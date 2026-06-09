@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Database, CheckCircle2, AlertCircle, Play, Loader2 } from 'lucide-react';
-import { DashboardWidgetShell, Badge, Button, ProgressBar, LoadingPhrase } from '../ui';
+import { DashboardWidgetShell, Badge, Button, ProgressBar, DataLoading } from '../ui';
 import {
   useDataHubBackups,
   useDataHubBackupProgress,
@@ -121,7 +121,7 @@ function LastBackupCard() {
       )}
 
       {isLoading && !isRunning && (
-        <LoadingPhrase className="text-xs text-[var(--color-text-muted)] !text-left" />
+        <DataLoading className="!py-3" />
       )}
       {!isLoading && isError && !isRunning && (
         <div className="flex items-start gap-2 text-rose-600 dark:text-rose-400">

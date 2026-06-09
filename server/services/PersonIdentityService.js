@@ -5,6 +5,8 @@ const PersonCommunicationProfile = require('../models/PersonCommunicationProfile
 const PersonSourceLink = require('../models/PersonSourceLink');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 
+const BYPASS = { bypassTenant: true };
+
 const SOURCE_TYPE_MAP = {
   crm: 'lead',
   leads: 'lead',
@@ -29,7 +31,7 @@ class PersonIdentityService {
    * @returns {Promise<{ personId, person, created: boolean }|null>}
    */
   async resolvePerson(input = {}, options = {}) {
-    const { source = 'unknown' } = options;
+    const { source = 'unknown', emailOnly = false } = options;
     const normalized = normalizePersonRecord(input, { tryRepairPhone: true });
     const email = normalized.email;
     const phone = normalized.phone;
@@ -38,24 +40,65 @@ class PersonIdentityService {
 
     if (!email && !phone) return null;
 
-    const identifiers = [];
-    if (email) identifiers.push({ type: 'email', value: email });
-    if (phone) identifiers.push({ type: 'phone', value: phone });
-
-    let personId = await this._findPersonByIdentifiers(identifiers);
+    const useEmailOnly = emailOnly || source === 'artist_path';
+    let personId = null;
     let created = false;
 
-    if (!personId) {
-      const person = await Person.create({
-        canonicalName: name !== 'Anonymous' ? name : (email || phone),
-        nameKey: normalized.nameKey,
-        city: city || undefined,
-        firstSeenAt: new Date(),
-        lastSeenAt: new Date(),
-      });
-      personId = person._id;
-      created = true;
+    if (useEmailOnly && email) {
+      const emailMatch = await PersonIdentifier.findOne({ type: 'email', valueNormalized: email }).lean();
+      if (emailMatch) {
+        const emailCount = await PersonIdentifier.countDocuments({
+          personId: emailMatch.personId,
+          type: 'email',
+        });
+        if (emailCount > 1) {
+          const person = await Person.create({
+            canonicalName: name !== 'Anonymous' ? name : email,
+            nameKey: normalized.nameKey,
+            city: city || undefined,
+            firstSeenAt: new Date(),
+            lastSeenAt: new Date(),
+          });
+          personId = person._id;
+          created = true;
+          await PersonIdentifier.updateOne(
+            { type: 'email', valueNormalized: email },
+            { $set: { personId: person._id, source } }
+          );
+        } else {
+          personId = emailMatch.personId;
+        }
+      } else {
+        const person = await Person.create({
+          canonicalName: name !== 'Anonymous' ? name : email,
+          nameKey: normalized.nameKey,
+          city: city || undefined,
+          firstSeenAt: new Date(),
+          lastSeenAt: new Date(),
+        });
+        personId = person._id;
+        created = true;
+      }
     } else {
+      const identifiers = [];
+      if (email) identifiers.push({ type: 'email', value: email });
+      if (phone) identifiers.push({ type: 'phone', value: phone });
+      personId = await this._findPersonByIdentifiers(identifiers);
+
+      if (!personId) {
+        const person = await Person.create({
+          canonicalName: name !== 'Anonymous' ? name : (email || phone),
+          nameKey: normalized.nameKey,
+          city: city || undefined,
+          firstSeenAt: new Date(),
+          lastSeenAt: new Date(),
+        });
+        personId = person._id;
+        created = true;
+      }
+    }
+
+    if (!created) {
       await Person.findByIdAndUpdate(personId, {
         $set: {
           ...(name && name !== 'Anonymous' ? { canonicalName: name, nameKey: normalized.nameKey } : {}),
@@ -66,33 +109,63 @@ class PersonIdentityService {
       });
     }
 
-    for (const id of identifiers) {
-      try {
-        await PersonIdentifier.findOneAndUpdate(
-          { type: id.type, valueNormalized: id.value },
-          { $setOnInsert: { personId, type: id.type, valueNormalized: id.value, source } },
-          { upsert: true, new: true }
-        );
-      } catch (err) {
-        if (err.code === 11000) {
-          const existing = await PersonIdentifier.findOne({ type: id.type, valueNormalized: id.value }).lean();
-          if (existing && String(existing.personId) !== String(personId)) {
-            personId = await this._mergePersonIds(personId, existing.personId);
-          }
-        } else {
-          throw err;
-        }
-      }
+    if (email) {
+      personId = (await this._upsertIdentifier(personId, 'email', email, source)) || personId;
+    }
+    if (phone) {
+      personId = (await this._attachPhoneIdentifier(personId, phone, source, { allowMerge: !useEmailOnly })) || personId;
     }
 
-    await PersonCommunicationProfile.findOneAndUpdate(
-      { personId },
-      { $setOnInsert: { personId } },
-      { upsert: true }
-    );
+    await this._ensureCommunicationProfile(personId);
 
     const person = await Person.findById(personId);
     return { personId, person, created };
+  }
+
+  async _ensureCommunicationProfile(personId) {
+    if (!personId) return null;
+    try {
+      return await PersonCommunicationProfile.findOneAndUpdate(
+        { personId },
+        { $setOnInsert: { personId } },
+        { upsert: true, new: true }
+      ).setOptions(BYPASS);
+    } catch (err) {
+      if (err.code === 11000) {
+        return PersonCommunicationProfile.findOne({ personId }).setOptions(BYPASS);
+      }
+      throw err;
+    }
+  }
+
+  async _upsertIdentifier(personId, type, value, source) {
+    try {
+      await PersonIdentifier.findOneAndUpdate(
+        { type, valueNormalized: value },
+        { $setOnInsert: { personId, type, valueNormalized: value, source } },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      if (err.code === 11000) {
+        const existing = await PersonIdentifier.findOne({ type, valueNormalized: value }).lean();
+        if (existing && String(existing.personId) !== String(personId)) {
+          return this._mergePersonIds(personId, existing.personId);
+        }
+      } else {
+        throw err;
+      }
+    }
+    return personId;
+  }
+
+  async _attachPhoneIdentifier(personId, phone, source, { allowMerge = true } = {}) {
+    if (!phone) return personId;
+    const existing = await PersonIdentifier.findOne({ type: 'phone', valueNormalized: phone }).lean();
+    if (existing && String(existing.personId) !== String(personId)) {
+      if (!allowMerge) return personId;
+      return this._mergePersonIds(personId, existing.personId);
+    }
+    return this._upsertIdentifier(personId, 'phone', phone, source);
   }
 
   async _findPersonByIdentifiers(identifiers) {
@@ -114,9 +187,9 @@ class PersonIdentityService {
 
     await PersonIdentifier.updateMany({ personId: secondary }, { $set: { personId: primary } });
     await PersonSourceLink.updateMany({ personId: secondary }, { $set: { personId: primary } });
-    const secondaryComms = await PersonCommunicationProfile.findOne({ personId: secondary }).lean();
+    const secondaryComms = await PersonCommunicationProfile.findOne({ personId: secondary }).setOptions(BYPASS).lean();
     if (secondaryComms) {
-      await PersonCommunicationProfile.deleteOne({ personId: secondary });
+      await PersonCommunicationProfile.deleteOne({ personId: secondary }).setOptions(BYPASS);
     }
     await Person.deleteOne({ _id: secondary });
     return primary;
@@ -152,11 +225,12 @@ class PersonIdentityService {
     if (fields.unsubscribeReason) update.unsubscribeReason = fields.unsubscribeReason;
     if (fields.bounceCount !== undefined) update.bounceCount = fields.bounceCount;
     if (Object.keys(update).length === 0) return null;
+    await this._ensureCommunicationProfile(personId);
     return PersonCommunicationProfile.findOneAndUpdate(
       { personId },
       { $set: update },
-      { upsert: true, new: true }
-    );
+      { new: true }
+    ).setOptions(BYPASS);
   }
 }
 

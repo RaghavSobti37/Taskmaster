@@ -4,11 +4,30 @@ const ArtistPathResponse = require('../models/ArtistPathResponse');
 const PersonIdentityService = require('./PersonIdentityService');
 const PersonHubBuilder = require('./PersonHubBuilder');
 const ContactService = require('./ContactService');
-const { mapRowToArtistPath, ARTIST_PATH_SHEET_ID, displayArtistLabel } = require('../../shared/artistPathSchema.cjs');
+const { mapRowToArtistPath, buildSheetRowId, ARTIST_PATH_SHEET_ID, displayArtistLabel } = require('../../shared/artistPathSchema.cjs');
 const logger = require('../utils/logger');
 const { sendAiSensyMessage } = require('../utils/aisensyClient');
 
 const HOLYSHEET_BASE = 'https://holysheet.soneshjain.com/api/v1';
+const { getTenantId } = require('../utils/tenantContext');
+
+let cachedDefaultTenantId = null;
+
+async function resolveTenantId() {
+  const fromContext = getTenantId();
+  if (fromContext) return fromContext;
+  if (cachedDefaultTenantId) return cachedDefaultTenantId;
+  const Tenant = require('../models/Tenant');
+  let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
+  if (!defaultTenant) {
+    defaultTenant = await Tenant.create({
+      name: 'Default Tenant',
+      contactEmail: 'admin@theshakticollective.in',
+    });
+  }
+  cachedDefaultTenantId = defaultTenant._id;
+  return cachedDefaultTenantId;
+}
 
 function getArtistPathApiKey() {
   return process.env.HOLYSHEET_ARTIST_PATH_API_KEY
@@ -104,12 +123,14 @@ async function upsertArtistPathRow(rawRow, { source = 'artist_path_sheet', sheet
   if (!resolved) return null;
 
   const sheetRowId = sheetRowIdOverride
+    || buildSheetRowId(row, { identity, answers, submittedAt, rowId, rawRow: mappedRaw })
     || rowId
     || row.rowId
     || row._id
     || row.id
     || `${email || phone}|${submittedAt?.toISOString?.() || Date.now()}`;
   const mergedAnswers = { ...answers, name, email, phone, city: identity.city };
+  const tenantId = await resolveTenantId();
 
   const doc = await ArtistPathResponse.findOneAndUpdate(
     { sheetRowId: String(sheetRowId) },
@@ -120,9 +141,10 @@ async function upsertArtistPathRow(rawRow, { source = 'artist_path_sheet', sheet
         answers: mergedAnswers,
         rawRow: mappedRaw,
         source,
+        tenantId,
       },
     },
-    { upsert: true, new: true }
+    { upsert: true, new: true, bypassTenant: true }
   );
 
   await PersonIdentityService.linkSource(resolved.personId, 'artist_path', doc._id, mergedAnswers);
@@ -187,7 +209,9 @@ async function importRows(rows, { userId, filename = 'artist_path_holysheet_sync
 
   let imported = 0;
   for (let i = 0; i < rows.length; i++) {
-    const result = await upsertArtistPathRow(rows[i], { source: 'artist_path_sheet' });
+    const mapped = mapRowToArtistPath(rows[i]);
+    const sheetRowIdOverride = buildSheetRowId(rows[i], mapped) || `sheet-row-${i}`;
+    const result = await upsertArtistPathRow(rows[i], { source: 'artist_path_sheet', sheetRowIdOverride });
     if (!result) continue;
     if (importSession) {
       await ArtistPathResponse.updateOne(

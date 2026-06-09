@@ -207,7 +207,7 @@ export const useDeleteTask = () => {
   });
 };
 
-const useTask = (taskId, { enabled = true } = {}) => {
+export const useTask = (taskId, { enabled = true } = {}) => {
   return useQuery({
     queryKey: ['task', taskId],
     queryFn: async () => {

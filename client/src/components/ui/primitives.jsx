@@ -155,7 +155,9 @@ export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
   );
 };
 
-export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props }) => {
+export const Input = React.forwardRef(({
+  label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props
+}, ref) => {
   const textareaRef = useRef(null);
   const fieldStyles = variant === 'ghost'
     ? 'bg-transparent border-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] focus:border-transparent'
@@ -172,9 +174,15 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
     syncTextareaHeight();
   }, [props.value, syncTextareaHeight]);
 
-  const handleTextareaChange = (e) => {
+  const assignRef = useCallback((node) => {
+    textareaRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+
+  const handleChange = (e) => {
     onChange?.(e);
-    syncTextareaHeight();
+    if (multiline && autoGrow) syncTextareaHeight();
   };
 
   return (
@@ -190,9 +198,9 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
       )}
       {multiline ? (
         <textarea
-          ref={textareaRef}
+          ref={assignRef}
           rows={rows}
-          onChange={handleTextareaChange}
+          onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
           className={`mobile-form-control block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
             autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
@@ -203,7 +211,8 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
         />
       ) : (
         <input
-          onChange={onChange}
+          ref={ref}
+          onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
           className={`mobile-form-control block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
@@ -221,7 +230,8 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
     {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
   </div>
   );
-};
+});
+Input.displayName = 'Input';
 
 export const Badge = ({ children, variant = 'info', className = '' }) => {
   const variants = {

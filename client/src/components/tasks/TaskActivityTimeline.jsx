@@ -115,6 +115,28 @@ function ActivityEvent({ item }) {
     );
   }
 
+  if (item.type === 'rollback') {
+    return (
+      <div className="rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/60 p-3 space-y-1.5 border-l-4 border-l-rose-500/50">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 shrink-0">
+            Rolled back
+          </span>
+          <span className="text-[var(--color-text-muted)] shrink-0 tabular-nums">{time}</span>
+          {item.actor && (
+            <UserLabel user={item.actor} name={item.actor.name} size="xs" nameClassName="text-xs font-semibold" />
+          )}
+        </div>
+        {item.body ? (
+          <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
+            <span className="text-[var(--color-text-muted)]">Reason: </span>
+            <MentionTitle text={item.body} />
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   if (item.type === 'message') {
     return (
       <div className="rounded-lg border border-[var(--color-bg-border)] p-3 space-y-1.5">

@@ -11,13 +11,12 @@ test.describe('mobile login', () => {
     test.skip(!hasAuthCreds, 'Set E2E_EMAIL and E2E_PASSWORD for mobile login E2E');
   });
 
-  test('iPhone login → clear cookies → re-login', async ({ page }) => {
+  test('iPhone login → logout → re-login', async ({ page }) => {
     await loginAsTestUser(page);
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.goto('/login');
-    await page.getByRole('button', { name: /clear session cookies/i }).click();
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
 
     await loginAsTestUser(page);
     await expect(page).toHaveURL(/\/dashboard/);
@@ -27,6 +26,6 @@ test.describe('mobile login', () => {
     await page.goto('/login');
     await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
     await expect(page.locator('input[autocomplete="current-password"]')).toBeVisible();
-    await expect(page.getByRole('button', { name: /clear session cookies/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
   });
 });

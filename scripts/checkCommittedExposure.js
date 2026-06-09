@@ -87,7 +87,8 @@ const isAllowedRenderHost = (match) =>
 const isAllowedGmail = (match, rel) =>
   /placeholder@gmail|youraccount@gmail|example\.com/i.test(match) ||
   rel.includes('.env.example') ||
-  rel.endsWith('AdminMailContent.jsx');
+  rel.endsWith('useCampaignAudience.js')
+  || rel.endsWith('ResendFromEmailPicker.jsx');
 
 function listGitTrackedFiles() {
   const raw = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' });

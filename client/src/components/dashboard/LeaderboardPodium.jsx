@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { DashboardWidgetShell, LoadingPhrase } from '../ui';
+import { DashboardWidgetShell, DataLoading } from '../ui';
 import { useLeaderboard, useLeaderboardBreakdown } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
@@ -15,6 +15,9 @@ const LeaderboardPodium = () => {
   const entries = data?.entries ?? [];
   const meta = data?.meta;
   const topFive = useMemo(() => entries.slice(0, TOP_N), [entries]);
+  const lastWeekLabel = meta?.lastWeekStartKey && meta?.lastWeekEndKey
+    ? `${meta.lastWeekStartKey} – ${meta.lastWeekEndKey}`
+    : null;
   const [selectedMember, setSelectedMember] = useState(null);
   const { data: breakdown, isLoading: breakdownLoading } = useLeaderboardBreakdown(
     selectedMember?._id,
@@ -34,7 +37,7 @@ const LeaderboardPodium = () => {
         }
         icon={Trophy}
       >
-        {isLoading && <LoadingPhrase className="text-[10px] tm-data-meta px-4 py-3 !text-left" />}
+        {isLoading && <DataLoading className="!py-3" />}
         {!isLoading && entries.length === 0 && (
           <p className="text-[10px] tm-data-meta italic px-4 py-3">No team members yet</p>
         )}
@@ -46,6 +49,7 @@ const LeaderboardPodium = () => {
                 member={member}
                 entries={entries}
                 currentUserId={user?._id}
+                lastWeekLabel={lastWeekLabel}
                 onSelect={setSelectedMember}
               />
             ))}

@@ -21,6 +21,16 @@ const {
   getProjectAnalytics,
   exportWorkspacesPlainText,
 } = require('../controllers/projectController');
+const {
+  getProjectGoals,
+  updateProjectGoals,
+  getProjectGoalsWeekly,
+} = require('../controllers/projectGoalsController');
+const {
+  getProjectKra,
+  getMyProjectKra,
+  upsertProjectKra,
+} = require('../controllers/projectKraController');
 const { linkProjectCalendar, getProjectCalendarEvents } = require('../controllers/googleController');
 const { protect } = require('../middleware/authMiddleware');
 const { validateBody } = require('../validation/validateBody');
@@ -76,6 +86,12 @@ router.put('/:id/remove-member', validateBody(removeMemberBody), removeMember);
 router.get('/:id/workload', getProjectWorkload);
 router.get('/:id/hours-summary', getProjectHoursSummary);
 router.get('/:id/analytics', getProjectAnalytics);
+router.get('/:id/goals', getProjectGoals);
+router.put('/:id/goals', updateProjectGoals);
+router.get('/:id/goals/weekly', getProjectGoalsWeekly);
+router.get('/:id/kra', getProjectKra);
+router.get('/:id/kra/me', getMyProjectKra);
+router.put('/:id/kra/:userId', upsertProjectKra);
 
 router.post('/:id/link-calendar', validateBody(linkCalendarBody), linkProjectCalendar);
 router.get('/:id/calendar-events', getProjectCalendarEvents);

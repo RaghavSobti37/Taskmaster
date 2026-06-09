@@ -119,15 +119,19 @@ export function canRollbackTask(task, user) {
   });
 }
 
-export function countReviewTasksByProject(reviewTasks = []) {
+export function countTasksByProject(tasks = []) {
   const counts = {};
-  for (const task of reviewTasks) {
+  for (const task of tasks) {
     const pid = task.projectId?._id || task.projectId;
     if (!pid) continue;
     const key = String(pid);
     counts[key] = (counts[key] || 0) + 1;
   }
   return counts;
+}
+
+export function countReviewTasksByProject(reviewTasks = []) {
+  return countTasksByProject(reviewTasks);
 }
 
 export function displayPersonName(person, fallback = 'Unknown') {

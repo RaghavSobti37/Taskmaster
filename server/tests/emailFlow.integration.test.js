@@ -40,15 +40,27 @@ describe('Email flow integration', () => {
   }, 30000);
 
   describe('buildFinalEmailHtml pipeline', () => {
-    it('strips Quill indent and inlines CSS', async () => {
+    it('converts Quill indent classes to inline padding-left for email clients', async () => {
       const out = await buildFinalEmailHtml({
         html: QUILL_INDENT_HTML,
         mode: 'preview',
         removeUnsubscribe: true,
       });
-      expect(out).not.toMatch(/ql-indent/i);
-      expect(out).not.toMatch(/padding-left\s*:\s*3em/i);
+      expect(out).toMatch(/padding-left\s*:\s*6em/i);
       expect(out).toContain('Hello {1}');
+    });
+
+    it('preserves stacked indent levels across multiple lines', async () => {
+      const html = [
+        '<p>Flush left</p>',
+        '<p class="ql-indent-1">Indent one</p>',
+        '<p class="ql-indent-2">Indent two</p>',
+        '<p class="ql-indent-3">Indent three</p>',
+      ].join('');
+      const out = await buildFinalEmailHtml({ html, mode: 'preview', removeUnsubscribe: true });
+      expect(out).toMatch(/padding-left\s*:\s*3em/i);
+      expect(out).toMatch(/padding-left\s*:\s*6em/i);
+      expect(out).toMatch(/padding-left\s*:\s*9em/i);
     });
 
     it('preview and test modes produce same indent normalization', async () => {
@@ -94,7 +106,7 @@ describe('Email flow integration', () => {
       expect(previewRes.statusCode).toBe(200);
       expect(previewRes.body.html).toMatch(/<!DOCTYPE html>/i);
       expect(previewRes.body.html).toContain('Test');
-      expect(previewRes.body.html).not.toMatch(/ql-indent/i);
+      expect(previewRes.body.html).toMatch(/padding-left\s*:\s*6em/i);
 
       const save = await agent.post('/api/mail/templates').send({
         name: `EMAIL_FLOW_TEST_${Date.now()}`,

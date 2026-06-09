@@ -159,6 +159,11 @@ router.post('/articles', validateBody(createArticleBody), async (req, res) => {
     });
 
     await article.populate('addedBy', 'name email');
+
+    const GamificationService = require('../services/gamificationService');
+    await GamificationService.generateWeeklyMissions(req.user._id);
+    await GamificationService.progressMission(req.user._id, 'NEWSLETTER_ARTICLE', 1);
+
     res.status(201).json(serializeArticle(article));
   } catch (err) {
     if (err.code === 11000) {

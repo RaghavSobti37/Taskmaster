@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Mail, Circle, UserMinus, Users } from 'lucide-react';
-import { Badge, AddMembers, EmptyState, NexusDropdown } from '../ui';
+import { Briefcase, Mail, Circle, UserMinus, Users, ClipboardList } from 'lucide-react';
+import { Badge, AddMembers, EmptyState, NexusDropdown, Button } from '../ui';
 import { NexusModal } from '../ui/modals';;
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { projectRoleLabel, PROJECT_ROLE_OPTIONS, normalizeProjectRoleValue } from '../../constants/taskOptions';
 
@@ -17,11 +17,28 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   const [localMembers, setLocalMembers] = useState(project.members || []);
   const [localMemberRoles, setLocalMemberRoles] = useState(project.memberRoles || []);
   const [removeModal, setRemoveModal] = useState({ open: false, member: null });
+  const [kraModal, setKraModal] = useState({ open: false, member: null, closed: '', moved: '' });
+  const [kraSaving, setKraSaving] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(null);
   const isAdmin = isAdminUser(currentUser);
   const isOwner = project.owner?._id === currentUser?._id || project.owner === currentUser?._id;
   const canManageTeam = isAdmin || isOwner;
   const ownerId = project.owner?._id || project.owner;
+
+  const { data: kraRows = [] } = useQuery({
+    queryKey: ['projects', project._id, 'kra'],
+    queryFn: async () => (await axios.get(`/api/projects/${project._id}/kra`)).data,
+    enabled: !!project._id,
+  });
+
+  const kraByUserId = React.useMemo(() => {
+    const map = new Map();
+    for (const row of kraRows) {
+      const uid = row.userId?._id || row.userId;
+      if (uid) map.set(String(uid), row);
+    }
+    return map;
+  }, [kraRows]);
 
   const teamUsers = directory.map((m) => ({
     _id: m.user?._id || m._id,
@@ -117,6 +134,38 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
 
   const onlineCount = localMembers.filter((m) => getMemberOnline(m)).length;
 
+  const openKraModal = (member) => {
+    const row = kraByUserId.get(String(member._id));
+    setKraModal({
+      open: true,
+      member,
+      closed: row?.closed || '',
+      moved: row?.moved || '',
+    });
+  };
+
+  const canViewKra = (member) => {
+    if (canManageTeam) return true;
+    return member._id === currentUser?._id;
+  };
+
+  const handleSaveKra = async () => {
+    if (!kraModal.member) return;
+    setKraSaving(true);
+    try {
+      await axios.put(`/api/projects/${project._id}/kra/${kraModal.member._id}`, {
+        closed: kraModal.closed,
+        moved: kraModal.moved,
+      });
+      queryClient.invalidateQueries({ queryKey: ['projects', project._id, 'kra'] });
+      setKraModal({ open: false, member: null, closed: '', moved: '' });
+    } catch (err) {
+      console.error('KRA save failed', err);
+    } finally {
+      setKraSaving(false);
+    }
+  };
+
   return (
     <div className="p-4">
       <NexusModal
@@ -129,6 +178,46 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         confirmLabel="Remove"
         onConfirm={handleConfirmRemove}
       />
+
+      {kraModal.open && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-lg bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-black uppercase tracking-widest">
+              KRA — {kraModal.member?.name}
+            </h3>
+            <div className="space-y-3">
+              <label className="block space-y-1">
+                <span className="text-[10px] font-black uppercase text-emerald-400">Closed</span>
+                <textarea
+                  className="w-full min-h-[80px] text-sm rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-2"
+                  value={kraModal.closed}
+                  onChange={(e) => setKraModal((s) => ({ ...s, closed: e.target.value }))}
+                  readOnly={!canManageTeam}
+                  placeholder="What we have closed…"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[10px] font-black uppercase text-blue-400">Moved</span>
+                <textarea
+                  className="w-full min-h-[80px] text-sm rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-2"
+                  value={kraModal.moved}
+                  onChange={(e) => setKraModal((s) => ({ ...s, moved: e.target.value }))}
+                  readOnly={!canManageTeam}
+                  placeholder="What we have moved…"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setKraModal({ open: false, member: null, closed: '', moved: '' })}>
+                Close
+              </Button>
+              {canManageTeam && (
+                <Button size="sm" disabled={kraSaving} onClick={handleSaveKra}>Save KRA</Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row lg:items-start gap-6">
         <div className="flex-1 min-w-0 space-y-4">
@@ -221,6 +310,15 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                           <span className="truncate">{member.email}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {canViewKra(member) && (
+                            <button
+                              type="button"
+                              onClick={() => openKraModal(member)}
+                              className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-blue-400 hover:border-blue-400/40 flex items-center gap-1"
+                            >
+                              <ClipboardList size={9} /> KRA
+                            </button>
+                          )}
                           <span className="text-[9px] font-black uppercase text-[var(--color-text-muted)] flex items-center gap-1">
                             <Circle size={6} className={isOnline ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
                             {isOnline ? 'Online' : 'Offline'}

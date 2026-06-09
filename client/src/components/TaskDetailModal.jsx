@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useRef } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Trash2 } from 'lucide-react';
+import { CheckCircle2, Trash2, RotateCcw } from 'lucide-react';
 import { Button, Spinner } from './ui';
 import { NexusModal, ModalShell, ModalFooter } from './ui/modals';;
-import { useProjects, useUpdateTask, useUserDirectory } from '../hooks/useTaskmasterQueries';
+import { useProjects, useUpdateTask, useUserDirectory, useTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -28,8 +28,28 @@ import { progressForTaskStatus } from '../utils/taskStatusButtons';
 import { mergeMentionedUserIdsIntoAssignees } from '../utils/mentionTokens';
 import { hasUnsavedTaskFields } from '../utils/taskFormDirty';
 
+function formValuesFromTask(task) {
+  return {
+    status: task?.status || 'todo',
+    progress: task?.progress ?? progressForTaskStatus(task?.status || 'todo'),
+    priority: task?.priority || 'medium',
+    type: normalizeTaskCategory(task?.type),
+    workspace: task?.workspace || task?.projectId?.workspace || 'General',
+    projectId: task?.projectId?._id || task?.projectId || '',
+    scheduleSlot: task?.scheduleSlot || 'FULL',
+    scheduleDate: task?.scheduleDate ? new Date(task.scheduleDate).toISOString().split('T')[0] : '',
+    assignees: task?.assignees?.map((a) => (typeof a === 'object' ? a._id : a)) || [],
+    dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+    dueDateManual: true,
+  };
+}
+
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate, onFinishRequest }) => {
   const { user } = useAuth();
+  const taskId = resolveTaskId(task);
+  const { data: fetchedTask, isFetching: isFetchingTask } = useTask(taskId, { enabled: isOpen && !!taskId });
+  const activeTask = fetchedTask ?? task;
+  const isHydrating = isOpen && !!taskId && !fetchedTask && isFetchingTask;
   const { data: projects = [] } = useProjects();
   const { data: directoryUsers = [] } = useUserDirectory(isOpen);
   const updateTaskMutation = useUpdateTask();
@@ -64,17 +84,17 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     setPendingFinishAfterSave(value);
   };
 
-  const canReview = canReviewTask(task, user);
-  const canRollback = canRollbackTask(task, user);
-  const canApproveReview = canUserApproveReview(user, getTaskAssignments(task));
-  const assigner = getTaskAssignedBy(task);
-  const creatorId = task?.createdBy?._id || task?.createdBy;
+  const canReview = canReviewTask(activeTask, user);
+  const canRollback = canRollbackTask(activeTask, user);
+  const canApproveReview = canUserApproveReview(user, getTaskAssignments(activeTask));
+  const assigner = getTaskAssignedBy(activeTask);
+  const creatorId = activeTask?.createdBy?._id || activeTask?.createdBy;
   const isCreator = creatorId?.toString() === user?._id?.toString();
   const canEditTimeline = canReview || isCreator;
   const isDone = formValues.status === 'done';
   const formLocked = isDone;
 
-  const isDirty = hasUnsavedTaskFields(task, {
+  const isDirty = hasUnsavedTaskFields(activeTask, {
     title,
     desc,
     formValues,
@@ -114,40 +134,27 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   };
 
   React.useEffect(() => {
-    if (task) {
-      setDisplayTask(task);
-      setTitle(task.title || '');
-      setDesc('');
-      setShowRollbackForm(false);
-      setRollbackReason('');
-      setShowCompletionFlash(false);
-      setPendingFinish(false);
-      setFormValues({
-        status: task.status || 'todo',
-        progress: task.progress ?? progressForTaskStatus(task.status || 'todo'),
-        priority: task.priority || 'medium',
-        type: normalizeTaskCategory(task.type),
-        workspace: task.workspace || task.projectId?.workspace || 'General',
-        projectId: task.projectId?._id || task.projectId || '',
-        scheduleSlot: task.scheduleSlot || 'FULL',
-        scheduleDate: task.scheduleDate ? new Date(task.scheduleDate).toISOString().split('T')[0] : '',
-        assignees: task.assignees?.map((a) => (typeof a === 'object' ? a._id : a)) || [],
-        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
-        dueDateManual: true,
-      });
-    }
-  }, [task]);
+    if (!isOpen || !activeTask) return;
+    setDisplayTask(activeTask);
+    setTitle(activeTask.title || '');
+    setDesc('');
+    setShowRollbackForm(false);
+    setRollbackReason('');
+    setShowCompletionFlash(false);
+    setPendingFinish(false);
+    setFormValues(formValuesFromTask(activeTask));
+  }, [isOpen, taskId, fetchedTask, activeTask]);
 
   const projectName = useMemo(() => {
     const id = formValues.projectId;
-    if (!id) return task?.projectId?.name || 'No project';
+    if (!id) return activeTask?.projectId?.name || 'No project';
     const match = projects.find((p) => String(p._id) === String(id));
-    return match?.name || task?.projectId?.name || 'Unknown project';
-  }, [formValues.projectId, projects, task?.projectId?.name]);
+    return match?.name || activeTask?.projectId?.name || 'Unknown project';
+  }, [formValues.projectId, projects, activeTask?.projectId?.name]);
 
   if (!task) return null;
 
-  const resolvedTask = displayTask ?? task;
+  const resolvedTask = displayTask ?? activeTask;
 
   const notifyUpdate = (data) => {
     if (onTaskUpdated) onTaskUpdated(data);
@@ -169,33 +176,33 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     }
 
     const messageDraft = desc.trim();
-    const payload = {
-      title,
-      status: reviewAction ? undefined : formValues.status,
-      progress: reviewAction ? undefined : formValues.progress,
-      priority: formValues.priority,
-      type: normalizeTaskCategory(formValues.type),
-      projectId: formValues.projectId || null,
-      workspace: formValues.workspace,
-      assignees: mergeMentionedUserIdsIntoAssignees(
-        formValues.assignees,
-        directoryUsers,
-        title,
-        desc
-      ).filter((id) => id !== creatorId?.toString()),
-      reviewAction,
-    };
+    const payload = reviewAction
+      ? {
+          reviewAction,
+          ...(reviewAction === 'rollback' ? { description: rollbackReason.trim() } : {}),
+        }
+      : {
+          title,
+          status: formValues.status,
+          progress: formValues.progress,
+          priority: formValues.priority,
+          type: normalizeTaskCategory(formValues.type),
+          projectId: formValues.projectId || null,
+          workspace: formValues.workspace,
+          assignees: mergeMentionedUserIdsIntoAssignees(
+            formValues.assignees,
+            directoryUsers,
+            title,
+            desc
+          ).filter((id) => id !== creatorId?.toString()),
+        };
 
-    if (reviewAction === 'rollback') {
-      payload.description = rollbackReason.trim();
-    }
-
-    if (canEditTimeline) {
-      const originalScheduleDate = toDateKey(task.scheduleDate) || '';
-      const originalDueDate = toDateKey(task.dueDate) || '';
+    if (!reviewAction && canEditTimeline) {
+      const originalScheduleDate = toDateKey(activeTask.scheduleDate) || '';
+      const originalDueDate = toDateKey(activeTask.dueDate) || '';
       const timelineChanged = formValues.scheduleDate !== originalScheduleDate
         || formValues.dueDate !== originalDueDate
-        || (formValues.scheduleSlot || 'FULL') !== (task.scheduleSlot || 'FULL');
+        || (formValues.scheduleSlot || 'FULL') !== (activeTask.scheduleSlot || 'FULL');
 
       if (timelineChanged) {
         const timelineCheck = validateTaskTimelineFields({
@@ -324,7 +331,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         />
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden tm-modal-scroll">
+          {isHydrating && (
+            <div className="flex items-center justify-center gap-2 px-6 py-3 text-sm text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">
+              <Spinner size="sm" />
+              Loading task details…
+            </div>
+          )}
+          <div className={`flex flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden tm-modal-scroll ${isHydrating ? 'opacity-60 pointer-events-none' : ''}`}>
             <div className="flex-1 min-w-0 shrink-0 lg:shrink lg:min-h-0 lg:overflow-y-auto lg:tm-modal-scroll p-4 sm:p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
               <TaskFormFields
                 values={formValues}
@@ -374,7 +387,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 canRollback={canRollback}
                 canApproveReview={canApproveReview}
                 assignerName={displayPersonName(assigner, 'assigner')}
-                isSaving={isSaving}
+                isSaving={isSaving || isHydrating}
                 showRollbackForm={showRollbackForm}
                 rollbackReason={rollbackReason}
                 onRollbackReasonChange={setRollbackReason}
@@ -386,7 +399,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
             </div>
 
             <div className="w-full lg:w-[min(400px,36vw)] shrink-0 flex flex-col min-h-[220px] max-h-[min(42vh,360px)] lg:max-h-none lg:min-h-0 border-t lg:border-t-0 border-[var(--color-bg-border)]">
-              <TaskHistoryPanel task={displayTask || task} enabled={isOpen} />
+              <TaskHistoryPanel task={resolvedTask} enabled={isOpen} />
             </div>
           </div>
 
@@ -416,8 +429,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                   {isSaving ? 'Saving...' : (pendingFinishAfterSave ? 'Save & Continue' : 'Save')}
                 </button>
               )}
-              {isDone && (
-                <span className="text-xs text-[var(--color-text-muted)]">Completed</span>
+              {isDone && canRollback && !showRollbackForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowRollbackForm(true)}
+                  disabled={isSaving || isHydrating}
+                  className="bg-amber-500 hover:bg-amber-400 text-[var(--color-bg-primary)] px-6 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50 transition-colors"
+                >
+                  <RotateCcw size={16} />
+                  Rollback Task
+                </button>
               )}
             </div>
           </ModalFooter>

@@ -13,7 +13,10 @@ const resolveCampaignByParam = async (id, options = {}) => {
   const key = String(id).trim();
   const { populate = false, lean = false } = options;
 
+  const bypassTenant = { bypassTenant: true };
+
   const applyQuery = (query, isLegacy = false) => {
+    query = query.setOptions(bypassTenant);
     if (populate && !isLegacy) {
       query = query.populate('recipients.leadId', 'name email location phone status artistType')
         .populate('senderProfileId')

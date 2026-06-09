@@ -2,6 +2,11 @@
 
 This document serves as the single source of truth for the CoreKnot project. It synthesizes infrastructure setup, backend logic, frontend design rules, and the multi-platform analytics engine into an AI-optimized format.
 
+### Production gaps (Jun 2026)
+
+- **Render cron jobs** (daily backup, subscription reminders, keep-warm): defined in `render.yaml` only — **not provisioned / not running**. Use admin DB Backup or `npm run backup:daily` for backups.
+- **Sentry + Datadog**: SDK integrated in code — **not active** in production (DSN/API keys unset). In-app SystemLog is the live diagnostics path.
+
 ---
 
 ## 1. System Architecture & Local Runtime

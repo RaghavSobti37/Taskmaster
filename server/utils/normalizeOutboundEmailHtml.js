@@ -6,7 +6,19 @@ const QUILL_STYLE_RE = /\.ql-|ql-indent|quill/i;
 const LIST_TAGS = new Set(['ul', 'ol']);
 const BLOCK_TAGS = new Set(['p', 'div', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'table', 'span', 'a']);
 const FLUSH_INLINE = 'margin:0!important;padding:0!important;padding-left:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
-const LIST_UL_INLINE = 'margin:0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;padding-left:1.5em!important';
+const PARAGRAPH_INLINE = 'margin:0 0 1em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
+const HEADING_INLINE = 'margin:0 0 0.75em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
+const LIST_UL_INLINE = 'margin:0 0 1em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;padding-left:1.5em!important';
+
+/** Quill snow default: each indent level = 3em */
+const QUILL_INDENT_STEP_EM = 3;
+
+const blockPreset = (tag) => {
+  if (LIST_TAGS.has(tag)) return LIST_UL_INLINE;
+  if (tag === 'p' || tag === 'blockquote') return PARAGRAPH_INLINE;
+  if (/^h[1-6]$/.test(tag)) return HEADING_INLINE;
+  return FLUSH_INLINE;
+};
 
 const hasLeftIndentInShorthand = (value) => {
   if (!value) return false;
@@ -34,10 +46,49 @@ const cleanIndentFromStyle = (style) => {
     .join('; ');
 };
 
-const mergeInlineStyle = (existing, preset) => {
-  const cleaned = cleanIndentFromStyle(existing);
-  if (!cleaned) return preset;
-  return `${preset};${cleaned}`;
+const parseAxisEm = (style, prop) => {
+  const re = new RegExp(`${prop}\\s*:\\s*([^;!]+)`, 'i');
+  const m = re.exec(style || '');
+  if (!m) return 0;
+  const v = m[1].trim().toLowerCase();
+  const num = parseFloat(v);
+  if (Number.isNaN(num)) return 0;
+  if (v.endsWith('em') || v.endsWith('rem')) return num;
+  if (v.endsWith('px')) return num / 16;
+  if (v.endsWith('pt')) return num / 12;
+  return num / 16;
+};
+
+const quillIndentLevel = (classAttr = '') => {
+  let level = 0;
+  for (const c of classAttr.split(/\s+/)) {
+    const m = /^ql-indent-(\d+)$/i.exec(c);
+    if (m) level = Math.max(level, parseInt(m[1], 10));
+  }
+  return level;
+};
+
+const resolveIndentEm = (classAttr = '', style = '') => {
+  const classEm = quillIndentLevel(classAttr) * QUILL_INDENT_STEP_EM;
+  const padEm = parseAxisEm(style, 'padding-left');
+  const marginEm = parseAxisEm(style, 'margin-left');
+  const textEm = parseAxisEm(style, 'text-indent');
+  return Math.max(classEm, padEm, marginEm, textEm);
+};
+
+const indentPaddingDeclaration = (classAttr = '', style = '') => {
+  const em = resolveIndentEm(classAttr, style);
+  if (em <= 0) return '';
+  return `padding-left:${em}em!important`;
+};
+
+const composeBlockStyle = (tag, classAttr = '', userStyle = '') => {
+  const indentPad = indentPaddingDeclaration(classAttr, userStyle);
+  const cleaned = cleanIndentFromStyle(userStyle);
+  let style = blockPreset(tag);
+  if (cleaned) style = `${style};${cleaned}`;
+  if (indentPad) style = `${style};${indentPad}`;
+  return style;
 };
 
 const isEmptyParagraph = ($, el) => {
@@ -61,11 +112,14 @@ const extractBodyInner = (html) => {
   return body != null ? body : html;
 };
 
+const isFullHtmlDocument = (html) => /<!DOCTYPE|<html[\s>]/i.test((html || '').trim());
+
 /**
- * Strip Quill/editor indent + spacer paragraphs so Gmail renders flush left without extra blank lines.
+ * Normalize Quill visual HTML for email clients: inline paragraph spacing, preserve indent levels.
  */
 const normalizeOutboundEmailHtml = (html) => {
   if (!html || typeof html !== 'string') return html || '';
+  if (isFullHtmlDocument(html)) return html.trim();
   let input = extractBodyInner(html);
   if (!/<[a-z][\s\S]*>/i.test(input)) return input;
 
@@ -82,29 +136,32 @@ const normalizeOutboundEmailHtml = (html) => {
 
   $('#ck-email-root').find('blockquote').each((_, el) => {
     const inner = $(el).html() || '';
-    $(el).replaceWith(`<p style="${FLUSH_INLINE}">${inner}</p>`);
+    const classAttr = el.attribs?.class || '';
+    const userStyle = el.attribs?.style || '';
+    $(el).replaceWith(`<p style="${composeBlockStyle('blockquote', classAttr, userStyle)}">${inner}</p>`);
   });
 
   $('#ck-email-root').find('*').each((_, el) => {
     const tag = (el.tagName || '').toLowerCase();
     const $el = $(el);
+    const classAttr = el.attribs?.class || '';
+    const userStyle = el.attribs?.style || '';
 
     if (el.attribs?.class) {
-      const classes = el.attribs.class
+      const classes = classAttr
         .split(/\s+/)
-        .filter((c) => c && !/^ql-/i.test(c) && !/^ql-align/i.test(c) && c !== 'email-preview-root');
+        .filter((c) => c && (
+          /^ql-indent-\d+$/i.test(c)
+          || (!/^ql-/i.test(c) && !/^ql-align/i.test(c) && c !== 'email-preview-root')
+        ));
       if (classes.length) $el.attr('class', classes.join(' '));
       else $el.removeAttr('class');
     }
 
     $el.removeAttr('data-indent');
 
-    if (BLOCK_TAGS.has(tag) && el.attribs?.style) {
-      const preset = LIST_TAGS.has(tag) ? LIST_UL_INLINE : FLUSH_INLINE;
-      $el.attr('style', mergeInlineStyle(el.attribs.style, preset));
-    } else if (BLOCK_TAGS.has(tag)) {
-      const preset = LIST_TAGS.has(tag) ? LIST_UL_INLINE : FLUSH_INLINE;
-      $el.attr('style', preset);
+    if (BLOCK_TAGS.has(tag)) {
+      $el.attr('style', composeBlockStyle(tag, classAttr, userStyle));
     }
   });
 
@@ -131,18 +188,10 @@ const normalizeOutboundEmailHtml = (html) => {
 
   let out = $('#ck-email-root').html() || '';
   out = out
-    .replace(/padding-left\s*:\s*[^;"']+;?/gi, (match, offset, str) => {
-      const before = str.slice(Math.max(0, offset - 30), offset);
-      if (/<(ul|ol)\b/i.test(before)) return match;
-      return '';
-    })
-    .replace(/margin-left\s*:\s*[^;"']+;?/gi, '')
-    .replace(/text-indent\s*:\s*[^;"']+;?/gi, '')
-    .replace(/border-left\s*:\s*[^;"']+;?/gi, '')
-    .replace(/\sstyle="\s*"/gi, '')
-    .replace(/\sclass="\s*"/gi, '')
     .replace(/(<\/p>)\s*(<p[^>]*>)\s*(<br\s*\/?>)\s*(<\/p>)/gi, '$1')
-    .replace(/(<\/p>)\s*(<p[^>]*>)\s*<\/p>/gi, '$1');
+    .replace(/(<\/p>)\s*(<p[^>]*>)\s*<\/p>/gi, '$1')
+    .replace(/\sstyle="\s*"/gi, '')
+    .replace(/\sclass="\s*"/gi, '');
 
   return out.trim();
 };
@@ -151,7 +200,15 @@ const normalizeOutboundEmailHtml = (html) => {
 const wrapEmailShell = (bodyHtml) => {
   const inner = (bodyHtml || '').trim();
   if (!inner) return inner;
-  return `<div style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42;color:#0f172a;word-wrap:break-word;">${inner}</div>`;
+  return `<div class="email-preview-root" style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42;word-wrap:break-word;">${inner}</div>`;
 };
 
-module.exports = { normalizeOutboundEmailHtml, wrapEmailShell, FLUSH_INLINE };
+module.exports = {
+  normalizeOutboundEmailHtml,
+  wrapEmailShell,
+  FLUSH_INLINE,
+  PARAGRAPH_INLINE,
+  isFullHtmlDocument,
+  QUILL_INDENT_STEP_EM,
+  resolveIndentEm,
+};

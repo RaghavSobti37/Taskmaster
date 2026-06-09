@@ -3,7 +3,7 @@ import { Button, Badge } from '../ui';
 import { Lock, Check, LogIn, LogOut, RotateCcw, Info } from 'lucide-react';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
-import { useWorkModeHint, useLogs } from '../../hooks/useTaskmasterQueries';
+import { useLogs } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import WorkModeToggle from './WorkModeToggle';
 import AttendanceTimeline from './AttendanceTimeline';
@@ -196,10 +196,8 @@ const UnifiedTimeCard = ({
     outMode: 'office',
   });
   const [showMarkInExpanded, setShowMarkInExpanded] = React.useState(false);
-  const workModeHintTouchedRef = React.useRef(false);
   const form = editForm || localForm;
   const setForm = setEditForm || setLocalForm;
-  const { data: workModeHint, isLoading: workModeHintLoading } = useWorkModeHint(!!isSelfMode);
 
   const inAppr = !!entry?.inTimeRecord?.isApproved;
   const outAppr = !!entry?.outTimeRecord?.isApproved;
@@ -220,14 +218,6 @@ const UnifiedTimeCard = ({
       workMode: entry?.outTimeRecord?.workMode || entry?.inTimeRecord?.workMode || f.workMode || 'office',
     }));
   }, [entry, editForm, inDisplayTime, outDisplayTime, hasIn, hasOut]);
-
-  React.useEffect(() => {
-    if (!isSelfMode || editForm || workModeHintTouchedRef.current) return;
-    const suggested = workModeHint?.suggestedMode;
-    if (suggested === 'office' || suggested === 'wfh') {
-      setLocalForm((f) => ({ ...f, workMode: suggested }));
-    }
-  }, [isSelfMode, editForm, workModeHint]);
 
   React.useEffect(() => {
     if (hasIn) setShowMarkInExpanded(false);
@@ -381,11 +371,8 @@ const UnifiedTimeCard = ({
           <WorkModeToggle
             compact={compact}
             value={activeWorkMode}
-            loading={workModeHintLoading}
             disabled={workModeToggleDisabled}
-            suggestedMode={workModeHint?.suggestedMode}
             onChange={(v) => {
-              workModeHintTouchedRef.current = true;
               setForm && setForm((f) => ({ ...f, workMode: v }));
             }}
           />

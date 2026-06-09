@@ -6,10 +6,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDepartments } from '../../hooks/useTaskmasterQueries';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import BrandLogo from '../../components/brand/BrandLogo';
-import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 const RegisterPage = () => {
-  const departmentLoadingPhrase = useLoadingPhrase();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,7 +111,7 @@ const RegisterPage = () => {
               disabled={departmentsLoading}
               className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none disabled:opacity-60"
             >
-              <option value="">{departmentsLoading ? departmentLoadingPhrase : 'Select department'}</option>
+              <option value="">{departmentsLoading ? 'Loading…' : 'Select department'}</option>
               {departments.map((d) => (
                 <option key={d._id} value={d._id}>{d.name}</option>
               ))}

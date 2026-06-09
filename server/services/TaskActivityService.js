@@ -212,6 +212,23 @@ const recordStatusChange = async (taskId, actor, statusFrom, statusTo, session) 
   );
 };
 
+const recordRollback = async (taskId, actor, reason, statusFrom, session) => {
+  const body = normalizeMessageBody(reason);
+  if (!body) return;
+
+  await TaskActivity.create(
+    [{
+      taskId,
+      type: 'rollback',
+      body,
+      actorId: actor._id,
+      statusFrom: String(statusFrom || '').toLowerCase(),
+      statusTo: 'in-progress',
+    }],
+    { session }
+  );
+};
+
 const normalizeMessageBody = (body) => sanitizeName(String(body || '').trim());
 
 const seedCreatedAndAssignments = async (task, assignments, actor, session) => {
@@ -501,6 +518,7 @@ module.exports = {
   seedCreatedAndAssignments,
   recordAssignmentChanges,
   recordStatusChange,
+  recordRollback,
   recordFieldChange,
   recordFieldChangesFromTask,
   listActivity,

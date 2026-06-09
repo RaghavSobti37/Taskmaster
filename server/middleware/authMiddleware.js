@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
+const { loadAuthUser } = require('../utils/authUserLookup');
+const { idFilter } = require('../utils/mongoId');
 
 const authContext = (req, user) => ({
   tenantId: user.tenantId,
@@ -28,9 +30,9 @@ const touchLastOnline = (userId) => {
   const lastWrite = lastOnlineWrites.get(key) || 0;
   if (now - lastWrite < LAST_ONLINE_INTERVAL_MS) return;
   lastOnlineWrites.set(key, now);
-  User.findByIdAndUpdate(userId, {
+  User.updateOne(idFilter(userId), {
     $set: { lastOnline: new Date(), online: true },
-  }).catch(() => {});
+  }).setOptions({ bypassTenant: true }).catch(() => {});
 };
 
 const { getTokenFromRequest } = require('../utils/authCookie');
@@ -72,7 +74,7 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 
-    req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
+    req.user = await loadAuthUser(decoded.id);
     if (req.user && decoded.jti) {
       const { touchSession } = require('../utils/sessionRegistry');
       await touchSession(decoded.id, decoded.jti, req);

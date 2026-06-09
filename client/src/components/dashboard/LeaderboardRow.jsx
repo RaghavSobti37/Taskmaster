@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import LeaderboardRankBadge from './LeaderboardRankBadge';
+import LeaderboardLastWeekRank from './LeaderboardLastWeekRank';
 import { hasLeaderboardRecalcHint, LeaderboardRecalcHover } from './LeaderboardRecalcHint';
 
 const PODIUM_BORDER = {
@@ -8,7 +9,7 @@ const PODIUM_BORDER = {
   3: 'tm-leaderboard-podium--bronze',
 };
 
-const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId }) => {
+const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId, lastWeekLabel }) => {
   const showHint = hasLeaderboardRecalcHint(member);
   const podiumClass = PODIUM_BORDER[member.rank] || '';
   const xpToNext = useMemo(() => {
@@ -19,6 +20,36 @@ const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId }) => {
     return gap > 0 ? gap : null;
   }, [entries, currentUserId, member._id, member.rank, member.weeklyXp]);
 
+  const rowInner = (
+    <>
+      <LeaderboardRankBadge rank={member.rank} />
+      <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)]">
+        {member.avatar ? (
+          <img src={member.avatar} alt="" className="w-full h-full object-cover" />
+        ) : (
+          member.name?.[0] || '?'
+        )}
+      </div>
+      <div className="min-w-0 flex-1 flex items-center gap-2">
+        <span className="tm-data-primary text-xs truncate min-w-0">{member.name}</span>
+        <LeaderboardLastWeekRank rank={member.lastWeekRank} weekLabel={lastWeekLabel} />
+        <span className="ml-auto shrink-0 text-[10px] font-bold tabular-nums text-amber-500 whitespace-nowrap">
+          {member.weeklyXp || 0} XP
+          {showHint && member.weeklyXpDelta !== 0 && (
+            <span className="ml-1 text-[9px] text-sky-400 font-semibold">
+              ({member.weeklyXpDelta > 0 ? '+' : ''}{member.weeklyXpDelta})
+            </span>
+          )}
+          {xpToNext != null && (
+            <span className="ml-1.5 text-[9px] font-semibold text-[var(--color-text-muted)]">
+              +{xpToNext} to next rank
+            </span>
+          )}
+        </span>
+      </div>
+    </>
+  );
+
   return (
     <div className={`relative group focus-within:z-20 ${podiumClass}`}>
       <button
@@ -26,30 +57,7 @@ const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId }) => {
         onClick={() => onSelect?.(member)}
         className="tm-data-row tm-leaderboard-row w-full text-left flex items-center gap-2 min-w-0 cursor-pointer"
       >
-        <LeaderboardRankBadge rank={member.rank} />
-        <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)]">
-          {member.avatar ? (
-            <img src={member.avatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            member.name?.[0] || '?'
-          )}
-        </div>
-        <div className="min-w-0 flex-1 flex items-center gap-2">
-          <span className="tm-data-primary text-xs truncate min-w-0">{member.name}</span>
-          <span className="ml-auto shrink-0 text-[10px] font-bold tabular-nums text-amber-500 whitespace-nowrap">
-            {member.weeklyXp || 0} XP
-            {showHint && member.weeklyXpDelta !== 0 && (
-              <span className="ml-1 text-[9px] text-sky-400 font-semibold">
-                ({member.weeklyXpDelta > 0 ? '+' : ''}{member.weeklyXpDelta})
-              </span>
-            )}
-            {xpToNext != null && (
-              <span className="ml-1.5 text-[9px] font-semibold text-[var(--color-text-muted)]">
-                +{xpToNext} to next rank
-              </span>
-            )}
-          </span>
-        </div>
+        {rowInner}
       </button>
       <LeaderboardRecalcHover member={member} />
     </div>

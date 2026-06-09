@@ -6,6 +6,7 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import DataOverviewSection from '../../components/ui/DataOverviewSection';
 import PageToolbar from '../../components/ui/PageToolbar';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
+import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
 import DataHubFolderSidebar from '../../components/dataHub/DataHubFolderSidebar';
 import DataHubTscImport from '../../components/dataHub/DataHubTscImport';
 import {
@@ -74,8 +75,6 @@ function formatBytes(bytes) {
 export function DataHubContent() {
   const savedFilters = useMemo(() => loadDataHubFilters(), []);
   const [activeFolder, setActiveFolder] = useState(savedFilters.activeFolder);
-  const [tscSubFilter, setTscSubFilter] = useState(null);
-  const [tscSubFilterParams, setTscSubFilterParams] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
@@ -106,6 +105,7 @@ export function DataHubContent() {
   const { data: syncStatus } = useDataHubSyncStatus();
   const { data: backupStatus } = useDataHubBackups();
   const autoSyncInFlight = useRef(false);
+  const [userSyncActive, setUserSyncActive] = useState(false);
   const reconcileRef = useRef(reconcileMutation);
   reconcileRef.current = reconcileMutation;
 
@@ -122,10 +122,14 @@ export function DataHubContent() {
   }, []);
 
   useEffect(() => {
-    runIncrementalSync();
+    const lastSync = syncStatus?.lastSyncedAt;
+    const recentlySynced = lastSync && (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000);
+    if (!recentlySynced) {
+      runIncrementalSync();
+    }
     const id = setInterval(runIncrementalSync, AUTO_SYNC_MS);
     return () => clearInterval(id);
-  }, [runIncrementalSync]);
+  }, [runIncrementalSync, syncStatus?.lastSyncedAt]);
 
   const peopleParams = useMemo(() => ({
     folder: activeFolder,
@@ -133,9 +137,7 @@ export function DataHubContent() {
     page,
     limit: pageSize,
     emailStatus: emailStatusFilter !== 'all' ? emailStatusFilter : undefined,
-    ...(tscSubFilterParams?.campaign ? { campaign: tscSubFilterParams.campaign } : {}),
-    ...(tscSubFilterParams?.originSource ? { originSource: tscSubFilterParams.originSource } : {}),
-  }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter, tscSubFilterParams]);
+  }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter]);
 
   const { data: peopleData, isLoading } = useDataHubPeople(peopleParams);
   const { data: analytics } = useDataHubAnalytics(activeFolder, { enabled: showAnalytics });
@@ -175,15 +177,18 @@ export function DataHubContent() {
         },
       ];
     }
+    const analyticsCharts = buildDataHubOverviewCharts(analytics, activeFolder);
     const folderChart = Object.entries(folderCounts)
       .filter(([key, val]) => key !== 'all' && Number(val) > 0)
       .map(([label, value]) => ({ label: label.replace(/_/g, ' '), value: Number(value) }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-    const charts = folderChart.length
-      ? [{ id: 'folders', title: 'Folder mix', type: folderChart.length <= 6 ? 'donut' : 'bar', data: folderChart }]
-      : [];
-    return { stats: stats.slice(0, 4), charts };
+    const charts = analyticsCharts.length
+      ? analyticsCharts
+      : (folderChart.length
+        ? [{ id: 'folders', title: 'Folder mix', type: folderChart.length <= 6 ? 'donut' : 'bar', data: folderChart }]
+        : []);
+    return { stats: stats.slice(0, 4), charts, eagerCharts: analyticsCharts.length > 0 };
   }, [analytics, activeFolder, folderCounts, total]);
 
   const handleRefresh = () => {
@@ -191,10 +196,15 @@ export function DataHubContent() {
   };
 
   const handleReconcile = async () => {
+    setUserSyncActive(true);
     try {
       await reconcileMutation.mutateAsync({ full: false });
+      handleRefresh();
+      toast.success('Data Hub synced');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Sync failed');
+    } finally {
+      setUserSyncActive(false);
     }
   };
 
@@ -206,14 +216,19 @@ export function DataHubContent() {
       type: 'danger',
     });
     if (!ok) return;
+    setUserSyncActive(true);
     try {
       await reconcileMutation.mutateAsync({ full: true });
       handleRefresh();
       toast.success('Full re-merge completed');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Full sync failed');
+    } finally {
+      setUserSyncActive(false);
     }
   };
+
+  const showSyncing = userSyncActive && reconcileMutation.isPending;
 
   const handleProductionBackup = async () => {
     const lastLabel = latestBackup?.date
@@ -296,25 +311,19 @@ export function DataHubContent() {
           folders={folders}
           activeFolder={activeFolder}
           onSelect={(key) => { setActiveFolder(key); setPage(1); }}
-          tscSubFilter={tscSubFilter}
-          onTscSubFilter={(key, filter) => {
-            setTscSubFilter(key);
-            setTscSubFilterParams(filter || null);
-            setPage(1);
-          }}
         />
 
         <div className="flex-1 min-w-0 flex flex-col space-y-3 mb-8">
-          <DataOverviewSection stats={overview.stats} charts={overview.charts} />
+          <DataOverviewSection stats={overview.stats} charts={overview.charts} eagerCharts={overview.eagerCharts} />
 
           <PageToolbar
             actions={(
               <>
                 <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden lg:inline mr-1">
-                  {reconcileMutation.isPending
+                  {showSyncing
                     ? 'Syncing…'
                     : `Synced ${formatLastSynced(lastSyncedAt)}`}
-                  {latestBackup?.date && !reconcileMutation.isPending && (
+                  {latestBackup?.date && !showSyncing && (
                     <> · Backup {latestBackup.date}</>
                   )}
                 </span>

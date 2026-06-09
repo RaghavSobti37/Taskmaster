@@ -81,11 +81,12 @@ router.post('/templates', protect, validateBody(mailTemplateDraftBody), async (r
     if (!name || !content) {
       return res.status(400).json({ error: 'name and content are required' });
     }
-    const normalizedContent = normalizeOutboundEmailHtml(content);
+    const isRawHtml = format === 'rawHtml';
+    const normalizedContent = isRawHtml ? content : normalizeOutboundEmailHtml(content);
     const payload = {
       name: String(name).trim(),
       content: normalizedContent,
-      format: format === 'rawHtml' ? 'rawHtml' : 'visual',
+      format: isRawHtml ? 'rawHtml' : 'visual',
       subject: subject || '',
       status: 'draft',
       dummyValues: dummyValues && typeof dummyValues === 'object' ? dummyValues : {},
@@ -102,6 +103,20 @@ router.post('/templates', protect, validateBody(mailTemplateDraftBody), async (r
       if (!template) return res.status(404).json({ error: 'Template not found' });
       const editCheck = assertCanEditTemplate(template, req.user);
       if (!editCheck.ok) return res.status(403).json({ error: editCheck.error });
+
+      if (template.status === 'approved') {
+        const isRawHtml = (format !== undefined ? format === 'rawHtml' : template.format === 'rawHtml');
+        const normalizedContent = isRawHtml ? content : normalizeOutboundEmailHtml(content);
+        template.content = normalizedContent;
+        template.approvedContent = normalizedContent;
+        if (name) template.name = String(name).trim();
+        if (subject !== undefined) template.subject = subject;
+        if (format !== undefined) template.format = isRawHtml ? 'rawHtml' : 'visual';
+        if (dummyValues && typeof dummyValues === 'object') template.dummyValues = dummyValues;
+        await template.save();
+        return res.json(template);
+      }
+
       if (!['draft', 'rejected'].includes(template.status) && !isAdminUser(req.user)) {
         return res.status(400).json({ error: 'Only draft or rejected templates can be saved as draft' });
       }
@@ -138,8 +153,13 @@ router.put('/templates/:id', protect, validateBody(mailTemplateDraftBody), async
 
     const { name, content, format, subject, dummyValues } = req.body;
     if (name) template.name = String(name).trim();
-    if (content !== undefined) template.content = normalizeOutboundEmailHtml(content);
     if (format !== undefined) template.format = format === 'rawHtml' ? 'rawHtml' : 'visual';
+    if (content !== undefined) {
+      const isRawHtml = (format !== undefined ? format === 'rawHtml' : template.format === 'rawHtml');
+      const normalizedContent = isRawHtml ? content : normalizeOutboundEmailHtml(content);
+      template.content = normalizedContent;
+      if (template.status === 'approved') template.approvedContent = normalizedContent;
+    }
     if (subject !== undefined) template.subject = subject;
     if (dummyValues && typeof dummyValues === 'object') template.dummyValues = dummyValues;
     await template.save();
@@ -191,11 +211,15 @@ router.post('/templates/:id/approve', protect, async (req, res) => {
       return res.status(400).json({ error: 'Template is not pending approval' });
     }
     const { content, subject } = req.body;
+    const isRawHtml = template.format === 'rawHtml';
+    let approvedBody;
     if (content !== undefined) {
-      template.approvedContent = normalizeOutboundEmailHtml(content);
+      approvedBody = isRawHtml ? content : normalizeOutboundEmailHtml(content);
     } else {
-      template.approvedContent = normalizeOutboundEmailHtml(template.content);
+      approvedBody = isRawHtml ? template.content : normalizeOutboundEmailHtml(template.content);
     }
+    template.approvedContent = approvedBody;
+    template.content = approvedBody;
     if (subject !== undefined) template.subject = subject;
     template.status = 'approved';
     template.approvedAt = new Date();
@@ -486,9 +510,12 @@ router.post('/preview', protect, async (req, res) => {
       subject,
       includeSignature,
       removeUnsubscribe,
+      signature: signatureOverride,
       senderProfileId,
       sampleRecipient,
       variableMapping,
+      dummyValues,
+      format,
       theme,
     } = req.body;
 
@@ -496,8 +523,10 @@ router.post('/preview', protect, async (req, res) => {
       return res.status(400).json({ error: 'content is required' });
     }
 
-    const { buildFinalEmailHtml, personalizeEmailContent, wrapPreviewDocument } = require('../utils/buildFinalEmailHtml');
-    const { leadToRowData } = require('../utils/indexedTemplateVariables');
+    const {
+      buildFinalEmailHtml, personalizeEmailContent, wrapPreviewDocument, applyFullDocumentEmailExtras,
+    } = require('../utils/buildFinalEmailHtml');
+    const { leadToRowData, applyIndexedVariables } = require('../utils/indexedTemplateVariables');
 
     let profile = null;
     if (senderProfileId) {
@@ -512,32 +541,53 @@ router.post('/preview', protect, async (req, res) => {
       }
       : { email: 'preview@example.com', name: 'Preview', rowData: {} };
 
-    const { html: personalizedHtml } = personalizeEmailContent({
-      html: content,
-      subject: subject || '',
-      recipient,
-      leadDoc: null,
-      variableMapping: variableMapping || {},
-    });
+    let htmlIn = content;
+    let subjectIn = subject || '';
+
+    if (dummyValues && typeof dummyValues === 'object' && Object.keys(dummyValues).length > 0) {
+      htmlIn = applyIndexedVariables(htmlIn, dummyValues);
+      subjectIn = applyIndexedVariables(subjectIn, dummyValues);
+    } else {
+      const { html: personalizedHtml } = personalizeEmailContent({
+        html: htmlIn,
+        subject: subjectIn,
+        recipient,
+        leadDoc: null,
+        variableMapping: variableMapping || {},
+      });
+      htmlIn = personalizedHtml;
+      const { subject: personalizedSubject } = personalizeEmailContent({
+        html: '',
+        subject: subjectIn,
+        recipient,
+        variableMapping: variableMapping || {},
+      });
+      subjectIn = personalizedSubject;
+    }
+
+    const isRawHtml = format === 'rawHtml';
+    const isFullDocument = /<!DOCTYPE|<html[\s>]/i.test((htmlIn || '').trim());
+    const signatureText = (typeof signatureOverride === 'string' ? signatureOverride : '') || profile?.signature || '';
+    const previewExtras = {
+      includeSignature: includeSignature === true,
+      signature: signatureText,
+      removeUnsubscribe: removeUnsubscribe === true,
+    };
+
+    if (isFullDocument) {
+      const html = applyFullDocumentEmailExtras(htmlIn, previewExtras);
+      return res.json({ html, subject: subjectIn });
+    }
 
     const bodyHtml = await buildFinalEmailHtml({
-      html: personalizedHtml,
-      includeSignature: includeSignature === true,
-      signature: profile?.signature || '',
-      removeUnsubscribe: removeUnsubscribe === true,
+      html: htmlIn,
+      ...previewExtras,
       mode: 'preview',
-    });
-
-    const { subject: personalizedSubject } = personalizeEmailContent({
-      html: '',
-      subject: subject || '',
-      recipient,
-      variableMapping: variableMapping || {},
     });
 
     res.json({
       html: wrapPreviewDocument(bodyHtml, { theme: theme === 'dark' ? 'dark' : 'light' }),
-      subject: personalizedSubject,
+      subject: subjectIn,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -548,8 +598,8 @@ router.post('/test-campaign', protect, async (req, res) => {
   try {
     const {
       subject, content, testEmail, senderProfileId, includeSignature,
-      senderMode, senderProfileIds, removeUnsubscribe,
-      variableMapping, sampleRecipient,
+      senderMode, senderProfileIds, removeUnsubscribe, signature: signatureOverride,
+      resendFromEmail, variableMapping, sampleRecipient, format, attachments,
     } = req.body;
 
     if (!subject || !content || !testEmail) {
@@ -578,9 +628,13 @@ router.post('/test-campaign', protect, async (req, res) => {
     }
 
     if (mode === 'system_resend' || mode === 'system_smtp') {
+      const { displayNameForResendEmail, isVerifiedResendEmail } = require('../utils/resendFromEmails');
+      const fromEmail = (mode === 'system_resend' && isVerifiedResendEmail(resendFromEmail))
+        ? resendFromEmail.trim().toLowerCase()
+        : (process.env.SYSTEM_VERIFIED_FROM_EMAIL || process.env.SMTP_USER || 'onboarding@resend.dev').trim().toLowerCase();
       profile = profile || {
-        name: mode === 'system_resend' ? 'System Resend' : 'System SMTP',
-        email: process.env.SYSTEM_VERIFIED_FROM_EMAIL || process.env.SMTP_USER || 'onboarding@resend.dev',
+        name: mode === 'system_resend' ? displayNameForResendEmail(fromEmail) : 'System SMTP',
+        email: fromEmail,
         smtpHost: '',
         smtpPort: 587,
         smtpUser: '',
@@ -588,7 +642,8 @@ router.post('/test-campaign', protect, async (req, res) => {
       };
     }
 
-    const { buildFinalEmailHtml, personalizeEmailContent } = require('../utils/buildFinalEmailHtml');
+    const { buildFinalEmailHtml, personalizeEmailContent, applyFullDocumentEmailExtras } = require('../utils/buildFinalEmailHtml');
+    const { isFullHtmlDocument } = require('../utils/normalizeOutboundEmailHtml');
     const { leadToRowData } = require('../utils/indexedTemplateVariables');
     const recipient = sampleRecipient && typeof sampleRecipient === 'object'
       ? {
@@ -605,13 +660,19 @@ router.post('/test-campaign', protect, async (req, res) => {
       variableMapping: variableMapping || {},
     });
 
-    const html = await buildFinalEmailHtml({
-      html: personalizedHtml,
+    const signatureText = (typeof signatureOverride === 'string' ? signatureOverride : '') || profile?.signature || '';
+    const previewExtras = {
       includeSignature: includeSignature === true,
-      signature: profile?.signature || '',
+      signature: signatureText,
       removeUnsubscribe: removeUnsubscribe === true,
-      mode: 'test',
-    });
+    };
+    const isFullDoc = format === 'rawHtml' || isFullHtmlDocument(personalizedHtml);
+    const html = isFullDoc
+      ? applyFullDocumentEmailExtras(personalizedHtml, previewExtras)
+      : await buildFinalEmailHtml({ html: personalizedHtml, ...previewExtras, mode: 'test' });
+
+    const { loadCampaignAttachments } = require('../utils/campaignAttachments');
+    const attachmentRows = await loadCampaignAttachments(attachments || []);
 
     const mailService = require('../services/mailService');
     await mailService.sendTestEmail({
@@ -621,6 +682,7 @@ router.post('/test-campaign', protect, async (req, res) => {
       profile,
       senderMode: mode,
       skipPipeline: true,
+      attachmentRows,
     });
 
     res.json({ success: true, message: `Test email sent to ${testEmail}` });

@@ -57,7 +57,7 @@ const LoginPage = () => {
     setError('');
     markForceLogout();
     try {
-      await axios.post(apiPath('/api/auth/logout'), null, AXIOS_SKIP_TOAST);
+      await axios.post(apiPath('/api/auth/logout'), null, { ...AXIOS_SKIP_TOAST, withCredentials: true });
     } catch {
       // HttpOnly cookies are cleared server-side when logout succeeds
     }

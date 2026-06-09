@@ -49,6 +49,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | Check | Command | When |
 | --- | --- | --- |
 | Working tree exposure | `npm run audit:exposure` | Before every commit / CI |
+| Orphan modules | `npm run audit:deadcode` | Before push / push-and-document |
 | Git history needles | `npm run audit:history` | After history rewrite or fork import |
 | Env preflight | `npm run preflight` | Before `npm run dev` |
 
@@ -88,6 +89,9 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Artist Path** | Admin page at `/admin/artist-path` — HolySheet sync, card grid, profile slider with lazy Q&A + Data Hub cross-link; shared column map in `shared/artistPathSchema.cjs` |
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
+| **Email hub** | `/emails/*` replaces legacy AdminMail monolith; `CampaignWizardShell` + Zod validation; Resend from-address picker; orphan scan via `npm run audit:deadcode` |
+| **Project goals** | `ProjectGoal` / KRA models, metrics strip on project detail, snapshot history |
+| **Agent memory** | `.specify/memory/` — structured context for Cursor; see [`.specify/README.md`](.specify/README.md) for first-time setup |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
 | **Unified login (v1.0.7)** | Same-origin `/api` on every device (Vercel + Vite proxy); login gated on `/api/auth/me`; simplified JWT `protect`; `/socket.io` Vercel rewrite; local dev always uses Vite proxy |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |

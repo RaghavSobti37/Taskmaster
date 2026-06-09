@@ -10,17 +10,14 @@ const WorkModeToggle = ({
   value = 'office',
   onChange,
   disabled = false,
-  loading = false,
   compact = false,
   className = '',
-  suggestedMode = null,
 }) => {
   const isOffice = value === 'office';
   const label = MODE_LABELS[value] || MODE_LABELS.office;
-  const hintMatches = suggestedMode === value && !loading && !disabled;
 
   const handleClick = () => {
-    if (disabled || loading || !onChange) return;
+    if (disabled || !onChange) return;
     onChange(isOffice ? 'wfh' : 'office');
   };
 
@@ -31,12 +28,12 @@ const WorkModeToggle = ({
         role="switch"
         aria-checked={!isOffice}
         aria-label={`Work mode: ${label}. Tap to switch between Office and WFH.`}
-        disabled={disabled || loading}
+        disabled={disabled}
         onClick={handleClick}
         className={[
           'group inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-atomic)] border-2 px-3 transition-all',
           compact ? 'py-2 text-xs' : 'py-2.5 text-sm',
-          disabled || loading
+          disabled
             ? 'cursor-not-allowed opacity-50 border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]'
             : 'cursor-pointer hover:brightness-[1.02] active:scale-[0.99]',
           isOffice
@@ -45,20 +42,12 @@ const WorkModeToggle = ({
         ].join(' ')}
       >
         {isOffice ? (
-          <Building2
-            size={compact ? 14 : 16}
-            className={`shrink-0 transition-all duration-300 ${hintMatches ? 'scale-110 text-[var(--color-action-primary)]' : ''}`}
-            aria-hidden
-          />
+          <Building2 size={compact ? 14 : 16} className="shrink-0" aria-hidden />
         ) : (
-          <Home
-            size={compact ? 14 : 16}
-            className={`shrink-0 transition-all duration-300 ${hintMatches ? 'scale-110 text-[var(--color-pastel-violet-text)]' : ''}`}
-            aria-hidden
-          />
+          <Home size={compact ? 14 : 16} className="shrink-0" aria-hidden />
         )}
-        <span className="font-bold tracking-wide">{loading ? 'Detecting…' : label}</span>
-        {!loading && !disabled && (
+        <span className="font-bold tracking-wide">{label}</span>
+        {!disabled && (
           <ArrowLeftRight
             size={compact ? 13 : 14}
             className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
@@ -66,7 +55,7 @@ const WorkModeToggle = ({
           />
         )}
       </button>
-      {!disabled && !loading && (
+      {!disabled && (
         <p className="text-[10px] font-medium text-center text-[var(--color-text-muted)]">
           Tap to switch · Office ↔ WFH
         </p>

@@ -138,6 +138,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
   const isActive = matchPaths?.length ? isHubMatch : isExactMatch;
   const iconOnly = collapsed && !isMobile;
   const tone = iconTone || NAV_ICON_TONES[pathOnly] || NAV_ICON_TONES['/dashboard'];
+  const navTitle = iconOnly ? label : undefined;
 
   return (
     <NavLink
@@ -145,8 +146,8 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
       end={end}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      title={iconOnly ? label : undefined}
-      aria-label={iconOnly ? label : undefined}
+      title={navTitle}
+      aria-label={navTitle || label}
       aria-current={isActive ? 'page' : undefined}
       data-tour={tourId || undefined}
       className={`tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''}`}
@@ -167,9 +168,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
       </div>
       {(!collapsed || isMobile) && (
         <>
-          <span className="tm-sidebar-nav-label truncate">
-            {label}
-          </span>
+          <span className="tm-sidebar-nav-label min-w-0 flex-1 truncate">{label}</span>
           {displayBadge > 0 && (
             <CountBadge
               count={displayBadge}
@@ -256,7 +255,6 @@ const OutletSidebar = () => {
     notifications: { unread: 0, byCategory: {} },
     review: { pending: 0 },
   } } = useStatusCounts(shellQueriesEnabled);
-
   const isMobile = useIsMobile();
   const departmentSlug = getDepartmentSlug(user);
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare, CalendarDays, Video } from 'lucide-react';
@@ -9,16 +9,22 @@ import {
   ListPageLayout,
   Spinner,
 } from '../../components/ui';
-import { useCalendarEvents, useStatusCounts } from '../../hooks/useTaskmasterQueries';
+import { useCalendarEvents, fetchCalendarHolidays, useStatusCounts } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
 import { formatEventRangeLabel, eventOccursOnDay, normalizeMeetingLink } from '../../utils/calendarEventTime';
 
 const CalendarView = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { data: calendarEvents = [], isLoading: eventsLoading, refetch: refetchAllEvents } = useCalendarEvents();
+  const calendarRange = useMemo(() => ({
+    start: startOfWeek(startOfMonth(currentMonth)).toISOString(),
+    end: endOfWeek(endOfMonth(currentMonth)).toISOString(),
+  }), [currentMonth]);
+  const { data: calendarEvents = [], isLoading: eventsLoading, isFetching: eventsFetching, refetch: refetchAllEvents, googleSyncWarning } = useCalendarEvents(calendarRange);
   const { data: statusCounts } = useStatusCounts(!!user);
   const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
@@ -31,8 +37,40 @@ const CalendarView = () => {
   const [showTasks, setShowTasks] = useState(true);
   const [selectedDay, setSelectedDay] = useState(new Date());
 
-  const syncSpinning = eventsLoading && calendarEvents.length === 0;
+  const [syncing, setSyncing] = useState(false);
+  const syncSpinning = syncing || eventsFetching;
   const gridLoading = eventsLoading;
+
+  const loadHolidays = useCallback(async () => {
+    setHolidaysLoading(true);
+    try {
+      const mapped = await fetchCalendarHolidays(currentMonth.getFullYear());
+      setHolidays(mapped);
+    } catch (err) {
+      console.error('Error fetching holidays:', err);
+      setHolidays([]);
+    } finally {
+      setHolidaysLoading(false);
+    }
+  }, [currentMonth]);
+
+  const handleSyncCalendar = async () => {
+    setSyncing(true);
+    try {
+      const result = await refetchAllEvents();
+      await loadHolidays();
+      const warning = result.data?.googleSyncWarning ?? googleSyncWarning;
+      if (warning) {
+        toast.error(warning);
+      } else {
+        toast.success('Calendar synced');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Calendar sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleSeedMusicCalendar = async () => {
     if (!window.confirm(`Import Music Content Calendar birthdays for ${currentMonth.getFullYear()}?`)) return;
@@ -49,29 +87,8 @@ const CalendarView = () => {
   };
 
   useEffect(() => {
-    const fetchHolidays = async () => {
-      setHolidaysLoading(true);
-      try {
-        const currentYear = currentMonth.getFullYear();
-        const res = await axios.get(`/api/google/holidays?year=${currentYear}`);
-        const uniqueHolidays = Array.from(new Map(res.data.map(h => [h.id, h])).values());
-        setHolidays(uniqueHolidays.map(h => ({
-          _id: h.id,
-          title: h.summary,
-          dueDate: h.start.date || h.start.dateTime,
-          description: h.description || '',
-          type: 'holiday',
-          source: h.source || 'google_calendar'
-        })));
-      } catch (err) {
-        console.error('Error fetching holidays:', err);
-        setHolidays([]);
-      } finally {
-        setHolidaysLoading(false);
-      }
-    };
-    fetchHolidays();
-  }, [currentMonth]);
+    loadHolidays();
+  }, [loadHolidays]);
 
   const parseLocalDate = (dateStr) => {
     if (!dateStr) return null;
@@ -368,7 +385,7 @@ const CalendarView = () => {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()} disabled={eventsLoading}><RefreshCw size={14} className={syncSpinning ? 'animate-spin' : ''} /> Sync Calendar</Button>
+             <Button variant="secondary" size="sm" onClick={handleSyncCalendar} disabled={syncSpinning}><RefreshCw size={14} className={syncSpinning ? 'animate-spin' : ''} /> Sync Calendar</Button>
              {isAdminUser(user) && (
                <Button variant="secondary" size="sm" onClick={handleSeedMusicCalendar} disabled={seedingMusicCalendar} title="Import Music Content Calendar birthdays">
                  <Star size={14} className={seedingMusicCalendar ? 'animate-pulse' : ''} /> Birthdays

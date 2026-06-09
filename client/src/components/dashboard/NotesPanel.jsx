@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StickyNote, Plus, ArrowRight } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow, Button, LoadingPhrase } from '../ui';
+import { DashboardWidgetShell, DataListRow, Button, DataLoading } from '../ui';
 import RelativeTimestamp from '../ui/RelativeTimestamp';
 import { useUserNotes } from '../../hooks/useTaskmasterQueries';
 import { getAllNoteDrafts, isNoteDraftStale } from '../../utils/noteDraftStorage';
@@ -61,7 +61,7 @@ const NotesPanel = () => {
 
       {(isLoading || recent.length > 0) && (
         <div className={recent.length > 3 ? 'max-h-[min(40vh,240px)] overflow-y-auto custom-scrollbar' : ''}>
-          {isLoading && <LoadingPhrase className="text-[10px] text-[var(--color-text-muted)] px-4 py-2 !text-left" />}
+          {isLoading && <DataLoading className="!py-3" />}
           {recent.map((note) => {
             const projectName = note.projectId?.name || note.calendarEventId?.title || 'Personal';
             return (

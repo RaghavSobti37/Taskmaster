@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Mail, Phone, MapPin, Music } from 'lucide-react';
 import { FullScreenWorkspace, Badge, Card, Spinner } from '../ui';
 import { useArtistPathPerson } from '../../hooks/queries/artistPath';
@@ -21,9 +21,14 @@ function formatDate(d) {
 }
 
 export default function ArtistPathProfileSlider({ personId, onClose }) {
-  const { data, isLoading } = useArtistPathPerson(personId);
+  const { data, isLoading, isFetching } = useArtistPathPerson(personId);
   const [showDataHub, setShowDataHub] = useState(false);
   const [crmTab, setCrmTab] = useState(false);
+
+  useEffect(() => {
+    setCrmTab(false);
+    setShowDataHub(false);
+  }, [personId]);
   const { data: crmData, isLoading: crmLoading } = useDataHubPersonSection(crmTab ? personId : null, 'crm');
 
   const hub = data?.hub;
@@ -72,13 +77,13 @@ export default function ArtistPathProfileSlider({ personId, onClose }) {
           </button>
         )}
       >
-        {isLoading && (
+        {(isLoading || isFetching) && (
           <div className="flex justify-center py-12">
             <Spinner size="md" />
           </div>
         )}
 
-        {!isLoading && (
+        {!isLoading && !isFetching && (
           <>
             <ArtistPathSocialLinks answers={latestAnswers} />
 

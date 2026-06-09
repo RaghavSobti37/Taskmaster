@@ -118,6 +118,7 @@ export default function NoteComposer({ onSaved, className = '' }) {
     enabled: hydrated,
     elevated: true,
     fieldLabels: { title: 'Title', content: 'Content' },
+    excludeFields: ['content'],
   });
 
   const handleSave = async (saveMeta) => {

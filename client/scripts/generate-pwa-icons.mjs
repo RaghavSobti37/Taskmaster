@@ -26,6 +26,8 @@ const PNG_SIZES = {
   'apple-touch-icon-152.png': 152,
   'apple-touch-icon-167.png': 167,
   'apple-touch-icon.png': 180,
+  'icon-44.png': 44,
+  'icon-96.png': 96,
   'icon-192.png': 192,
   'mstile-150x150.png': 150,
   'icon-512.png': 512,
@@ -76,6 +78,8 @@ function buildManifestIcons() {
     manifestIconEntry('apple-touch-icon-152.png', 152),
     manifestIconEntry('apple-touch-icon-167.png', 167),
     manifestIconEntry('apple-touch-icon.png', 180),
+    manifestIconEntry('icon-44.png', 44),
+    manifestIconEntry('icon-96.png', 96),
     manifestIconEntry('icon-192.png', 192),
     manifestIconEntry('mstile-150x150.png', 150),
     manifestIconEntry('icon-512.png', 512),
@@ -138,10 +142,14 @@ fs.writeFileSync(path.join(iconsDir, 'catalog.json'), `${JSON.stringify(catalog,
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 manifest.theme_color = THEME_COLOR;
 manifest.icons = buildManifestIcons();
-const shortcutIcon = { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' };
+const shortcutIcons = [
+  { src: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
+  { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+];
 for (const shortcut of manifest.shortcuts || []) {
-  shortcut.icons = [shortcutIcon];
+  shortcut.icons = shortcutIcons;
 }
+manifest.id = '/?app=coreknot-harmonic-v2';
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log('Updated manifest.json icons');
 

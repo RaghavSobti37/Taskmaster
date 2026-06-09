@@ -31,6 +31,8 @@ const {
   sleep,
   extractId,
 } = require('./qaApiClient');
+const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
+const { sanitizeEmail } = require('../../utils/sanitizer');
 const { userMatchesQaExclusion, QA_EXCLUDED_EMAILS } = require('../../utils/qaExcludedUsers');
 
 const SERVER_ROOT = path.join(__dirname, '../..');
@@ -199,7 +201,7 @@ async function runReviewResubmitAfterRollback(def, ctx) {
   return { ...probeFail(def, `Re-submit should be in-review, got ${secondStatus || secondDone.status}`), artifacts: ctx.artifacts };
 }
 
-async function runReviewCreatorBypassBlocked(def, ctx) {
+async function runReviewCreatorCanComplete(def, ctx) {
   const pair = await distinctUsers();
   const project = await pickProject();
   if (!pair || !project) return skipProbeResult(def, 'Need users + project');
@@ -213,14 +215,14 @@ async function runReviewCreatorBypassBlocked(def, ctx) {
     user: pair.assigner,
     data: { status: 'done' },
   });
-  if (res.status === 400 || res.status === 403) {
-    return { ...probePass(def, 'Creator/assigner blocked from direct done on delegated task'), artifacts: ctx.artifacts };
-  }
   const status = res.data?.status || res.data?.data?.status;
   if (status === 'done') {
-    return { ...probeFail(def, 'Creator marked delegated task done without assignee/review'), artifacts: ctx.artifacts };
+    return { ...probePass(def, 'Creator completed delegated task without waiting for assignee'), artifacts: ctx.artifacts };
   }
-  return { ...probePass(def, `Delegated task not directly completable by assigner (${res.status})`), artifacts: ctx.artifacts };
+  if (res.status === 400 || res.status === 403) {
+    return { ...probeFail(def, `Creator blocked from completing delegated task (${res.status})`), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, `Expected done, got ${status || res.status}`), artifacts: ctx.artifacts };
 }
 
 async function resolvePlatformOwnerProbeUser() {
@@ -612,8 +614,9 @@ async function runTaskCompleteXp(def, ctx) {
 
 async function runLeadCapturedXp(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const email = `qa-lead-xp-${Date.now()}@example.com`;
-  const phone = `9${String(Date.now()).slice(-9)}`;
+  const email = qaUniqueEmail('qa-lead-xp');
+  const phone = qaUniquePhone('9');
+  await purgeQaIdentity({ email, phone });
   const res = await request(def, {
     method: 'POST',
     url: '/api/crm/leads',
@@ -807,19 +810,21 @@ async function runReviewApproveNotify(def, ctx) {
 // ── Suite 7: Data hub + CRM sync ──
 
 async function runLeadSyncsContact(def, ctx) {
-  const email = `qa-contact-sync-${Date.now()}@example.com`;
-  const phone = `8${String(Date.now()).slice(-9)}`;
+  const email = qaUniqueEmail('qa-contact-sync');
+  const phone = qaUniquePhone('8');
+  await purgeQaIdentity({ email, phone });
+  const normalizedEmail = sanitizeEmail(email);
   let lead;
   try {
     lead = await LeadService.createLead({
       name: 'QA Contact Sync',
-      email,
+      email: normalizedEmail,
       phone,
       source: 'QA Integration',
     });
     track(ctx, 'lead', lead._id);
 
-    const contact = await Contact.findOne({ email }).lean();
+    const contact = await Contact.findOne({ email: normalizedEmail }).setOptions({ bypassTenant: true }).lean();
     if (contact?._id) track(ctx, 'contact', contact._id);
     if (contact?.inCRM) {
       return { ...probePass(def, 'LeadService.syncToContactHub set Contact.inCRM'), artifacts: ctx.artifacts };
@@ -849,12 +854,14 @@ async function runMailOpenContactSync(def, ctx) {
 }
 
 async function runMultiinletFlagSet(def, ctx) {
-  const email = `qa-multi-${Date.now()}@example.com`;
-  const phone = `7${String(Date.now()).slice(-9)}`;
+  const email = qaUniqueEmail('qa-multi');
+  const phone = qaUniquePhone('7');
+  const normalizedEmail = sanitizeEmail(email);
+  await purgeQaIdentity({ email: normalizedEmail, phone });
   try {
-    await ContactService.mergeContact({ name: 'QA Multi', email, phone }, 'crm');
-    await ContactService.mergeContact({ name: 'QA Multi', email, phone, exlyOfferingTitle: 'QA Course' }, 'exly');
-    const contact = await Contact.findOne({ email }).lean();
+    await ContactService.mergeContact({ name: 'QA Multi', email: normalizedEmail, phone }, 'crm');
+    await ContactService.mergeContact({ name: 'QA Multi', email: normalizedEmail, phone, exlyOfferingTitle: 'QA Course' }, 'exly');
+    const contact = await Contact.findOne({ email: normalizedEmail }).setOptions({ bypassTenant: true }).lean();
     if (contact?._id) track(ctx, 'contact', contact._id);
     if (contact?.isMultiInlet && (contact.inletCount || 0) >= 2) {
       return { ...probePass(def, `isMultiInlet=true inletCount=${contact.inletCount}`), artifacts: ctx.artifacts };
@@ -1217,7 +1224,7 @@ async function runQaExcludedNoNotify(def, ctx) {
 const PLANNED_INTEGRATION_DEFS = [
   { id: 'sm-review-rollback', title: 'Assigner rolls back task from in-review', sev: 'high', category: 'business-logic' },
   { id: 'sm-review-resubmit', title: 'Assignee re-submit after rollback returns to in-review', sev: 'critical', category: 'business-logic' },
-  { id: 'sm-review-creator-bypass-blocked', title: 'Creator blocked from direct done on delegated task', sev: 'high', category: 'business-logic' },
+  { id: 'sm-review-creator-can-complete', title: 'Creator may complete delegated task without assignee', sev: 'high', category: 'business-logic' },
   { id: 'sm-review-platform-owner-rollback', title: 'Platform owner can rollback in-review task', sev: 'high', category: 'business-logic' },
   { id: 'sm-review-preserve-assigner', title: 'Assignee edit preserves original assigner', sev: 'high', category: 'business-logic' },
   { id: 'int-bug-platform-owner-assign', title: 'Bug report auto-assigns platform owner', sev: 'high', category: 'business-logic' },
@@ -1265,7 +1272,7 @@ const PLANNED_INTEGRATION_DEFS = [
 const PLANNED_RUNNERS = {
   'sm-review-rollback': runReviewRollback,
   'sm-review-resubmit': runReviewResubmitAfterRollback,
-  'sm-review-creator-bypass-blocked': runReviewCreatorBypassBlocked,
+  'sm-review-creator-can-complete': runReviewCreatorCanComplete,
   'sm-review-platform-owner-rollback': runReviewPlatformOwnerRollback,
   'sm-review-preserve-assigner': runReviewPreserveAssigner,
   'int-bug-platform-owner-assign': runBugPlatformOwnerAssign,

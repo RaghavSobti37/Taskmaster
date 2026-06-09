@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { Badge, TablePagination } from '../ui';
-import { User, Calendar, CheckCircle2, Circle } from 'lucide-react';
-import { format } from 'date-fns';
+import { User, Calendar, Circle } from 'lucide-react';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
-import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
+import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import { isPendingTask } from '../../utils/pendingTask';
 import MentionTitle from '../mentions/MentionTitle';
 import TaskMentionBadge from '../tasks/TaskMentionBadge';
 import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
+import CompletedTaskRollbackButton from '../tasks/CompletedTaskRollbackButton';
+import { useAuth } from '../../contexts/AuthContext';
 
 const COMPLETED_PAGE_SIZE_DEFAULT = 5;
 
@@ -90,6 +91,7 @@ const ProjectList = ({
   onCompletedPageSizeChange,
   serverCompletedPagination = false,
 }) => {
+  const { user } = useAuth();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
   const [localCompletedPage, setLocalCompletedPage] = useState(1);
@@ -122,12 +124,29 @@ const ProjectList = ({
     }
   };
 
-  const renderRow = (task, { completedSection = false } = {}) => {
+  const renderCompletedRow = (task) => (
+    <tr
+      key={task._id}
+      className="tm-task-row tm-task-row--completed border-b border-[var(--color-bg-border)]"
+    >
+      <td className="px-4 py-1.5 w-10">
+        <CompletedTaskRollbackButton task={task} user={user} onClick={onDetail} />
+      </td>
+      <td colSpan={5} className="px-4 py-1.5">
+        <MentionTitle
+          text={task.title}
+          className="text-sm text-[var(--color-text-muted)] line-through decoration-[var(--color-text-muted)]/50 truncate block"
+          truncate
+        />
+      </td>
+    </tr>
+  );
+
+  const renderRow = (task) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
       return <TaskTableRowSkeleton key={task._id} colSpan={6} className="!border-0" />;
     }
 
-    const isDone = task.status === 'done';
     const isInReview = task.status === 'in-review';
 
     return (
@@ -135,48 +154,35 @@ const ProjectList = ({
         key={task._id}
         data-highlight-id={task._id}
         onClick={(e) => { if (!e.target.closest('button')) onDetail(task); }}
-        className={`tm-task-row cursor-pointer transition-colors group border-b border-[var(--color-bg-border)] ${isDone ? 'tm-task-row--completed' : ''}`}
-        style={isDone ? getCompletedTaskRowStyle() : getTaskRowStyle(resolveTaskWorkspaceColor(task, workspaces, projects))}
+        className="tm-task-row cursor-pointer transition-colors group border-b border-[var(--color-bg-border)]"
+        style={getTaskRowStyle(resolveTaskWorkspaceColor(task, workspaces, projects))}
       >
         <td className="px-4 py-2">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (isDone) {
-                onDetail(task);
-                return;
-              }
               if (!isInReview) onCompleteRequest(task);
             }}
-            className={`transition-colors ${isDone ? 'text-[var(--color-pastel-slate-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)]'}`}
-            aria-label={isDone ? 'View completed task' : 'Mark complete'}
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)] transition-colors"
+            aria-label="Mark complete"
           >
-            {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+            <Circle size={20} />
           </button>
         </td>
         <td className="px-4 py-2 max-w-0 w-full">
           <div className="cursor-pointer min-w-0" onClick={() => onDetail(task)}>
-            <div className={`text-sm font-bold transition-all min-w-0 flex items-center gap-2 ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+            <div className="text-sm font-bold transition-all min-w-0 flex items-center gap-2 text-[var(--color-text-primary)]">
               <MentionTitle text={task.title} className="tm-task-title" truncate />
               <TaskMentionBadge task={task} />
             </div>
-            {isDone && task.completedAt && (
-              <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-xs normal-case font-medium tracking-normal italic">
-                Completed {format(new Date(task.completedAt), 'MMM d')}
-              </p>
-            )}
           </div>
         </td>
         <td className="px-4 py-2">
-          {completedSection ? (
-            <Badge variant="info">Done</Badge>
-          ) : (
-            <TaskStatusSwitcher task={task} onUpdate={onUpdate} onCompleteRequest={onCompleteRequest} />
-          )}
+          <TaskStatusSwitcher task={task} onUpdate={onUpdate} onCompleteRequest={onCompleteRequest} />
         </td>
         <td className="px-4 py-2">
-          <Badge variant={isDone ? 'info' : getPriorityBadgeVariant(task.priority)}>
+          <Badge variant={getPriorityBadgeVariant(task.priority)}>
             {task.priority}
           </Badge>
         </td>
@@ -239,9 +245,8 @@ const ProjectList = ({
             </h3>
           </div>
           <table className="w-full text-left border-collapse">
-            {TABLE_HEAD}
             <tbody>
-              {paginatedDoneTasks.map((task) => renderRow(task, { completedSection: true }))}
+              {paginatedDoneTasks.map(renderCompletedRow)}
             </tbody>
           </table>
           <TablePagination

@@ -10,6 +10,7 @@ const {
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,
+  WEEKLY_MISSIONS,
   RECALC_HISTORY_ACTIONS,
   normalizeGamificationAction,
   isTimeBasedXpAction,
@@ -20,7 +21,7 @@ const {
   MAX_XP_HOURS_PER_EVENT,
 } = require('../../shared/gamificationRules');
 const { MIN_COMPLETION_MINUTES, parseTimeSpentToHours } = require('../../shared/timeSpent');
-const { todayStart, todayEnd, getCurrentWeekRange, getDateKey } = require('../utils/attendanceDate');
+const { todayStart, todayEnd, getCurrentWeekRange, getPreviousWeekRange, getDateKey } = require('../utils/attendanceDate');
 
 /** One XP audit row per user per entity (prevents inflated totals from legacy duplicate awards). */
 const ENTITY_DEDUPE_FIELD = {
@@ -632,9 +633,11 @@ class GamificationService {
     return byUser;
   }
 
-  static async getWeeklyLeaderboard(limit) {
+  static async getWeeklyLeaderboard(limit, weekStartInput) {
     const config = await this.getConfigPlain();
-    const { weekStart, weekEnd, weekStartKey, weekEndKey } = getCurrentWeekRange();
+    const { weekStart, weekEnd, weekStartKey, weekEndKey } = weekStartInput
+      ? getCurrentWeekRange(weekStartInput)
+      : getCurrentWeekRange();
 
     const tenantFilter = getTenantScopedUserFilter();
     const tenantUsers = await User.find(tenantFilter).select('_id').lean();
@@ -670,6 +673,35 @@ class GamificationService {
       resolvedSum,
       configRates: configSnapshot(config),
     };
+  }
+
+  static async getLeaderboardTopEntries(limit = 5, weekStartInput) {
+    const weekly = await this.getWeeklyLeaderboard(null, weekStartInput);
+    const tenantFilter = getTenantScopedUserFilter();
+    const allUsers = await User.find(tenantFilter, 'name avatar exp level').sort({ name: 1 }).lean();
+    const weeklyXpByUserId = new Map(
+      weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    );
+
+    return allUsers
+      .map((user) => ({
+        ...user,
+        weeklyXp: weeklyXpByUserId.get(String(user._id)) || 0,
+      }))
+      .sort((a, b) => {
+        if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+        return (a.name || '').localeCompare(b.name || '');
+      })
+      .slice(0, limit)
+      .map((user, index) => ({
+        rank: index + 1,
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        weeklyXp: user.weeklyXp,
+        exp: user.exp,
+        level: user.level,
+      }));
   }
 
   static formatXpLogForApi(log, config, toSimpleMessage) {
@@ -1062,21 +1094,106 @@ class GamificationService {
       targetCount: m.targetCount,
       expReward: m.expReward,
       actionType: m.actionType,
+      cadence: 'daily',
       date: today,
     }));
 
     await DailyMission.insertMany(missions);
   }
 
+  static async generateWeeklyMissions(userId) {
+    const { weekStart, weekStartKey } = getCurrentWeekRange();
+
+    const existing = await DailyMission.countDocuments({
+      userId,
+      cadence: 'weekly',
+      weekKey: weekStartKey,
+    });
+
+    if (existing > 0) return;
+
+    let newsletterCount = 0;
+    try {
+      const NewsletterIssue = require('../models/NewsletterIssue');
+      const NewsletterArticle = require('../models/NewsletterArticle');
+      const { getCurrentWeekKey } = require('../utils/newsletterWeek');
+      const issue = await NewsletterIssue.findOne({ weekKey: getCurrentWeekKey() }).lean();
+      if (issue) {
+        newsletterCount = await NewsletterArticle.countDocuments({
+          issueId: issue._id,
+          addedBy: userId,
+        });
+      }
+    } catch (err) {
+      logger.warn('Gamification', 'Newsletter backfill skipped', { error: err.message });
+    }
+
+    const missions = WEEKLY_MISSIONS.map((m) => {
+      const initialCount = m.actionType === 'NEWSLETTER_ARTICLE'
+        ? Math.min(newsletterCount, m.targetCount)
+        : 0;
+      return {
+        userId,
+        title: m.title,
+        description: m.description,
+        targetCount: m.targetCount,
+        expReward: m.expReward,
+        actionType: m.actionType,
+        cadence: 'weekly',
+        weekKey: weekStartKey,
+        date: weekStart,
+        currentCount: initialCount,
+        completed: initialCount >= m.targetCount,
+      };
+    });
+
+    await DailyMission.insertMany(missions);
+
+    for (const mission of missions) {
+      if (mission.completed) {
+        const saved = await DailyMission.findOne({
+          userId,
+          cadence: 'weekly',
+          weekKey: weekStartKey,
+          actionType: mission.actionType,
+        });
+        if (saved) {
+          await this.awardActionXp(
+            userId,
+            'MISSION_COMPLETE',
+            {
+              missionId: saved._id,
+              title: saved.title,
+              expReward: saved.expReward,
+            },
+            { entityKey: 'missionId', entityId: saved._id }
+          );
+        }
+      }
+    }
+  }
+
   static async progressMission(userId, actionType, count = 1) {
     const today = startOfToday();
+    const { weekStartKey } = getCurrentWeekRange();
 
-    const missions = await DailyMission.find({
+    const dailyMissions = await DailyMission.find({
       userId,
       actionType,
       completed: false,
+      cadence: { $ne: 'weekly' },
       date: { $gte: today },
     });
+
+    const weeklyMissions = await DailyMission.find({
+      userId,
+      actionType,
+      completed: false,
+      cadence: 'weekly',
+      weekKey: weekStartKey,
+    });
+
+    const missions = [...dailyMissions, ...weeklyMissions];
 
     for (const mission of missions) {
       mission.currentCount += count;

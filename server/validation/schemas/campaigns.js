@@ -10,7 +10,7 @@ const resendCampaignBody = z.record(z.unknown()).refine(
     if (key === 'includeSignature') {
       return typeof value === 'boolean' || value === undefined;
     }
-    if (key === 'senderMode' || key === 'systemProvider' || key === 'senderProfileId') {
+    if (key === 'senderMode' || key === 'systemProvider' || key === 'senderProfileId' || key === 'resendFromEmail') {
       return value === undefined || typeof value === 'string';
     }
     return isSafePrimitive(value);
@@ -32,6 +32,7 @@ const resendFilteredCampaignBody = z.record(z.unknown()).refine(
       || key === 'titleOverride'
       || key === 'senderMode'
       || key === 'senderProfileId'
+      || key === 'resendFromEmail'
       || key === 'systemProvider'
     ) {
       return value === undefined || typeof value === 'string';

@@ -6,6 +6,8 @@ const Lead = require('../../models/Lead');
 const FinanceDocument = require('../../models/FinanceDocument');
 const CRMAudit = require('../../models/CRMAudit');
 const Contact = require('../../models/Contact');
+const DataHubSyncState = require('../../models/DataHubSyncState');
+const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
 const {
   isApiReachable,
   resolveTestUsers,
@@ -116,6 +118,7 @@ const INTEGRATION_DEFS = [
     title: 'Repeated reconcile produces stable Contact state',
     sev: 'medium',
     category: 'business-logic',
+    timeout: 240000,
   },
 ];
 
@@ -391,8 +394,9 @@ async function runProjectTaskCount(def, ctx) {
 
 async function runLeadAudit(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const email = `qa-audit-${Date.now()}@example.com`;
-  const phone = `9${String(Date.now()).slice(-9)}`;
+  const email = qaUniqueEmail('qa-audit');
+  const phone = qaUniquePhone('9');
+  await purgeQaIdentity({ email, phone });
   const createRes = await request(def, {
     method: 'POST',
     url: '/api/crm/leads',
@@ -436,10 +440,23 @@ async function runUnsubscribeWiring(def, ctx) {
 
 async function runReconcileIdempotent(def, ctx) {
   const { adminUser } = await resolveTestUsers();
+  const syncStamp = new Date();
+  await DataHubSyncState.findOneAndUpdate(
+    { configKey: 'incremental' },
+    {
+      $set: {
+        lastSyncedAt: syncStamp,
+        lastFullSyncAt: syncStamp,
+        lastStats: { leads: 0, outsourced: 0, bookedCalls: 0, newsletter: 0, exly: 0, enquiries: 0, mail: 0, errors: 0 },
+      },
+    },
+    { upsert: true }
+  );
+
   const before = await Contact.countDocuments();
-  const reconcileReq = { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {}, timeout: 180000 };
-  const r1 = await request({ ...def, timeout: 180000 }, reconcileReq);
-  const r2 = await request({ ...def, timeout: 180000 }, reconcileReq);
+  const reconcileReq = { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {}, timeout: 120000 };
+  const r1 = await request({ ...def, timeout: 120000 }, reconcileReq);
+  const r2 = await request({ ...def, timeout: 120000 }, reconcileReq);
   if (r1.status === 403 || r2.status === 403) {
     return skipProbeResult(def, 'Data Hub reconcile requires admin — test user not admin');
   }

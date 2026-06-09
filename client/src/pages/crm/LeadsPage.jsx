@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Trash2, CheckCircle2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History, UserPlus
+  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
@@ -710,39 +710,6 @@ export default function LeadsPage() {
               Fix highlighted fields before saving.
             </div>
           )}
-          {/* Funnel Mapping */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
-              <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
-                <Layers size={14} /> Overflow.io Conversion Funnel
-              </h3>
-              <Badge variant="mint" className="font-mono text-[9px]">overflow.io map</Badge>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[var(--color-bg-secondary)]/30 p-4 rounded-2xl border border-[var(--color-bg-border)]">
-              {[
-                { stage: '1. Discovery', desc: `Captured via ${selectedLead?.source || 'Direct'}`, status: 'Passed', color: 'border-blue-500 text-blue-400 bg-blue-500/10' },
-                { stage: '2. Enrichment', desc: `Quality Scored: Level ${editLeadData.leadQuality}`, status: 'Passed', color: 'border-amber-500 text-amber-400 bg-amber-500/10' },
-                { stage: '3. Engagement', desc: `Call Touchpoint: ${editLeadData.callStatus}`, status: editLeadData.callStatus && editLeadData.callStatus !== 'Pending' ? 'Passed' : 'Active', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
-                { stage: '4. Conversion', desc: 'Member Onboarded & Subscribed', status: editLeadData.leadStatus === 'Converted' ? 'Passed' : 'Pending', color: editLeadData.leadStatus === 'Converted' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-500 bg-slate-900/40' },
-              ].map((step, index) => (
-                <div key={index} className={`p-3 rounded-xl border relative flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer ${step.color}`}>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase">{step.stage}</span>
-                      <span className="text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/40 font-mono">{step.status}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-300 font-medium leading-tight">{step.desc}</p>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-current/20 flex items-center justify-between text-[9px] font-mono opacity-80">
-                    <span>Pulse {index + 1}</span>
-                    <GitCommit size={12} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
           {/* Lead Stages & Interaction Updates */}
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
@@ -790,20 +757,6 @@ export default function LeadsPage() {
                   {team.map(rep => (
                     <option key={rep._id} value={rep._id}>{rep.name}</option>
                   ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Conversion Plan / Status</label>
-                <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
-                  value={editLeadData.planOption || ''}
-                  onChange={e => setEditLeadData({ ...editLeadData, planOption: e.target.value, ...(e.target.value ? { leadStatus: 'Converted' } : {}) })}
-                >
-                  <option value="">Select Plan (None)</option>
-                  <option value="One-Time">One-Time Payment</option>
-                  <option value="3 Mo">3 Months Plan</option>
-                  <option value="6 Mo">6 Months Plan</option>
-                  <option value="9 Mo">9 Months Plan</option>
                 </select>
               </div>
             </div>

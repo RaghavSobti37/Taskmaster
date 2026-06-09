@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Person = require('../models/Person');
 const PersonIdentifier = require('../models/PersonIdentifier');
 const PersonCommunicationProfile = require('../models/PersonCommunicationProfile');
@@ -29,6 +30,19 @@ function isLikelyEssayName(value) {
   return t.length > 55 || /^I (AM|WAS|'M)\b/i.test(t) || /^I WANT TO\b/i.test(t);
 }
 
+function responseCompleteness(answers = {}) {
+  return Object.values(answers || {}).filter((v) => v != null && String(v).trim() !== '').length;
+}
+
+function pickBestArtistPathResponse(responses = []) {
+  if (!responses.length) return null;
+  return [...responses].sort((a, b) => {
+    const completenessDelta = responseCompleteness(b.answers) - responseCompleteness(a.answers);
+    if (completenessDelta !== 0) return completenessDelta;
+    return new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0);
+  })[0];
+}
+
 function resolveHubDisplayName(person, latestArtistPath) {
   const fromAnswers = latestArtistPath?.answers?.name;
   if (fromAnswers && !isLikelyEssayName(fromAnswers)) return fromAnswers;
@@ -42,16 +56,44 @@ class PersonHubBuilder {
     const person = await Person.findById(personId).lean();
     if (!person) return null;
 
-    const [identifiers, comms, links, artistPathCount, latestArtistPath] = await Promise.all([
+    const [identifiers, comms, links, artistPathResponses] = await Promise.all([
       PersonIdentifier.find({ personId }).lean(),
       PersonCommunicationProfile.findOne({ personId }).lean(),
       PersonSourceLink.find({ personId }).lean(),
-      ArtistPathResponse.countDocuments({ personId }),
-      ArtistPathResponse.findOne({ personId }).sort({ submittedAt: -1 }).lean(),
+      ArtistPathResponse.find({ personId }).setOptions({ bypassTenant: true }).lean(),
     ]);
 
-    const email = identifiers.find((i) => i.type === 'email')?.valueNormalized || '';
-    const phone = identifiers.find((i) => i.type === 'phone')?.valueNormalized || '';
+    const artistPathCount = artistPathResponses.length;
+    const latestArtistPath = pickBestArtistPathResponse(artistPathResponses);
+
+    const identifierEmails = identifiers
+      .filter((i) => i.type === 'email')
+      .map((i) => i.valueNormalized)
+      .filter(Boolean);
+    const responseEmail = latestArtistPath?.answers?.email?.toLowerCase();
+    let email = (responseEmail && identifierEmails.includes(responseEmail) ? responseEmail : null)
+      || identifierEmails[0]
+      || responseEmail
+      || '';
+    const identifierPhones = identifiers
+      .filter((i) => i.type === 'phone')
+      .map((i) => i.valueNormalized)
+      .filter(Boolean);
+    const responsePhone = latestArtistPath?.answers?.phone;
+    let phone = (responsePhone && identifierPhones.includes(responsePhone) ? responsePhone : null)
+      || identifierPhones[0]
+      || responsePhone
+      || '';
+
+    if (email) {
+      const emailOwner = await PersonHubView.findOne({ email, personId: { $ne: personId } })
+        .setOptions({ bypassTenant: true })
+        .select('personId')
+        .lean();
+      if (emailOwner) {
+        email = identifierEmails.find((e) => e !== responseEmail) || identifierEmails[0] || email;
+      }
+    }
     const inletKeys = [...new Set(links.map((l) => l.sourceType))];
     const flags = {};
     for (const key of inletKeys) {
@@ -67,8 +109,6 @@ class PersonHubBuilder {
     const hubDoc = {
       personId,
       name: resolveHubDisplayName(person, latestArtistPath),
-      email: email || undefined,
-      phone: phone || undefined,
       city: person.city || latestArtistPath?.answers?.city,
       inletKeys,
       inletCount: inletKeys.length,
@@ -76,19 +116,30 @@ class PersonHubBuilder {
       emailStatus: comms?.emailStatus || 'Pending',
       unsubscribed: comms?.unsubscribed || false,
       lastActivityAt,
-      inArtistPath: inletKeys.includes('artist_path') || artistPathCount > 0,
+      inArtistPath: artistPathCount > 0,
       latestArtistType: latestArtistPath?.answers?.stageName
         || latestArtistPath?.answers?.artistType
         || undefined,
       artistPathResponseCount: artistPathCount,
       ...flags,
     };
+    if (email) hubDoc.email = email;
+    if (phone) hubDoc.phone = phone;
 
-    return PersonHubView.findOneAndUpdate(
-      { personId },
-      { $set: hubDoc },
-      { upsert: true, new: true }
+    const payload = { ...hubDoc, updatedAt: new Date() };
+    if (!email) delete payload.email;
+    if (!phone) delete payload.phone;
+
+    await PersonHubView.collection.updateOne(
+      { personId: new mongoose.Types.ObjectId(personId) },
+      {
+        $set: payload,
+        $setOnInsert: { createdAt: new Date() },
+      },
+      { upsert: true }
     );
+
+    return PersonHubView.findOne({ personId }).setOptions({ bypassTenant: true });
   }
 
   async rebuildAll({ onProgress, batchSize = 100 } = {}) {

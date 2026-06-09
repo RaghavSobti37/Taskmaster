@@ -9,7 +9,7 @@ const {
   request,
   QA_API_BASE,
 } = require('./qaApiClient');
-const { purgeQaIdentity } = require('./qaTestData');
+const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
 
 /** Suite 4 + Suite 7 — dedicated HTTP probes (not tied to page filename). */
 const PROBE_DEFS = [
@@ -469,11 +469,13 @@ const PROBE_DEFS = [
     suite: 's4',
     async run() {
       const { adminUser } = await resolveTestUsers();
-      const phone = `98${String(Date.now()).slice(-8)}`;
-      const emailA = `qa-dup-a-${Date.now()}@example.com`;
-      const emailB = `qa-dup-b-${Date.now()}@example.com`;
+      const phone = qaUniquePhone('9');
+      const emailA = qaUniqueEmail('qa-dup-a');
+      const emailB = qaUniqueEmail('qa-dup-b');
       const payload = { name: 'QA Dup A', phone, email: emailA };
       try {
+        await purgeQaIdentity({ phone, email: emailA });
+        await purgeQaIdentity({ email: emailB });
         const r1 = await request(this, {
           method: 'POST',
           url: '/api/crm/leads',

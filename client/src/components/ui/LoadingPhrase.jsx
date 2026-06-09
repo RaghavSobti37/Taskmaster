@@ -1,13 +1,11 @@
 import React from 'react';
-import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
-/** Visible loading copy — never generic "Loading..."; phrase held ≥5s via loadingPhraseSession */
-export function LoadingPhrase({ phrase: phraseProp, className = '' }) {
-  const random = useLoadingPhrase();
-  const text = phraseProp ?? random;
+/** Displays one loading phrase (caller picks via useLoadingPhrase — full-screen / heavy loaders only). */
+export function LoadingPhrase({ phrase, className = '' }) {
+  if (!phrase) return null;
   return (
     <p className={`text-sm font-medium text-[var(--color-text-secondary)] text-center max-w-md px-4 ${className}`}>
-      {text}
+      {phrase}
     </p>
   );
 }

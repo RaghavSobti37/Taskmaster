@@ -38,6 +38,7 @@ export const useCreateNewsletterArticle = () => {
     mutationFn: (payload) => axios.post('/api/newsletter/articles', payload).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['gamification', 'missions'] });
     },
   });
 };

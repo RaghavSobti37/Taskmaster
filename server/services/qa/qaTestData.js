@@ -9,9 +9,49 @@ const Project = require('../../models/Project');
 const FinanceDocument = require('../../models/FinanceDocument');
 const Notification = require('../../models/Notification');
 const XPAuditLog = require('../../models/XPAuditLog');
+const Person = require('../../models/Person');
+const PersonIdentifier = require('../../models/PersonIdentifier');
+const PersonCommunicationProfile = require('../../models/PersonCommunicationProfile');
+const PersonSourceLink = require('../../models/PersonSourceLink');
+const { normalizePhone, sanitizeEmail } = require('../../utils/sanitizer');
 const { isRootAdminEmail } = require('../../../shared/rootAdminEmails');
+const crypto = require('crypto');
 
 const BYPASS = { bypassTenant: true };
+
+/** Unique 10-digit Indian mobile for QA probes (avoids Date.now() collisions). */
+function qaUniquePhone(prefixDigit = '9') {
+  const suffix = crypto.randomInt(100000000, 999999999);
+  return `${prefixDigit}${suffix}`.slice(0, 10);
+}
+
+function qaUniqueEmail(label = 'qa') {
+  return `${label}-${Date.now()}-${crypto.randomInt(1000, 9999)}@example.com`;
+}
+
+async function purgePersonGoldenRecords({ email, phone } = {}) {
+  const normalizedEmail = email ? sanitizeEmail(email) || String(email).trim().toLowerCase() : null;
+  const normalizedPhone = phone ? normalizePhone(phone) || phone : null;
+  const idClauses = [];
+  if (normalizedEmail) idClauses.push({ type: 'email', valueNormalized: normalizedEmail });
+  if (normalizedPhone) idClauses.push({ type: 'phone', valueNormalized: normalizedPhone });
+  if (!idClauses.length) return;
+
+  const identifierRows = await PersonIdentifier.find({ $or: idClauses })
+    .setOptions(BYPASS)
+    .select('personId')
+    .lean();
+  const personIds = [...new Set(identifierRows.map((row) => String(row.personId)).filter(Boolean))];
+  if (!personIds.length) return;
+
+  const objectIds = personIds.map((id) => id);
+  await Promise.all([
+    PersonCommunicationProfile.deleteMany({ personId: { $in: objectIds } }).setOptions(BYPASS),
+    PersonSourceLink.deleteMany({ personId: { $in: objectIds } }).setOptions(BYPASS),
+    PersonIdentifier.deleteMany({ personId: { $in: objectIds } }).setOptions(BYPASS),
+    Person.deleteMany({ _id: { $in: objectIds } }).setOptions(BYPASS),
+  ]);
+}
 
 /** Emails created by automated QA probes (qa-*@example.com / qa-*@test.com). */
 const QA_EMAIL_PATTERN = /^qa-[a-z0-9-]+@(example\.com|test\.com)$/i;
@@ -291,10 +331,14 @@ async function purgeQaTestData() {
 }
 
 async function purgeQaIdentity({ email, phone } = {}) {
+  const normalizedEmail = email ? sanitizeEmail(email) || String(email).trim().toLowerCase() : null;
+  const normalizedPhone = phone ? normalizePhone(phone) || phone : null;
   const clauses = [];
-  if (email) clauses.push({ email: String(email).trim().toLowerCase() });
-  if (phone) clauses.push({ phone });
+  if (normalizedEmail) clauses.push({ email: normalizedEmail });
+  if (normalizedPhone) clauses.push({ phone: normalizedPhone });
   if (!clauses.length) return;
+
+  await purgePersonGoldenRecords({ email: normalizedEmail, phone: normalizedPhone });
 
   const match = clauses.length === 1 ? clauses[0] : { $or: clauses };
   const leads = await Lead.find(match).setOptions(BYPASS).select('_id').lean();
@@ -338,6 +382,10 @@ async function deleteTrackedArtifact(artifact) {
           ? Contact.deleteMany(contactMatch).setOptions(BYPASS)
           : Promise.resolve(),
         Lead.deleteOne({ _id: id }).setOptions(BYPASS),
+        purgePersonGoldenRecords({
+          email: lead?.email,
+          phone: lead?.phone,
+        }),
       ]);
       return { ok: true };
     }
@@ -424,6 +472,8 @@ module.exports = {
   purgeQaGamificationData,
   purgeQaTestData,
   purgeQaIdentity,
+  qaUniquePhone,
+  qaUniqueEmail,
   deleteTrackedArtifact,
   purgeQaRunArtifacts,
   countQaResiduals,

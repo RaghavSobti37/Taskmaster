@@ -25,7 +25,7 @@ class LeadService {
     await backgroundQueue.queueCsvBackup();
     await followupCache.cacheFollowup(newLead).catch(() => {});
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: newLead._id, action: 'create' });
-    await this.syncToContactHub(newLead).catch(() => {});
+    await this.syncToContactHub(newLead);
 
     return newLead;
   }

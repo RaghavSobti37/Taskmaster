@@ -7,7 +7,7 @@ const { makeCheck, readText, readRepoText, listFiles, SERVER_ROOT, REPO_ROOT } =
 async function runSuite3StaticChecks() {
   const checks = [];
   const leadModel = await readText('models/Lead.js');
-  const contactModel = await readText('models/Contact.js');
+  const contactModel = await readText('models/PersonIndex.js');
   const taskModel = await readText('models/Task.js');
   const clientDate = await readRepoText('client/src/utils/dateValidation.js');
   const crmCtrl = await readText('controllers/crmController.js');
@@ -23,6 +23,7 @@ async function runSuite3StaticChecks() {
   const financeRoutes = await readText('routes/financeRoutes.js');
   const dataHubRoutes = await readText('routes/dataHubRoutes.js');
   const dataHubSvc = await readText('services/DataHubService.js');
+  const artistPathHubSvc = await readText('services/artistPathHubService.js');
 
   checks.push(
     makeCheck(
@@ -49,7 +50,7 @@ async function runSuite3StaticChecks() {
       'Contact dedup index exists',
       contactModel && /\.index\(\{\s*email/.test(contactModel) ? 'pass' : 'fail',
       'Contact schema indexes email for reconcile dedup',
-      'models/Contact.js',
+      'models/PersonIndex.js',
       'high'
     ),
     makeCheck(
@@ -217,7 +218,8 @@ async function runSuite3StaticChecks() {
     if (content.includes('bypassTenant')) bypassInRoutes.push(path.basename(file));
   }
   const unexpectedBypass = bypassInRoutes.filter((f) => !BYPASS_ROUTE_ALLOWLIST.has(f));
-  const svcHasBypass = dataHubSvc && dataHubSvc.includes('bypassTenant');
+  const svcHasBypass = (dataHubSvc && dataHubSvc.includes('bypassTenant'))
+    || (artistPathHubSvc && artistPathHubSvc.includes('bypassTenant'));
   checks.push(
     makeCheck(
       'auth-datahub-bypass-scoped',

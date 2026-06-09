@@ -1,6 +1,6 @@
 const juice = require('juice');
 const logger = require('./logger');
-const { normalizeOutboundEmailHtml, wrapEmailShell } = require('./normalizeOutboundEmailHtml');
+const { normalizeOutboundEmailHtml, wrapEmailShell, isFullHtmlDocument } = require('./normalizeOutboundEmailHtml');
 const { appendSignatureIfMissing } = require('./emailSignature');
 const { stripUnsubscribe } = require('./emailContentUtils');
 const { prepareCampaignHTML } = require('./emailTracker');
@@ -80,6 +80,18 @@ const buildFinalEmailHtml = async ({
 }) => {
   let out = html || '';
 
+  if (isFullHtmlDocument(out)) {
+    out = applyFullDocumentEmailExtras(out, { includeSignature, signature, removeUnsubscribe });
+    if (mode === 'live' && campaignId && leadEmail) {
+      const baseUrl = trackingBaseUrl || resolveTrackingApiBaseUrl();
+      const { processedHtml } = await prepareCampaignHTML(out, campaignId, leadEmail, baseUrl, {
+        skipAutoFooter: true,
+      });
+      out = processedHtml || out;
+    }
+    return out;
+  }
+
   if (removeUnsubscribe) {
     out = stripUnsubscribe(out);
   }
@@ -95,12 +107,7 @@ const buildFinalEmailHtml = async ({
   }
 
   if (!removeUnsubscribe && !out.includes('/unsubscribe')) {
-    const unsubscribeUrl = buildStaticUnsubscribePageUrl();
-    const unsubscribeFooter = `<div style="margin:16px 0 0 0;padding:0;border-top:1px solid #eee;font-size:12px;color:#777;text-align:center;font-family:sans-serif;">
-<p style="margin:4px 0;padding:0;">You are receiving this email because you opted in at our website or events.</p>
-<p style="margin:4px 0;padding:0;">If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color:#ef4444;text-decoration:underline;">unsubscribe here</a>.</p>
-</div>`;
-    out = `${out}${unsubscribeFooter}`;
+    out = `${out}${buildUnsubscribeFooter()}`;
   }
 
   if (mode === 'live' && campaignId && leadEmail) {
@@ -116,12 +123,69 @@ const buildFinalEmailHtml = async ({
   return wrapEmailShell(out);
 };
 
+const buildUnsubscribeFooter = () => {
+  const unsubscribeUrl = buildStaticUnsubscribePageUrl();
+  return `<div style="margin:16px 0 0 0;padding:0;border-top:1px solid #eee;font-size:12px;color:#777;text-align:center;font-family:sans-serif;">
+<p style="margin:4px 0;padding:0;">You are receiving this email because you opted in at our website or events.</p>
+<p style="margin:4px 0;padding:0;">If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color:#ef4444;text-decoration:underline;">unsubscribe here</a>.</p>
+</div>`;
+};
+
+const injectBeforeBodyClose = (html, snippet) => {
+  if (!snippet) return html;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${snippet}</body>`);
+  }
+  return `${html}${snippet}`;
+};
+
+/** Apply signature + unsubscribe to a full HTML document without stripping head/styles. */
+const applyFullDocumentEmailExtras = (html, {
+  includeSignature = false,
+  signature = '',
+  removeUnsubscribe = false,
+} = {}) => {
+  let out = html || '';
+  if (removeUnsubscribe) {
+    out = stripUnsubscribe(out);
+  }
+  const extras = [];
+  if (includeSignature && String(signature).trim()) {
+    extras.push(normalizeOutboundEmailHtml(signature));
+  }
+  if (!removeUnsubscribe && !out.includes('/unsubscribe')) {
+    extras.push(buildUnsubscribeFooter());
+  }
+  if (extras.length) {
+    out = injectBeforeBodyClose(out, extras.join(''));
+  }
+  return out;
+};
+
+const QUILL_INDENT_PREVIEW_CSS = `
+.ql-indent-1:not(li){padding-left:3em!important;}
+.ql-indent-2:not(li){padding-left:6em!important;}
+.ql-indent-3:not(li){padding-left:9em!important;}
+.ql-indent-4:not(li){padding-left:12em!important;}
+.ql-indent-5:not(li){padding-left:15em!important;}
+.ql-indent-6:not(li){padding-left:18em!important;}
+.ql-indent-7:not(li){padding-left:21em!important;}
+.ql-indent-8:not(li){padding-left:24em!important;}
+li.ql-indent-1{padding-left:3em!important;}
+li.ql-indent-2{padding-left:6em!important;}
+li.ql-indent-3{padding-left:9em!important;}
+p,blockquote{margin:0 0 1em 0;}
+`;
+
 const wrapPreviewDocument = (bodyHtml, { theme = 'light' } = {}) => {
   const bg = theme === 'dark' ? '#0f172a' : '#ffffff';
   const color = theme === 'dark' ? '#f8fafc' : '#0f172a';
   const inner = (bodyHtml || '').trim();
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
-    body{margin:0;padding:16px;background:${bg};color:${color};}
+    body{margin:0;padding:16px;background:${bg};color:${color};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42;}
+    .email-preview-root,.email-preview-root p,.email-preview-root div,.email-preview-root li,.email-preview-root blockquote{max-width:100%;color:inherit;}
+    a{color:#2563eb;}
+    ${QUILL_INDENT_PREVIEW_CSS}
   </style></head><body>${inner}</body></html>`;
 };
 
@@ -130,4 +194,6 @@ module.exports = {
   personalizeEmailContent,
   wrapPreviewDocument,
   inlineCss,
+  buildUnsubscribeFooter,
+  applyFullDocumentEmailExtras,
 };

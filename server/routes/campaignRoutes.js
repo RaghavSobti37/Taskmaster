@@ -19,6 +19,14 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs, stopCampaign } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
+const { isAdminUser } = require('../utils/departmentPermissions');
+
+const assertCampaignAccess = (campaign, user) => {
+  if (!campaign) return false;
+  if (isAdminUser(user)) return true;
+  const ownerId = campaign.createdBy?._id || campaign.createdBy;
+  return ownerId && String(ownerId) === String(user._id);
+};
 const {
   normalizeEmail,
   isValidEmail,
@@ -118,7 +126,9 @@ router.get('/:id/recipients', async (req, res) => {
     const hideInvalid = req.query.hideInvalid === 'true';
 
     const resolved = await resolveCampaignByParam(req.params.id, { lean: true });
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
 
     let recipients = (resolved.campaign.recipients || []).map((r) => annotateRecipient(
       typeof r.toObject === 'function' ? r.toObject() : r
@@ -159,7 +169,9 @@ router.get('/:id', async (req, res) => {
     const MailEvent = require('../models/MailEvent');
 
     const resolved = await resolveCampaignByParam(id, { populate: true, lean: true });
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
     let campaign = resolved.campaign;
 
     const computed = computeRecipientStats(campaign.recipients);
@@ -265,7 +277,7 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
   try {
     const {
       title, subject, content, senderProfileId, senderMode, senderProfileIds,
-      systemProvider, includeSignature, attachments, eventTag, leadIds, customRecipients,
+      systemProvider, resendFromEmail, includeSignature, signature, attachments, eventTag, leadIds, customRecipients,
       removeUnsubscribe, variableFallbacks, mailTemplateId, variableMapping,
       action,
     } = req.body;
@@ -282,7 +294,10 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
       return res.status(400).json({ error: 'Only approved templates can be used for campaigns' });
     }
 
-    const templateContent = normalizeOutboundEmailHtml(getEffectiveTemplateContent(template));
+    const effectiveBody = getEffectiveTemplateContent(template);
+    const templateContent = template.format === 'rawHtml'
+      ? effectiveBody
+      : normalizeOutboundEmailHtml(effectiveBody);
     const resolvedSubject = subject || template.subject || title;
     const mappingObj = variableMapping && typeof variableMapping === 'object' ? variableMapping : {};
     const mappingCheck = validateVariableMapping([templateContent, resolvedSubject], mappingObj);
@@ -342,6 +357,7 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
 
     const skippedInvalidCount = allRecipients.filter((r) => r.status === 'Invalid').length;
 
+    const { isVerifiedResendEmail } = require('../utils/resendFromEmails');
     const mode = senderMode || 'single';
     if (mode === 'single' && !senderProfileId) {
       return res.status(400).json({ error: 'senderProfileId required for single sender mode' });
@@ -349,18 +365,27 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
     if (mode === 'pool' && (!senderProfileIds || senderProfileIds.length === 0)) {
       return res.status(400).json({ error: 'At least one profile required for pool mode' });
     }
+    if (mode === 'system_resend') {
+      const from = (resendFromEmail || '').trim().toLowerCase();
+      if (!from || !isVerifiedResendEmail(from)) {
+        return res.status(400).json({ error: 'resendFromEmail required — pick a @theshakticollective.in address' });
+      }
+    }
 
     const campaignPayload = {
       campaignId,
       title,
       subject: resolvedSubject,
-      content: normalizeOutboundEmailHtml(content || templateContent),
+      content: (template.format === 'rawHtml' || /<!DOCTYPE|<html[\s>]/i.test((content || templateContent || '').trim()))
+        ? (content || templateContent)
+        : normalizeOutboundEmailHtml(content || templateContent),
       mailTemplateId: template._id,
       variableMapping: mappingObj,
       senderProfileId: senderProfileId || undefined,
       senderMode: mode,
       senderProfileIds: senderProfileIds || [],
       includeSignature: includeSignature === true,
+      signature: typeof signature === 'string' ? signature : '',
       removeUnsubscribe: removeUnsubscribe === true,
       attachments: (attachments || []).map((a) => ({
         filename: a.filename,
@@ -376,6 +401,9 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
     };
     if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
       campaignPayload.systemProvider = systemProvider;
+    }
+    if (mode === 'system_resend' && resendFromEmail) {
+      campaignPayload.resendFromEmail = resendFromEmail.trim().toLowerCase();
     }
     if (variableFallbacks && typeof variableFallbacks === 'object') {
       campaignPayload.variableFallbacks = variableFallbacks;
@@ -404,7 +432,9 @@ router.post('/', validateBody(createCampaignBody), async (req, res) => {
 router.post('/:id/dispatch', async (req, res) => {
   try {
     const resolved = await resolveCampaignByParam(req.params.id);
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
     const { campaign } = resolved;
     if (!resolved.isLegacy && campaign.status === 'Draft') {
       campaign.status = 'Queued';
@@ -420,12 +450,14 @@ router.post('/:id/dispatch', async (req, res) => {
 router.post('/:id/resend', validateBody(resendCampaignBody), async (req, res) => {
   try {
     const {
-      senderMode, senderProfileId, senderProfileIds, systemProvider,
+      senderMode, senderProfileId, senderProfileIds, systemProvider, resendFromEmail,
       targetStatuses, includeSignature
     } = req.body;
 
     const resolved = await resolveCampaignByParam(req.params.id);
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
 
     let campaign = resolved.campaign;
     const isCore = !resolved.isLegacy;
@@ -445,6 +477,14 @@ router.post('/:id/resend', validateBody(resendCampaignBody), async (req, res) =>
         campaign.set('systemProvider', undefined);
       }
       if (includeSignature !== undefined) campaign.includeSignature = includeSignature;
+      if (resendFromEmail !== undefined) {
+        const { isVerifiedResendEmail } = require('../utils/resendFromEmails');
+        const from = (resendFromEmail || '').trim().toLowerCase();
+        if (from && !isVerifiedResendEmail(from)) {
+          return res.status(400).json({ error: 'resendFromEmail must be a @theshakticollective.in address' });
+        }
+        campaign.resendFromEmail = from || undefined;
+      }
 
       const mode = campaign.senderMode || 'single';
       if (mode === 'single' && !campaign.senderProfileId && senderProfileId === undefined) {
@@ -508,11 +548,14 @@ router.post('/:id/resend-filtered', validateBody(resendFilteredCampaignBody), as
       senderProfileId,
       senderProfileIds,
       systemProvider,
+      resendFromEmail,
       includeSignature,
     } = req.body;
 
     const resolved = await resolveCampaignByParam(req.params.id);
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
     const source = resolved.campaign;
 
     let filteredRecipients = [];
@@ -567,6 +610,13 @@ router.post('/:id/resend-filtered', validateBody(resendFilteredCampaignBody), as
     if (mode === 'pool' && (!resolvedProfileIds || resolvedProfileIds.length === 0)) {
       return res.status(400).json({ error: 'At least one profile required for pool mode' });
     }
+    const resolvedResendFrom = (resendFromEmail || source.resendFromEmail || '').trim().toLowerCase();
+    if (mode === 'system_resend') {
+      const { isVerifiedResendEmail } = require('../utils/resendFromEmails');
+      if (!resolvedResendFrom || !isVerifiedResendEmail(resolvedResendFrom)) {
+        return res.status(400).json({ error: 'resendFromEmail required — pick a @theshakticollective.in address' });
+      }
+    }
 
     const campaignId = crypto.randomBytes(12).toString('hex');
     const campaignPayload = {
@@ -594,6 +644,9 @@ router.post('/:id/resend-filtered', validateBody(resendFilteredCampaignBody), as
       campaignPayload.systemProvider = systemProvider;
     } else if (source.systemProvider && (mode === 'system_resend' || mode === 'system_smtp')) {
       campaignPayload.systemProvider = source.systemProvider;
+    }
+    if (mode === 'system_resend' && resolvedResendFrom) {
+      campaignPayload.resendFromEmail = resolvedResendFrom;
     }
 
     if (source.variableFallbacks) {
@@ -629,7 +682,9 @@ router.post('/:id/resend-filtered', validateBody(resendFilteredCampaignBody), as
 router.post('/:id/stop', async (req, res) => {
   try {
     const resolved = await resolveCampaignByParam(req.params.id);
-    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
 
     const result = await stopCampaign(resolved.campaign._id);
     res.json(result);
@@ -641,27 +696,21 @@ router.post('/:id/stop', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
     const MailEvent = require('../models/MailEvent');
     const EmailLog = require('../models/EmailLog');
 
-    const campaign = await Campaign.findOne({
-      ...(isObjectIdHex(id) ? { $or: [{ campaignId: id }, { _id: id }] } : { campaignId: id }),
-    });
-    if (campaign) {
-      await Campaign.findByIdAndDelete(campaign._id);
-      await EmailLog.deleteMany({ campaignId: { $in: [String(campaign.campaignId), String(campaign._id)] } });
-      await MailEvent.deleteMany({ campaignId: campaign._id });
+    const resolved = await resolveCampaignByParam(req.params.id);
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    if (id.match(/^[0-9a-fA-F]{24}$/)) {
-      const mailCamp = await MailCampaign.findById(id);
-      if (mailCamp) {
-        await MailCampaign.findByIdAndDelete(id);
-        await EmailLog.deleteMany({ campaignId: id });
-        await MailEvent.deleteMany({ campaignId: id });
-      }
-    }
+    const { campaign, Model } = resolved;
+    const campId = campaign._id;
+    const campaignTag = campaign.campaignId || String(campId);
+
+    await Model.findByIdAndDelete(campId).setOptions({ bypassTenant: true });
+    await EmailLog.deleteMany({ campaignId: { $in: [campaignTag, String(campId)] } });
+    await MailEvent.deleteMany({ campaignId: campId }).setOptions({ bypassTenant: true });
 
     res.json({ success: true, message: 'Campaign and all associated tracking data deleted successfully' });
   } catch (err) {

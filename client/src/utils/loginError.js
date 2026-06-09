@@ -4,7 +4,7 @@ export function formatLoginError(err) {
     return {
       message:
         err?.message
-        || 'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.',
+        || 'Could not reach the server. Check your connection and try again.',
       isNetwork: !err?.message,
     };
   }

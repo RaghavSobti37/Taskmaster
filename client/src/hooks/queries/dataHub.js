@@ -73,7 +73,10 @@ export const useDataHubReconcile = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ full = false } = {}) => axios.post('/api/data-hub/reconcile', null, { params: full ? { full: 'true' } : {} }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dataHub'] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+      await queryClient.refetchQueries({ queryKey: ['dataHub'], type: 'active' });
+    },
   });
 };
 

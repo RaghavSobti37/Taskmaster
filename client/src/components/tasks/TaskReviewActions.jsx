@@ -22,52 +22,35 @@ export default function TaskReviewActions({
   onConfirmRollback,
 }) {
   if (isDone) {
-    if (!canRollback) {
-      return (
-        <p className="text-xs text-[var(--color-text-muted)] py-3 border-t border-[var(--color-bg-border)]">
-          This task is completed.
-        </p>
-      );
-    }
+    if (!canRollback || !showRollbackForm) return null;
 
     return (
-      <div className="space-y-3 py-3 border-t border-[var(--color-bg-border)]">
+      <div className="space-y-2 py-3 border-t border-amber-500/30">
         <p className="text-xs text-[var(--color-text-muted)]">
           Reopen this task if more work is needed.
         </p>
-        <div className="flex flex-wrap gap-3">
-          {canRollback && !showRollbackForm && (
-            <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={onShowRollbackForm}>
-              <RotateCcw size={14} className="mr-1" /> Rollback Task
-            </Button>
-          )}
+        <textarea
+          autoFocus
+          value={rollbackReason}
+          onChange={(e) => onRollbackReasonChange(e.target.value)}
+          placeholder="Reason for rollback (required)…"
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-[var(--color-bg-border)] rounded-lg bg-[var(--color-bg-workspace)] text-[var(--color-text-primary)] resize-none focus:outline-none focus:border-amber-500/50"
+        />
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving || !rollbackReason.trim()}
+            onClick={onConfirmRollback}
+            className="!bg-amber-500 hover:!bg-amber-400 !text-[var(--color-bg-primary)] border-0"
+          >
+            Confirm rollback
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onHideRollbackForm}>
+            Cancel
+          </Button>
         </div>
-        {canRollback && showRollbackForm && (
-          <div className="space-y-2">
-            <textarea
-              autoFocus
-              value={rollbackReason}
-              onChange={(e) => onRollbackReasonChange(e.target.value)}
-              placeholder="Reason for rollback (required)…"
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-[var(--color-bg-border)] rounded-lg bg-[var(--color-bg-workspace)] text-[var(--color-text-primary)] resize-none focus:outline-none focus:border-[var(--color-action-primary)]/50"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isSaving || !rollbackReason.trim()}
-                onClick={onConfirmRollback}
-              >
-                Confirm rollback
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={onHideRollbackForm}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

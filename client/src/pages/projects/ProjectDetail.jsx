@@ -14,6 +14,7 @@ import ProjectTeam from '../../components/project/ProjectTeam';
 import ProjectAssets from '../../components/project/ProjectAssets';
 import ProjectFinance from '../../components/project/ProjectFinance';
 import ProjectGoalsPanel from '../../components/project/ProjectGoalsPanel';
+import ProjectGoalsStrip from '../../components/project/ProjectGoalsStrip';
 import { useAuth } from '../../contexts/AuthContext';
 import { Badge, ProgressBar, PageSkeleton, NexusDropdown, TabSwitcher, PageContainer, PageHeader, Button, SearchInput } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
@@ -90,6 +91,10 @@ const ProjectDetail = () => {
       setActiveTab(location.state.tab);
     }
   }, [location.state?.tab, id, navigate]);
+
+  useEffect(() => {
+    if (activeTab !== 'goals') setGoalsEditRequested(false);
+  }, [activeTab]);
   const { data: scheduleData, isLoading: scheduleLoading } = useSchedule({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
@@ -107,6 +112,7 @@ const ProjectDetail = () => {
   const [taskToApprove, setTaskToApprove] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
+  const [goalsEditRequested, setGoalsEditRequested] = useState(false);
   const { addToast } = useSystemToast();
 
   const handleUpdateProjectStatus = async (status) => {
@@ -339,6 +345,15 @@ const ProjectDetail = () => {
         />
       </PageHeader>
 
+      <ProjectGoalsStrip
+        projectId={id}
+        project={project}
+        onEditGoals={() => {
+          setGoalsEditRequested(true);
+          setActiveTab('goals');
+        }}
+      />
+
       <NexusModal
         isOpen={showCloseWarning}
         onClose={() => setShowCloseWarning(false)}
@@ -503,7 +518,11 @@ const ProjectDetail = () => {
                 <ProjectTeam project={project} onRemoveMember={handleRemoveMember} />
               )}
               {activeTab === 'goals' && (
-                <ProjectGoalsPanel projectId={id} project={project} />
+                <ProjectGoalsPanel
+                  projectId={id}
+                  project={project}
+                  startInEdit={goalsEditRequested}
+                />
               )}
               {activeTab === 'assets' && (
                 <ProjectAssets projectId={id} />

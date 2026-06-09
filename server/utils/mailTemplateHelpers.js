@@ -65,7 +65,9 @@ const assertCanEditTemplate = (template, user) => {
     }
     return { ok: true };
   }
-  if (template.status === 'approved' && isAdminUser(user)) return { ok: true };
+  if (template.status === 'approved' && (isAdminUser(user) || canApproveMailTemplates(user))) {
+    return { ok: true };
+  }
   return { ok: false, error: 'Approved templates cannot be edited' };
 };
 

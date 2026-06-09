@@ -8,7 +8,6 @@ import RoleOptionBoxes from './RoleOptionBoxes';
 import { PROJECT_ROLE_OPTIONS } from '../../constants/taskOptions';
 import { suggestProjectRole } from '../../utils/taskText';
 import { getDepartmentSlug } from '../../utils/departmentPermissions';
-import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 import { Spinner } from './Spinner';
 
 const UserAvatar = ({ user, size = 'md' }) => {
@@ -43,7 +42,6 @@ const AddMembers = ({
   const [projectRole, setProjectRole] = useState(defaultRole);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const teamLoadingPhrase = useLoadingPhrase();
 
   const availableUsers = useMemo(
     () => users.filter((u) => !excludeIds.includes(u._id)),
@@ -101,7 +99,7 @@ const AddMembers = ({
             options={userOptions}
             value={selectedUserId}
             onChange={handleSelectUser}
-            placeholder={loading ? teamLoadingPhrase : 'Choose member'}
+            placeholder={loading ? 'Loading…' : 'Choose member'}
             searchable
             disabled={loading}
           />
@@ -134,7 +132,7 @@ const AddMembers = ({
               options={userOptions}
               value={selectedUserId}
               onChange={handleSelectUser}
-              placeholder={loading ? teamLoadingPhrase : 'Select member'}
+              placeholder={loading ? 'Loading…' : 'Select member'}
               searchable
               disabled={loading}
             />

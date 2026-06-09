@@ -7,20 +7,22 @@ import {
 } from 'lucide-react';
 import { Badge, ProgressBar, Button, Input, PageSkeleton, NexusDropdown, ListPageLayout, SearchInput } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
-import { useProjects, useWorkspaces, useReviewTasks } from '../../hooks/useTaskmasterQueries';
+import { useProjects, useWorkspaces, useReviewTasks, useDashboardTasks } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
 import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS } from '../../utils/workspaceColors';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
-import { countReviewTasksByProject } from '../../utils/taskReview';
+import { countReviewTasksByProject, countTasksByProject } from '../../utils/taskReview';
+import { filterOverdueTasks } from '../../utils/dashboardTasks';
+import { projectCardAccentClass, ProjectCardStatusOverlay } from '../../components/project/ProjectStatusPing';
 
 const ProjectPreview = ({
-  project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd, reviewCount = 0,
+  project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd, reviewCount = 0, overdueCount = 0,
 }) => (
   <div
-    className={`p-2.5 bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-colors cursor-pointer group/preview min-w-0 ${reviewCount > 0 ? 'border-l-2 border-l-amber-500 bg-amber-500/5' : ''}`}
+    className={`relative p-2.5 bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-colors cursor-pointer group/preview min-w-0 ${projectCardAccentClass({ reviewCount, overdueCount })}`}
     onClick={() => onNavigate(project._id)}
   >
     <div className="flex items-start justify-between gap-2 mb-2">
@@ -28,6 +30,7 @@ const ProjectPreview = ({
         {project.name?.toUpperCase()}
       </h4>
       <div className="flex items-center gap-1 shrink-0">
+        <ProjectCardStatusOverlay reviewCount={reviewCount} overdueCount={overdueCount} />
         {canMove && (
           <div
             draggable
@@ -47,14 +50,6 @@ const ProjectPreview = ({
           >
             <GripVertical size={14} />
           </div>
-        )}
-        {reviewCount > 0 && (
-          <span
-            className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
-            title={`${reviewCount} task${reviewCount === 1 ? '' : 's'} awaiting your review`}
-          >
-            Review {reviewCount}
-          </span>
         )}
         <button
           onClick={(e) => onToggleStar(e, project)}
@@ -109,6 +104,7 @@ const ProjectsView = () => {
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
   const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
   const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
+  const { data: dashboardTasks = [] } = useDashboardTasks(user?._id, !!user?._id);
 
   const navigateToProject = useCallback((projectId, tab) => {
     if (tab === 'analytics') {
@@ -119,6 +115,10 @@ const ProjectsView = () => {
   }, [navigate]);
 
   const reviewCountByProject = useMemo(() => countReviewTasksByProject(reviewTasks), [reviewTasks]);
+  const overdueCountByProject = useMemo(
+    () => countTasksByProject(filterOverdueTasks(dashboardTasks)),
+    [dashboardTasks]
+  );
   const totalReviewCount = reviewTasks.length;
 
   useEffect(() => {
@@ -585,6 +585,7 @@ const ProjectsView = () => {
                               project={project}
                               accent={group.color}
                               reviewCount={reviewCountByProject[String(project._id)] || 0}
+                              overdueCount={overdueCountByProject[String(project._id)] || 0}
                               canMove={canMoveProject(project)}
                               onNavigate={navigateToProject}
                               onToggleStar={toggleStar}
@@ -617,6 +618,7 @@ const ProjectsView = () => {
               {filteredProjects.map((project, index) => {
                 const accent = getWorkspaceColor(project.workspace);
                 const reviewCount = reviewCountByProject[String(project._id)] || 0;
+                const overdueCount = overdueCountByProject[String(project._id)] || 0;
                 const canMove = canMoveProject(project);
                 return (
                   <motion.div
@@ -629,14 +631,14 @@ const ProjectsView = () => {
                   >
                     <div
                       className={`flex flex-col h-full group relative overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] cursor-pointer transition-colors hover:bg-[var(--color-bg-secondary)]/30 ${draggingProjectId === project._id ? 'opacity-50' : ''
-                        } ${reviewCount > 0 ? 'border-l-2 border-l-amber-500' : ''}`}
+                        } ${projectCardAccentClass({ reviewCount, overdueCount })}`}
                       style={project.starred ? { borderTopColor: accent, borderTopWidth: 2 } : undefined}
                       onClick={() => navigateToProject(project._id)}
                     >
                       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: accent }} />
 
                       <div className="p-3 space-y-3 flex flex-col flex-1">
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent }} />
@@ -648,7 +650,8 @@ const ProjectsView = () => {
                               {(project.workspace || 'General').toUpperCase()}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0 ml-1">
+                          <div className="flex items-center gap-1 shrink-0">
+                            <ProjectCardStatusOverlay reviewCount={reviewCount} overdueCount={overdueCount} />
                             {canMove && (
                               <div
                                 draggable
@@ -668,14 +671,6 @@ const ProjectsView = () => {
                               >
                                 <GripVertical size={14} />
                               </div>
-                            )}
-                            {reviewCount > 0 && (
-                              <span
-                                className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
-                                title={`${reviewCount} task${reviewCount === 1 ? '' : 's'} awaiting your review`}
-                              >
-                                Review {reviewCount}
-                              </span>
                             )}
                             <Badge variant={project.status === 'completed' ? 'success' : 'info'} className="!py-0 !px-1.5 !text-[8px]">
                               {project.status || 'Active'}

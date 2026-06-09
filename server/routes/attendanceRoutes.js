@@ -1,5 +1,4 @@
 const express = require('express');
-const ipaddr = require('ipaddr.js');
 
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
@@ -34,68 +33,6 @@ const isOps = (user) => isOpsUser(user);
 
 const STANDARD_SHIFT_MINUTES = 8 * 60;
 const DISCREPANCY_THRESHOLD_MINUTES = 30;
-
-const resolveClientIp = (req) => {
-  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  if (ip && typeof ip === 'string') {
-    ip = ip.split(',')[0].trim();
-    if (ip.includes('::ffff:')) {
-      return ip.split('::ffff:')[1];
-    }
-  }
-  return ip || '';
-};
-
-/** Comma-separated office egress IPs (v4/v6). OFFICE_IP_WHITELIST is legacy alias — both are merged. */
-function getOfficeIpTargets() {
-  const chunks = [
-    process.env.OFFICE_PUBLIC_IP,
-    process.env.OFFICE_IP_WHITELIST,
-  ];
-  return [...new Set(
-    chunks
-      .flatMap((v) => String(v || '').split(','))
-      .map((s) => s.trim())
-      .filter(Boolean)
-  )];
-}
-
-function verifyNetworkMatch(clientRawIp, targetOfficeIp) {
-  if (!clientRawIp || !targetOfficeIp) return false;
-  try {
-    let cleanedClient = clientRawIp;
-    if (cleanedClient.includes('::ffff:')) {
-      cleanedClient = cleanedClient.split('::ffff:')[1];
-    }
-    
-    // Support comma-separated target IPs
-    const targetIps = targetOfficeIp.split(',').map(i => i.trim());
-    
-    const parsedClient = ipaddr.process(cleanedClient);
-    
-    if (
-      process.env.NODE_ENV !== 'production'
-      && (parsedClient.toString() === '::1' || parsedClient.toString() === '127.0.0.1')
-    ) {
-      if (process.env.ATTENDANCE_DEBUG === 'true') {
-        console.log('[ATTENDANCE DEBUG] Localhost loopback detected. Auto-matching for testing.');
-      }
-      return true;
-    }
-    
-    const clientString = parsedClient.toString();
-    for (const target of targetIps) {
-      try {
-        const parsedTarget = ipaddr.process(target);
-        if (clientString === parsedTarget.toString()) return true;
-      } catch (e) {}
-    }
-    return false;
-  } catch (error) {
-    console.error('[ATTENDANCE NETWORK ERROR]', error.message);
-    return false;
-  }
-}
 
 const computeAttendanceMetrics = (attendanceDoc) => refreshAttendanceMetrics(attendanceDoc);
 
@@ -133,29 +70,11 @@ router.get('/', validateQuery(attendanceQuery), async (req, res) => {
   }
 });
 
-function suggestWorkModeFromRequest(req) {
-  const clientIp = resolveClientIp(req);
-  const officeIpTargets = getOfficeIpTargets();
-  if (officeIpTargets.length > 0 && verifyNetworkMatch(clientIp, officeIpTargets.join(','))) {
-    return 'office';
-  }
-  return 'wfh';
-}
-
-router.get('/work-mode-hint', async (req, res) => {
-  try {
-    res.json({ suggestedMode: suggestWorkModeFromRequest(req) });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
   try {
     const now = new Date();
     const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
-    const clientIp = resolveClientIp(req);
 
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -172,8 +91,8 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
     const verificationMethod = 'MANUAL';
 
     const updateBlock = type === 'in'
-      ? { 'inTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, checkInIp: clientIp, verificationMethod, isApproved: false } }
-      : { 'outTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, checkOutIp: clientIp, verificationMethod, isApproved: false } };
+      ? { 'inTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, verificationMethod, isApproved: false } }
+      : { 'outTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, verificationMethod, isApproved: false } };
 
     const attendance = await Attendance.findOneAndUpdate(
       { userId: req.user._id, date: today },

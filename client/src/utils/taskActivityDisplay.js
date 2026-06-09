@@ -1,5 +1,5 @@
 /** Activity types shown in task history UI (no status/field edit noise). */
-export const VISIBLE_TASK_ACTIVITY_TYPES = new Set(['created', 'assignment', 'message']);
+export const VISIBLE_TASK_ACTIVITY_TYPES = new Set(['created', 'assignment', 'message', 'rollback']);
 
 function activityUserId(ref) {
   if (!ref) return null;

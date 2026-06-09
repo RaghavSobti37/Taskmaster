@@ -135,6 +135,13 @@ const getCurrentWeekRange = (weekStartInput) => {
   return { weekStart, weekEnd, weekStartKey: mondayKey, weekEndKey: sundayKey };
 };
 
+const getPreviousWeekRange = () => {
+  const { weekStartKey } = getCurrentWeekRange();
+  const anchor = toDateKeyAnchor(weekStartKey);
+  anchor.setDate(anchor.getDate() - 7);
+  return getCurrentWeekRange(getDateKey(anchor));
+};
+
 const validateAttendanceTimes = ({ dateKey, timeIn, timeOut, onLeave, isHalfDay }) => {
   const todayKey = getDateKey();
   const now = new Date();
@@ -185,6 +192,7 @@ module.exports = {
   isWeekend,
   getMondayDateKey,
   getCurrentWeekRange,
+  getPreviousWeekRange,
   validateAttendanceTimes,
   parseTimeToMinutes,
 };

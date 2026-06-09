@@ -6,7 +6,7 @@ const escapeRegExp = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /**
  * Apply Todo page filters to an existing task query (scope=todo).
  */
-function applyTodoFilters(filter = {}, query = {}) {
+function applyTodoFilters(filter = {}, query = {}, { skipStatFilter = false } = {}) {
   const next = { ...filter };
 
   if (query.search?.trim()) {
@@ -38,11 +38,11 @@ function applyTodoFilters(filter = {}, query = {}) {
   const tomorrow = new Date(todayStart);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  if (query.statFilter === 'open') {
+  if (!skipStatFilter && query.statFilter === 'open') {
     next.status = { $ne: 'done' };
-  } else if (query.statFilter === 'in-review') {
+  } else if (!skipStatFilter && query.statFilter === 'in-review') {
     next.status = 'in-review';
-  } else if (query.statFilter === 'overdue') {
+  } else if (!skipStatFilter && query.statFilter === 'overdue') {
     next.status = { $ne: 'done' };
     next.$and = [...(next.$and || []), {
       $expr: {
@@ -52,7 +52,7 @@ function applyTodoFilters(filter = {}, query = {}) {
         ],
       },
     }];
-  } else if (query.statFilter === 'today') {
+  } else if (!skipStatFilter && query.statFilter === 'today') {
     next.status = { $ne: 'done' };
     next.$and = [...(next.$and || []), {
       $expr: {

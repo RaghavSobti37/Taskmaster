@@ -3,12 +3,29 @@ import { Clock } from 'lucide-react';
 import { DataLoading } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAttendance } from '../../../hooks/useTaskmasterQueries';
+import { formatAttendanceRecordTime, formatDateKeyIST } from '../../../utils/attendanceUtils';
 
 const getAttendanceRowClass = (row) => {
   if (row.onLeave) return 'bg-red-500/15 text-red-900 dark:text-red-100';
   if (row.isHalfDay) return 'bg-yellow-500/15 text-yellow-900 dark:text-yellow-100';
   return '';
 };
+
+const formatLegacyFlatTime = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  return trimmed || '';
+};
+
+const getTimeInDisplay = (row) =>
+  formatAttendanceRecordTime(row?.inTimeRecord)
+  || formatLegacyFlatTime(row?.timeIn)
+  || '-';
+
+const getTimeOutDisplay = (row) =>
+  formatAttendanceRecordTime(row?.outTimeRecord)
+  || formatLegacyFlatTime(row?.timeOut)
+  || '-';
 
 export default function AttendanceTab() {
   const { user } = useAuth();
@@ -44,9 +61,9 @@ export default function AttendanceTab() {
                 </tr>
               ) : myAttendance.map((row) => (
                 <tr key={row?._id} className={`border-b border-[var(--color-bg-border)] last:border-0 ${getAttendanceRowClass(row)}`}>
-                  <td className="px-4 py-3 tabular-nums">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
-                  <td className="px-4 py-3 tabular-nums">{row.timeIn || '-'}</td>
-                  <td className="px-4 py-3 tabular-nums">{row.timeOut || '-'}</td>
+                  <td className="px-4 py-3 tabular-nums">{row.date ? formatDateKeyIST(row.date) : '-'}</td>
+                  <td className="px-4 py-3 tabular-nums">{getTimeInDisplay(row)}</td>
+                  <td className="px-4 py-3 tabular-nums">{getTimeOutDisplay(row)}</td>
                 </tr>
               ))}
               {!isLoading && myAttendance.length === 0 && (

@@ -69,6 +69,7 @@ function userSessionChanged(prev, next) {
     pagePermissions: JSON.stringify(u.departmentId?.pagePermissions || u.pagePermissions || null),
     exp: u.exp,
     level: u.level,
+    mustChangePassword: Boolean(u.mustChangePassword),
   });
   const a = pick(prev);
   const b = pick(next);

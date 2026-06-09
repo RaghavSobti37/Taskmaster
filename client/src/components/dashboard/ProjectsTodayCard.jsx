@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderKanban, ArrowDown, ArrowUp } from 'lucide-react';
-import { DashboardWidgetShell, Button, CountBadge, LoadingPhrase } from '../ui';
+import { DashboardWidgetShell, Button, CountBadge, DataLoading } from '../ui';
 import { formatProjectName } from '../../utils/projectUtils';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getTaskWorkspace, getWorkspaceColor, getWorkspaceAccentStyle } from '../../utils/workspaceColors';
@@ -110,7 +110,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
           </div>
         </div>
         <div className="px-0">
-          {loading && <LoadingPhrase className="text-xs text-[var(--color-text-muted)] px-4 py-2 !text-left" />}
+          {loading && <DataLoading className="!py-3" />}
           {!loading && (
             <ProjectGroupList
               groups={overdueGroups}
@@ -141,7 +141,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
           </div>
         </div>
         <div className="px-0">
-          {loading && <LoadingPhrase className="text-xs text-[var(--color-text-muted)] px-4 py-2 !text-left" />}
+          {loading && <DataLoading className="!py-3" />}
           {!loading && (
             <ProjectGroupList
               groups={todayGroups}

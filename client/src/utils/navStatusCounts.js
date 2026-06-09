@@ -43,8 +43,16 @@ export function getNavCountsForPath(path, statusCounts = {}) {
       };
     case '/calendar':
       return { count: 0, todayCount: calendar.today || 0 };
-    case '/projects':
-      return { count: review.pending || 0, todayCount: 0 };
+    case '/projects': {
+      const reviewPending = review.pending || 0;
+      const overdue = tasks.overdue || 0;
+      return {
+        count: overdue,
+        todayCount: overdue > 0 ? 0 : reviewPending,
+        badgeCount: overdue + reviewPending,
+        badgeVariant: overdue > 0 ? 'rose' : 'amber',
+      };
+    }
     default:
       return { count: 0, todayCount: 0 };
   }

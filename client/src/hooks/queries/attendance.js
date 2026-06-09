@@ -8,14 +8,6 @@ export const useAttendance = (params = {}, enabled = true) => useQuery({
   staleTime: 1000 * 60,
 });
 
-export const useWorkModeHint = (enabled = true) => useQuery({
-  queryKey: ['attendance', 'work-mode-hint'],
-  queryFn: async () => (await axios.get('/api/attendance/work-mode-hint')).data,
-  enabled,
-  staleTime: 1000 * 60 * 30,
-  retry: 1,
-});
-
 export const useAttendanceCheck = () => {
   const queryClient = useQueryClient();
   return useMutation({

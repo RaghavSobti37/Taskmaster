@@ -1,7 +1,7 @@
 {
   "source": "/brand-mark.svg",
   "themeColor": "#126d5e",
-  "generatedAt": "2026-06-06T09:11:57.981Z",
+  "generatedAt": "2026-06-08T19:33:50.529Z",
   "files": [
     "apple-touch-icon-120.png",
     "apple-touch-icon-152.png",
@@ -11,7 +11,9 @@
     "favicon-32.png",
     "favicon-48.png",
     "icon-192.png",
+    "icon-44.png",
     "icon-512.png",
+    "icon-96.png",
     "icon-maskable-512.png",
     "mstile-150x150.png",
     "og-image.png"

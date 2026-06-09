@@ -25,12 +25,14 @@ export default function CountBadge({
   variant = 'rose',
   className = '',
   pulse = false,
+  title,
 }) {
   const n = Number(count) || 0;
   if (n <= 0) return null;
   const label = n > max ? `${max}+` : String(n);
   return (
     <span
+      title={title}
       className={`inline-flex items-center justify-center rounded-full font-bold tabular-nums shrink-0 border-2 border-[var(--color-bg-surface)] ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.rose} ${pulse ? 'animate-pulse' : ''} ${className}`}
     >
       {label}

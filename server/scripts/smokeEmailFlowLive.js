@@ -63,7 +63,7 @@ async function main() {
   ok('auth');
 
   const preview = await request('POST', '/api/mail/preview', {
-    content: '<p class="ql-indent-1" style="padding-left:40px">Hi {1}</p>',
+    content: '<p class="ql-indent-1">Hi {1}</p>',
     subject: 'Smoke',
     removeUnsubscribe: true,
     sampleRecipient: { email: 'a@b.com', rowData: { name: 'SmokeName' } },
@@ -72,6 +72,7 @@ async function main() {
   if (preview.status !== 200) fail(`preview ${preview.status}`);
   if (!preview.body?.html?.includes('SmokeName')) fail('preview missing personalized name');
   if (/ql-indent/i.test(preview.body.html)) fail('preview still has ql-indent');
+  if (!/padding-left\s*:\s*3em!important/i.test(preview.body.html)) fail('preview missing inlined indent padding');
   ok('preview API');
 
   const tpl = await request('POST', '/api/mail/templates', {

@@ -4,9 +4,29 @@ import { DEFAULT_LOADER_VARIANT } from '../brand/fluidRibbonLoaderCatalog';
 import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 import { LoadingPhrase } from './LoadingPhrase';
 
+function SpinnerWithPhrase({
+  size,
+  className,
+  variant,
+  phraseClassName,
+}) {
+  const phrase = useLoadingPhrase();
+  return (
+    <div className="flex flex-col items-center justify-center gap-4">
+      <FluidRibbonLoader
+        variant={variant || DEFAULT_LOADER_VARIANT}
+        size={size}
+        className={className}
+        label={phrase}
+      />
+      <LoadingPhrase phrase={phrase} className={phraseClassName} />
+    </div>
+  );
+}
+
 /**
  * Spinner — fluid-ribbon loader (default frl-v-02).
- * Visible phrase only when showPhrase (boot, dashboard widgets, heavy pages).
+ * Phrase only when showPhrase (boot, heavy pages) — one phrase per mount, no rotation.
  */
 export const Spinner = ({
   size = 'md',
@@ -15,21 +35,23 @@ export const Spinner = ({
   showPhrase = false,
   phraseClassName = '',
 }) => {
-  const phrase = useLoadingPhrase();
-  const loader = (
+  if (showPhrase) {
+    return (
+      <SpinnerWithPhrase
+        size={size}
+        className={className}
+        variant={variant}
+        phraseClassName={phraseClassName}
+      />
+    );
+  }
+  return (
     <FluidRibbonLoader
       variant={variant || DEFAULT_LOADER_VARIANT}
       size={size}
       className={className}
-      label={showPhrase ? phrase : 'Loading'}
+      label="Loading"
     />
-  );
-  if (!showPhrase) return loader;
-  return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      {loader}
-      <LoadingPhrase phrase={phrase} className={phraseClassName} />
-    </div>
   );
 };
 

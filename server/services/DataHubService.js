@@ -27,10 +27,81 @@ const {
 const FOLDER_CACHE_TTL_MS = 5 * 60 * 1000;
 const INCREMENTAL_BOOTSTRAP_MS = 24 * 60 * 60 * 1000; // first run: last 24h only
 const CONTACT_BYPASS = { bypassTenant: true };
-const PERSON_INDEX_MATCH = {};
 const WEEKLY_DATE_FORMAT = '%Y-%U';
+const HUB_SOURCE_TO_FOLDER = {
+  lead: 'leads',
+  exly_booking: 'exly',
+  outsourced: 'outsourced',
+  booked_call: 'booked_calls',
+  newsletter: 'newsletter',
+  artist_path: 'artist_path',
+  mail: 'mail',
+  enquiry: 'enquiries',
+  community: 'community',
+};
 let folderCache = { data: null, expiresAt: 0 };
 let hubViewActive = null;
+
+function mapHubInletKey(hubKey) {
+  return HUB_SOURCE_TO_FOLDER[hubKey] || hubKey;
+}
+
+function dateCoalesceStage(field = 'createdAt') {
+  return {
+    $addFields: {
+      _dateField: {
+        $convert: {
+          input: `$${field}`,
+          to: 'date',
+          onError: null,
+          onNull: null,
+        },
+      },
+    },
+  };
+}
+
+async function countSinceDate(HubModel, match, since, field = 'createdAt') {
+  const rows = await HubModel.aggregate([
+    { $match: match },
+    dateCoalesceStage(field),
+    { $match: { _dateField: { $gte: since, $ne: null } } },
+    { $count: 'n' },
+  ]).option(CONTACT_BYPASS);
+  return rows[0]?.n || 0;
+}
+
+async function aggregateWeeklyGrowth(HubModel, match, since) {
+  return HubModel.aggregate([
+    { $match: match },
+    dateCoalesceStage('createdAt'),
+    { $match: { _dateField: { $gte: since, $ne: null } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: WEEKLY_DATE_FORMAT, date: '$_dateField' } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]).option(CONTACT_BYPASS);
+}
+
+async function aggregateInletBreakdown(HubModel, match) {
+  if (hubViewActive) {
+    return HubModel.aggregate([
+      { $match: match },
+      { $unwind: { path: '$inletKeys', preserveNullAndEmptyArrays: false } },
+      { $group: { _id: '$inletKeys', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]).option(CONTACT_BYPASS);
+  }
+  return HubModel.aggregate([
+    { $match: match },
+    { $unwind: { path: '$inlets', preserveNullAndEmptyArrays: false } },
+    { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]).option(CONTACT_BYPASS);
+}
 
 async function resolveHubModel() {
   if (hubViewActive === null) {
@@ -53,6 +124,7 @@ function mapHubRow(c) {
     inletCount: c.inletCount ?? inlets.length,
     isMultiInlet: c.isMultiInlet ?? inlets.length >= 2,
     inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
+    updatedAt: c.updatedAt || c.lastActivityAt,
   };
 }
 
@@ -638,31 +710,10 @@ class DataHubService {
       })
     );
 
-    const [campaigns, sources] = await Promise.all([
-      OutsourcedRecord.aggregate([
-        { $match: { campaign: { $nin: [null, ''] } } },
-        { $group: { _id: '$campaign', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 15 },
-      ]),
-      OutsourcedRecord.aggregate([
-        { $match: { originSource: { $nin: [null, ''] } } },
-        { $group: { _id: '$originSource', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 15 },
-      ]),
-    ]);
-
     const folders = folderKeys.map((key) => ({
       key,
       label: DATA_INLETS[key]?.label || key,
       count: counts[key] || 0,
-      children: (key === 'outsourced' || key === 'tsc')
-        ? [
-          ...campaigns.map((c) => ({ key: `outsourced:campaign:${c._id}`, label: c._id, count: c.count, filter: { campaign: c._id } })),
-          ...sources.map((s) => ({ key: `outsourced:source:${s._id}`, label: s._id, count: s.count, filter: { originSource: s._id } })),
-        ]
-        : undefined,
     }));
 
     folderCache = { data: { folders, counts }, expiresAt: now + FOLDER_CACHE_TTL_MS };
@@ -684,109 +735,102 @@ class DataHubService {
   }
 
   async getGlobalAnalytics() {
+    const HubModel = await resolveHubModel();
+    const match = buildFolderQuery('all');
+    const weekAgo = this._weekAgo();
+    const growthSince = new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000);
+    const loyalQuery = buildFolderQuery('loyal');
+
     const [
-      totalPersonIndexs,
+      totalPeople,
       emailHealth,
       inletBreakdown,
       newThisWeek,
       overlapPairs,
+      loyalCount,
+      growth,
     ] = await Promise.all([
-      PersonIndex.countDocuments(PERSON_INDEX_MATCH).setOptions(CONTACT_BYPASS),
-      PersonIndex.aggregate([
-        { $match: PERSON_INDEX_MATCH },
+      HubModel.countDocuments(match).setOptions(CONTACT_BYPASS),
+      HubModel.aggregate([
+        { $match: match },
         { $group: { _id: '$emailStatus', count: { $sum: 1 } } },
-      ]),
-      PersonIndex.aggregate([
-        { $match: PERSON_INDEX_MATCH },
-        { $unwind: { path: '$inlets', preserveNullAndEmptyArrays: false } },
-        { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-      ]),
-      PersonIndex.countDocuments({
-        ...PERSON_INDEX_MATCH,
-        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      }).setOptions(CONTACT_BYPASS),
+      ]).option(CONTACT_BYPASS),
+      aggregateInletBreakdown(HubModel, match),
+      countSinceDate(HubModel, match, weekAgo, 'createdAt'),
       this.getOverlapMatrix(),
-    ]);
-
-    const growth = await PersonIndex.aggregate([
-      {
-        $match: {
-          ...PERSON_INDEX_MATCH,
-          createdAt: {
-            $gte: new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000),
-            $type: 'date',
-          },
-        },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: WEEKLY_DATE_FORMAT, date: '$createdAt' } },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
+      HubModel.countDocuments(loyalQuery).setOptions(CONTACT_BYPASS),
+      aggregateWeeklyGrowth(HubModel, match, growthSince),
     ]);
 
     return {
       folder: 'all',
       label: DATA_INLETS.all.label,
-      totalPersonIndexs,
+      totalPersonIndexs: totalPeople,
       newThisWeek,
       kpis: [
-        { key: 'total', label: 'Unique People', value: totalPersonIndexs },
+        { key: 'total', label: 'Unique People', value: totalPeople },
         { key: 'newWeek', label: 'New This Week', value: newThisWeek },
-        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS) },
+        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: loyalCount },
         {
           key: 'unsubRate',
           label: 'Unsub Rate',
-          value: totalPersonIndexs
-            ? Math.round(((emailHealth.find((e) => e._id === 'Unsubscribed')?.count || 0) / totalPersonIndexs) * 100)
+          value: totalPeople
+            ? Math.round(((emailHealth.find((e) => e._id === 'Unsubscribed')?.count || 0) / totalPeople) * 100)
             : 0,
           format: 'percent',
         },
       ],
       emailHealth: emailHealth.map((r) => ({ status: r._id || 'Unknown', count: r.count })),
-      inletBreakdown: inletBreakdown.map((r) => ({
-        key: r._id,
-        label: DATA_INLETS[r._id]?.label || r._id,
-        count: r.count,
-      })),
+      inletBreakdown: inletBreakdown.map((r) => {
+        const folderKey = hubViewActive ? mapHubInletKey(r._id) : r._id;
+        return {
+          key: folderKey,
+          label: DATA_INLETS[folderKey]?.label || r._id,
+          count: r.count,
+        };
+      }),
       growth,
       overlap: overlapPairs,
-      loyalCount: await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS),
+      loyalCount,
     };
   }
 
   async getLoyalAnalytics() {
-    const total = await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS);
+    const HubModel = await resolveHubModel();
+    const match = buildFolderQuery('loyal');
+    const total = await HubModel.countDocuments(match).setOptions(CONTACT_BYPASS);
     const overlap = await this.getOverlapMatrix();
 
-    const inletDistribution = await PersonIndex.aggregate([
-      { $match: { isMultiInlet: true } },
+    const inletDistribution = await HubModel.aggregate([
+      { $match: match },
       { $group: { _id: '$inletCount', count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
-    ]);
+    ]).option(CONTACT_BYPASS);
 
-    const topInletsAmongLoyal = await PersonIndex.aggregate([
-      { $match: { isMultiInlet: true } },
-      { $unwind: '$inlets' },
-      { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
+    const topInletsAmongLoyal = hubViewActive
+      ? await HubModel.aggregate([
+        { $match: match },
+        { $unwind: '$inletKeys' },
+        { $group: { _id: '$inletKeys', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ]).option(CONTACT_BYPASS)
+      : await HubModel.aggregate([
+        { $match: match },
+        { $unwind: '$inlets' },
+        { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ]).option(CONTACT_BYPASS);
 
     const avgInlets = total
-      ? (await PersonIndex.aggregate([
-        { $match: { isMultiInlet: true } },
+      ? (await HubModel.aggregate([
+        { $match: match },
         { $group: { _id: null, avg: { $avg: '$inletCount' } } },
-      ]))[0]?.avg || 0
+      ]).option(CONTACT_BYPASS))[0]?.avg || 0
       : 0;
 
-    const newLoyalThisWeek = await PersonIndex.countDocuments({
-      isMultiInlet: true,
-      updatedAt: { $gte: this._weekAgo() },
-    }).setOptions(CONTACT_BYPASS);
+    const newLoyalThisWeek = await countSinceDate(HubModel, match, this._weekAgo(), 'updatedAt');
 
     return {
       folder: 'loyal',
@@ -803,32 +847,38 @@ class DataHubService {
         label: `${r._id} inlets`,
         count: r.count,
       })),
-      topInletsAmongLoyal: topInletsAmongLoyal.map((r) => ({
-        label: DATA_INLETS[r._id]?.label || r._id,
-        count: r.count,
-      })),
+      topInletsAmongLoyal: topInletsAmongLoyal.map((r) => {
+        const folderKey = hubViewActive ? mapHubInletKey(r._id) : r._id;
+        return {
+          label: DATA_INLETS[folderKey]?.label || r._id,
+          count: r.count,
+        };
+      }),
     };
   }
 
   async getInletAnalytics(folder) {
+    const HubModel = await resolveHubModel();
     const query = buildFolderQuery(folder);
-    const total = await PersonIndex.countDocuments(query).setOptions(CONTACT_BYPASS);
+    const total = await HubModel.countDocuments(query).setOptions(CONTACT_BYPASS);
     const weekAgo = this._weekAgo();
     const monthAgo = this._monthAgo();
 
     const result = { folder, total, label: DATA_INLETS[folder]?.label || folder, kpis: [] };
 
     if (folder === 'leads') {
+      const qaExclude = buildDataHubExcludeFilter();
+      const leadMatch = { $match: qaExclude };
       const [funnel, callStatus, sources, quality, connect, newWeek, converted] = await Promise.all([
-        Lead.aggregate([{ $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-        Lead.aggregate([{ $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-        Lead.aggregate([{ $group: { _id: '$source', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-        Lead.aggregate([{ $group: { _id: '$leadQuality', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-        Lead.aggregate([{ $group: { _id: '$meaningfulConnect', count: { $sum: 1 } } }]),
-        Lead.countDocuments({ createdAt: { $gte: weekAgo } }),
-        Lead.countDocuments({ leadStatus: { $regex: /convert/i } }),
+        Lead.aggregate([leadMatch, { $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+        Lead.aggregate([leadMatch, { $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+        Lead.aggregate([leadMatch, { $group: { _id: '$source', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+        Lead.aggregate([leadMatch, { $group: { _id: '$leadQuality', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
+        Lead.aggregate([leadMatch, { $group: { _id: '$meaningfulConnect', count: { $sum: 1 } } }]),
+        Lead.countDocuments({ ...qaExclude, createdAt: { $gte: weekAgo } }),
+        Lead.countDocuments({ ...qaExclude, leadStatus: { $regex: /convert/i } }),
       ]);
-      const leadTotal = await Lead.countDocuments({});
+      const leadTotal = await Lead.countDocuments(qaExclude);
       const connectYes = connect.find((c) => c._id === 'YES')?.count || 0;
       result.funnel = funnel;
       result.callStatus = callStatus;
@@ -836,7 +886,8 @@ class DataHubService {
       result.quality = quality;
       result.meaningfulConnect = connect;
       result.kpis = [
-        { key: 'total', label: 'CRM Leads', value: leadTotal },
+        { key: 'people', label: 'People in CRM', value: total },
+        { key: 'total', label: 'Lead records', value: leadTotal },
         { key: 'newWeek', label: 'New This Week', value: newWeek },
         { key: 'connected', label: 'Meaningful Connect', value: connectYes },
         {
@@ -890,7 +941,7 @@ class DataHubService {
         OutsourcedRecord.countDocuments({}),
         OutsourcedRecord.countDocuments({ email: { $nin: [null, ''] } }),
         OutsourcedRecord.countDocuments({ phone: { $nin: [null, ''] } }),
-        PersonIndex.countDocuments({ $or: [{ inOutsourced: true }, { inTsc: true }], inCRM: true }).setOptions(CONTACT_BYPASS),
+        HubModel.countDocuments({ $or: [{ inOutsourced: true }, { inTsc: true }], inCRM: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.topCampaigns = topCampaigns;
       result.topSources = topSources;
@@ -957,19 +1008,42 @@ class DataHubService {
     }
 
     if (folder === 'unsubscribed') {
-      const allPeople = await PersonIndex.countDocuments(PERSON_INDEX_MATCH).setOptions(CONTACT_BYPASS);
-      const [byReason, byInlet, recentUnsubs] = await Promise.all([
-        PersonIndex.aggregate([{ $match: query }, { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-        PersonIndex.aggregate([
-          { $match: query },
-          { $unwind: '$inlets' },
-          { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ]),
-        PersonIndex.countDocuments({ ...query, updatedAt: { $gte: weekAgo } }).setOptions(CONTACT_BYPASS),
-      ]);
+      const allMatch = buildFolderQuery('all');
+      const allPeople = await HubModel.countDocuments(allMatch).setOptions(CONTACT_BYPASS);
+      const [byReason, byInlet, recentUnsubs] = hubViewActive
+        ? await Promise.all([
+          HubModel.aggregate([
+            { $match: query },
+            { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ]).option(CONTACT_BYPASS),
+          HubModel.aggregate([
+            { $match: query },
+            { $unwind: '$inletKeys' },
+            { $group: { _id: '$inletKeys', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ]).option(CONTACT_BYPASS),
+          countSinceDate(HubModel, query, weekAgo, 'updatedAt'),
+        ])
+        : await Promise.all([
+          HubModel.aggregate([
+            { $match: query },
+            { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ]).option(CONTACT_BYPASS),
+          HubModel.aggregate([
+            { $match: query },
+            { $unwind: '$inlets' },
+            { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ]).option(CONTACT_BYPASS),
+          countSinceDate(HubModel, query, weekAgo, 'updatedAt'),
+        ]);
       result.byReason = byReason;
-      result.byInlet = byInlet.map((r) => ({ label: DATA_INLETS[r._id]?.label || r._id, count: r.count }));
+      result.byInlet = byInlet.map((r) => {
+        const folderKey = hubViewActive ? mapHubInletKey(r._id) : r._id;
+        return { label: DATA_INLETS[folderKey]?.label || r._id, count: r.count };
+      });
       result.kpis = [
         { key: 'total', label: 'Unsubscribed', value: total },
         { key: 'recent', label: 'Updated This Week', value: recentUnsubs },
@@ -1028,10 +1102,10 @@ class DataHubService {
 
     if (folder === 'active') {
       const [inMailer, inExly, inCRM, multiInlet] = await Promise.all([
-        PersonIndex.countDocuments({ ...query, inMailer: true }).setOptions(CONTACT_BYPASS),
-        PersonIndex.countDocuments({ ...query, inExly: true }).setOptions(CONTACT_BYPASS),
-        PersonIndex.countDocuments({ ...query, inCRM: true }).setOptions(CONTACT_BYPASS),
-        PersonIndex.countDocuments({ ...query, isMultiInlet: true }).setOptions(CONTACT_BYPASS),
+        HubModel.countDocuments({ ...query, inMailer: true }).setOptions(CONTACT_BYPASS),
+        HubModel.countDocuments({ ...query, inExly: true }).setOptions(CONTACT_BYPASS),
+        HubModel.countDocuments({ ...query, inCRM: true }).setOptions(CONTACT_BYPASS),
+        HubModel.countDocuments({ ...query, isMultiInlet: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.engagementFlags = [
         { label: 'Mail Engagement', count: inMailer },
@@ -1056,11 +1130,18 @@ class DataHubService {
   }
 
   async getOverlapMatrix() {
-    const multi = await PersonIndex.find({ isMultiInlet: true }).setOptions(CONTACT_BYPASS).select('inlets').lean();
+    const HubModel = await resolveHubModel();
+    const match = buildFolderQuery('loyal');
+    const multi = await HubModel.find(match)
+      .setOptions(CONTACT_BYPASS)
+      .select(hubViewActive ? 'inletKeys' : 'inlets')
+      .lean();
     const pairCounts = {};
 
     for (const c of multi) {
-      const keys = [...new Set((c.inlets || []).map((i) => i.key))].sort();
+      const keys = hubViewActive
+        ? [...new Set((c.inletKeys || []).map(mapHubInletKey))].sort()
+        : [...new Set((c.inlets || []).map((i) => i.key))].sort();
       for (let i = 0; i < keys.length; i++) {
         for (let j = i + 1; j < keys.length; j++) {
           const pair = `${keys[i]}+${keys[j]}`;
@@ -1101,9 +1182,13 @@ class DataHubService {
     let since = null;
 
     if (incremental && !full) {
-      since = state.lastSyncedAt
-        ? new Date(state.lastSyncedAt)
-        : new Date(Date.now() - INCREMENTAL_BOOTSTRAP_MS);
+      if (!state.lastFullSyncAt && !state.lastSyncedAt) {
+        since = null;
+      } else {
+        since = state.lastSyncedAt
+          ? new Date(state.lastSyncedAt)
+          : new Date(Date.now() - INCREMENTAL_BOOTSTRAP_MS);
+      }
     }
 
     const stats = await this._runInletMerge({ since, onProgress, full: !incremental || full });
@@ -1305,11 +1390,11 @@ class DataHubService {
   }
 
   async repairDuplicateInlets({ onProgress } = {}) {
+    let fixed = 0;
     const contacts = await PersonIndex.find({ inlets: { $exists: true, $not: { $size: 0 } } })
       .setOptions(CONTACT_BYPASS)
       .select('inlets')
       .lean();
-    let fixed = 0;
     for (const contact of contacts) {
       const deduped = dedupeInletEntries(contact.inlets || []);
       if (deduped.length === (contact.inlets || []).length) continue;
@@ -1325,6 +1410,27 @@ class DataHubService {
       ).setOptions(CONTACT_BYPASS);
       fixed += 1;
     }
+
+    const hubViews = await PersonHubView.find({ inletKeys: { $exists: true, $not: { $size: 0 } } })
+      .setOptions(CONTACT_BYPASS)
+      .select('inletKeys')
+      .lean();
+    for (const view of hubViews) {
+      const keys = [...new Set((view.inletKeys || []).filter(Boolean))];
+      if (keys.length === (view.inletKeys || []).length) continue;
+      await PersonHubView.updateOne(
+        { _id: view._id },
+        {
+          $set: {
+            inletKeys: keys,
+            inletCount: keys.length,
+            isMultiInlet: keys.length >= 2,
+          },
+        }
+      ).setOptions(CONTACT_BYPASS);
+      fixed += 1;
+    }
+
     if (fixed && onProgress) onProgress(`repaired duplicate inlets on ${fixed} contacts`);
     return fixed;
   }

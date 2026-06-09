@@ -15,7 +15,9 @@ const campaignSchema = new mongoose.Schema({
   },
   senderProfileIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile' }],
   systemProvider: { type: String, enum: ['resend', 'env_smtp'] },
+  resendFromEmail: { type: String, trim: true, lowercase: true },
   includeSignature: { type: Boolean, default: true },
+  signature: { type: String, default: '' },
   removeUnsubscribe: { type: Boolean, default: false },
   variableFallbacks: {
     type: Map,

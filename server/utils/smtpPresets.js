@@ -43,8 +43,8 @@ const inferProviderFromEmail = (email) => {
   for (const { pattern, provider } of DOMAIN_PROVIDER_RULES) {
     if (pattern.test(addr)) return provider;
   }
-  // Google Workspace custom domain → Gmail SMTP when EMAIL_SERVICE=gmail in .env
-  const envEmail = (process.env.EMAIL_ADDRESS || '').trim().toLowerCase();
+  if (/@theshakticollective\.in$/i.test(addr)) return 'gmail';
+  const envEmail = (process.env.EMAIL_ADDRESS || process.env.EMAIL_ADDRESS2 || '').trim().toLowerCase();
   if (
     (process.env.EMAIL_SERVICE || '').toLowerCase() === 'gmail'
     && envEmail

@@ -1337,6 +1337,41 @@ html[data-pwa-desktop] [data-page-root] {
   font-style: normal;
 }
 
+/* Template Studio — Quill indent levels in editor + preview parity */
+.mail-template-quill .ql-editor .ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 3em;
+}
+.mail-template-quill .ql-editor .ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+.mail-template-quill .ql-editor .ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 9em;
+}
+.mail-template-quill .ql-editor .ql-indent-4:not(.ql-direction-rtl) {
+  padding-left: 12em;
+}
+.mail-template-quill .ql-editor .ql-indent-5:not(.ql-direction-rtl) {
+  padding-left: 15em;
+}
+.mail-template-quill .ql-editor .ql-indent-6:not(.ql-direction-rtl) {
+  padding-left: 18em;
+}
+.mail-template-quill .ql-editor .ql-indent-7:not(.ql-direction-rtl) {
+  padding-left: 21em;
+}
+.mail-template-quill .ql-editor .ql-indent-8:not(.ql-direction-rtl) {
+  padding-left: 24em;
+}
+.mail-template-quill .ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
+  padding-left: 3em;
+}
+.mail-template-quill .ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
+  padding-left: 6em;
+}
+.mail-template-quill .ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
+  padding-left: 9em;
+}
+
 .logo-mark-gallery-detail {
   border-left: 4px solid #a8c4a4 !important;
 }

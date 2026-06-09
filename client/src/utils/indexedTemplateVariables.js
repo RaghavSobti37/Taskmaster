@@ -62,6 +62,17 @@ export const previewWithDummyValues = (text, dummyValues = {}) => {
   });
 };
 
+/** Replace {1} with dummy text as-is (for subject lines and live preview). */
+export const applyDummyValuesPlain = (text, dummyValues = {}) => {
+  if (!text) return text;
+  const decoded = decodeVariableEntities(coalesceSplitVariableMarkup(text));
+  return decoded.replace(/\{(\d+)\}/g, (match, idx) => {
+    const d = dummyValues[idx] ?? dummyValues[String(idx)];
+    if (d !== undefined && d !== null && String(d).trim() !== '') return String(d).trim();
+    return match;
+  });
+};
+
 const validateVariableMapping = (texts, mapping = {}) => {
   const indices = new Set();
   for (const t of texts) {
@@ -95,10 +106,19 @@ export const resolveRowValuesFromRecipient = (recipient, variableMapping = {}) =
   return values;
 };
 
+export const normalizeTemplateDummyValues = (dummyValues) => {
+  if (!dummyValues) return {};
+  if (dummyValues instanceof Map) return Object.fromEntries(dummyValues.entries());
+  return typeof dummyValues === 'object' ? dummyValues : {};
+};
+
 export const getEffectiveTemplateContent = (template) => {
   if (!template) return '';
-  if (template.approvedContent) return template.approvedContent;
-  return template.content || '';
+  const content = template.content || '';
+  const approved = template.approvedContent || '';
+  if (template.format === 'rawHtml' && content.length > approved.length) return content;
+  if (approved) return approved;
+  return content;
 };
 
 export const leadToRowData = (lead) => {

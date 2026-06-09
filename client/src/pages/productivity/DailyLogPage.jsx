@@ -8,7 +8,7 @@ import {
   Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, History, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading } from '../../components/ui';
+import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading, Spinner } from '../../components/ui';
 import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
@@ -86,7 +86,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     endDate: endOfDay(selectedDate).toISOString(),
   }), [selectedDate]);
 
-  const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, { limit: 500, ...logDateRange });
+  const { data: logs = [], isLoading: logsLoading, isFetching: logsFetching } = useLogs(targetUserId, { limit: 500, ...logDateRange });
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
@@ -94,6 +94,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { data: activityGrid = [] } = useActivityGrid();
 
   const loading = logsLoading;
+  const logsRefetching = logsFetching && !logsLoading;
 
   const targetUser = userDirectory.find(u => u._id === targetUserId);
   const targetUserName = adminViewUserName || targetUser?.name || '';
@@ -404,10 +405,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 </div>
              </div>
              
-             <div className="p-6 space-y-4">
+             <div className="p-6 space-y-4 relative min-h-[200px]">
+                {logsRefetching && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75 backdrop-blur-[1px]">
+                    <Spinner size={100} />
+                  </div>
+                )}
                 {loading ? (
                   <DataLoading showPhrase className="py-16" />
-                ) : dailyLogs.length === 0 ? (
+                ) : logsRefetching ? null : dailyLogs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
                      <Activity size={48} className="mb-4" />
                      <p className="text-xs font-black uppercase tracking-widest">No activity recorded for this date</p>

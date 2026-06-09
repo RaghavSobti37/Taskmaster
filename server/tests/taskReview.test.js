@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const TaskActivity = require('../models/TaskActivity');
 const TaskAssignment = require('../models/TaskAssignment');
 const User = require('../models/User');
 const TaskService = require('../services/TaskService');
@@ -60,13 +61,17 @@ describe('task review workflow', () => {
 
     await TaskService.updateTask(
       task._id,
-      { reviewAction: 'rollback' },
+      { reviewAction: 'rollback', description: 'Missing acceptance criteria' },
       creator,
       null
     );
 
     updated = await Task.findById(task._id).lean();
     expect(updated.status).toBe('in-progress');
+
+    const rollbackRow = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
+    expect(rollbackRow?.body).toBe('Missing acceptance criteria');
+    expect(rollbackRow?.statusFrom).toBe('in-review');
 
     await TaskService.updateTask(
       task._id,
@@ -162,7 +167,7 @@ describe('task review workflow', () => {
 
     await TaskService.updateTask(
       task._id,
-      { reviewAction: 'rollback' },
+      { reviewAction: 'rollback', description: 'Reopened for additional work' },
       assignee,
       null
     );
@@ -170,6 +175,10 @@ describe('task review workflow', () => {
     const updated = await Task.findById(task._id).lean();
     expect(updated.status).toBe('in-progress');
     expect(updated.completedAt).toBeFalsy();
+
+    const rollbackRow = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
+    expect(rollbackRow?.body).toBe('Reopened for additional work');
+    expect(rollbackRow?.statusFrom).toBe('done');
   });
 
   test('platform owner can rollback in-review task they did not assign', async () => {

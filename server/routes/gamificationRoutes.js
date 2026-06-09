@@ -5,7 +5,7 @@ const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
-const { getCurrentWeekRange } = require('../utils/attendanceDate');
+const { getCurrentWeekRange, getPreviousWeekRange } = require('../utils/attendanceDate');
 const { ACTION_LABELS } = require('../../shared/gamificationRules');
 
 const toSimpleMessage = (log) => {
@@ -31,13 +31,18 @@ router.get('/missions', protect, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const { weekStartKey } = getCurrentWeekRange();
 
     await GamificationService.generateDailyMissions(req.user._id);
+    await GamificationService.generateWeeklyMissions(req.user._id);
 
     const missions = await DailyMission.find({
       userId: req.user._id,
-      date: { $gte: today },
-    });
+      $or: [
+        { cadence: { $ne: 'weekly' }, date: { $gte: today } },
+        { cadence: 'weekly', weekKey: weekStartKey },
+      ],
+    }).sort({ cadence: 1, date: 1 });
 
     res.json(missions);
   } catch (err) {
@@ -144,6 +149,25 @@ router.get('/leaderboard', protect, async (req, res) => {
       weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
     );
 
+    const prevWeek = getPreviousWeekRange();
+    const lastWeekWeekly = await GamificationService.getWeeklyLeaderboard(null, prevWeek.weekStartKey);
+    const lastWeekXpByUserId = new Map(
+      lastWeekWeekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    );
+    const lastWeekRankByUserId = new Map(
+      [...allUsers]
+        .map((user) => ({
+          _id: user._id,
+          name: user.name,
+          weeklyXp: lastWeekXpByUserId.get(String(user._id)) || 0,
+        }))
+        .sort((a, b) => {
+          if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+          return (a.name || '').localeCompare(b.name || '');
+        })
+        .map((user, index) => [String(user._id), index + 1])
+    );
+
     const top = allUsers
       .map((user) => ({
         ...user,
@@ -178,6 +202,7 @@ router.get('/leaderboard', protect, async (req, res) => {
           avatar: user.avatar,
           exp: user.exp,
           level: user.level,
+          lastWeekRank: lastWeekRankByUserId.get(userKey),
           weeklyXpPrior: hasRecalcDelta ? weeklyXpPrior : undefined,
           weeklyXpDelta: hasRecalcDelta ? weeklyXpDelta : undefined,
           recalcChanges: hasRecalcDelta
@@ -209,6 +234,8 @@ router.get('/leaderboard', protect, async (req, res) => {
         lastRecalculatedAt,
         logCount: weekly.logCount,
         configRates: weekly.configRates,
+        lastWeekStartKey: prevWeek.weekStartKey,
+        lastWeekEndKey: prevWeek.weekEndKey,
       },
     });
   } catch (err) {

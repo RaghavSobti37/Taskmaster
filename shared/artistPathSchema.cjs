@@ -112,8 +112,39 @@ function normalizePhone(value) {
 
 function parseSubmittedAt(value) {
   if (!value) return null;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+  const str = String(value).trim();
+
+  // HolySheet / Google Sheets — D/M/YYYY, h:mm:ss am/pm (Indian entries)
+  const dm = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i);
+  if (dm) {
+    const day = parseInt(dm[1], 10);
+    const month = parseInt(dm[2], 10);
+    const year = parseInt(dm[3], 10);
+    let hour = parseInt(dm[4] || '0', 10);
+    const min = parseInt(dm[5] || '0', 10);
+    const sec = parseInt(dm[6] || '0', 10);
+    const ap = (dm[7] || '').toLowerCase();
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      if (ap === 'pm' && hour < 12) hour += 12;
+      if (ap === 'am' && hour === 12) hour = 0;
+      const parsed = new Date(year, month - 1, day, hour, min, sec);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+  }
+
+  const d = new Date(str);
+  return Number.isNaN(d.getTime()) || d.getFullYear() < 2000 ? null : d;
+}
+
+/** Stable per-sheet-line id — keeps rows distinct when timestamps fail to parse */
+function buildSheetRowId(row = {}, mapped = null) {
+  const m = mapped || mapRowToArtistPath(row);
+  const tsRaw = String(row.Timestamp || row.timestamp || '').trim();
+  if (m.submittedAt && m.identity.email) {
+    return [m.identity.email, m.identity.phone, m.submittedAt.toISOString()].filter(Boolean).join('|');
+  }
+  const parts = [m.identity.email, m.identity.phone, tsRaw, m.identity.name].filter(Boolean);
+  return parts.join('|');
 }
 
 function mapRowToArtistPath(row = {}) {
@@ -140,7 +171,8 @@ function mapRowToArtistPath(row = {}) {
   }
 
   if (!rowId) {
-    rowId = [identity.email, identity.phone, submittedAt?.toISOString?.()].filter(Boolean).join('|') || '';
+    const tsRaw = String(row.Timestamp || row.timestamp || '').trim();
+    rowId = [identity.email, identity.phone, submittedAt?.toISOString?.() || tsRaw].filter(Boolean).join('|') || '';
   }
 
   return { identity, answers, submittedAt, rowId, rawRow };
@@ -157,5 +189,6 @@ module.exports = {
   ANSWER_KEYS,
   ANSWER_LABELS,
   mapRowToArtistPath,
+  buildSheetRowId,
   displayArtistLabel,
 };

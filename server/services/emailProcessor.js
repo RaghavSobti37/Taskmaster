@@ -6,9 +6,6 @@ const { SMTP_PRESETS } = require('../utils/smtpPresets');
 const { isAuthError, isRetryableSmtpError } = require('../utils/envProviderCredentials');
 const { ENV_CONFIG } = require('../config/environment');
 const { buildProfileTransporter, buildEnvTransporter, resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
-const fs = require('fs');
-const path = require('path');
-
 const { resolveTrackingApiBaseUrl } = require('../utils/trackingUrls');
 const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
 
@@ -54,26 +51,11 @@ const logCampaignEvent = async (MailEvent, { eventType, email, campaignId, metad
   }
 };
 
-const loadAttachments = async (campaign) => {
-  const fsPromises = fs.promises;
-  const uploadDir = path.join(__dirname, '../uploads/campaign-attachments');
-  const rows = await Promise.all((campaign.attachments || []).map(async (att) => {
-    const filePath = path.join(uploadDir, att.storageKey);
-    if (!att.storageKey) return null;
-    try {
-      await fsPromises.access(filePath);
-    } catch {
-      return null;
-    }
-    const content = await fsPromises.readFile(filePath);
-    return {
-      filename: att.filename,
-      content,
-      contentType: att.contentType || 'application/octet-stream',
-    };
-  }));
-  return rows.filter(Boolean);
-};
+const {
+  loadCampaignAttachments,
+  formatResendAttachments,
+  formatNodemailerAttachments,
+} = require('../utils/campaignAttachments');
 
 const resolveSender = async (campaign, profileId, jobIndex) => {
   const EmailProfile = require('../models/EmailProfile');
@@ -84,12 +66,16 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
     if (!resend) {
       throw new Error('RESEND_API_KEY not configured. Cannot use System Resend sender mode.');
     }
-    const fromEmail = process.env.SYSTEM_VERIFIED_FROM_EMAIL || campaign.senderProfileId?.email;
+    const { resolveResendFromEmail, displayNameForResendEmail } = require('../utils/resendFromEmails');
+    const linked = campaign.senderProfileId && typeof campaign.senderProfileId === 'object'
+      ? campaign.senderProfileId
+      : null;
+    const fromEmail = resolveResendFromEmail(campaign);
     return {
       profile: {
-        name: 'System Resend',
-        email: fromEmail || 'onboarding@resend.dev',
-        signature: campaign.senderProfileId?.signature || ''
+        name: linked?.name || displayNameForResendEmail(fromEmail),
+        email: fromEmail,
+        signature: campaign.signature || linked?.signature || '',
       },
       useResend: !!resend,
       transporter: null,
@@ -322,10 +308,11 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     variableFallbacks: fallbacks,
   });
 
+  const campaignSignature = typeof campaign.signature === 'string' ? campaign.signature : '';
   const processedHtml = await buildFinalEmailHtml({
     html: htmlContent,
     includeSignature: shouldIncludeSignature,
-    signature: profile.signature || '',
+    signature: campaignSignature || profile.signature || '',
     mode: 'live',
     campaignId: campaign.campaignId || campaign._id.toString(),
     leadEmail: email,
@@ -335,29 +322,38 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;
   const mailSubject = mergedSubject;
-  const mailAttachments = await loadAttachments(campaign);
+  const attachmentRows = await loadCampaignAttachments(campaign);
+  const expectedCount = (campaign.attachments || []).filter((a) => a.storageKey).length;
+  if (expectedCount > 0 && attachmentRows.length === 0) {
+    logger.warn('Email Processor', 'Campaign attachments missing on disk', {
+      campaignId: campaign.campaignId || campaign._id?.toString(),
+      expected: expectedCount,
+    });
+  }
   let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const campaignTag = campaign.campaignId || campaign._id.toString();
 
+  const { sanitizeResendTags } = require('../utils/resendTags');
   const resendPayload = {
     from: senderFrom,
     to: [email],
     subject: mailSubject,
     html: processedHtml,
     headers: { 'X-Campaign-ID': campaignTag },
-    tags: [
-      { name: 'campaign_id', value: campaignTag.slice(0, 256) },
-      { name: 'recipient_email', value: cleanEmail.slice(0, 256) },
-    ],
+    tags: sanitizeResendTags([
+      { name: 'campaign_id', value: campaignTag },
+      { name: 'recipient_email', value: cleanEmail },
+    ]),
   };
-  if (mailAttachments.length) {
-    resendPayload.attachments = mailAttachments.map((a) => ({ filename: a.filename, content: a.content }));
+  if (attachmentRows.length) {
+    resendPayload.attachments = formatResendAttachments(attachmentRows);
   }
 
   const sendViaResend = async () => {
     if (!resend) return false;
-    const resp = await resend.emails.send(resendPayload);
-    messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
+    const { data, error } = await resend.emails.send(resendPayload);
+    if (error) throw new Error(error.message || 'Resend send failed');
+    messageIdStr = data?.id || messageIdStr;
     return true;
   };
 
@@ -384,7 +380,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
         to: email,
         subject: mailSubject,
         html: processedHtml,
-        attachments: mailAttachments,
+        attachments: formatNodemailerAttachments(attachmentRows),
         headers: { 'X-Campaign-ID': campaignTag },
       };
 

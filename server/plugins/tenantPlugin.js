@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { getTenantId } = require('../utils/tenantContext');
+const { tenantIdFilter } = require('../utils/mongoId');
 
 module.exports = function tenantPlugin(schema, options) {
   // Add tenantId to the schema if it doesn't exist
@@ -48,7 +49,7 @@ module.exports = function tenantPlugin(schema, options) {
 
     const tenantId = (this.options && this.options.tenantId) || getTenantId();
     if (tenantId) {
-      this.where({ tenantId });
+      this.where(tenantIdFilter(tenantId));
     }
     next();
   };

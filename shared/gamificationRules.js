@@ -159,6 +159,18 @@ const DAILY_MISSIONS = [
   },
 ];
 
+/** Weekly missions — bonus XP; week boundary uses IST Mon–Sun (same as leaderboard). */
+const WEEKLY_MISSIONS = [
+  {
+    title: 'Newsletter Contributor',
+    description: 'Add 1 article link this week',
+    targetCount: 1,
+    actionType: 'NEWSLETTER_ARTICLE',
+    expReward: 30,
+    cadence: 'weekly',
+  },
+];
+
 const FAIRNESS_PRINCIPLES = [
   'Outcome over setup — completing work earns more than creating tasks or projects.',
   'Role-balanced paths — sales (leads), creatives (tasks + assets), ops (attendance + invoices), reviewers (approvals) can all climb the board.',
@@ -222,6 +234,7 @@ module.exports = {
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,
+  WEEKLY_MISSIONS,
   FAIRNESS_PRINCIPLES,
   ROLE_PATHS,
   XP_RULE_ROWS,

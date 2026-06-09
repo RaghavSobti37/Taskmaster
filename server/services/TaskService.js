@@ -598,13 +598,35 @@ exports.createTask = async (taskData, user, session) => {
   return { taskDto: mapTaskDTO(taskObj), pendingNotifications };
 };
 
-exports.getTasks = async (filter, { userId = null, listMode = false, page, limit, sort } = {}) => {
+exports.getTasks = async (filter, { userId = null, listMode = false, completedListMode = false, page, limit, sort } = {}) => {
+  const sortSpec = sort && Object.keys(sort).length ? sort : { dueDate: 1, _id: 1 };
+
+  if (completedListMode) {
+    const leanQuery = Task.find(filter)
+      .select('_id title status completedAt createdBy')
+      .populate('createdBy', 'name avatar')
+      .populate(TASK_LIST_ASSIGNEE_POPULATE);
+    if (page && limit) {
+      const skip = (Math.max(1, page) - 1) * limit;
+      const [total, tasks] = await Promise.all([
+        Task.countDocuments(filter),
+        leanQuery.sort(sortSpec).skip(skip).limit(limit).lean({ virtuals: true }),
+      ]);
+      return {
+        tasks: tasks.map(mapTaskDTO),
+        total,
+        page: Math.max(1, page),
+        pages: Math.max(1, Math.ceil(total / limit)),
+      };
+    }
+    const tasks = await leanQuery.sort(sortSpec).lean({ virtuals: true });
+    return tasks.map(mapTaskDTO);
+  }
+
   const assigneePopulate = listMode ? TASK_LIST_ASSIGNEE_POPULATE : TASK_ASSIGNEE_POPULATE;
   const createdByPopulate = listMode
     ? { path: 'createdBy', select: 'name avatar' }
     : { path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } };
-
-  const sortSpec = sort && Object.keys(sort).length ? sort : { dueDate: 1, _id: 1 };
 
   const baseQuery = Task.find(filter)
     .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours completedAt updatedAt createdBy mentionAccessIds color')
@@ -719,6 +741,13 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (coreUpdates.title !== undefined) coreUpdates.title = sanitizeName(coreUpdates.title);
   if (coreUpdates.description !== undefined) coreUpdates.description = sanitizeName(coreUpdates.description);
 
+  const rollbackReasonText = reviewAction === 'rollback'
+    ? String(coreUpdates.description || '').trim()
+    : '';
+  if (reviewAction === 'rollback') {
+    delete coreUpdates.description;
+  }
+
   let sourceProject = null;
   if (existing.projectId) {
     sourceProject = await Project.findById(existing.projectId).session(session);
@@ -794,6 +823,15 @@ exports.updateTask = async (taskId, updates, user, session) => {
       coreUpdates.completedAt = null;
       coreUpdates.progress = Math.min(existing.progress || 0, 90);
     }
+    for (const field of TIMELINE_FIELDS) {
+      delete coreUpdates[field];
+    }
+    delete coreUpdates.priority;
+    delete coreUpdates.projectId;
+    delete coreUpdates.workspace;
+    delete coreUpdates.type;
+    delete coreUpdates.title;
+    delete coreUpdates.assignees;
   }
 
   stripUnchangedTimelineFields(coreUpdates, existing);
@@ -1083,6 +1121,17 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (reviewAction === 'rollback') {
+      const TaskActivityService = require('./TaskActivityService');
+      if (rollbackReasonText) {
+        await TaskActivityService.recordRollback(
+          task._id,
+          user,
+          rollbackReasonText,
+          existing.status,
+          session
+        );
+      }
+
       const actorId = user._id.toString();
       const wasDone = String(existing.status || '').toLowerCase() === 'done';
       if (wasDone && task.projectId) {

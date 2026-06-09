@@ -87,8 +87,11 @@ const resolveRowValues = (recipient, variableMapping = {}) => {
 
 const getEffectiveTemplateContent = (template) => {
   if (!template) return '';
-  if (template.approvedContent) return template.approvedContent;
-  return template.content || '';
+  const content = template.content || '';
+  const approved = template.approvedContent || '';
+  if (template.format === 'rawHtml' && content.length > approved.length) return content;
+  if (approved) return approved;
+  return content;
 };
 
 const leadToRowData = (lead) => {

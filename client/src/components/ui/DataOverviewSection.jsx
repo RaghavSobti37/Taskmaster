@@ -18,6 +18,7 @@ const ChartFallback = () => (
  * @param {Array} props.charts - { id, title, type: 'bar'|'donut', data: [{ label, value }] }
  * @param {boolean} props.mobileCollapsed - collapse charts on mobile (default true)
  * @param {number} props.mobileMaxStats - max stats visible before expand (default 2)
+ * @param {boolean} props.eagerCharts - render charts immediately (skip idle/intersection defer)
  */
 export default function DataOverviewSection({
   stats = [],
@@ -25,6 +26,7 @@ export default function DataOverviewSection({
   className = '',
   mobileCollapsed = true,
   mobileMaxStats = 2,
+  eagerCharts = false,
 }) {
   const isMobile = useIsMobile();
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -36,6 +38,11 @@ export default function DataOverviewSection({
   const hasCharts = charts.length > 0;
 
   useEffect(() => {
+    if (eagerCharts && hasCharts) {
+      setSectionVisible(true);
+      setChartsReady(true);
+      return undefined;
+    }
     const el = sectionRef.current;
     if (!el || !hasCharts) {
       setSectionVisible(false);
@@ -49,9 +56,10 @@ export default function DataOverviewSection({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasCharts]);
+  }, [hasCharts, eagerCharts]);
 
   useEffect(() => {
+    if (eagerCharts) return undefined;
     if (!hasCharts || (!sectionVisible && !insightsOpen)) {
       setChartsReady(false);
       return undefined;
@@ -63,7 +71,7 @@ export default function DataOverviewSection({
     }
     const timer = window.setTimeout(enable, 500);
     return () => window.clearTimeout(timer);
-  }, [hasCharts, sectionVisible, insightsOpen]);
+  }, [hasCharts, sectionVisible, insightsOpen, eagerCharts]);
 
   if (!hasStats && !hasCharts) return null;
 

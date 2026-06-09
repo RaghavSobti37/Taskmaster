@@ -19,6 +19,7 @@ export const BRAND_ICONS = {
   appleTouch152: '/icons/apple-touch-icon-152.png',
   appleTouch167: '/icons/apple-touch-icon-167.png',
   appleTouch180: '/icons/apple-touch-icon.png',
+  pwa96: '/icons/icon-96.png',
   pwa192: '/icons/icon-192.png',
   pwa512: '/icons/icon-512.png',
   maskable512: '/icons/icon-maskable-512.png',

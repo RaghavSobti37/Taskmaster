@@ -52,7 +52,6 @@ const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminTeamsPage = lazyWithRetry(() => import('./pages/admin/AdminTeamsPage'));
 const AdminExly = lazyWithRetry(() => import('./pages/admin/AdminExly'));
-const AdminMail = lazyWithRetry(() => import('./pages/admin/AdminMail'));
 const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
 const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
@@ -77,7 +76,12 @@ const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
-const EmailsPage = lazyWithRetry(() => import('./pages/workspace/EmailsPage'));
+const EmailHubLayout = lazyWithRetry(() => import('./pages/emails/EmailHubLayout'));
+const EmailsOverviewPage = lazyWithRetry(() => import('./pages/emails/EmailsOverviewPage'));
+const EmailsCampaignsPage = lazyWithRetry(() => import('./pages/emails/EmailsCampaignsPage'));
+const EmailsTemplatesPage = lazyWithRetry(() => import('./pages/emails/EmailsTemplatesPage'));
+const EmailsProfilesPage = lazyWithRetry(() => import('./pages/emails/EmailsProfilesPage'));
+const EmailsAnalyticsPage = lazyWithRetry(() => import('./pages/emails/EmailsAnalyticsPage'));
 const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterPage'));
 const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
 const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
@@ -243,10 +247,16 @@ function App() {
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
               </Route>
               <Route element={<PageRoute page="emails" />}>
-                <Route path="/emails" element={<EmailsPage />} />
-                <Route path="/emails/newsletter" element={<NewsletterPage />} />
-                <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
-                <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
+                <Route element={<EmailHubLayout />}>
+                  <Route path="/emails" element={<EmailsOverviewPage />} />
+                  <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
+                  <Route path="/emails/templates" element={<EmailsTemplatesPage />} />
+                  <Route path="/emails/profiles" element={<EmailsProfilesPage />} />
+                  <Route path="/emails/analytics" element={<EmailsAnalyticsPage />} />
+                  <Route path="/emails/newsletter" element={<NewsletterPage />} />
+                  <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
+                  <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
+                </Route>
                 <Route path="/emails/create" element={<CreateCampaignPage />} />
               </Route>
               <Route path="/workspace/emails" element={<Navigate to="/emails" replace />} />

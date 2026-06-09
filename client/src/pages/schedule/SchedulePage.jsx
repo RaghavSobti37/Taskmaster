@@ -9,10 +9,12 @@ import { DesktopRecommendedBanner } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import ScheduleDayViewControl from '../../components/schedule/ScheduleDayViewControl';
-import { useSchedule, useWorkspaces, useProjects } from '../../hooks/useTaskmasterQueries';
+import { useSchedule, useWorkspaces, useProjects, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { useStatusCounts } from '../../hooks/useStatusCounts';
+import { useDashboardTaskActions } from '../../hooks/useDashboardTaskActions';
 
 const TaskDetailModal = lazy(() => import('../../components/TaskDetailModal'));
+const TaskCompletionModal = lazy(() => import('../../components/TaskCompletionModal'));
 import { CalendarDays, Users, Layers } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -37,8 +39,19 @@ const SchedulePage = () => {
   const scheduleEnd = addDaysToDateKey(today, MAX_SCHEDULE_DAYS - 1);
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
+  const { data: users = [] } = useUserDirectory();
   const { data: scheduleData, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
   const { data: statusCounts } = useStatusCounts(!!user);
+  const {
+    taskToComplete,
+    setTaskToComplete,
+    taskToApprove,
+    setTaskToApprove,
+    completionSubmitForReview,
+    handleCompleteRequest,
+    handleCompleteSubmit,
+    handleApproveReview,
+  } = useDashboardTaskActions({ user, projects, users });
 
   const scheduleStats = useMemo(() => {
     const tasks = scheduleData?.tasks || [];
@@ -124,13 +137,28 @@ const SchedulePage = () => {
         )}
       </div>
 
-      {selectedTask && (
+      {(selectedTask || taskToComplete || taskToApprove) && (
         <Suspense fallback={null}>
           <TaskDetailModal
             isOpen={!!selectedTask}
             onClose={() => setSelectedTask(null)}
             task={selectedTask}
             onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['schedule'] })}
+            onFinishRequest={handleCompleteRequest}
+          />
+          <TaskCompletionModal
+            task={taskToComplete}
+            isOpen={!!taskToComplete}
+            onClose={() => setTaskToComplete(null)}
+            onSubmit={handleCompleteSubmit}
+            submitForReview={completionSubmitForReview}
+          />
+          <TaskCompletionModal
+            task={taskToApprove}
+            isOpen={!!taskToApprove}
+            onClose={() => setTaskToApprove(null)}
+            onSubmit={handleApproveReview}
+            approveReview
           />
         </Suspense>
       )}

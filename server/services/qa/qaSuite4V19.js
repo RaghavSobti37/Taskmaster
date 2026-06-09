@@ -163,11 +163,14 @@ async function runSuite4V19Checks() {
       'fe-user-data-deletion-page',
       'security-hardening',
       'User data deletion public page wired',
-      appJsx && appJsx.includes('/userdata') && (await readRepoText('client/src/pages/UserDataDeletion.jsx'))
+      appJsx && appJsx.includes('/userdata') && (
+        (await readRepoText('client/src/pages/legal/UserDataDeletion.jsx'))
+        || (await readRepoText('client/src/pages/UserDataDeletion.jsx'))
+      )
         ? 'pass'
         : 'warn',
       '/userdata route for Meta/Google deletion status lookup',
-      'client/src/pages/UserDataDeletion.jsx',
+      'client/src/pages/legal/UserDataDeletion.jsx',
       'medium'
     )
   );

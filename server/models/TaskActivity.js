@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const ACTIVITY_TYPES = ['created', 'assignment', 'message', 'status_change', 'field_change'];
+const ACTIVITY_TYPES = ['created', 'assignment', 'message', 'status_change', 'field_change', 'rollback'];
 
 const taskActivitySchema = new mongoose.Schema({
   taskId: {

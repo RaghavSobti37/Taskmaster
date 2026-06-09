@@ -89,6 +89,41 @@ const getFallbackHolidays = () => {
   ];
 };
 
+/** Prefer primary googleRefreshToken; fall back to first linked googleAccounts entry. */
+function resolveGoogleRefreshToken(user) {
+  if (!user) return null;
+  if (user.googleRefreshToken) return user.googleRefreshToken;
+  const accounts = user.googleAccounts || [];
+  for (const acc of accounts) {
+    if (acc.refreshToken) return acc.refreshToken;
+  }
+  return null;
+}
+
+async function fetchPersonalGoogleEvents(refreshToken, timeMin, timeMax) {
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  const calendar = getCalendar(oauth2Client);
+
+  const response = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 250,
+  });
+
+  return (response.data.items || []).map((event) => ({
+    id: event.id,
+    summary: event.summary,
+    start: event.start,
+    end: event.end,
+    visibility: event.visibility || 'default',
+    type: 'personal',
+  }));
+}
+
 exports.linkGoogleAccount = async (req, res) => {
   try {
     const { code } = req.body;
@@ -109,40 +144,22 @@ exports.linkGoogleAccount = async (req, res) => {
 
 exports.getCalendarEvents = async (req, res) => {
   try {
-    // If user has linked Google account, fetch their personal events too
-    let personalEvents = [];
-    if (req.user.googleRefreshToken) {
-      try {
-        const oauth2Client = createOAuth2Client();
-        oauth2Client.setCredentials({ refresh_token: req.user.googleRefreshToken });
-        const calendar = getCalendar(oauth2Client);
-        
-        const now = new Date();
-        const yearStart = new Date(now.getFullYear(), 0, 1);
-        const yearEnd = new Date(now.getFullYear(), 11, 31);
-        
-        const response = await calendar.events.list({
-          calendarId: 'primary',
-          timeMin: yearStart.toISOString(),
-          timeMax: yearEnd.toISOString(),
-          singleEvents: true,
-          orderBy: 'startTime',
-          maxResults: 250
-        });
-        
-        personalEvents = (response.data.items || []).map(event => ({
-          id: event.id,
-          summary: event.summary,
-          start: event.start,
-          visibility: event.visibility || 'default',
-          type: 'personal'
-        }));
-      } catch (err) {
-        logger.error('Calendar', 'Failed to fetch personal events', { error: err.message });
-      }
+    const refreshToken = resolveGoogleRefreshToken(req.user);
+    if (!refreshToken) {
+      return res.json([]);
     }
 
-    res.json(personalEvents);
+    const now = new Date();
+    const timeMin = req.query.start ? new Date(req.query.start) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const timeMax = req.query.end ? new Date(req.query.end) : new Date(now.getFullYear(), now.getMonth() + 2, 0);
+
+    try {
+      const personalEvents = await fetchPersonalGoogleEvents(refreshToken, timeMin, timeMax);
+      res.json(personalEvents);
+    } catch (err) {
+      logger.error('Calendar', 'Failed to fetch personal events', { error: err.message });
+      res.status(502).json({ error: err.message || 'Failed to fetch Google Calendar events' });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

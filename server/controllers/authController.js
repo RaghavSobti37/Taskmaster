@@ -377,8 +377,15 @@ exports.googleAuthCallback = async (req, res) => {
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
           });
-          await user.save();
         }
+        if (tokens.refresh_token) {
+          user.googleRefreshToken = tokens.refresh_token;
+        }
+        if (tokens.access_token) {
+          user.googleAccessToken = tokens.access_token;
+        }
+        user.googleCalendarLinked = true;
+        await user.save();
       }
       return res.redirect(`${FRONTEND_URL}/auth/google/success?link=success`);
     }

@@ -171,7 +171,7 @@ function resolveLhBaseUrl() {
     if (front && !/localhost|127\.0\.0\.1/i.test(front)) return front;
   }
 
-  return 'http://localhost:4173';
+  return 'http://localhost:5173';
 }
 
 function resolveLighthouseRoutes(pathFilter) {

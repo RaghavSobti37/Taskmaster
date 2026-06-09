@@ -1,7 +1,7 @@
 /** Display helpers for Artist Path admin UI */
 
 export const HIDDEN_ANSWER_KEYS = new Set([
-  'name', 'email', 'phone', 'city', 'artistIdentity',
+  'name', 'email', 'phone', 'city',
   'instagram', 'spotify', 'youtube',
 ]);
 
@@ -15,6 +15,11 @@ export const SOCIAL_PLATFORMS = [
 
 /** Ordered question groups — social links shown in profile header */
 export const QUESTION_GROUPS = [
+  {
+    title: 'Artist identity',
+    keys: ['artistIdentity'],
+    fullWidth: true,
+  },
   {
     title: 'Profile',
     keys: ['stageName', 'trainingDetails', 'coreSkills', 'strengthsUniqueness', 'dailyTime', 'mentorName'],

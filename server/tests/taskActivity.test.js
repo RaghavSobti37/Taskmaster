@@ -200,6 +200,29 @@ describe('TaskService updateTask message activity', () => {
     expect(row?.statusTo).toBe('in-progress');
   });
 
+  test('recordRollback writes rollback activity with reason', async () => {
+    const actor = await User.create({ name: 'Reviewer', email: 'reviewer-rollback@test.com' });
+    const task = await Task.create({
+      title: 'Rollback task',
+      createdBy: actor._id,
+      status: 'in-review',
+    });
+
+    await TaskActivityService.recordRollback(
+      task._id,
+      actor,
+      'Needs more detail on deliverables',
+      'in-review',
+      null
+    );
+
+    const row = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
+    expect(row?.body).toBe('Needs more detail on deliverables');
+    expect(row?.statusFrom).toBe('in-review');
+    expect(row?.statusTo).toBe('in-progress');
+    expect(row?.actorId.toString()).toBe(actor._id.toString());
+  });
+
   test('appendTaskMessage on save path records new description as message', async () => {
     const creator = await User.create({ name: 'Updater', email: 'updater-activity@test.com' });
     const task = await Task.create({

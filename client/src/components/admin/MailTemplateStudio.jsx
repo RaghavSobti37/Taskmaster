@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import '../../utils/mailTemplateQuillSetup';
 import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../ui';
 import { format } from 'date-fns';
@@ -20,13 +21,19 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import { canApproveMailTemplates } from '../../utils/mailTemplateApprovers';
 import {
   parseIndexedVariablesFromHtml,
-  previewWithDummyValues,
+  applyDummyValuesPlain,
   nextVariableIndex,
   insertIndexedVariable,
   getEffectiveTemplateContent,
 } from '../../utils/indexedTemplateVariables';
 import axios from 'axios';
-import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import PreviewIframe from '../emails/PreviewIframe';
+import {
+  inlineQuillIndentsInHtml,
+  wrapVisualPreviewBody,
+  enhancePreviewDocument,
+} from '../../utils/visualEmailHtml';
 const STATUS_LABELS = {
   draft: 'Draft',
   pending_approval: 'Pending',
@@ -42,6 +49,22 @@ const emptyDraft = () => ({
   format: 'visual',
   dummyValues: {},
 });
+
+const MAIL_TEMPLATE_QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    ['link'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    ['clean'],
+  ],
+  clipboard: { matchVisual: false },
+};
+
+const MAIL_TEMPLATE_QUILL_FORMATS = [
+  'header', 'bold', 'italic', 'underline', 'link', 'list', 'bullet', 'indent',
+];
 
 export default function MailTemplateStudio({ onUseInCampaign }) {
   const toast = useToast();
@@ -71,23 +94,29 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   );
 
   const [serverPreviewDoc, setServerPreviewDoc] = useState('');
+  const [previewSubject, setPreviewSubject] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const localPreviewDoc = useMemo(() => {
+    if (!draft.content?.trim() || useRawHtml) return '';
+    return wrapVisualPreviewBody(inlineQuillIndentsInHtml(draft.content), { theme: 'light' });
+  }, [draft.content, useRawHtml]);
+
   const previewHtml = useMemo(() => {
-    if (useRawHtml) {
-      return previewWithDummyValues(draft.content, draft.dummyValues);
+    if (serverPreviewDoc && !serverPreviewDoc.includes('Preview failed')) {
+      return useRawHtml ? serverPreviewDoc : enhancePreviewDocument(serverPreviewDoc, { theme: 'light' });
     }
-    return serverPreviewDoc || '<p style="padding:16px;font-family:sans-serif;color:#64748b">Loading server preview…</p>';
-  }, [draft.content, draft.dummyValues, useRawHtml, serverPreviewDoc]);
+    if (localPreviewDoc) return localPreviewDoc;
+    if (draft.content?.trim()) {
+      return '<p style="padding:16px;font-family:sans-serif;color:#64748b">Loading preview…</p>';
+    }
+    return '<p style="padding:16px;font-family:sans-serif;color:#94a3b8">No preview available</p>';
+  }, [serverPreviewDoc, localPreviewDoc, draft.content, useRawHtml]);
 
   useEffect(() => {
-    if (useRawHtml) {
+    if (!draft.content?.trim()) {
       setServerPreviewDoc('');
-      return undefined;
-    }
-    const html = previewWithDummyValues(draft.content, draft.dummyValues);
-    if (!html?.trim()) {
-      setServerPreviewDoc('');
+      setPreviewSubject('');
       return undefined;
     }
     let cancelled = false;
@@ -95,15 +124,21 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       setPreviewLoading(true);
       try {
         const { data } = await axios.post('/api/mail/preview', {
-          content: html,
-          subject: previewWithDummyValues(draft.subject || '', draft.dummyValues),
+          content: draft.content,
+          subject: draft.subject || '',
+          dummyValues: draft.dummyValues,
+          format: useRawHtml ? 'rawHtml' : 'visual',
           removeUnsubscribe: true,
           theme: 'light',
         });
-        if (!cancelled) setServerPreviewDoc(data.html || '');
+        if (!cancelled) {
+          setServerPreviewDoc(data.html || '');
+          setPreviewSubject(data.subject || applyDummyValuesPlain(draft.subject || '', draft.dummyValues));
+        }
       } catch {
         if (!cancelled) {
           setServerPreviewDoc('<p style="padding:16px;color:#dc2626">Preview failed</p>');
+          setPreviewSubject(applyDummyValuesPlain(draft.subject || '', draft.dummyValues));
         }
       } finally {
         if (!cancelled) setPreviewLoading(false);
@@ -111,16 +146,6 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     })();
     return () => { cancelled = true; };
   }, [draft.content, draft.subject, draft.dummyValues, useRawHtml]);
-
-  const studioDraft = useMemo(
-    () => ({ ...draft, format: useRawHtml ? 'rawHtml' : 'visual' }),
-    [draft, useRawHtml]
-  );
-  const studioBaseline = useMemo(
-    () => ({ ...draftBaseline, format: rawHtmlBaseline ? 'rawHtml' : 'visual' }),
-    [draftBaseline, rawHtmlBaseline]
-  );
-  const hasStudioEdits = studioTab === 'editor' && !stableJsonEqual(studioDraft, studioBaseline);
 
   const syncBaseline = (nextDraft, rawHtml = useRawHtml) => {
     const snap = cloneSnapshot(nextDraft);
@@ -136,13 +161,16 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       id: t._id,
       name: t.name,
       subject: t.subject || '',
-      content: t.content || '',
+      content: getEffectiveTemplateContent(t) || '',
       format: t.format || 'visual',
       dummyValues: dummies,
+      status: t.status,
     };
     setDraft(loaded);
     setUseRawHtml(t.format === 'rawHtml');
     syncBaseline(loaded, t.format === 'rawHtml');
+    setServerPreviewDoc('');
+    setPreviewSubject('');
     setStudioTab('editor');
   };
 
@@ -153,11 +181,6 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     syncBaseline(fresh, false);
     setReviewingId(null);
     setStudioTab('editor');
-  };
-
-  const handleRevertStudioEdits = () => {
-    setDraft(cloneSnapshot(draftBaseline));
-    setUseRawHtml(rawHtmlBaseline);
   };
 
   const handleInsertVariable = () => {
@@ -197,10 +220,11 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         ...draft,
         id: data._id,
         format: useRawHtml ? 'rawHtml' : 'visual',
+        status: data.status || draft.status,
       };
       setDraft(saved);
       syncBaseline(saved, useRawHtml);
-      toast.success('Template draft saved');
+      toast.success(draft.status === 'approved' ? 'Approved template updated' : 'Template draft saved');
       refetchAll();
     } catch (e) {
       toast.error(e.response?.data?.error || e.message);
@@ -244,17 +268,6 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     }
   };
 
-  const reviewingTemplate = reviewingId
-    ? pendingTemplates.find((t) => t._id === reviewingId)
-    : null;
-
-  useEffect(() => {
-    if (reviewingTemplate) {
-      loadTemplate(reviewingTemplate);
-      setUseRawHtml(reviewingTemplate.format === 'rawHtml');
-    }
-  }, [reviewingId]);
-
   const handleApprove = async () => {
     if (!reviewingId) return;
     try {
@@ -291,28 +304,6 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const myTemplates = allTemplates.filter(
     (t) => isAdmin || String(t.createdBy?._id || t.createdBy) === String(user?._id)
   );
-
-  useUnsavedChanges({
-    baseline: studioBaseline,
-    draft: studioDraft,
-    setDraft: (snap) => {
-      const { format, ...rest } = snap;
-      setDraft(rest);
-      setUseRawHtml(format === 'rawHtml');
-    },
-    hasChanges: hasStudioEdits,
-    onSave: handleSaveDraft,
-    onCancel: handleRevertStudioEdits,
-    isSaving: saveMutation.isPending,
-    enabled: studioTab === 'editor',
-    elevated: true,
-    fieldLabels: {
-      name: 'Template name',
-      subject: 'Subject',
-      content: 'Content',
-      format: 'Format',
-    },
-  });
 
   return (
     <div className="space-y-6">
@@ -354,10 +345,15 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               )}
             </p>
 
-            <div className="flex gap-2">
-              <Button size="xs" variant="ghost" onClick={handleInsertVariable} title="Optional shortcut for the next index">
-                <Plus size={12} /> Insert next {'{n}'}
+            <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+              <Button size="xs" variant="secondary" onClick={handleInsertVariable} title="Insert next indexed variable into content">
+                <Plus size={12} /> Insert Variable {nextVariableIndex(draft.content)}
               </Button>
+              {detectedIndices.map((idx) => (
+                <span key={idx} className="text-[10px] font-mono px-2 py-1 rounded bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
+                  {`{${idx}}`}
+                </span>
+              ))}
             </div>
 
             {detectedIndices.length > 0 && (
@@ -383,8 +379,18 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                 placeholder="HTML with {1} {2} variables"
               />
             ) : (
-              <div className="rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
-                <ReactQuill theme="snow" value={draft.content} onChange={(v) => setDraft((p) => ({ ...p, content: v }))} className="h-[280px] mb-12" />
+              <div className="mail-template-quill rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
+                <ReactQuill
+                  theme="snow"
+                  value={draft.content}
+                  onChange={(content, _delta, _source, editor) => {
+                    const html = editor?.root?.innerHTML ?? content;
+                    setDraft((p) => ({ ...p, content: html }));
+                  }}
+                  modules={MAIL_TEMPLATE_QUILL_MODULES}
+                  formats={MAIL_TEMPLATE_QUILL_FORMATS}
+                  className="h-[280px] mb-12"
+                />
               </div>
             )}
 
@@ -392,7 +398,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               {!reviewingId && (
                 <>
                   <Button size="sm" variant="secondary" onClick={handleSaveDraft} disabled={saveMutation.isPending}>
-                    <Save size={14} /> Save Draft
+                    <Save size={14} /> {draft.status === 'approved' ? 'Save changes' : 'Save Draft'}
                   </Button>
                   <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || submitMutation.isPending}>
                     <Send size={14} /> Submit for Approval
@@ -412,16 +418,17 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
             </div>
           </Card>
 
-          <Card className="p-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] lg:sticky lg:top-4 lg:self-start">
-            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-              <Eye size={12} /> Preview
+          <Card className="p-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] lg:sticky lg:top-4 lg:self-start space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+                <Eye size={12} /> Live Preview
+              </div>
+              {previewLoading && <span className="text-[10px] text-[var(--color-text-muted)] animate-pulse">Updating…</span>}
             </div>
-            <div className="bg-white rounded-lg overflow-hidden border border-[var(--color-bg-border)]" style={{ height: '480px' }}>
-              <iframe srcDoc={previewHtml} className="w-full h-full border-none" title="Template preview" sandbox="allow-same-origin" />
-            </div>
+            <PreviewIframe html={previewHtml} minHeight={480} />
             {draft.subject && (
-              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                Subject: {previewWithDummyValues(draft.subject, draft.dummyValues)}
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Subject: {previewSubject || applyDummyValuesPlain(draft.subject, draft.dummyValues)}
               </p>
             )}
           </Card>
@@ -482,7 +489,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                   By {t.createdBy?.name || 'Unknown'} · {t.submittedAt ? format(new Date(t.submittedAt), 'MMM dd HH:mm') : '—'}
                 </span>
               </div>
-              <Button size="sm" onClick={() => { setReviewingId(t._id); setStudioTab('editor'); }}>Review</Button>
+              <Button size="sm" onClick={() => { loadTemplate(t); setReviewingId(t._id); }}>Review</Button>
             </Card>
           ))}
           {pendingTemplates.length === 0 && (

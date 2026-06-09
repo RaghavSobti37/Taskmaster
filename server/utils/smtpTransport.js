@@ -131,17 +131,25 @@ const resolveMailTransport = async ({ senderMode, profile, preferResend = true, 
   );
 };
 
-const sendViaTransport = async ({ transport, to, subject, html, fromEmail, fromName, tags }) => {
+const { sanitizeResendTags } = require('./resendTags');
+
+const sendViaTransport = async ({
+  transport, to, subject, html, fromEmail, fromName, tags, resendAttachments, nodemailerAttachments,
+}) => {
   const from = fromName ? `"${fromName}" <${fromEmail}>` : fromEmail;
 
   if (transport.type === 'resend') {
     const payload = { from, to: Array.isArray(to) ? to : [to], subject, html };
-    if (tags?.length) payload.tags = tags;
-    const resp = await transport.resend.emails.send(payload);
-    return resp?.id || resp?.data?.id || `resend_${Date.now()}`;
+    if (tags?.length) payload.tags = sanitizeResendTags(tags);
+    if (resendAttachments?.length) payload.attachments = resendAttachments;
+    const { data, error } = await transport.resend.emails.send(payload);
+    if (error) throw new Error(error.message || 'Resend send failed');
+    return data?.id || `resend_${Date.now()}`;
   }
 
-  const info = await transport.transporter.sendMail({ from, to, subject, html });
+  const mailOptions = { from, to, subject, html };
+  if (nodemailerAttachments?.length) mailOptions.attachments = nodemailerAttachments;
+  const info = await transport.transporter.sendMail(mailOptions);
   return info.messageId;
 };
 

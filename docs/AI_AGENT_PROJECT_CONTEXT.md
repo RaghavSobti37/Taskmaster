@@ -3,8 +3,10 @@
 > **Purpose:** Single authoritative export for any AI coding agent working on this codebase.  
 > **Product name:** CoreKnot (repo folder: `Taskmaster`, GitHub: `CoreKnot`)  
 > **Version:** 1.0.0 stable (`v1.0.0` git tag; client + server `package.json` `1.0.0`)  
-> **Last compiled:** 2026-06-04  
+> **Last compiled:** 2026-06-09  
 > **Read this entire document before making changes.**
+
+> **Production reality (Jun 2026):** `render.yaml` cron services (backup, subscription reminders, keep-warm) are **not provisioned on Render** — blueprint only. Sentry + Datadog are **wired in code but not active** (DSN/API keys unset on live Vercel/Render). Use in-app SystemLog for ops diagnostics until these are turned on.
 
 ---
 
@@ -109,7 +111,7 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   ├── dateValidation.js              # IST date-key + no-past-date guards (CJS)
 │   └── mentionTokens.js               # @user / #asset token parsing
 ├── docs/                              # Architecture docs (this file lives here)
-├── render.yaml                        # Render cron for daily backup
+├── render.yaml                        # Cron blueprint (not provisioned on Render yet)
 └── README.md                          # Human-facing overview
 ```
 
@@ -167,9 +169,10 @@ Browser → tsccoreknot.com (Vercel CDN)
 - `/api/(.*)` → `https://CoreKnot-jfw0.onrender.com/api/$1`
 - `/(.*)` → `/index.html` (SPA fallback)
 
-**Render config** (`render.yaml`):
-- Cron `CoreKnot-daily-backup` at `31 18 * * *` (12:01 AM IST) → `runDailyBackup.js` → GridFS `taskmaster_backups`, 7-day retention
-- Cron `CoreKnot-subscription-reminders` at `30 3 * * *` → `runSubscriptionReminders.js` (due-date alerts; `SUBSCRIPTION_REMINDERS_ENABLED`)
+**Render config** (`render.yaml` — blueprint only, **cron services not provisioned** as of Jun 2026):
+- `CoreKnot-daily-backup` (`31 18 * * *` IST) → `runDailyBackup.js` — **not running**; use admin **DB Backup** or `npm run backup:daily`
+- `CoreKnot-subscription-reminders` (`30 3 * * *`) → `runSubscriptionReminders.js` — **not running**
+- `CoreKnot-keep-warm` (every 14 min) → `keepWarm.js` — **not running**
 
 **Production build:** In production, `server/server.js` serves `client/dist` as static SPA with cache headers.
 
@@ -852,7 +855,7 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 **API:** `/api/subscriptions` — CRUD (delete requires opsOrAdmin); shares `getUsdInrRate` with finance.
 
-**Reminders:** Render cron `CoreKnot-subscription-reminders` → `runSubscriptionReminders.js` → `subscriptionReminderService.js`.
+**Reminders:** `runSubscriptionReminders.js` → `subscriptionReminderService.js` exists; Render cron **not provisioned** — reminders inactive in production until cron is created.
 
 ### Calendar & Music Content
 
@@ -1056,12 +1059,15 @@ Redis-down paths fall back to synchronous processing or in-memory queues.
 
 `triggerService.js` — mail-dispatch-job, scheduled jobs (mock client if no API key)
 
-### External cron (Render)
+### External cron (Render) — **not active in production (Jun 2026)**
 
-| Cron | Schedule | Script |
-|------|----------|--------|
-| `CoreKnot-daily-backup` | `31 18 * * *` (12:01 AM IST) | `runDailyBackup.js` |
-| `CoreKnot-subscription-reminders` | `30 3 * * *` | `runSubscriptionReminders.js` |
+Defined in `render.yaml` but **cron services not provisioned** on Render. Scripts exist for manual or future cron use:
+
+| Cron (blueprint) | Schedule | Script | Status |
+|------|----------|--------|--------|
+| `CoreKnot-daily-backup` | `31 18 * * *` (12:01 AM IST) | `runDailyBackup.js` | Not running |
+| `CoreKnot-subscription-reminders` | `30 3 * * *` | `runSubscriptionReminders.js` | Not running |
+| `CoreKnot-keep-warm` | `*/14 * * * *` | `keepWarm.js` | Not running |
 
 ### Public webhook endpoints
 
@@ -1247,6 +1253,8 @@ Path: `shared/`
 
 ## 18. Observability & Diagnostics
 
+> **Sentry + Datadog (Jun 2026):** Client and server SDKs are integrated (`utils/sentry.js`, `datadog-init.js`, Vite RUM init) but **not actively collecting** — production `SENTRY_DSN`, `DD_API_KEY`, `VITE_SENTRY_DSN`, and `VITE_DD_*` are unset. Alert docs (`SENTRY_ALERTS.md`, `MONITORING_ALERTS.md`, `datadog/`) describe intended setup, not live monitoring.
+
 ### SystemHealthService
 
 - Probes MongoDB + Redis every 15s
@@ -1328,7 +1336,7 @@ Path: `server/scripts/` (57 files)
 | Script | Purpose |
 |--------|---------|
 | `seedDepartmentsAndTaskTypes.js` | Initial org structure seed |
-| `runDailyBackup.js` | Production MongoDB backup (Render cron) |
+| `runDailyBackup.js` | Production MongoDB backup (manual / future Render cron — cron not provisioned) |
 | `migrateReviewWorkflow.js` | Task review workflow migration |
 | `migrateRoleToDepartment.js` | Legacy role → department migration |
 | `migrateDepartmentPagePermissions.js` | Page permission migration |
@@ -1337,7 +1345,7 @@ Path: `server/scripts/` (57 files)
 | `keepOnlyCampaign.js` | Campaign cleanup |
 | `sync-prod-to-local.js` | Prod → local DB sync |
 | `reconcileDataHub.js` | Data Hub inlet backfill (`--full`, `--prod`) |
-| `runSubscriptionReminders.js` | Subscription due-date notifications (Render cron) |
+| `runSubscriptionReminders.js` | Subscription due-date notifications (future Render cron — not provisioned) |
 | `seedProductionContent.js` | Prod: music calendar seed + full Data Hub reconcile |
 | `syncDataHubToProd.js` | Push local Data Hub collections → prod (destructive) |
 | `compareDataHubDbs.js` | Compare local vs prod Data Hub collection counts |

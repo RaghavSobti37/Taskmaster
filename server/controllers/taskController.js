@@ -255,10 +255,60 @@ exports.getTasks = async (req, res, next) => {
 
       const { applyTodoFilters, getTodoSort } = require('../utils/todoQueryBuilder');
       const statsBaseFilter = mergeTaskListFilter({ ...queryFilter }, { includeOldCompleted: includeAllCompleted });
-      queryFilter = applyTodoFilters(statsBaseFilter, req.query);
       const page = parseInt(req.query.page, 10) || 1;
       const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
       const sort = getTodoSort(req.query.sort, req.query.order);
+      const completedLimit = Math.min(Math.max(parseInt(req.query.completedLimit, 10) || 5, 1), 50);
+      const completedPage = Math.max(parseInt(req.query.completedPage, 10) || 1, 1);
+      const statusIsDoneOnly = req.query.status === 'done';
+      const useSplitPagination = !includeAllCompleted && !statusIsDoneOnly;
+      const completedSort = { completedAt: -1, updatedAt: -1, _id: -1 };
+
+      if (useSplitPagination) {
+        const activeFilter = applyTodoFilters(statsBaseFilter, req.query);
+        const completedBase = applyTodoFilters(statsBaseFilter, req.query, { skipStatFilter: true });
+        const activeClauses = activeFilter.$and || [activeFilter];
+        const completedClauses = completedBase.$and || [completedBase];
+        const activeQuery = { $and: [...activeClauses, { status: { $ne: 'done' } }] };
+        const completedQuery = { $and: [...completedClauses, { status: 'done' }] };
+        const Task = require('../models/Task');
+
+        const [activeResult, completedResult, completedTotal, stats] = await Promise.all([
+          TaskService.getTasks(activeQuery, {
+            userId: req.user._id,
+            listMode: true,
+            page,
+            limit,
+            sort,
+          }),
+          TaskService.getTasks(completedQuery, {
+            userId: req.user._id,
+            completedListMode: true,
+            page: completedPage,
+            limit: completedLimit,
+            sort: completedSort,
+          }),
+          Task.countDocuments(completedQuery),
+          TaskService.getTodoStats(statsBaseFilter),
+        ]);
+
+        const activeList = activeResult.tasks || [];
+        const completedList = completedResult.tasks || [];
+
+        return res.json({
+          tasks: [...activeList, ...completedList],
+          total: activeResult.total ?? activeList.length,
+          page: activeResult.page ?? page,
+          pages: activeResult.pages ?? 1,
+          completedTotal,
+          completedPage,
+          completedLimit,
+          completedPages: Math.max(1, Math.ceil(completedTotal / completedLimit)),
+          stats,
+        });
+      }
+
+      queryFilter = applyTodoFilters(statsBaseFilter, req.query);
       const [result, stats] = await Promise.all([
         TaskService.getTasks(queryFilter, {
           userId: req.user._id,
@@ -296,6 +346,7 @@ exports.getTasks = async (req, res, next) => {
           page: completedPage,
           limit: completedLimit,
           sort: completedSort,
+          completedListMode: true,
         }),
         Task.countDocuments(completedFilter),
       ]);

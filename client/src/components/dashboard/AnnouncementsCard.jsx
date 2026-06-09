@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Megaphone } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow, Button, LoadingPhrase } from '../ui';
+import { DashboardWidgetShell, DataListRow, Button, DataLoading } from '../ui';
 import { useAnnouncements } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
 
@@ -21,7 +21,7 @@ const AnnouncementsCard = () => {
       icon={Megaphone}
     >
       <p className="text-[9px] text-[var(--color-text-muted)] px-4 pt-2 pb-1">Team updates from management</p>
-      {isLoading && <LoadingPhrase className="text-[10px] text-[var(--color-text-muted)] px-4 py-2 !text-left" />}
+      {isLoading && <DataLoading className="!py-3" />}
       {!isLoading && rows.length === 0 && (
         <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-6">No announcements yet</p>
       )}

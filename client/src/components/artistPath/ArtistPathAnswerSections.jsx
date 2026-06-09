@@ -30,9 +30,9 @@ function AnswerValue({ fieldKey, value, links }) {
   );
 }
 
-function AnswerRow({ fieldKey, value, links }) {
+function AnswerRow({ fieldKey, value, links, fullWidth }) {
   const text = String(value);
-  const isLong = text.length > 100;
+  const isLong = fullWidth || text.length > 100;
   return (
     <div
       className={`rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40 px-4 py-3 h-full min-h-[4.5rem] flex flex-col ${
@@ -63,7 +63,13 @@ export default function ArtistPathAnswerSections({ answers }) {
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {group.items.map(({ key, value }) => (
-              <AnswerRow key={key} fieldKey={key} value={value} links={group.links} />
+              <AnswerRow
+                key={key}
+                fieldKey={key}
+                value={value}
+                links={group.links}
+                fullWidth={group.fullWidth || key === 'artistIdentity'}
+              />
             ))}
           </div>
         </section>

@@ -192,10 +192,10 @@ const sendCampaign = async (campaignId) => {
           headers: {
             'X-Campaign-ID': campaign._id.toString()
           },
-          tags: [
+          tags: require('../utils/resendTags').sanitizeResendTags([
             { name: 'campaign_id', value: campaign._id.toString() },
-            { name: 'recipient_id', value: recipient._id.toString() }
-          ]
+            { name: 'recipient_id', value: recipient._id.toString() },
+          ]),
         };
         if (formattedAttachments.length > 0) {
           payload.attachments = formattedAttachments;
@@ -422,9 +422,10 @@ const scanBounces = async (profileId) => {
 };
 
 module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: async (opts) => {
-  const { to, subject, html, profile, senderMode, skipPipeline } = opts;
+  const { to, subject, html, profile, senderMode, skipPipeline, attachmentRows = [] } = opts;
   const { resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
   const { buildFinalEmailHtml } = require('../utils/buildFinalEmailHtml');
+  const { formatResendAttachments, formatNodemailerAttachments } = require('../utils/campaignAttachments');
 
   let inlinedHtml = html;
   if (!skipPipeline) {
@@ -447,6 +448,8 @@ module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: as
     subject,
     html: inlinedHtml,
     fromEmail: transport.fromEmail,
-    fromName: transport.fromName
+    fromName: transport.fromName,
+    resendAttachments: formatResendAttachments(attachmentRows),
+    nodemailerAttachments: formatNodemailerAttachments(attachmentRows),
   });
 } };

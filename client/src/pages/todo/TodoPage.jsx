@@ -34,6 +34,7 @@ import {
   normalizeCompletionHours,
 } from '../../utils/taskCompletion';
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
+import CompletedTaskRollbackButton from '../../components/tasks/CompletedTaskRollbackButton';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
@@ -46,6 +47,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 
 const TODO_FILTERS_KEY = 'todo-filters';
 const DEFAULT_PAGE_SIZE = 50;
+const COMPLETED_PAGE_SIZE_DEFAULT = 5;
 
 const loadTodoFilters = () => {
   try {
@@ -84,12 +86,15 @@ const TodoPage = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(savedFilters?.statusFilter || 'all');
   const includeOldCompleted = statusFilter === 'done' || debouncedSearch.trim().length > 0;
+  const useSplitCompletedPagination = !includeOldCompleted && statusFilter !== 'done';
   const [priorityFilter, setPriorityFilter] = useState(savedFilters?.priorityFilter || 'all');
   const [typeFilter, setTypeFilter] = useState(savedFilters?.typeFilter || 'all');
   const [workspaceFilter, setWorkspaceFilter] = useState(savedFilters?.workspaceFilter || 'all');
   const [projectFilter, setProjectFilter] = useState(savedFilters?.projectFilter || 'all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(savedFilters?.pageSize || DEFAULT_PAGE_SIZE);
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedPageSize, setCompletedPageSize] = useState(COMPLETED_PAGE_SIZE_DEFAULT);
   const [sortConfig, setSortConfig] = useState(savedFilters?.sortConfig || { field: 'dueDate', order: 'asc' });
   const [statFilter, setStatFilter] = useState(savedFilters?.statFilter ?? null);
 
@@ -106,9 +111,13 @@ const TodoPage = () => {
     sort: sortConfig.field || 'dueDate',
     order: sortConfig.order || 'asc',
     ...(includeOldCompleted ? { includeOldCompleted: '1' } : {}),
+    ...(useSplitCompletedPagination
+      ? { completedPage, completedLimit: completedPageSize }
+      : {}),
   }), [
     page, pageSize, debouncedSearch, statusFilter, priorityFilter, typeFilter,
     projectFilter, workspaceFilter, statFilter, sortConfig, includeOldCompleted,
+    useSplitCompletedPagination, completedPage, completedPageSize,
   ]);
 
   const { data, isLoading } = useTodoTasks(todoParams, user?._id);
@@ -128,6 +137,7 @@ const TodoPage = () => {
 
   useEffect(() => {
     setPage(1);
+    setCompletedPage(1);
   }, [debouncedSearch, statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter, statFilter]);
 
   useEffect(() => {
@@ -206,6 +216,11 @@ const TodoPage = () => {
 
   const activeTasks = tasks.filter((t) => t.status !== 'done');
   const doneTasks = tasks.filter((t) => t.status === 'done');
+  const completedTotal = data?.completedTotal ?? doneTasks.length;
+  const completedTotalPages = data?.completedPages ?? 1;
+  const showCompletedSection = useSplitCompletedPagination
+    ? completedTotal > 0 && !statFilter
+    : doneTasks.length > 0;
 
   const handleCompleteRequest = (task) => {
     const intent = resolveTaskFinishIntent(task, user, projects, users);
@@ -253,10 +268,45 @@ const TodoPage = () => {
     }
   };
 
+  const renderDoneTaskCard = (task) => (
+    <div
+      key={task._id}
+      className="tm-task-row tm-task-row--completed px-4 py-2 border-b border-[var(--color-bg-border)]"
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <CompletedTaskRollbackButton task={task} user={user} onClick={setSelectedTask} />
+        <MentionTitle
+          text={task.title}
+          className="text-sm text-[var(--color-text-muted)] line-through decoration-[var(--color-text-muted)]/50 block truncate min-w-0 flex-1"
+          truncate
+        />
+      </div>
+    </div>
+  );
+
+  const renderDoneRow = (task) => (
+    <tr
+      key={task._id}
+      className="tm-task-row tm-task-row--completed border-b border-[var(--color-bg-border)]"
+    >
+      <td className="px-4 py-1.5 w-10">
+        <CompletedTaskRollbackButton task={task} user={user} onClick={setSelectedTask} />
+      </td>
+      <td colSpan={6} className="px-4 py-1.5">
+        <MentionTitle
+          text={task.title}
+          className="text-sm text-[var(--color-text-muted)] line-through decoration-[var(--color-text-muted)]/50 truncate block"
+          truncate
+        />
+      </td>
+    </tr>
+  );
+
   const renderTaskCard = (task) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
       return <div key={task?._id} className="p-4"><DataLoading /></div>;
     }
+    if (task.status === 'done') return renderDoneTaskCard(task);
     const isDone = task.status === 'done';
     const isInReview = task.status === 'in-review';
     const assignerUser = resolveDirectoryUser(getTaskAssignedBy(task), users);
@@ -448,64 +498,117 @@ const TodoPage = () => {
         ) : (
           activeTasks.map(renderTaskCard)
         )}
-        {activeTasks.length > 0 && doneTasks.length > 0 && (
+        {showCompletedSection && (
           <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1">
-            Completed ({doneTasks.length})
+            Completed ({completedTotal})
           </p>
         )}
-        {doneTasks.length > 20 ? (
-          <VirtualTaskList items={doneTasks} renderItem={(task) => renderTaskCard(task)} />
+        {showCompletedSection && (doneTasks.length > 20 ? (
+          <VirtualTaskList items={doneTasks} renderItem={(task) => renderDoneTaskCard(task)} />
         ) : (
-          doneTasks.map(renderTaskCard)
+          doneTasks.map(renderDoneTaskCard)
+        ))}
+      </div>
+
+      <div className="hidden lg:block space-y-6">
+        {statusFilter !== 'done' && (
+        <div className="overflow-hidden border-t border-[var(--color-bg-border)]">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-[var(--color-bg-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                <th className="px-4 py-3 w-10" />
+                <th className="px-4 py-3"><SortHeader field="title" label="Task" /></th>
+                <th className="px-4 py-3"><SortHeader field="type" label="Type" /></th>
+                <th className="px-4 py-3">Assigned by</th>
+                <th className="px-4 py-3"><SortHeader field="status" label="Status" /></th>
+                <th className="px-4 py-3"><SortHeader field="priority" label="Priority" /></th>
+                <th className="px-4 py-3"><SortHeader field="dueDate" label="Due" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr><td colSpan={7}><DataLoading /></td></tr>
+              )}
+              {!isLoading && statusFilter !== 'done' && activeTasks.length === 0 && !showCompletedSection && (
+                <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
+              )}
+              {!isLoading && statusFilter !== 'done' && activeTasks.length === 0 && showCompletedSection && (
+                <tr><td colSpan={7} className="p-10 text-center text-sm text-[var(--color-text-muted)] italic">No open tasks — completed tasks are listed below.</td></tr>
+              )}
+              {statusFilter !== 'done' && activeTasks.map(renderRow)}
+            </tbody>
+          </table>
+          {totalItems > 0 && (
+            <TablePagination
+              pageSize={pageSize}
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              rowCount={activeTasks.length}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
+          )}
+        </div>
+        )}
+
+        {showCompletedSection && (
+          <div className="overflow-hidden border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+            <div className="px-4 py-2 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                Completed Tasks ({completedTotal})
+              </h3>
+            </div>
+            <table className="w-full text-left">
+              <tbody>
+                {doneTasks.map(renderDoneRow)}
+              </tbody>
+            </table>
+            {useSplitCompletedPagination && (
+              <TablePagination
+                pageSize={completedPageSize}
+                currentPage={Math.min(completedPage, completedTotalPages)}
+                totalPages={completedTotalPages}
+                totalItems={completedTotal}
+                rowCount={doneTasks.length}
+                onPageChange={setCompletedPage}
+                onPageSizeChange={(size) => {
+                  setCompletedPageSize(size);
+                  setCompletedPage(1);
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {statusFilter === 'done' && !isLoading && doneTasks.length === 0 && (
+          <div className="p-12 text-center text-sm text-[var(--color-text-muted)] italic border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+            No completed tasks match filters
+          </div>
+        )}
+
+        {statusFilter === 'done' && totalItems > 0 && (
+          <TablePagination
+            pageSize={pageSize}
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            rowCount={doneTasks.length}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          />
         )}
       </div>
-
-      <div className="overflow-hidden hidden lg:block border-t border-[var(--color-bg-border)]">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-[var(--color-bg-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-              <th className="px-4 py-3 w-10" />
-              <th className="px-4 py-3"><SortHeader field="title" label="Task" /></th>
-              <th className="px-4 py-3"><SortHeader field="type" label="Type" /></th>
-              <th className="px-4 py-3">Assigned by</th>
-              <th className="px-4 py-3"><SortHeader field="status" label="Status" /></th>
-              <th className="px-4 py-3"><SortHeader field="priority" label="Priority" /></th>
-              <th className="px-4 py-3"><SortHeader field="dueDate" label="Due" /></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={7}><DataLoading /></td></tr>
-            )}
-            {!isLoading && tasks.length === 0 && (
-              <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
-            )}
-            {activeTasks.map(renderRow)}
-            {activeTasks.length > 0 && doneTasks.length > 0 && (
-              <tr className="border-b border-[var(--color-bg-border)]">
-                <td colSpan={7} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Completed ({doneTasks.length})</td>
-              </tr>
-            )}
-            {doneTasks.map(renderRow)}
-          </tbody>
-        </table>
-      </div>
-
-      {totalItems > 0 && (
-        <TablePagination
-          pageSize={pageSize}
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          rowCount={tasks.length}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
-        />
-      )}
 
       {(selectedTask || taskToComplete) && (
         <Suspense fallback={null}>
-          <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
+          <TaskDetailModal
+            isOpen={!!selectedTask}
+            task={selectedTask}
+            onClose={() => setSelectedTask(null)}
+            onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
+            onFinishRequest={handleCompleteRequest}
+          />
           <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />
         </Suspense>
       )}

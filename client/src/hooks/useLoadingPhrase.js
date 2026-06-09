@@ -1,22 +1,11 @@
-import { useEffect, useState } from 'react';
-import { acquireLoadingPhrase, MIN_LOADING_PHRASE_MS } from '../lib/loadingPhraseSession';
+import { useState } from 'react';
+import { pickRandomLoadingPhrase } from '../lib/loadingPhrases';
 
 /**
- * Loading copy — same phrase for ≥5s app-wide; rotates only after lock expires while still mounted.
+ * One humorous phrase per mount — fixed until unmount. No rotation while loading.
+ * Use only with full-screen / large loaders (Spinner showPhrase, LoadingState showPhrase).
  */
 export function useLoadingPhrase() {
-  const [phrase, setPhrase] = useState(() => acquireLoadingPhrase());
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPhrase((prev) => {
-        const next = acquireLoadingPhrase();
-        return next === prev ? prev : next;
-      });
-    }, 250);
-    return () => clearInterval(id);
-  }, []);
-
+  const [phrase] = useState(() => pickRandomLoadingPhrase());
   return phrase;
 }
-

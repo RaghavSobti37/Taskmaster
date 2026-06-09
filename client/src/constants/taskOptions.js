@@ -126,3 +126,23 @@ export function normalizeProjectRoleValue(role) {
   if (PROJECT_ROLE_OPTIONS.some((o) => o.value === role)) return role;
   return 'member';
 }
+
+const normalizeProjectUserId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  return String(value._id || value);
+};
+
+/** Project role for a user (admin | manager | member). Mirrors shared/projectRoles.js. */
+export function getProjectRoleForUser(project, userId) {
+  if (!project || !userId) return null;
+  const uid = normalizeProjectUserId(userId);
+  const ownerId = normalizeProjectUserId(project.owner);
+  if (ownerId && ownerId === uid) return 'admin';
+
+  const entry = (project.memberRoles || []).find((r) => {
+    const roleUserId = normalizeProjectUserId(r.user?._id || r.user);
+    return roleUserId === uid;
+  });
+  return normalizeProjectRoleValue(entry?.role);
+}

@@ -162,6 +162,7 @@ export default function NoteEditorPage() {
     enabled: hydrated && !readOnly,
     elevated: true,
     fieldLabels: { title: 'Title', content: 'Content' },
+    excludeFields: ['content'],
   });
 
   const handleSave = async (saveMeta) => {

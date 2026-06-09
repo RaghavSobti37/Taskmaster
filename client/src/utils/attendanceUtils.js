@@ -17,6 +17,8 @@ export const formatAttendanceRecordTime = (record) => {
   if (!record) return '';
   const manual = typeof record.manualTimestamp === 'string' ? record.manualTimestamp.trim() : '';
   if (manual) return manual;
+  const legacy = typeof record.timestamp === 'string' ? record.timestamp.trim() : '';
+  if (legacy) return legacy;
   if (record.systemTimestamp) {
     return new Date(record.systemTimestamp).toLocaleTimeString([], {
       hour: '2-digit',

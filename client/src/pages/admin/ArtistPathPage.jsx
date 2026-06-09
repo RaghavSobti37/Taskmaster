@@ -93,7 +93,11 @@ export default function ArtistPathPage() {
       )}
 
       <Suspense fallback={null}>
-        <ArtistPathProfileSlider personId={selectedId} onClose={() => setSelectedId(null)} />
+        <ArtistPathProfileSlider
+          key={selectedId || 'closed'}
+          personId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
       </Suspense>
     </PageContainer>
   );

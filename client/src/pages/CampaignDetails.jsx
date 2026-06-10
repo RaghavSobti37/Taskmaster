@@ -241,19 +241,23 @@ export default function CampaignDetails() {
   }));
   const hasChartData = chartData.length > 0 && chartData.some((pt) => pt.opens > 0 || pt.clicks > 0);
 
-  const locationData = Object.entries(
-    campaign.locationBreakdown && typeof campaign.locationBreakdown === 'object' && !Array.isArray(campaign.locationBreakdown)
-      ? campaign.locationBreakdown
-      : {}
+  const locationData = (Array.isArray(campaign.locationBreakdownRows) && campaign.locationBreakdownRows.length > 0
+    ? campaign.locationBreakdownRows
+    : Object.entries(
+        campaign.locationBreakdown && typeof campaign.locationBreakdown === 'object' && !Array.isArray(campaign.locationBreakdown)
+          ? campaign.locationBreakdown
+          : {}
+      ).map(([city, stats]) => ({ city, ...stats }))
   )
-    .map(([city, stats]) => ({
-      city,
-      opens: Number(stats?.opens) || 0,
-      clicks: Number(stats?.clicks) || 0,
-      total: (Number(stats?.opens) || 0) + (Number(stats?.clicks) || 0),
+    .map((row) => ({
+      city: row.city || row.location,
+      count: Number(row.count) || 0,
+      opens: Number(row.opens) || 0,
+      clicks: Number(row.clicks) || 0,
+      total: row.total ?? ((Number(row.opens) || 0) + (Number(row.clicks) || 0)),
     }))
-    .filter((r) => r.opens > 0 || r.clicks > 0)
-    .sort((a, b) => b.total - a.total);
+    .filter((r) => r.count > 0 || r.opens > 0 || r.clicks > 0)
+    .sort((a, b) => (b.count || b.total) - (a.count || a.total));
 
   const totalRecipients = campaign?.recipientCount ?? campaign?.stats?.total ?? 0;
   const deliveredCount =
@@ -338,8 +342,9 @@ export default function CampaignDetails() {
 
       <RegisteredLocationBarChart
         title="Registered location"
+        variant="histogram"
         data={locationData}
-        height={140}
+        height={256}
         limit={8}
         className="p-3 bg-[var(--color-bg-surface)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]"
       />
@@ -397,6 +402,7 @@ export default function CampaignDetails() {
           </p>
           <RegisteredLocationBarChart
             title="Registered location breakdown"
+            variant="histogram"
             data={locationData}
             height={256}
             limit={12}

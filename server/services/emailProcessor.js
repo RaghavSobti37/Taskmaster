@@ -309,8 +309,15 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   });
 
   const campaignSignature = typeof campaign.signature === 'string' ? campaign.signature : '';
+  let templateFormat = 'visual';
+  if (campaign.mailTemplateId) {
+    const MailTemplate = require('../models/MailTemplate');
+    const tpl = await MailTemplate.findById(campaign.mailTemplateId).select('format').lean();
+    if (tpl?.format) templateFormat = tpl.format;
+  }
   const processedHtml = await buildFinalEmailHtml({
     html: htmlContent,
+    format: templateFormat,
     includeSignature: shouldIncludeSignature,
     signature: campaignSignature || profile.signature || '',
     mode: 'live',

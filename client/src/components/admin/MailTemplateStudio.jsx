@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../utils/mailTemplateQuillSetup';
+import { MAIL_TEMPLATE_QUILL_KEYBOARD, attachMailTemplateClipboardSanitizer } from '../../utils/mailTemplateQuillSetup';
 import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../ui';
 import { format } from 'date-fns';
@@ -28,13 +29,15 @@ import {
 } from '../../utils/indexedTemplateVariables';
 import axios from 'axios';
 import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useDebounce } from '../../hooks/useDebounce';
 import PreviewIframe from '../emails/PreviewIframe';
 import {
   canonicalizeVisualMailHtml,
   repairIndentDrift,
   wrapVisualPreviewBody,
-  enhancePreviewDocument,
 } from '../../utils/visualEmailHtml';
+
+const PREVIEW_DEBOUNCE_MS = 450;
 const STATUS_LABELS = {
   draft: 'Draft',
   pending_approval: 'Pending',
@@ -61,10 +64,11 @@ const MAIL_TEMPLATE_QUILL_MODULES = {
     ['clean'],
   ],
   clipboard: { matchVisual: false },
+  keyboard: MAIL_TEMPLATE_QUILL_KEYBOARD,
 };
 
 const MAIL_TEMPLATE_QUILL_FORMATS = [
-  'header', 'bold', 'italic', 'underline', 'link', 'list', 'bullet', 'indent',
+  'header', 'bold', 'italic', 'underline', 'link', 'list', 'bullet', 'indent', 'break',
 ];
 
 export default function MailTemplateStudio({ onUseInCampaign }) {
@@ -88,6 +92,13 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const [rawHtmlBaseline, setRawHtmlBaseline] = useState(false);
   const [studioTab, setStudioTab] = useState('editor');
   const [reviewingId, setReviewingId] = useState(null);
+  const quillRef = useRef(null);
+
+  const bindQuillPasteSanitizer = useCallback((editor) => {
+    if (!editor?.getEditor) return;
+    attachMailTemplateClipboardSanitizer(editor.getEditor());
+  }, []);
+
 
   const detectedIndices = useMemo(
     () => parseIndexedVariablesFromHtml(`${draft.content}${draft.subject}`),
@@ -98,10 +109,22 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const [previewSubject, setPreviewSubject] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const debouncedContent = useDebounce(draft.content, PREVIEW_DEBOUNCE_MS);
+  const debouncedSubject = useDebounce(draft.subject, PREVIEW_DEBOUNCE_MS);
+
+  const visualContentForSave = useCallback(() => (
+    useRawHtml ? draft.content : canonicalizeVisualMailHtml(draft.content)
+  ), [draft.content, useRawHtml]);
+
+  const previewBodyHtml = useMemo(() => {
+    if (!debouncedContent?.trim()) return '';
+    return useRawHtml ? debouncedContent : canonicalizeVisualMailHtml(debouncedContent);
+  }, [debouncedContent, useRawHtml]);
+
   const localPreviewDoc = useMemo(() => {
-    if (!draft.content?.trim() || useRawHtml) return '';
-    return wrapVisualPreviewBody(canonicalizeVisualMailHtml(draft.content), { theme: 'light' });
-  }, [draft.content, useRawHtml]);
+    if (!previewBodyHtml) return '';
+    return wrapVisualPreviewBody(previewBodyHtml, { theme: 'light' });
+  }, [previewBodyHtml]);
 
   const previewSource = useMemo(() => {
     if (previewLoading) return 'updating';
@@ -126,7 +149,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
 
   const previewHtml = useMemo(() => {
     if (serverPreviewDoc && !serverPreviewDoc.includes('Preview failed')) {
-      return useRawHtml ? serverPreviewDoc : enhancePreviewDocument(serverPreviewDoc, { theme: 'light' });
+      return serverPreviewDoc;
     }
     if (localPreviewDoc) return localPreviewDoc;
     if (draft.content?.trim()) {
@@ -136,18 +159,20 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   }, [serverPreviewDoc, localPreviewDoc, draft.content, useRawHtml]);
 
   useEffect(() => {
-    if (!draft.content?.trim()) {
+    if (studioTab !== 'editor') return undefined;
+    if (!previewBodyHtml?.trim()) {
       setServerPreviewDoc('');
       setPreviewSubject('');
+      setPreviewLoading(false);
       return undefined;
     }
     let cancelled = false;
+    setPreviewLoading(true);
     (async () => {
-      setPreviewLoading(true);
       try {
         const { data } = await axios.post('/api/mail/preview', {
-          content: draft.content,
-          subject: draft.subject || '',
+          content: previewBodyHtml,
+          subject: debouncedSubject || '',
           dummyValues: draft.dummyValues,
           format: useRawHtml ? 'rawHtml' : 'visual',
           removeUnsubscribe: true,
@@ -155,19 +180,19 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         });
         if (!cancelled) {
           setServerPreviewDoc(data.html || '');
-          setPreviewSubject(data.subject || applyDummyValuesPlain(draft.subject || '', draft.dummyValues));
+          setPreviewSubject(data.subject || applyDummyValuesPlain(debouncedSubject || '', draft.dummyValues));
         }
       } catch {
         if (!cancelled) {
           setServerPreviewDoc('<p style="padding:16px;color:#dc2626">Preview failed</p>');
-          setPreviewSubject(applyDummyValuesPlain(draft.subject || '', draft.dummyValues));
+          setPreviewSubject(applyDummyValuesPlain(debouncedSubject || '', draft.dummyValues));
         }
       } finally {
         if (!cancelled) setPreviewLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [draft.content, draft.subject, draft.dummyValues, useRawHtml]);
+  }, [previewBodyHtml, debouncedSubject, draft.dummyValues, useRawHtml, studioTab]);
 
   const syncBaseline = (nextDraft, rawHtml = useRawHtml) => {
     const snap = cloneSnapshot(nextDraft);
@@ -184,7 +209,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       id: t._id,
       name: t.name,
       subject: t.subject || '',
-      content: t.format === 'rawHtml' ? rawContent : canonicalizeVisualMailHtml(rawContent),
+      content: rawContent,
       format: t.format || 'visual',
       dummyValues: dummies,
       status: t.status,
@@ -224,10 +249,6 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const canSubmit = draft.name.trim()
     && draft.content.trim()
     && detectedIndices.every((i) => (draft.dummyValues[i] || draft.dummyValues[String(i)] || '').trim());
-
-  const visualContentForSave = () => (
-    useRawHtml ? draft.content : canonicalizeVisualMailHtml(draft.content)
-  );
 
   const handleSaveDraft = async () => {
     if (!draft.name.trim() || !draft.content.trim()) {
@@ -352,7 +373,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         <Button size="sm" variant="ghost" onClick={handleNew}>+ New Template</Button>
       </div>
 
-      {studioTab === 'editor' && (
+      <div className={studioTab === 'editor' ? undefined : 'hidden'} aria-hidden={studioTab !== 'editor'}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
             <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)]">
@@ -412,12 +433,15 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               <div className="space-y-1">
                 <div className="mail-template-quill rounded-lg overflow-hidden border border-[var(--color-bg-border)] shadow-sm">
                   <ReactQuill
+                    ref={(editor) => {
+                      quillRef.current = editor;
+                      bindQuillPasteSanitizer(editor);
+                    }}
                     theme="snow"
                     value={draft.content}
                     onChange={(content, _delta, _source, editor) => {
                       const html = editor?.root?.innerHTML ?? content;
-                      const repaired = repairIndentDrift(html);
-                      setDraft((p) => ({ ...p, content: repaired }));
+                      setDraft((p) => ({ ...p, content: repairIndentDrift(html) }));
                     }}
                     modules={MAIL_TEMPLATE_QUILL_MODULES}
                     formats={MAIL_TEMPLATE_QUILL_FORMATS}
@@ -426,9 +450,9 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                 </div>
                 <p className="text-[10px] text-[var(--color-text-muted)]">
                   <span className="font-semibold text-[var(--color-text-secondary)]">Enter</span>
-                  {' = new paragraph (email spacing) · '}
+                  {' = new line · '}
                   <span className="font-semibold text-[var(--color-text-secondary)]">Shift+Enter</span>
-                  {' = tight line within paragraph'}
+                  {' = new paragraph (email spacing)'}
                 </p>
               </div>
             )}
@@ -476,7 +500,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
             )}
           </Card>
         </div>
-      )}
+      </div>
 
       {studioTab === 'library' && (
         <div className="space-y-3">

@@ -8,6 +8,7 @@ const {
   buildQaTestDataFilter,
   buildQaTaskFilter,
   buildQaUserFilter,
+  buildQaDailyLogFilter,
   countQaResiduals,
 } = require('../services/qa/qaTestData');
 const { corruptPhoneQuery } = require('../services/leadPhoneRepair');
@@ -94,6 +95,14 @@ async function audit() {
     samples: await sample(Log, qaLogFilter, 'action origin status targetEntity createdAt'),
   };
 
+  const qaTaskIds = (await Task.find(buildQaTaskFilter()).setOptions(BYPASS).select('_id').lean()).map((t) => t._id);
+  const qaUserIds = (await User.find(buildQaUserFilter()).setOptions(BYPASS).select('_id').lean()).map((u) => u._id);
+  const qaDailyLogFilter = buildQaDailyLogFilter({ taskIds: qaTaskIds, qaUserIds });
+  report.sections.qaDailyLogs = {
+    count: await Log.countDocuments(qaDailyLogFilter).setOptions(BYPASS),
+    samples: await sample(Log, qaDailyLogFilter, 'userId action details.title details.type targetId createdAt'),
+  };
+
   // XP audits
   report.sections.qaXpAudits = {
     count: await XPAuditLog.countDocuments({ 'details.qaProbe': true }),
@@ -146,7 +155,6 @@ async function audit() {
   };
 
   // Notifications linked to QA tasks but no QA in title
-  const qaTaskIds = (await Task.find(buildQaTaskFilter()).setOptions(BYPASS).select('_id').lean()).map((t) => t._id);
   const orphanNotifFilter = qaTaskIds.length
     ? { relatedTaskId: { $in: qaTaskIds }, title: { $not: { $regex: /^QA /i } } }
     : { _id: null };
@@ -184,6 +192,7 @@ async function audit() {
     corruptPhones: corruptCount,
     probePhones: report.sections.probePhones.count,
     qaLogs: report.sections.qaLogs.count,
+    qaDailyLogs: report.sections.qaDailyLogs.count,
     qaXpAudits: report.sections.qaXpAudits.count,
     staleQaRuns: staleRuns,
     mailEvents: report.sections.mailEvents.count,
@@ -200,6 +209,7 @@ async function audit() {
       toFix.corruptPhones +
       toFix.probePhones +
       toFix.qaLogs +
+      toFix.qaDailyLogs +
       toFix.qaXpAudits +
       toFix.mailEvents +
       toFix.mailCampaigns +

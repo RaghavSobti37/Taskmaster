@@ -1,0 +1,39 @@
+name: Deploy Render
+
+# Deploy only after CI passes on main — never ship broken builds.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: render-deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy production API (CoreKnot-api)
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_API secret not set — skipping production deploy"
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK"
+          echo "Production deploy triggered"
+
+      - name: Deploy staging API (coreknot-api-staging)
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_STAGING secret not set — skipping staging deploy"
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK"
+          echo "Staging deploy triggered"

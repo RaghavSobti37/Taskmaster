@@ -730,7 +730,7 @@ class QATestingService {
       const testRun = await QATestRun.findById(this.testRunId);
       const cleanupResults = {
         deleted: {
-          tasks: 0, projects: 0, logs: 0, finance: 0, leads: 0, contacts: 0, audits: 0,
+          tasks: 0, projects: 0, logs: 0, dailyLogs: 0, finance: 0, leads: 0, contacts: 0, audits: 0,
           users: 0, notifications: 0, xpAudits: 0, tracked: 0,
         },
         errors: [],
@@ -750,6 +750,7 @@ class QATestingService {
       cleanupResults.deleted.contacts += swept.deleted.contacts;
       cleanupResults.deleted.audits = swept.deleted.audits;
       cleanupResults.deleted.logs += swept.deleted.logs;
+      cleanupResults.deleted.dailyLogs = swept.deleted.dailyLogs || 0;
       cleanupResults.deleted.users = swept.deleted.users;
       cleanupResults.deleted.tasks += swept.deleted.tasks;
       cleanupResults.deleted.finance = swept.deleted.finance;

@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { pushCustomToast } from '../lib/notifications';
-import { invalidateTaskDomain, invalidateReviewTasks } from '../lib/queryInvalidation';
+import { invalidateTaskDomain, invalidateReviewTasks, invalidateStatusCounts } from '../lib/queryInvalidation';
+import { addNotification, notificationsQueryKey } from './queries/notifications';
 
 /** Socket.io channels — dynamic import so public routes do not load socket.io-client. */
 export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
@@ -69,7 +70,14 @@ export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
         queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
       });
 
-      cleanups = [unsubTask, unsubAwarded, unsubRecalc, unsubGlobalRecalc];
+      const unsubNotification = subscribeToChannel(`user-${userId}`, 'notification', (payload) => {
+        if (!payload?.title) return;
+        addNotification(userId, payload);
+        queryClient.invalidateQueries({ queryKey: notificationsQueryKey(userId) });
+        invalidateStatusCounts(queryClient);
+      });
+
+      cleanups = [unsubTask, unsubAwarded, unsubRecalc, unsubGlobalRecalc, unsubNotification];
     };
 
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {

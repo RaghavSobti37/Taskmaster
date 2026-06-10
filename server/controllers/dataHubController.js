@@ -1,5 +1,10 @@
 const DataHubService = require('../services/DataHubService');
-const { runDailyBackup, listAvailableBackups, getBackupDbName, getBackupProgress } = require('../services/databaseBackupService');
+const {
+  runDailyBackup,
+  listAvailableBackups,
+  getBackupDestination,
+  getBackupProgress,
+} = require('../services/databaseBackupService');
 const { notifyBackupResult } = require('../services/backupNotificationService');
 const logger = require('../utils/logger');
 
@@ -109,10 +114,11 @@ exports.getSyncStatus = async (req, res) => {
 
 exports.listBackups = async (req, res) => {
   try {
-    const snapshots = await listAvailableBackups();
+    const listing = await listAvailableBackups();
     res.json({
-      backupDatabase: getBackupDbName(),
-      snapshots,
+      destination: listing.destination || getBackupDestination(),
+      backupDatabase: listing.backupDatabase,
+      snapshots: listing.snapshots || [],
     });
   } catch (error) {
     logger.error('dataHubController', 'listBackups', { error: error.message });

@@ -69,7 +69,28 @@ describe('Email flow integration', () => {
       expect(preview.replace(/\s+/g, ' ')).toBe(test.replace(/\s+/g, ' '));
     });
 
-    it('removes Quill spacer paragraphs from real templates', async () => {
+    it('preserves inline padding-left without ql-indent classes', async () => {
+      const out = await buildFinalEmailHtml({
+        html: '<p style="padding-left: 3em">Indented</p>',
+        mode: 'preview',
+        removeUnsubscribe: true,
+      });
+      expect(out).toMatch(/padding-left\s*:\s*3em/i);
+    });
+
+    it('preserves blank lines as email-safe spacers', async () => {
+      const out = await buildFinalEmailHtml({
+        html: '<p>line one</p><p><br></p><p>line two</p>',
+        mode: 'preview',
+        removeUnsubscribe: true,
+      });
+      expect(out).toContain('line one');
+      expect(out).toContain('line two');
+      expect(out).toMatch(/&nbsp;/i);
+      expect(out).not.toMatch(/<p[^>]*><br\s*\/?><\/p>/i);
+    });
+
+    it('converts Quill spacer paragraphs to nbsp blocks in real templates', async () => {
       const fs = require('fs');
       const path = require('path');
       const html = fs.readFileSync(
@@ -79,7 +100,28 @@ describe('Email flow integration', () => {
       const out = await buildFinalEmailHtml({ html, mode: 'preview', removeUnsubscribe: true });
       expect((html.match(/<p><br\s*\/?><\/p>/gi) || []).length).toBeGreaterThan(0);
       expect(out).not.toMatch(/<p[^>]*><br\s*\/?><\/p>/i);
-      expect(out).not.toMatch(/padding-left\s*:\s*(?!0)[^;"']+/i);
+      expect(out).toMatch(/&nbsp;/i);
+    });
+
+    it('skips normalization for rawHtml fragments', async () => {
+      const out = await buildFinalEmailHtml({
+        html: '<p style="padding-left: 40px">Raw indent</p>',
+        format: 'rawHtml',
+        mode: 'preview',
+        removeUnsubscribe: true,
+      });
+      expect(out).toMatch(/padding-left\s*:\s*40px/i);
+    });
+
+    it('does not zero indent when juicing styled visual HTML', async () => {
+      const out = await buildFinalEmailHtml({
+        html: '<style>.indented { padding-left: 48px; }</style><p class="indented">Hi</p>',
+        format: 'visual',
+        mode: 'preview',
+        removeUnsubscribe: true,
+      });
+      expect(out).toMatch(/padding-left\s*:\s*3em/i);
+      expect(out).not.toMatch(/padding-left\s*:\s*0!important/i);
     });
 
     it('personalizeEmailContent applies {n} variables', () => {
@@ -135,6 +177,7 @@ describe('Email flow integration', () => {
         mailTemplateId: templateId,
         variableMapping: { 1: 'name' },
         senderMode: 'system_resend',
+        resendFromEmail: 'team@theshakticollective.in',
         includeSignature: false,
         removeUnsubscribe: true,
         customRecipients: [
@@ -164,6 +207,7 @@ describe('Email flow integration', () => {
         mailTemplateId: templateId,
         variableMapping: { 1: 'name' },
         senderMode: 'system_resend',
+        resendFromEmail: 'team@theshakticollective.in',
         includeSignature: false,
         removeUnsubscribe: true,
         customRecipients: [

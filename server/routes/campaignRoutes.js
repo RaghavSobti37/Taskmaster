@@ -200,6 +200,7 @@ router.get('/:id', async (req, res) => {
       campaign.recipients || [],
     );
     campaign.locationBreakdown = registered.locationBreakdown;
+    campaign.locationBreakdownRows = registered.locationBreakdownRows;
     if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
     else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
 

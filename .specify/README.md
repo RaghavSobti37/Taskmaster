@@ -33,11 +33,13 @@ After setup, **do not** re-run the copy step unless you intentionally reset memo
 
 | Path | Purpose |
 | --- | --- |
+| `memory/PROJECT_MASTER_CONTEXT.md` | **Master context** — full project breakdown for humans and AI agents |
 | `memory/project-overview.md` | Product scope, stack, tenancy |
 | `memory/architecture.md` | Runtime, API, data flows |
 | `memory/features.md` | Major feature areas and routes |
 | `memory/recent-changes.md` | Session delta — updated every push-and-document |
 | `memory/conventions.md` | Locked rules, audits, env safety |
+| `memory/auth-and-recent-fixes.md` | Version-by-version changelog (detailed) |
 
 ## Maintenance
 

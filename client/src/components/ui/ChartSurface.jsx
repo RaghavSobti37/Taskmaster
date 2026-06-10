@@ -18,6 +18,8 @@ export const CHART_MUTED = {
  * Flat chart container — no card border/shadow; data line carries color.
  */
 export default function ChartSurface({ title, info, actions, children, className = '', height }) {
+  const chartAreaStyle = height ? { height, minHeight: height } : undefined;
+
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
       {(title || actions) && (
@@ -27,7 +29,10 @@ export default function ChartSurface({ title, info, actions, children, className
         </div>
       )}
       {info}
-      <div className="w-full flex-1 min-h-0" style={height ? { height } : undefined}>
+      <div
+        className={`w-full ${height ? 'shrink-0' : 'flex-1 min-h-0'}`}
+        style={chartAreaStyle}
+      >
         {children}
       </div>
     </div>

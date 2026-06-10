@@ -3,6 +3,7 @@ const {
   PARAGRAPH_INLINE,
   HEADING_INLINE,
   LIST_UL_INLINE,
+  SPACER_INLINE,
 } = require('../../shared/emailBlockSpacing.cjs');
 
 const INDENT_STYLE_PROP = /^(padding-left|margin-left|text-indent|border-left|border-left-width|border-left-style)\s*:/i;
@@ -143,6 +144,14 @@ const normalizeOutboundEmailHtml = (html) => {
     $(el).replaceWith(`<p style="${composeBlockStyle('blockquote', classAttr, userStyle)}">${inner}</p>`);
   });
 
+  $('#ck-email-root').find('p, div').each((_, el) => {
+    if (!isEmptyParagraph($, el)) return;
+    const $el = $(el);
+    $el.html('&nbsp;');
+    $el.attr('style', SPACER_INLINE);
+    $el.removeAttr('class');
+  });
+
   $('#ck-email-root').find('*').each((_, el) => {
     const tag = (el.tagName || '').toLowerCase();
     const $el = $(el);
@@ -160,12 +169,12 @@ const normalizeOutboundEmailHtml = (html) => {
     $el.removeAttr('data-indent');
 
     if (BLOCK_TAGS.has(tag)) {
+      const inner = ($el.html() || '').trim();
+      if ((tag === 'p' || tag === 'div') && inner === '&nbsp;' && (el.attribs?.style || '') === SPACER_INLINE) {
+        return;
+      }
       $el.attr('style', composeBlockStyle(tag, classAttr, userStyle));
     }
-  });
-
-  $('#ck-email-root').find('p, div').each((_, el) => {
-    if (isEmptyParagraph($, el)) $(el).remove();
   });
 
   const unwrapClasses = ['ql-editor', 'ql-container', 'ql-snow', 'email-preview-root'];
@@ -187,8 +196,6 @@ const normalizeOutboundEmailHtml = (html) => {
 
   let out = $('#ck-email-root').html() || '';
   out = out
-    .replace(/(<\/p>)\s*(<p[^>]*>)\s*(<br\s*\/?>)\s*(<\/p>)/gi, '$1')
-    .replace(/(<\/p>)\s*(<p[^>]*>)\s*<\/p>/gi, '$1')
     .replace(/\sstyle="\s*"/gi, '')
     .replace(/\sclass="\s*"/gi, '');
 

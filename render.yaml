@@ -17,7 +17,7 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false
     branch: main
     envVars:
       - key: NODE_ENV
@@ -43,6 +43,16 @@ services:
         sync: false
       - key: DD_API_KEY
         sync: false
+      - key: SUPABASE_SECONDARY_ENABLED
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_BACKUP_BUCKET
+        value: taskmaster-backups
 
   # Staging API — PR/preview testing; never points at production DB
   - type: web
@@ -54,7 +64,7 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false
     branch: main
     envVars:
       - key: NODE_ENV
@@ -80,6 +90,16 @@ services:
         sync: false
       - key: DD_API_KEY
         sync: false
+      - key: SUPABASE_SECONDARY_ENABLED
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_BACKUP_BUCKET
+        value: taskmaster-backups
 
   - type: cron
     name: CoreKnot-daily-backup

@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const User = require('../models/User');
-const Notification = require('../models/Notification');
 const { createNotification } = require('../services/notificationDispatcher');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
 
@@ -42,41 +41,24 @@ async function main() {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '1h' });
   const headers = { Authorization: `Bearer ${token}` };
 
-  let listData;
   try {
     const list1 = await axios.get(`${API}/notifications`, { headers });
-    listData = list1.data;
-    const unreadInList = (listData.notifications || []).filter((n) => !n.read).length;
-    pass(`GET /notifications -> ${listData.notifications?.length ?? 0} items, ${unreadInList} unread in list`);
-    log('INFO', 'Allowed categories', { allowed: listData.allowedCategories });
+    if (list1.data?.localOnly) pass('GET /notifications reports localOnly mode');
+    else fail('GET /notifications missing localOnly flag');
   } catch (e) {
     fail(`GET /notifications: ${e.response?.data?.error || e.message}`);
   }
 
-  let countsBefore;
   try {
     const counts = await axios.get(`${API}/notifications/status-counts`, { headers });
-    countsBefore = counts.data;
-    pass(`status-counts unread=${counts.data?.notifications?.unread}`);
+    if (counts.data?.notifications?.localOnly) pass('status-counts reports localOnly notifications');
+    else fail('status-counts missing localOnly flag');
   } catch (e) {
     fail(`status-counts: ${e.response?.data?.error || e.message}`);
   }
 
-  if (listData && countsBefore) {
-    const unreadInList = (listData.notifications || []).filter((n) => !n.read).length;
-    const badge = countsBefore.notifications?.unread ?? -1;
-    if (unreadInList === badge) {
-      pass(`Badge matches inbox unread (${badge})`);
-    } else {
-      fail(`Badge mismatch: inbox shows ${unreadInList} unread, badge=${badge}`);
-    }
-  }
-
   const allowed = await getAllowedCategoriesForUser(user);
-  const dbUnreadFilter = { recipient: user._id, read: false };
-  if (user.role !== 'admin') dbUnreadFilter.category = { $in: allowed };
-  const dbUnread = await Notification.countDocuments(dbUnreadFilter);
-  log('INFO', 'DB unread (category-filtered)', { count: dbUnread, allowed });
+  log('INFO', 'Allowed categories', { allowed });
 
   let testId;
   try {
@@ -89,39 +71,19 @@ async function main() {
       actionUrl: '/inbox',
       sendEmail: false
     });
-    testId = created._id.toString();
-    pass(`createNotification -> ${testId}`);
+    testId = created?._id;
+    if (testId) pass(`createNotification dispatched -> ${testId}`);
+    else fail('createNotification returned no id');
   } catch (e) {
     fail(`createNotification: ${e.message}`);
   }
 
   try {
-    const list2 = await axios.get(`${API}/notifications`, { headers });
-    const found = list2.data?.notifications?.find((n) => n._id === testId || n.title?.includes('[TEST]'));
-    if (found) pass(`Test notification visible (read=${found.read})`);
-    else fail('Test notification missing from GET /notifications');
-
-    const counts2 = await axios.get(`${API}/notifications/status-counts`, { headers });
-    const badgeAfter = counts2.data?.notifications?.unread;
-    if (found && !found.read && badgeAfter >= 1) pass(`Badge incremented after create (unread=${badgeAfter})`);
-    else if (found?.read) pass('Test was already read');
-    else fail(`Badge did not increment (unread=${badgeAfter})`);
-
-    if (found && !found.read) {
-      const mark = await axios.patch(`${API}/notifications/${found._id}/read`, {}, { headers });
-      if (mark.data?.read === true) pass('PATCH mark read');
-      else fail('PATCH mark read failed');
-
-      const counts3 = await axios.get(`${API}/notifications/status-counts`, { headers });
-      const unreadAfterRead = (await axios.get(`${API}/notifications`, { headers })).data?.notifications?.filter((n) => !n.read).length;
-      if (counts3.data?.notifications?.unread === unreadAfterRead) {
-        pass(`Badge synced after read (unread=${unreadAfterRead})`);
-      } else {
-        fail(`Badge out of sync after read: badge=${counts3.data?.notifications?.unread}, list=${unreadAfterRead}`);
-      }
-    }
+    const mark = await axios.patch(`${API}/notifications/${testId}/read`, {}, { headers });
+    if (mark.data?.localOnly) pass('PATCH mark read stub OK');
+    else fail('PATCH mark read missing localOnly');
   } catch (e) {
-    fail(`Verify flow: ${e.response?.data?.error || e.message}`);
+    fail(`PATCH mark read: ${e.response?.data?.error || e.message}`);
   }
 
   try {

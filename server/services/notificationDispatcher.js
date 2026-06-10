@@ -1,7 +1,7 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const Notification = require('../models/Notification');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { sendPushToUser } = require('./pushNotificationService');
@@ -88,29 +88,34 @@ const createNotification = async ({
   }
 
   const resolvedIconType = resolveIconType({ iconType, actorId, relatedTaskId, category });
+  const notificationId = crypto.randomUUID();
 
-  const notification = await Notification.create({
-    recipient: recipientId,
+  const notification = {
+    _id: notificationId,
+    recipient: recipientId?.toString?.() || String(recipientId),
     title,
     message,
     type,
     category,
-    relatedLeadId,
-    relatedTaskId,
-    relatedProjectId,
-    actionUrl,
-    actorId,
-    iconType: resolvedIconType
-  });
+    relatedLeadId: relatedLeadId?.toString?.() || relatedLeadId,
+    relatedTaskId: relatedTaskId?.toString?.() || relatedTaskId,
+    relatedProjectId: relatedProjectId?.toString?.() || relatedProjectId,
+    actionUrl: actionUrl || '',
+    actorId: actorId?.toString?.() || actorId,
+    iconType: resolvedIconType,
+    read: false,
+    emailSent: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const { broadcastRealtimeEvent } = require('../config/realtime');
+  broadcastRealtimeEvent(`user-${recipientId}`, 'notification', notification);
 
   if (sendEmail) {
     const user = await User.findById(recipientId).select('name email');
     if (user) {
       const sent = await sendNotificationEmail(user, { title, message, category, actionUrl });
-      if (sent) {
-        notification.emailSent = true;
-        await notification.save();
-      }
+      if (sent) notification.emailSent = true;
     }
   }
 
@@ -118,7 +123,7 @@ const createNotification = async ({
     title,
     body: message,
     actionUrl: actionUrl || '/inbox',
-    notificationId: notification._id.toString(),
+    notificationId,
     category,
     iconType: resolvedIconType
   });

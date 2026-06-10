@@ -36,7 +36,7 @@ describe('trackingUrls local DB mismatch warning', () => {
   test('isLocalDevMongoUri recognizes legacy and current local names', () => {
     const { isLocalDevMongoUri } = require('../utils/trackingUrls');
     const localAtlas =
-      'mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/';
+      'mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/taskmaster_local';
     const prodAtlas =
       'mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/';
 

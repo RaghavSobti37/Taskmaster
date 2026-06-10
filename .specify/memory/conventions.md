@@ -11,6 +11,19 @@
 - Logo/spinner — `docs/LOGO_LOCKED.md`.
 - Production hosts — `.cursor/production-hosts.local.json` (gitignored).
 
+## Supabase / backup scripts
+
+```bash
+npm run supabase:setup --prefix server
+npm run supabase:migrate --prefix server
+npm run supabase:health --prefix server
+npm run backup:verify-supabase --prefix server
+npm run backup:daily --prefix server
+```
+
+- `BACKUP_DESTINATION=supabase` default when Supabase configured.
+- Do not delete Mongo log/mail collections without explicit user approval — backups GridFS only auto-purge.
+
 ## Campaign location scripts
 
 ```bash

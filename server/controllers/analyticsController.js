@@ -81,6 +81,24 @@ exports.getCumulativeMetrics = async (req, res) => {
   try {
     const userId = req.user._id;
 
+    try {
+      const { isSupabaseEnabled } = require('../config/supabase');
+      const { readLatestMailRollups } = require('../services/supabase/mailRollupStore');
+      if (isSupabaseEnabled()) {
+        const cached = await readLatestMailRollups(userId);
+        if (cached?.aggregateData?.length || cached?.dynamicBreakdown?.length) {
+          return res.status(200).json({
+            ...cached,
+            source: 'supabase',
+          });
+        }
+      }
+    } catch (supabaseReadErr) {
+      logger.warn('analyticsController', 'Supabase rollup read failed — falling back to Mongo', {
+        error: supabaseReadErr.message,
+      });
+    }
+
     const [coreAgg, mailAgg, engagedEmails] = await Promise.all([
       Campaign.aggregate([
         { $match: { createdBy: userId } },
@@ -110,7 +128,7 @@ exports.getCumulativeMetrics = async (req, res) => {
     const aggregateData = mergeTagMetrics(coreAgg, mailAgg);
     const dynamicBreakdown = await buildCumulativeRegisteredLocationBreakdown(engagedEmails);
 
-    res.status(200).json({ aggregateData, dynamicBreakdown });
+    res.status(200).json({ aggregateData, dynamicBreakdown, source: 'mongo' });
   } catch (error) {
     logger.error('analyticsController', 'Cumulative metrics ', { error: error.message || error });
     res.status(500).json({ error: error.message });

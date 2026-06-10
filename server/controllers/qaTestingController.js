@@ -268,7 +268,7 @@ exports.purgeAllTestData = async (req, res, next) => {
     DataHubService.clearFolderCache();
     res.json({
       success: true,
-      message: `Purged ${swept.deleted.tasks} QA tasks, ${swept.deleted.xpAudits} XP audit rows, ${swept.deleted.users} probe users, and related CRM/logs. Re-synced XP for ${xpRecalc.updatedUsers} user(s). Repaired ${phoneRepair.repaired} corrupt phones.`,
+      message: `Purged ${swept.deleted.tasks} QA tasks, ${swept.deleted.dailyLogs || 0} daily log entries, ${swept.deleted.xpAudits} XP audit rows, ${swept.deleted.users} probe users, and related CRM/logs. Re-synced XP for ${xpRecalc.updatedUsers} user(s). Repaired ${phoneRepair.repaired} corrupt phones.`,
       deleted: swept.deleted,
       phoneRepair,
       xpRecalc,

@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const SystemLog = require('../models/SystemLog');
+
+const PERSIST_SYSTEM_LOGS = String(process.env.PERSIST_SYSTEM_LOGS || 'false').toLowerCase() === 'true';
 const User = require('../models/User');
 const {
   SEVERITY,
@@ -89,12 +91,34 @@ function normalizeEntry(raw = {}) {
 }
 
 function broadcastSystemLog(doc) {
+  if (!PERSIST_SYSTEM_LOGS) return;
   const { broadcastRealtimeEvent } = require('../config/realtime');
   broadcastRealtimeEvent('system-logs', 'system_log', doc);
 }
 
+function formatStdoutLog(entry) {
+  const meta = {
+    traceId: entry.traceId,
+    module: entry.module,
+    route: entry.route,
+    httpStatus: entry.httpStatus,
+    errorCode: entry.errorCode,
+  };
+  return `[SystemLog] ${entry.severity} ${entry.message} ${JSON.stringify(meta)}`;
+}
+
 function writeSystemLog(rawEntry) {
   const entry = normalizeEntry(rawEntry);
+
+  if (!PERSIST_SYSTEM_LOGS) {
+    const level = entry.severity === 'ERROR'
+      ? 'error'
+      : entry.severity === 'WARN'
+        ? 'warn'
+        : 'log';
+    console[level](formatStdoutLog(entry));
+    return entry;
+  }
 
   setImmediate(async () => {
     try {
@@ -156,4 +180,5 @@ module.exports = {
   sanitizeValue,
   enrichLogsWithActorNames,
   enrichLogWithActorName,
+  PERSIST_SYSTEM_LOGS,
 };

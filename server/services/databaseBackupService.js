@@ -109,6 +109,54 @@ const getRetentionCount = () => {
   return Number.isFinite(parsed) && parsed >= 1 ? parsed : 2;
 };
 
+const getBackupDestination = () => {
+  const explicit = String(process.env.BACKUP_DESTINATION || '').trim().toLowerCase();
+  if (explicit === 'mongo' || explicit === 'supabase' || explicit === 'both') {
+    return explicit;
+  }
+  try {
+    const { isSupabaseEnabled } = require('../config/supabase');
+    return isSupabaseEnabled() ? 'supabase' : 'mongo';
+  } catch {
+    return 'mongo';
+  }
+};
+
+const shouldPurgeMongoAfterSupabase = () => {
+  const raw = String(process.env.BACKUP_PURGE_MONGO_AFTER_SUPABASE ?? 'true').trim().toLowerCase();
+  return raw !== 'false' && raw !== '0';
+};
+
+const purgeAllMongoGridFsBackups = async (connection, backupDbName) => {
+  const backupDb = connection.useDb(backupDbName, { useCache: false }).db;
+  const snapshotsCol = backupDb.collection(SNAPSHOTS_COLLECTION);
+  const snapshots = await snapshotsCol.find({}).toArray();
+
+  let deletedFiles = 0;
+  for (const snapshot of snapshots) {
+    deletedFiles += await deleteSnapshotFiles(backupDb, snapshot.date);
+    await snapshotsCol.deleteOne({ _id: snapshot._id });
+    logger.info('DatabaseBackup', `Purged Mongo GridFS snapshot ${snapshot.date}`);
+  }
+
+  const filesCol = backupDb.collection(`${GRIDFS_BUCKET}.files`);
+  const orphanFiles = await filesCol.find({}).toArray();
+  if (orphanFiles.length) {
+    const bucket = getGridFSBucket(backupDb);
+    for (const file of orphanFiles) {
+      await bucket.delete(file._id);
+      deletedFiles += 1;
+    }
+    logger.info('DatabaseBackup', `Removed ${orphanFiles.length} orphan GridFS backup files`);
+  }
+
+  return {
+    deletedSnapshots: snapshots.length,
+    deletedFiles,
+    backupDatabase: backupDbName,
+  };
+};
+
 /** @deprecated Use getRetentionCount — kept for scripts/docs that reference days. */
 const getRetentionDays = () => getRetentionCount();
 
@@ -243,6 +291,7 @@ const runDailyBackup = async () => {
   const snapshotDate = getISTDateString();
   const retentionCount = getRetentionCount();
   const backupDbName = getBackupDbName();
+  const destination = getBackupDestination();
   let connection;
 
   resetBackupProgress(snapshotDate);
@@ -256,62 +305,121 @@ const runDailyBackup = async () => {
     }).asPromise();
 
     const sourceDb = connection.db;
-    const backupDb = connection.useDb(backupDbName, { useCache: false }).db;
     const sourceDbStats = await getProductionDatabaseStats(sourceDb);
+    const collectionNames = await listSourceCollections(sourceDb);
 
     logger.info('DatabaseBackup', 'Starting daily backup', {
       snapshotDate,
+      destination,
       backupDbName,
       sourceDb: sourceDb.databaseName,
       retentionCount,
       sourceDataSizeBytes: sourceDbStats.dataSizeBytes,
     });
 
-    await removeExistingSnapshot(backupDb, snapshotDate);
-
-    const collectionNames = await listSourceCollections(sourceDb);
     patchBackupProgress({
       totalCollections: collectionNames.length,
       currentCollection: 'Starting export…',
       percent: 1,
     });
-    const exportedCollections = [];
-    let totalBytes = 0;
 
-    for (let i = 0; i < collectionNames.length; i += 1) {
-      const collectionName = collectionNames[i];
-      patchBackupProgress({ currentCollection: collectionName });
-      const result = await exportCollection(sourceDb, backupDb, snapshotDate, collectionName);
-      exportedCollections.push(result);
-      totalBytes += result.compressedBytes;
-      patchBackupProgress({ completedCollections: i + 1 });
-      logger.info('DatabaseBackup', `Backed up ${collectionName}`, result);
-      await sleep(COLLECTION_PAUSE_MS);
+    let exportedCollections = [];
+    let totalBytes = 0;
+    let cleanup = { deletedSnapshots: 0, deletedFiles: 0, kept: retentionCount };
+    let supabaseResult = { skipped: true, reason: 'not requested' };
+    let mongoResult = { skipped: true, reason: 'not requested' };
+
+    if (destination === 'supabase' || destination === 'both') {
+      const {
+        runSupabaseProductionBackup,
+        pruneOldSupabaseSnapshots,
+      } = require('./supabase/backupStore');
+      const { SUPABASE_BACKUP_BUCKET } = require('../config/supabase');
+
+      supabaseResult = await runSupabaseProductionBackup({
+        sourceDb,
+        snapshotDate,
+        collectionNames,
+        sourceDbStats,
+        onProgress: patchBackupProgress,
+      });
+      exportedCollections = supabaseResult.collections || [];
+      totalBytes = supabaseResult.totalBytes || 0;
+      cleanup = await pruneOldSupabaseSnapshots(retentionCount);
+      logger.info('DatabaseBackup', 'Supabase backup complete', supabaseResult);
+
+      if (supabaseResult.skipped !== true && shouldPurgeMongoAfterSupabase()) {
+        const mongoPurge = await purgeAllMongoGridFsBackups(connection, backupDbName);
+        logger.info('DatabaseBackup', 'Purged Mongo GridFS backups after Supabase success', mongoPurge);
+        supabaseResult.mongoPurge = mongoPurge;
+      }
     }
 
-    await backupDb.collection(SNAPSHOTS_COLLECTION).insertOne({
-      date: snapshotDate,
-      createdAt: new Date(),
-      status: 'completed',
-      collections: exportedCollections,
-      totalBytes,
-      sourceDbStats,
-      sourceDatabase: sourceDb.databaseName,
-      backupDatabase: backupDbName,
-    });
+    if (destination === 'mongo' || destination === 'both') {
+      const backupDb = connection.useDb(backupDbName, { useCache: false }).db;
+      await removeExistingSnapshot(backupDb, snapshotDate);
 
-    const cleanup = await pruneOldSnapshots(backupDb, retentionCount);
+      const mongoExported = [];
+      let mongoBytes = 0;
+
+      for (let i = 0; i < collectionNames.length; i += 1) {
+        const collectionName = collectionNames[i];
+        if (destination === 'mongo') {
+          patchBackupProgress({ currentCollection: collectionName });
+        }
+        const result = await exportCollection(sourceDb, backupDb, snapshotDate, collectionName);
+        mongoExported.push(result);
+        mongoBytes += result.compressedBytes;
+        if (destination === 'mongo') {
+          patchBackupProgress({ completedCollections: i + 1 });
+        }
+        logger.info('DatabaseBackup', `Backed up ${collectionName} to Mongo GridFS`, result);
+        await sleep(COLLECTION_PAUSE_MS);
+      }
+
+      await backupDb.collection(SNAPSHOTS_COLLECTION).insertOne({
+        date: snapshotDate,
+        createdAt: new Date(),
+        status: 'completed',
+        collections: mongoExported,
+        totalBytes: mongoBytes,
+        sourceDbStats,
+        sourceDatabase: sourceDb.databaseName,
+        backupDatabase: backupDbName,
+      });
+
+      cleanup = await pruneOldSnapshots(backupDb, retentionCount);
+      mongoResult = {
+        skipped: false,
+        destination: 'mongo',
+        backupDatabase: backupDbName,
+        collectionCount: mongoExported.length,
+        totalBytes: mongoBytes,
+      };
+
+      if (destination === 'mongo') {
+        exportedCollections = mongoExported;
+        totalBytes = mongoBytes;
+      }
+    }
 
     const durationMs = Date.now() - startedAt;
+    const primaryDestination = destination === 'both' ? 'supabase+mongo' : destination;
+    const backupDatabaseLabel = destination === 'supabase'
+      ? (supabaseResult.backupDatabase || 'taskmaster-backups')
+      : destination === 'mongo'
+        ? backupDbName
+        : `${supabaseResult.backupDatabase || 'taskmaster-backups'}+${backupDbName}`;
 
     const successResult = {
       success: true,
       date: snapshotDate,
+      destination: primaryDestination,
       collections: exportedCollections,
       collectionCount: exportedCollections.length,
       totalBytes,
       durationMs,
-      backupDatabase: backupDbName,
+      backupDatabase: backupDatabaseLabel,
       sourceDatabase: sourceDbStats.sourceDatabase,
       sourceDataSizeBytes: sourceDbStats.dataSizeBytes,
       sourceIndexSizeBytes: sourceDbStats.indexSizeBytes,
@@ -319,6 +427,8 @@ const runDailyBackup = async () => {
       sourceTotalSizeBytes: sourceDbStats.totalSizeBytes,
       retentionCount,
       cleanup,
+      supabase: supabaseResult,
+      mongo: mongoResult,
     };
     finishBackupProgress(successResult);
     return successResult;
@@ -347,6 +457,27 @@ const runDailyBackup = async () => {
 };
 
 const listAvailableBackups = async () => {
+  const destination = getBackupDestination();
+
+  if (destination === 'supabase' || destination === 'both') {
+    try {
+      const { listSupabaseBackups } = require('./supabase/backupStore');
+      const { SUPABASE_BACKUP_BUCKET } = require('../config/supabase');
+      const snapshots = await listSupabaseBackups();
+      if (snapshots.length || destination === 'supabase') {
+        return {
+          destination: 'supabase',
+          backupDatabase: SUPABASE_BACKUP_BUCKET,
+          snapshots,
+        };
+      }
+    } catch (err) {
+      logger.warn('DatabaseBackup', 'Supabase backup list failed — falling back to Mongo', {
+        error: err.message,
+      });
+    }
+  }
+
   const sourceUri = getSourceUri();
   const backupDbName = getBackupDbName();
   let connection;
@@ -363,15 +494,20 @@ const listAvailableBackups = async () => {
       .sort({ date: -1 })
       .toArray();
 
-    return snapshots.map((snap) => ({
-      date: snap.date,
-      createdAt: snap.createdAt,
-      status: snap.status,
-      collectionCount: snap.collections?.length || 0,
-      collections: (snap.collections || []).map((c) => c.collectionName),
-      totalBytes: snap.totalBytes || 0,
-      expiresAt: snap.expiresAt,
-    }));
+    return {
+      destination: 'mongo',
+      backupDatabase: backupDbName,
+      snapshots: snapshots.map((snap) => ({
+        date: snap.date,
+        createdAt: snap.createdAt,
+        status: snap.status,
+        collectionCount: snap.collections?.length || 0,
+        collections: (snap.collections || []).map((c) => c.collectionName),
+        totalBytes: snap.totalBytes || 0,
+        expiresAt: snap.expiresAt,
+        destination: 'mongo',
+      })),
+    };
   } finally {
     if (connection) {
       await connection.close();
@@ -431,6 +567,9 @@ module.exports = {
   getProductionDatabaseStats,
   getISTDateString,
   getBackupDbName,
+  getBackupDestination,
+  purgeAllMongoGridFsBackups,
+  shouldPurgeMongoAfterSupabase,
   getRetentionCount,
   getRetentionDays,
   getSourceUri,

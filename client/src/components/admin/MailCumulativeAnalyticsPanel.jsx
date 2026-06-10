@@ -9,6 +9,7 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
 
   const chartData = locationRows.map((row) => ({
     city: row.location,
+    count: row.count || 0,
     opens: row.opens || 0,
     clicks: row.clicks || 0,
     total: row.total ?? ((row.opens || 0) + (row.clicks || 0)),
@@ -63,27 +64,13 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
           Opens and clicks by each engaged recipient&apos;s CRM city — not IP tracking geo. Click a bar to view leads.
         </p>
         <RegisteredLocationBarChart
+          variant="histogram"
           data={chartData}
           height={320}
           limit={16}
           onLocationClick={onLocationSelect}
           emptyMessage="No engaged lead demographics recorded yet."
         />
-        {locationRows.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-            {locationRows.slice(0, 9).map((item, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between text-left hover:bg-[var(--color-bg-border)]/20 transition-all duration-200"
-                onClick={() => onLocationSelect?.(item.location)}
-              >
-                <span className="font-bold text-xs block">{item.location}</span>
-                <Badge variant="mint">{item.count} engaged</Badge>
-              </button>
-            ))}
-          </div>
-        )}
       </Card>
     </div>
   );

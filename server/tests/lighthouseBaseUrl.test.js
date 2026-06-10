@@ -24,6 +24,6 @@ describe('resolveLhBaseUrl', () => {
     process.env.NODE_ENV = 'development';
     jest.resetModules();
     const { resolveLhBaseUrl: resolve } = require('../services/qa/qaLighthouseRunner');
-    expect(resolve()).toBe('http://localhost:4173');
+    expect(resolve()).toBe('http://localhost:5173');
   });
 });

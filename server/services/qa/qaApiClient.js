@@ -3,8 +3,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 const Department = require('../../models/Department');
 const { ADMIN_SLUG, OPS_SLUG, SALES_SLUG } = require('../../utils/departmentPermissions');
-const { qaExcludedEmailNinFilter, pickFirstNonExcludedUser } = require('../../utils/qaExcludedUsers');
+const { getDefaultSeedPassword } = require('../../utils/defaultPassword');
+const { buildQaUserFilter, qaUniqueEmail } = require('./qaTestData');
 const { reportQaActivity, sanitizePayload } = require('./qaActivity');
+
+const BYPASS = { bypassTenant: true };
 
 const QA_API_BASE = () =>
   (process.env.QA_API_BASE_URL || process.env.API_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
@@ -20,31 +23,48 @@ function clearResolveTestUsersCache() {
   cachedUsers = null;
 }
 
-async function findProbeUser(filter) {
+/** Only QA-pattern probe accounts — never real staff (purged after each run). */
+async function ensureQaProbeUser({ departmentId, roleLabel = 'any' } = {}) {
   const populate = { path: 'departmentId', select: 'name slug' };
-  const candidates = await User.find({ ...filter, ...qaExcludedEmailNinFilter() })
+  const label = String(roleLabel || 'any').replace(/[^a-z0-9]+/gi, ' ').trim() || 'any';
+  const created = await User.create({
+    name: `QA ${label.charAt(0).toUpperCase()}${label.slice(1)} Probe`,
+    email: qaUniqueEmail(`qa-${label.toLowerCase().replace(/\s+/g, '-')}`),
+    password: getDefaultSeedPassword(),
+    gender: 'male',
+    ...(departmentId ? { departmentId } : {}),
+  });
+  return User.findById(created._id).setOptions(BYPASS).populate(populate).lean();
+}
+
+async function findProbeUser(filter = {}, roleLabel = 'any') {
+  const populate = { path: 'departmentId', select: 'name slug' };
+  const deptClause = filter.departmentId ? { departmentId: filter.departmentId } : {};
+  const candidates = await User.find({ $and: [buildQaUserFilter(), deptClause] })
+    .setOptions(BYPASS)
     .populate(populate)
     .limit(12)
     .lean();
-  return pickFirstNonExcludedUser(candidates);
+  if (candidates[0]) return candidates[0];
+  return ensureQaProbeUser({ departmentId: filter.departmentId, roleLabel });
 }
 
 async function resolveTestUsers() {
   if (cachedUsers) return cachedUsers;
 
-  const anyUser = await findProbeUser({});
+  const anyUser = await findProbeUser({}, 'any');
   const adminDept = await Department.findOne({ slug: ADMIN_SLUG }).select('_id');
   const opsDept = await Department.findOne({ slug: OPS_SLUG }).select('_id');
   const salesDept = await Department.findOne({ slug: SALES_SLUG }).select('_id');
 
   const adminUser = adminDept
-    ? await findProbeUser({ departmentId: adminDept._id })
+    ? await findProbeUser({ departmentId: adminDept._id }, 'admin')
     : null;
   const opsUser = opsDept
-    ? await findProbeUser({ departmentId: opsDept._id })
+    ? await findProbeUser({ departmentId: opsDept._id }, 'ops')
     : null;
   const salesUser = salesDept
-    ? await findProbeUser({ departmentId: salesDept._id })
+    ? await findProbeUser({ departmentId: salesDept._id }, 'sales')
     : null;
 
   cachedUsers = {

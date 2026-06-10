@@ -230,6 +230,16 @@ if (process.env.NODE_ENV !== 'test') {
 
       const { ensureDataHubBootstrap } = require('./utils/ensureDataHubBootstrap');
       ensureDataHubBootstrap().catch(() => {});
+
+      const { isSupabaseEnabled, getSupabaseConfig } = require('./config/supabase');
+      const { registerSupabaseMirrors } = require('./services/supabase/registerMirrors');
+      if (isSupabaseEnabled()) {
+        registerSupabaseMirrors();
+        const sb = getSupabaseConfig();
+        console.log(`[SUPABASE] Secondary store enabled — ${sb.url}`);
+      } else {
+        console.log('[SUPABASE] Secondary store disabled or missing credentials');
+      }
     })
     .catch(err => {
       console.error('[ERROR] Initial MongoDB connection failed:', err.message);
@@ -336,6 +346,7 @@ app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
+app.use('/api/admin/supabase', require('./routes/supabaseAdminRoutes'));
 app.use('/api/admin/queues', require('./routes/queueAdminRoutes'));
 app.use('/api/admin', require('./routes/masterclassReviewAdminRoutes'));
 
@@ -441,6 +452,9 @@ function onServerListening() {
 
   const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
   initLogArchiverWorker();
+
+  const { initSupabaseSyncWorker } = require('./workers/supabaseSyncWorker');
+  initSupabaseSyncWorker();
 
   const { initRealtime } = require('./config/realtime');
   initRealtime(server, corsAllowlist);

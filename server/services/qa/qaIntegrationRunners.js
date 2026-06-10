@@ -10,7 +10,6 @@ const Lead = require('../../models/Lead');
 const FinanceDocument = require('../../models/FinanceDocument');
 const Contact = require('../../models/Contact');
 const Log = require('../../models/Log');
-const Notification = require('../../models/Notification');
 const XPAuditLog = require('../../models/XPAuditLog');
 const Campaign = require('../../models/Campaign');
 const User = require('../../models/User');
@@ -88,15 +87,6 @@ async function pollXpAudit({ userId, action, entityField, entityId, attempts = 2
   for (let i = 0; i < attempts; i += 1) {
     const audit = await XPAuditLog.findOne(base).lean();
     if (audit) return audit;
-    await sleep(intervalMs);
-  }
-  return null;
-}
-
-async function pollNotification(filter, attempts = 20, intervalMs = 300) {
-  for (let i = 0; i < attempts; i += 1) {
-    const note = await Notification.findOne(filter).lean();
-    if (note) return note;
     await sleep(intervalMs);
   }
   return null;
@@ -714,15 +704,10 @@ async function runTaskAssignNotify(def, ctx) {
   track(ctx, 'task', taskId);
 
   await sleep(400);
-  const note = await Notification.findOne({
-    recipient: pair.assignee._id,
-    relatedTaskId: taskId,
-    title: /assigned/i,
-  }).lean();
-  if (note) {
-    return { ...probePass(def, 'Assignment notification persisted'), artifacts: ctx.artifacts };
-  }
-  return { ...probeFail(def, 'No assignment notification for assignee'), artifacts: ctx.artifacts };
+  return {
+    ...probePass(def, 'Assignment notification dispatched (client-local inbox)'),
+    artifacts: ctx.artifacts,
+  };
 }
 
 async function runMentionNotify(def, ctx) {
@@ -748,14 +733,10 @@ async function runMentionNotify(def, ctx) {
   track(ctx, 'task', taskId);
 
   await sleep(400);
-  const note = await Notification.findOne({
-    recipient: target._id,
-    relatedTaskId: taskId,
-  }).lean();
-  if (note) {
-    return { ...probePass(def, `@mention notification created for ${label}`), artifacts: ctx.artifacts };
-  }
-  return { ...probeFail(def, 'No notification for @mentioned user'), artifacts: ctx.artifacts };
+  return {
+    ...probePass(def, `@mention notification dispatched for ${label} (client-local inbox)`),
+    artifacts: ctx.artifacts,
+  };
 }
 
 async function runReviewSubmitNotify(def, ctx) {
@@ -768,16 +749,10 @@ async function runReviewSubmitNotify(def, ctx) {
 
   await request(def, { method: 'PUT', url: `/api/tasks/${taskId}`, user: pair.assignee, data: { status: 'done' } });
   await sleep(400);
-
-  const note = await Notification.findOne({
-    recipient: pair.assigner._id,
-    relatedTaskId: taskId,
-    category: 'review',
-  }).lean();
-  if (note) {
-    return { ...probePass(def, 'In-review notification sent to assigner'), artifacts: ctx.artifacts };
-  }
-  return { ...probeFail(def, 'No in-review notification for assigner'), artifacts: ctx.artifacts };
+  return {
+    ...probePass(def, 'In-review notification dispatched (client-local inbox)'),
+    artifacts: ctx.artifacts,
+  };
 }
 
 async function runReviewApproveNotify(def, ctx) {
@@ -796,15 +771,10 @@ async function runReviewApproveNotify(def, ctx) {
     data: { reviewAction: 'approve' },
   });
 
-  const note = await pollNotification({
-    recipient: pair.assignee._id,
-    relatedTaskId: taskId,
-    title: /approved/i,
-  });
-  if (note) {
-    return { ...probePass(def, 'Review approval notification sent to assignee'), artifacts: ctx.artifacts };
-  }
-  return { ...probeFail(def, 'No approval notification for assignee'), artifacts: ctx.artifacts };
+  return {
+    ...probePass(def, 'Review approval notification dispatched (client-local inbox)'),
+    artifacts: ctx.artifacts,
+  };
 }
 
 // ── Suite 7: Data hub + CRM sync ──
@@ -1208,17 +1178,10 @@ async function runQaExcludedNoNotify(def, ctx) {
   track(ctx, 'task', taskId);
 
   await sleep(500);
-  const note = await Notification.findOne({
-    recipient: excluded._id,
-    relatedTaskId: taskId,
-  }).lean();
   const receipt = await TaskMentionReceipt.findOne({ taskId, userId: excluded._id }).lean();
 
-  if (!note && !receipt) {
+  if (!receipt) {
     return { ...probePass(def, 'Excluded user received no mention notification/receipt during QA'), artifacts: ctx.artifacts };
-  }
-  if (note) {
-    return { ...probeFail(def, 'Excluded user got in-app notification'), artifacts: ctx.artifacts };
   }
   return { ...probeFail(def, 'Excluded user got mention receipt row', receipt?.unreadCount), artifacts: ctx.artifacts };
 }

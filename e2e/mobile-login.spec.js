@@ -4,9 +4,9 @@ import { loginAsTestUser } from './helpers/auth.js';
 
 const hasAuthCreds = Boolean(process.env.E2E_EMAIL && process.env.E2E_PASSWORD);
 
-test.describe('mobile login', () => {
-  test.use({ ...devices['iPhone 13'] });
+test.use({ ...devices['iPhone 13'] });
 
+test.describe('mobile login', () => {
   test.beforeEach(() => {
     test.skip(!hasAuthCreds, 'Set E2E_EMAIL and E2E_PASSWORD for mobile login E2E');
   });

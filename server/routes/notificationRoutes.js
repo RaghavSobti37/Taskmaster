@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const Notification = require('../models/Notification');
 const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Lead = require('../models/Lead');
@@ -9,7 +8,6 @@ const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
 const { startOfDay, endOfDay, isBefore } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
-const { isAdminUser } = require('../utils/departmentPermissions');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
 const TaskService = require('../services/TaskService');
@@ -87,22 +85,6 @@ router.get('/status-counts', protect, async (req, res) => {
       date: { $gte: todayStart, $lte: todayEnd }
     });
 
-    const allowed = await getAllowedCategoriesForUser(req.user);
-    const unreadFilter = { recipient: req.user._id, read: false };
-    if (!isAdminUser(req.user)) {
-      unreadFilter.category = { $in: allowed };
-    }
-    const unreadNotificationsCount = await Notification.countDocuments(unreadFilter);
-
-    const unreadByCategoryAgg = await Notification.aggregate([
-      { $match: unreadFilter },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-    ]);
-    const unreadByCategory = unreadByCategoryAgg.reduce((acc, row) => {
-      if (row._id) acc[row._id] = row.count;
-      return acc;
-    }, {});
-
     const inReviewTasksCount = await Task.countDocuments({
       ...taskScope,
       status: 'in-review',
@@ -116,11 +98,13 @@ router.get('/status-counts', protect, async (req, res) => {
       logger.warn('status-counts review queue', reviewErr?.message);
     }
 
+    const allowed = await getAllowedCategoriesForUser(req.user);
+
     res.json({
       tasks: { overdue: overdueTasksCount, today: todayTasksCount, inReview: inReviewTasksCount },
       followups: { overdue: overdueFollowupsCount, today: todayFollowupsCount },
       calendar: { today: todayCalendarCount },
-      notifications: { unread: unreadNotificationsCount, byCategory: unreadByCategory },
+      notifications: { unread: 0, byCategory: {}, localOnly: true, allowedCategories: ['all', ...allowed] },
       review: { pending: reviewPendingCount },
     });
   } catch (error) {
@@ -177,22 +161,12 @@ router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), a
 router.get('/', protect, async (req, res) => {
   try {
     const allowed = await getAllowedCategoriesForUser(req.user);
-    const filter = { recipient: req.user._id };
-    if (!isAdminUser(req.user)) {
-      filter.category = { $in: allowed };
-    }
-
-    const notifications = await Notification.find(filter)
-      .sort('-createdAt')
-      .limit(50)
-      .populate('actorId', 'name avatar')
-      .populate('relatedProjectId', 'name color');
-
     const user = await User.findById(req.user._id).populate('departmentId', 'slug name');
     res.json({
-      notifications,
+      notifications: [],
+      localOnly: true,
       allowedCategories: ['all', ...allowed],
-      departmentSlug: user?.departmentId?.slug || ''
+      departmentSlug: user?.departmentId?.slug || '',
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch notifications' });
@@ -200,43 +174,15 @@ router.get('/', protect, async (req, res) => {
 });
 
 router.patch('/:id/read', protect, async (req, res) => {
-  try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user._id },
-      { read: true },
-      { new: true }
-    );
-    if (!notification) return res.status(404).json({ error: 'Notification not found' });
-    res.json(notification);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update notification' });
-  }
+  res.json({ _id: req.params.id, read: true, localOnly: true });
 });
 
 router.patch('/read-all', protect, async (req, res) => {
-  try {
-    await Notification.updateMany(
-      { recipient: req.user._id, read: false },
-      { read: true }
-    );
-    res.json({ message: 'All notifications marked as read' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update notifications' });
-  }
+  res.json({ message: 'All notifications marked as read', localOnly: true });
 });
 
 router.delete('/', protect, async (req, res) => {
-  try {
-    const allowed = await getAllowedCategoriesForUser(req.user);
-    const filter = { recipient: req.user._id };
-    if (!isAdminUser(req.user)) {
-      filter.category = { $in: allowed };
-    }
-    const result = await Notification.deleteMany(filter);
-    res.json({ message: 'Notifications cleared', deletedCount: result.deletedCount });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to clear notifications' });
-  }
+  res.json({ message: 'Notifications cleared', deletedCount: 0, localOnly: true });
 });
 
 module.exports = router;

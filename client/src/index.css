@@ -1376,7 +1376,7 @@ html[data-pwa-desktop] [data-page-root] {
   margin: 0;
 }
 
-/* Empty spacer lines (Enter) show same 1em gap as sent email; removed on save */
+/* Empty spacer lines (Enter) show same 1em gap as sent email; preserved as &nbsp; spacers on save */
 .mail-template-quill .ql-editor p:empty,
 .mail-template-quill .ql-editor p:has(> br:only-child) {
   min-height: 1em;

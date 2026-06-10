@@ -2,10 +2,8 @@
 export function formatLoginError(err) {
   if (!err?.response) {
     return {
-      message:
-        err?.message
-        || 'Could not reach the server. Check your connection and try again.',
-      isNetwork: !err?.message,
+      message: 'Could not reach the server. Check your connection and try again.',
+      isNetwork: true,
     };
   }
 

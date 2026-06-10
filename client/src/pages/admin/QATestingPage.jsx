@@ -1107,7 +1107,7 @@ const QATestingPage = () => {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Purge QA test data?',
-                  message: 'Removes QA probe tasks (titles starting with QA, [QA BUG], etc.), probe users, CRM/Data Hub rows, QA activity logs, and XP audit entries from tests — then re-syncs affected users’ total XP. Production data outside QA patterns is not affected.',
+                  message: 'Removes QA probe tasks (titles starting with QA, [QA BUG], etc.), probe users, CRM/Data Hub rows, QA activity logs, daily log entries from QA task flows, and XP audit entries from tests — then re-syncs affected users’ total XP. Production data outside QA patterns is not affected.',
                   confirmLabel: 'Purge',
                   type: 'danger',
                 });

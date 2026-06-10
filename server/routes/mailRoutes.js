@@ -581,6 +581,7 @@ router.post('/preview', protect, async (req, res) => {
 
     const bodyHtml = await buildFinalEmailHtml({
       html: htmlIn,
+      format: isRawHtml ? 'rawHtml' : 'visual',
       ...previewExtras,
       mode: 'preview',
     });
@@ -666,10 +667,15 @@ router.post('/test-campaign', protect, async (req, res) => {
       signature: signatureText,
       removeUnsubscribe: removeUnsubscribe === true,
     };
-    const isFullDoc = format === 'rawHtml' || isFullHtmlDocument(personalizedHtml);
+    const isFullDoc = isFullHtmlDocument(personalizedHtml);
     const html = isFullDoc
       ? applyFullDocumentEmailExtras(personalizedHtml, previewExtras)
-      : await buildFinalEmailHtml({ html: personalizedHtml, ...previewExtras, mode: 'test' });
+      : await buildFinalEmailHtml({
+        html: personalizedHtml,
+        format: format === 'rawHtml' ? 'rawHtml' : 'visual',
+        ...previewExtras,
+        mode: 'test',
+      });
 
     const { loadCampaignAttachments } = require('../utils/campaignAttachments');
     const attachmentRows = await loadCampaignAttachments(attachments || []);

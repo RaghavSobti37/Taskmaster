@@ -32,7 +32,7 @@ export default function DataMiniChart({
   if (series.length === 0) {
     return (
       <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
-        <div className="h-full flex items-center justify-center text-[11px] text-[var(--color-text-muted)] italic text-center px-3">
+        <div className="flex items-center justify-center text-[11px] text-[var(--color-text-muted)] italic text-center px-3" style={{ height, minHeight: height }}>
           No location data yet — opens and clicks from real devices will populate city geo.
         </div>
       </ChartSurface>
@@ -42,7 +42,7 @@ export default function DataMiniChart({
   return (
     <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
       {type === 'donut' ? (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={height}>
           <PieChart>
             <Pie
               data={series}
@@ -62,7 +62,7 @@ export default function DataMiniChart({
           </PieChart>
         </ResponsiveContainer>
       ) : (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={height}>
           <BarChart data={series} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
             <CartesianGrid {...CHART_MUTED.grid} vertical={false} />
             <XAxis dataKey="label" tick={CHART_MUTED.axis} axisLine={false} tickLine={false} />

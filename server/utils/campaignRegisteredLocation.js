@@ -125,6 +125,72 @@ const attributeEventsToBreakdown = (events, emailCityMap) => {
   return { locationBreakdown, engagedByCity };
 };
 
+const resolveRegisteredCityForRecipient = (rec, emailCityMap) => {
+  const email = String(rec?.email || '').toLowerCase().trim();
+  if (!email) return 'Unknown';
+  if (emailCityMap.has(email)) return emailCityMap.get(email);
+  const fromLead = registeredCityFromLeadDoc(
+    rec?.leadId && typeof rec.leadId === 'object' ? rec.leadId : null,
+  );
+  return fromLead || 'Unknown';
+};
+
+/** Fallback when MailEvents are missing — group Opened/Clicked recipients by CRM city. */
+const attributeRecipientsToBreakdown = (recipients = [], emailCityMap) => {
+  const locationBreakdown = {};
+  const engagedByCity = {};
+
+  for (const rec of recipients) {
+    const status = rec?.status;
+    if (status !== 'Opened' && status !== 'Clicked') continue;
+
+    const email = String(rec?.email || '').toLowerCase().trim();
+    if (!email) continue;
+
+    const city = resolveRegisteredCityForRecipient(rec, emailCityMap);
+    if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
+    if (status === 'Opened') locationBreakdown[city].opens += 1;
+    if (status === 'Clicked') {
+      locationBreakdown[city].clicks += 1;
+      locationBreakdown[city].opens += 1;
+    }
+    if (!engagedByCity[city]) engagedByCity[city] = new Set();
+    engagedByCity[city].add(email);
+  }
+
+  return { locationBreakdown, engagedByCity };
+};
+
+const enrichBreakdownWithCounts = (locationBreakdown, engagedByCity) => {
+  const enriched = {};
+  for (const [city, stats] of Object.entries(locationBreakdown || {})) {
+    enriched[city] = {
+      opens: stats?.opens || 0,
+      clicks: stats?.clicks || 0,
+      count: engagedByCity[city]?.size || 0,
+    };
+  }
+  return enriched;
+};
+
+const breakdownHasEngagement = (locationBreakdown = {}) =>
+  Object.values(locationBreakdown).some(
+    (stats) => (stats?.opens || 0) > 0 || (stats?.clicks || 0) > 0,
+  );
+
+const formatLocationBreakdownRows = (locationBreakdown = {}) =>
+  Object.entries(locationBreakdown)
+    .map(([location, stats]) => ({
+      location,
+      city: location,
+      count: stats?.count || 0,
+      opens: stats?.opens || 0,
+      clicks: stats?.clicks || 0,
+      total: (stats?.opens || 0) + (stats?.clicks || 0),
+    }))
+    .filter((row) => row.count > 0 || row.opens > 0 || row.clicks > 0)
+    .sort((a, b) => b.total - a.total);
+
 /**
  * @param {import('mongoose').Types.ObjectId} campaignId
  * @param {Array} recipients - campaign.recipients (leadId may be populated)
@@ -140,10 +206,20 @@ const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => 
     .setOptions(BYPASS)
     .lean();
 
-  const { locationBreakdown } = attributeEventsToBreakdown(events, emailCityMap);
+  let { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, emailCityMap);
+  if (!breakdownHasEngagement(locationBreakdown) && recipients.length > 0) {
+    ({ locationBreakdown, engagedByCity } = attributeRecipientsToBreakdown(recipients, emailCityMap));
+  }
+
+  const enrichedBreakdown = enrichBreakdownWithCounts(locationBreakdown, engagedByCity);
   const timeSeries = await buildEngagementTimeSeries(campaignId);
 
-  return { locationBreakdown, timeSeries, emailCityMap };
+  return {
+    locationBreakdown: enrichedBreakdown,
+    locationBreakdownRows: formatLocationBreakdownRows(enrichedBreakdown),
+    timeSeries,
+    emailCityMap,
+  };
 };
 
 /** Cross-campaign: engaged emails → CRM cities with opens/clicks/count. */
@@ -161,19 +237,8 @@ const buildCumulativeRegisteredLocationBreakdown = async (engagedEmails = []) =>
     .lean();
 
   const { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, emailCityMap);
-
-  const dynamicBreakdown = Object.entries(locationBreakdown)
-    .map(([location, stats]) => ({
-      location,
-      count: engagedByCity[location]?.size || 0,
-      opens: stats.opens || 0,
-      clicks: stats.clicks || 0,
-      total: (stats.opens || 0) + (stats.clicks || 0),
-    }))
-    .filter((r) => r.count > 0 || r.opens > 0 || r.clicks > 0)
-    .sort((a, b) => b.total - a.total);
-
-  return dynamicBreakdown;
+  const enrichedBreakdown = enrichBreakdownWithCounts(locationBreakdown, engagedByCity);
+  return formatLocationBreakdownRows(enrichedBreakdown);
 };
 
 module.exports = {
@@ -183,4 +248,8 @@ module.exports = {
   buildRegisteredLocationBreakdown,
   buildEngagementTimeSeries,
   buildCumulativeRegisteredLocationBreakdown,
+  attributeEventsToBreakdown,
+  attributeRecipientsToBreakdown,
+  formatLocationBreakdownRows,
+  enrichBreakdownWithCounts,
 };

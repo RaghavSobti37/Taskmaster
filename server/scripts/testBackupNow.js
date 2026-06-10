@@ -115,8 +115,9 @@ const main = async () => {
       : 'N/A';
     console.log(`\nCompression ratio vs prod data size: ${ratio}%`);
 
-    const backups = await listAvailableBackups();
-    console.log(`\nAvailable snapshots: ${backups.map((b) => b.date).join(', ') || 'none'}`);
+    const listing = await listAvailableBackups();
+    const snapshots = listing.snapshots || [];
+    console.log(`\nAvailable snapshots (${listing.destination}): ${snapshots.map((b) => b.date).join(', ') || 'none'}`);
 
     try {
       await notifyBackupResult(result);

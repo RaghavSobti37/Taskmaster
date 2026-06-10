@@ -1,7 +1,7 @@
 /**
  * Centralized structured logger for production code.
  * Replaces raw console.* calls with tagged, level-aware logging.
- * Optional meta.persist writes to SystemLog collection.
+ * Optional meta.persist writes to SystemLog collection when PERSIST_SYSTEM_LOGS=true.
  */
 const { SEVERITY, MODULE } = require('../../shared/systemLogContract');
 
@@ -23,6 +23,7 @@ const severityFromLevel = {
 
 function maybePersist(level, tag, message, meta) {
   if (!meta?.persist) return;
+  if (String(process.env.PERSIST_SYSTEM_LOGS || 'false').toLowerCase() !== 'true') return;
   const { writeSystemLog } = require('../services/systemLogService');
   const severity = meta.severity || severityFromLevel[level] || SEVERITY.INFO;
   writeSystemLog({

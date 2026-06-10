@@ -97,6 +97,16 @@ const updateStats = async () => {
     // Execute zero-downtime bulk write
     if (bulkOps.length > 0) {
       await CRMStatSnapshot.bulkWrite(bulkOps);
+      try {
+        const { isSupabaseEnabled } = require('../config/supabase');
+        const { mirrorCrmStatSnapshotsFromMongo } = require('../services/supabase/snapshotStore');
+        if (isSupabaseEnabled()) {
+          const snapshots = await CRMStatSnapshot.find({}).lean();
+          await mirrorCrmStatSnapshotsFromMongo(snapshots);
+        }
+      } catch (mirrorErr) {
+        logger.warn('statsWorker', 'Supabase CRM snapshot mirror failed', { error: mirrorErr.message });
+      }
     }
     
     const duration = Date.now() - startTime;

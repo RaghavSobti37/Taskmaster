@@ -106,6 +106,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Assets hub** | `/assets` hub layout — **File Links** (all with `assets` permission) + **Managed Accounts** (`/assets/accounts`) for org emails, social IDs, and platform logins; Google Sheet import replaces tenant data; roles: admin, artist-management, operations |
 | **Pagination** | `DataTable` / `TablePagination` default **10 entries** via `DEFAULT_TABLE_PAGE_SIZE`; server-side pages clamp when filters shrink; Followups + Booking Enquiries wired to full pagination API |
 | **Campaign location & mail studio** | Option C WYSIWYG block spacing (`shared/emailBlockSpacing.cjs`); campaign + aggregate analytics show **registered CRM city** breakdown (opens/clicks attributed via `Lead.location` / `Lead.city`, not IP geo); shared `RegisteredLocationBarChart`; rebuild: `node server/scripts/rebuildCampaignLocationBreakdown.js <id> [--prod]`; Resend backfill: `node server/scripts/backfillCampaignFromResend.js <id> [--prod]` |
+| **Supabase secondary store** | Offloads logs, audits, mail rollups, CRM snapshots, and **production backups** from Atlas M0; Mongo stays primary for live CRM/email; `Last Backup` widget + Data Hub **DB Backup** → Supabase Storage (`taskmaster-backups`); auto-purges Mongo GridFS after successful Supabase dump — see [Backup & Supabase](#backup--supabase-secondary-store) |
 | **Local dev tools** | **Agentation** annotate button (`agentation` devDependency) — only when `VITE_ENABLE_AGENTATION=true` in `client/.env.development`; compile-time stripped from production builds |
 
 Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) · UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
@@ -289,8 +290,8 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 * **Attendance Overview card:** Multi-series line chart (marked, present, half day, leave) with 7d / 30d / 90d timeframe; `GET /api/dashboard/attendance-overview` aggregates unique people per IST day (ops/admin).
 * **Task Activity chart:** Renamed from “Team Activity”; chronological area chart with correct day ordering and “Tasks” series labels.
-* **Last Backup card (admin):** Highlights latest snapshot plus a **Recent snapshots (last 2)** list; aligns with count-based retention below.
-* **Backup retention:** `BACKUP_RETENTION_COUNT` (default `2`) replaces day-based pruning; `render.yaml` cron sets `BACKUP_RETENTION_COUNT=2`.
+* **Last Backup card (admin):** Highlights latest snapshot plus a **Recent snapshots (last 2)** list; shows **Supabase Storage** destination when configured; **Run** triggers async prod backup with live progress.
+* **Backup retention:** `BACKUP_RETENTION_COUNT` (default `2`) on Supabase snapshots; Mongo GridFS purged after each successful Supabase dump (`BACKUP_PURGE_MONGO_AFTER_SUPABASE=true` default).
 
 ### Dashboard Widgets & Layout Library (v1.9.4)
 
@@ -506,7 +507,41 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **API:** `/api/data-hub` — folders, people search/pagination, analytics, sync status, reconcile trigger.
 * **Sync:** `DataHubService.syncAllInlets()` merges contacts from leads, Exly, TSC, booked-call webhooks, mail events, and enquiries into the unified `Contact` hub with inlet flags.
 * **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; **Full Sync** button in UI for full re-merge; **Sync New** for incremental updates.
-* **Production DB backup:** **DB Backup** on Data Hub toolbar — `POST /api/data-hub/backup` (admin). Streams prod MongoDB → Atlas GridFS `taskmaster_backups` (7-day retention). Also: `npm run backup:daily` or GitHub Actions (free cron alternative to paid Render cron). See [`docs/DATA_BACKUP.md`](docs/DATA_BACKUP.md).
+* **Production DB backup:** **DB Backup** on Data Hub toolbar and dashboard **Last Backup** card — `POST /api/data-hub/backup` (admin, **202** + progress poll). Default destination: **Supabase Storage** when `SUPABASE_*` env is set; legacy Atlas GridFS via `BACKUP_DESTINATION=mongo`. Verify: `npm run backup:verify-supabase`. Cron: `npm run backup:daily`. See [`docs/DATA_BACKUP.md`](docs/DATA_BACKUP.md).
+
+### Backup & Supabase secondary store
+
+MongoDB Atlas M0 quota is shared across prod, local, and legacy GridFS backups. Supabase acts as a **secondary warehouse** — not a replacement for live CRM/task data.
+
+| Data | Primary | Secondary (Supabase) |
+| --- | --- | --- |
+| Leads, tasks, campaigns | MongoDB | — |
+| Live email tracking | MongoDB (locked) | Rollups only |
+| Logs, audits, QA runs | MongoDB (mirrored) | Postgres tables |
+| Mail analytics dashboards | MongoDB fallback | Postgres rollups |
+| **Production snapshots** | — (purged after copy) | Storage + Postgres metadata |
+
+**Setup (Render + local `server/.env`):**
+
+```bash
+SUPABASE_SECONDARY_ENABLED=true
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SECRET_KEY=your_service_role_key
+SUPABASE_DB_URL=postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:5432/postgres
+SUPABASE_BACKUP_BUCKET=taskmaster-backups
+BACKUP_DESTINATION=supabase          # default when Supabase configured
+BACKUP_PURGE_MONGO_AFTER_SUPABASE=true
+```
+
+**Commands:**
+
+| Command | Purpose |
+| --- | --- |
+| `npm run supabase:setup --prefix server` | Apply Postgres schema + create backup bucket |
+| `npm run supabase:migrate --prefix server` | Fast parallel prod → Supabase data sync |
+| `npm run backup:verify-supabase --prefix server` | Full backup test + Mongo GridFS purge check |
+| `npm run supabase:health --prefix server` | Connection + table counts |
+| `GET /api/admin/supabase/health` | Admin health report (auth required) |
 
 ### Task Mentions & Assets
 
@@ -744,6 +779,12 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `FRONTEND_URL` | Production Only | The public consumer web location utilized to build structural email CTA references. |
 | `VITE_API_URL` | Highly Recommended | Direct endpoint address pointing to the static web API host, intentionally skipping standard middle-tier routing paths during massive data payload uploads. |
 | `REDIS_URL` | Optional | Render Key Value internal URL for BullMQ queues, follow-up cache, and notification locks. Instance **maxmemory policy must be `noeviction`** — `allkeys-lru` can silently drop queued jobs. |
+| `SUPABASE_URL` | Secondary store | Supabase project URL — backups, logs mirror, analytics rollups. |
+| `SUPABASE_SECRET_KEY` | Secondary store | Service role key (server only; never commit). |
+| `SUPABASE_DB_URL` | Secondary store | Postgres connection URI for schema + batch inserts. |
+| `SUPABASE_BACKUP_BUCKET` | Optional | Storage bucket for gzipped collection dumps (default: `taskmaster-backups`). |
+| `BACKUP_DESTINATION` | Optional | `supabase` (default when configured), `mongo`, or `both`. |
+| `BACKUP_PURGE_MONGO_AFTER_SUPABASE` | Optional | Delete Atlas GridFS snapshots after successful Supabase backup (default: `true`). |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Webhook Integrations | Google Sheets append credentials for public booking webhooks (`BookedCalls` tab). |
 | `GOOGLE_PRIVATE_KEY` | Webhook Integrations | PEM private key paired with the service account email (newline-escaped). |
 | `AISENSY_API_KEY` | Webhook Integrations | WhatsApp campaign dispatch for booked-call confirmations and rep alerts. |

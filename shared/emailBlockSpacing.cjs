@@ -1,7 +1,7 @@
 /**
  * Email block spacing — single source of truth for Template Studio editor,
  * client preview (wrapVisualPreviewBody), and server preview (wrapPreviewDocument).
- * Keep in sync with .mail-template-quill rules in client/src/index.css.
+ * Keep in sync with client/src/utils/emailBlockSpacing.js and .mail-template-quill rules in client/src/index.css.
  */
 
 const EMAIL_FONT_STACK =
@@ -20,6 +20,10 @@ const HEADING_INLINE =
   'margin:0 0 0.75em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
 const LIST_UL_INLINE =
   'margin:0 0 1em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;padding-left:1.5em!important';
+
+/** Blank-line spacer — survives email clients (non-collapsing) */
+const SPACER_INLINE =
+  'margin:0 0 1em 0!important;padding:0!important;margin-left:0!important;text-indent:0!important;border:0!important';
 
 const PREVIEW_BASE_CSS = `
   body{margin:0;padding:16px;font-family:${EMAIL_FONT_STACK};font-size:14px;line-height:1.42;}
@@ -65,6 +69,7 @@ module.exports = {
   PARAGRAPH_INLINE,
   HEADING_INLINE,
   LIST_UL_INLINE,
+  SPACER_INLINE,
   PREVIEW_BASE_CSS,
   PREVIEW_BLOCK_CSS,
   EDITOR_BLOCK_CSS,

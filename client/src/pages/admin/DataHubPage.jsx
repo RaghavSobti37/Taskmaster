@@ -146,7 +146,13 @@ export function DataHubContent() {
   const folderCounts = folderData?.counts || {};
   const lastSyncedAt = syncStatus?.lastSyncedAt || syncStatus?.lastStats?.syncedAt;
   const latestBackup = backupStatus?.snapshots?.[0];
+  const backupDestination = backupStatus?.destination || 'mongo';
   const backupDbLabel = backupStatus?.backupDatabase || 'taskmaster_backups';
+  const backupTargetLabel = backupDestination === 'supabase'
+    ? `Supabase Storage (${backupDbLabel})`
+    : backupDestination === 'supabase+mongo'
+      ? `Supabase + Atlas GridFS`
+      : `Atlas GridFS (${backupDbLabel})`;
   const total = peopleData?.total ?? 0;
 
   const overview = useMemo(() => {
@@ -236,7 +242,7 @@ export function DataHubContent() {
       : 'No snapshots found yet.';
     const ok = await confirm({
       title: 'Back up production database?',
-      message: `Back up the full production MongoDB into Atlas GridFS (${backupDbLabel})? ${lastLabel} This may take 1–2 minutes. You will get a success email when done.`,
+      message: `Back up the full production MongoDB into ${backupTargetLabel}? ${lastLabel} This may take 1–2 minutes. You will get a success email when done.`,
       confirmLabel: 'Start backup',
       type: 'danger',
     });
@@ -333,7 +339,7 @@ export function DataHubContent() {
                   className="!px-2.5 whitespace-nowrap"
                   onClick={handleProductionBackup}
                   disabled={backupMutation.isPending || reconcileMutation.isPending}
-                  title={`Full production DB backup → ${backupDbLabel} (GridFS, 7-day retention)`}
+                  title={`Full production DB backup → ${backupTargetLabel}`}
                 >
                   <Database size={14} className={backupMutation.isPending ? 'animate-pulse' : ''} />
                   {backupMutation.isPending ? 'Backing up…' : 'DB Backup'}

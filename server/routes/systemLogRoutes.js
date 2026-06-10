@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 const { getTenantId } = require('../utils/tenantContext');
 const SystemLog = require('../models/SystemLog');
-const { writeSystemLog, enrichLogsWithActorNames } = require('../services/systemLogService');
+const { writeSystemLog, enrichLogsWithActorNames, PERSIST_SYSTEM_LOGS } = require('../services/systemLogService');
 const {
   SEVERITY,
   isValidSeverity,
@@ -53,6 +53,26 @@ router.post('/', protect, clientLogLimiter, (req, res) => {
   }
 
   const visible = Boolean(userVisible);
+  if (!PERSIST_SYSTEM_LOGS) {
+    writeSystemLog({
+      traceId: traceId || req.traceId,
+      contextId,
+      severity,
+      module: module || undefined,
+      message,
+      userVisible: visible,
+      route: route || req.headers['x-client-route'],
+      method: 'CLIENT',
+      errorCode,
+      payload,
+      relatedEntities,
+      actorId: req.user._id.toString(),
+      actorName: req.user.name || req.user.email,
+      tenantId: req.tenantId,
+    });
+    return res.json({ success: true, persisted: false, traceId: req.traceId, consoleOnly: true });
+  }
+
   if (!shouldPersistClientLog({ severity, userVisible: visible, errorCode })) {
     return res.json({ success: true, persisted: false, traceId: req.traceId });
   }
@@ -78,6 +98,9 @@ router.post('/', protect, clientLogLimiter, (req, res) => {
 });
 
 router.get('/analytics/top-pages', protect, opsOrAdmin, async (req, res) => {
+  if (!PERSIST_SYSTEM_LOGS) {
+    return res.json({ days: parseInt(req.query.days, 10) || 7, pages: [], persistenceDisabled: true });
+  }
   try {
     const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 7));
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -116,6 +139,15 @@ router.get('/analytics/top-pages', protect, opsOrAdmin, async (req, res) => {
 });
 
 router.get('/', protect, opsOrAdmin, async (req, res) => {
+  if (!PERSIST_SYSTEM_LOGS) {
+    const pageNum = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    return res.json({
+      logs: [],
+      persistenceDisabled: true,
+      pagination: { page: pageNum, limit: limitNum, total: 0, pages: 0 },
+    });
+  }
   try {
     const {
       module,
@@ -179,6 +211,9 @@ router.get('/', protect, opsOrAdmin, async (req, res) => {
 });
 
 router.get('/:traceId/trail', protect, opsOrAdmin, async (req, res) => {
+  if (!PERSIST_SYSTEM_LOGS) {
+    return res.json({ traceId: req.params.traceId, logs: [], persistenceDisabled: true });
+  }
   try {
     const { traceId } = req.params;
     const logs = await SystemLog.find({ traceId })

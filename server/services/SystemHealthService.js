@@ -36,6 +36,21 @@ class SystemHealthService {
     } catch {
       redisStatus = 'unavailable';
     }
+
+    let supabaseStatus = 'disabled';
+    try {
+      const { isSupabaseEnabled, isSupabaseConfigured } = require('../config/supabase');
+      if (!isSupabaseConfigured()) {
+        supabaseStatus = 'not_configured';
+      } else if (!isSupabaseEnabled()) {
+        supabaseStatus = 'disabled';
+      } else {
+        supabaseStatus = 'enabled';
+      }
+    } catch {
+      supabaseStatus = 'unknown';
+    }
+
     return {
       status: systemStatus,
       reason: failReason,
@@ -47,6 +62,10 @@ class SystemHealthService {
         redis: {
           ok: redisStatus === 'connected',
           state: redisStatus,
+        },
+        supabase: {
+          ok: supabaseStatus === 'enabled',
+          state: supabaseStatus,
         },
       },
       uptimeSeconds: Math.floor(process.uptime()),

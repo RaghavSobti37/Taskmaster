@@ -59,6 +59,13 @@ function LastBackupCard() {
   }, [data]);
 
   const latest = recentBackups[0] || null;
+  const backupDestination = data?.destination || 'mongo';
+  const backupTarget = data?.backupDatabase || 'taskmaster_backups';
+  const destinationLabel = backupDestination === 'supabase'
+    ? `Supabase Storage · ${backupTarget}`
+    : backupDestination === 'supabase+mongo'
+      ? `Supabase + Atlas GridFS`
+      : `Atlas GridFS · ${backupTarget}`;
 
   const completedAtLabel = latest?.createdAt
     ? formatTimestampWithTz(latest.createdAt, 'MMM dd, yyyy · HH:mm:ss')
@@ -102,7 +109,7 @@ function LastBackupCard() {
       {isRunning && (
         <div className="space-y-2 mb-4">
           <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-            <span>Backing up production</span>
+            <span>Backing up production → {backupDestination === 'mongo' ? 'Atlas' : 'Supabase'}</span>
             <span className="tabular-nums">{progress?.percent ?? 0}%</span>
           </div>
           <ProgressBar progress={progress?.percent ?? 0} color="bg-emerald-500" />
@@ -149,6 +156,9 @@ function LastBackupCard() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Badge variant="info" className="text-[9px]">
+              {destinationLabel}
+            </Badge>
             <Badge variant="success" className="text-[9px]">
               {latest.collectionCount} collections
             </Badge>

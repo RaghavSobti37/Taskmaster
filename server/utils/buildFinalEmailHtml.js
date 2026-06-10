@@ -11,10 +11,9 @@ const { resolveTrackingApiBaseUrl, buildStaticUnsubscribePageUrl } = require('./
 const JUICE_RESET_CSS = `
   body, div, p, blockquote, h1, h2, h3, h4, h5, h6, span, td, th, table {
     margin: 0 !important;
-    padding: 0 !important;
-    padding-left: 0 !important;
-    margin-left: 0 !important;
-    text-indent: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-right: 0 !important;
     border-left: 0 !important;
   }
   ul, ol { margin: 0 !important; padding-left: 1.5em !important; }
@@ -70,6 +69,7 @@ const personalizeEmailContent = ({
  */
 const buildFinalEmailHtml = async ({
   html,
+  format = 'visual',
   includeSignature = true,
   signature = '',
   removeUnsubscribe = false,
@@ -92,18 +92,24 @@ const buildFinalEmailHtml = async ({
     return out;
   }
 
+  const isRawFragment = format === 'rawHtml';
+
   if (removeUnsubscribe) {
     out = stripUnsubscribe(out);
   }
 
-  out = normalizeOutboundEmailHtml(out);
-  out = inlineCss(out);
-  out = normalizeOutboundEmailHtml(out);
+  if (!isRawFragment) {
+    out = normalizeOutboundEmailHtml(out);
+    out = inlineCss(out);
+    out = normalizeOutboundEmailHtml(out);
+  }
 
   if (includeSignature && signature) {
     const sig = normalizeOutboundEmailHtml(signature);
     out = appendSignatureIfMissing(out, sig);
-    out = normalizeOutboundEmailHtml(out);
+    if (!isRawFragment) {
+      out = normalizeOutboundEmailHtml(out);
+    }
   }
 
   if (!removeUnsubscribe && !out.includes('/unsubscribe')) {
@@ -115,8 +121,8 @@ const buildFinalEmailHtml = async ({
     const { processedHtml } = await prepareCampaignHTML(out, campaignId, leadEmail, baseUrl, {
       skipAutoFooter: true,
     });
-    out = normalizeOutboundEmailHtml(processedHtml);
-  } else {
+    out = isRawFragment ? (processedHtml || out) : normalizeOutboundEmailHtml(processedHtml);
+  } else if (!isRawFragment) {
     out = normalizeOutboundEmailHtml(out);
   }
 

@@ -15,6 +15,7 @@ const PersonCommunicationProfile = require('../../models/PersonCommunicationProf
 const PersonSourceLink = require('../../models/PersonSourceLink');
 const { normalizePhone, sanitizeEmail } = require('../../utils/sanitizer');
 const { isRootAdminEmail } = require('../../../shared/rootAdminEmails');
+const { refreshAttendanceMetricsForUserDay } = require('../../utils/refreshAttendanceMetrics');
 const crypto = require('crypto');
 
 const BYPASS = { bypassTenant: true };
@@ -137,6 +138,32 @@ async function collectQaLeadIds() {
   return leads.map((l) => l._id);
 }
 
+async function collectQaUserIds() {
+  const users = await User.find(buildQaUserFilter()).setOptions(BYPASS).select('_id').lean();
+  return users.map((u) => u._id);
+}
+
+/** Daily log rows created by QA task flows (assignee/reviewer hours on real or probe users). */
+function buildQaDailyLogFilter({ taskIds = [], qaUserIds = [] } = {}) {
+  const orClauses = [
+    { 'details.title': { $regex: /^QA /i } },
+    { 'details.title': { $regex: /^\[QA BUG\]/i } },
+    { 'details.title': { $regex: /^Backdated QA/i } },
+    { 'details.title': { $regex: /^QA probe bug/i } },
+  ];
+  if (taskIds.length) {
+    orClauses.push({ targetId: { $in: taskIds } });
+    orClauses.push({ targetId: { $in: taskIds.map(String) } });
+  }
+  if (qaUserIds.length) {
+    orClauses.push({ userId: { $in: qaUserIds } });
+  }
+  return {
+    action: 'DAILY_LOG',
+    $or: orClauses,
+  };
+}
+
 async function deleteTasksByIds(taskIds) {
   if (!taskIds.length) return { deletedCount: 0, assignments: 0, logs: 0 };
 
@@ -202,6 +229,21 @@ async function purgeQaNotifications(taskIds, leadIds) {
   if (leadIds.length) clauses.push({ relatedLeadId: { $in: leadIds } });
   const result = await Notification.deleteMany({ $or: clauses }).setOptions(BYPASS);
   return result.deletedCount || 0;
+}
+
+async function purgeQaDailyLogs({ taskIds = [], qaUserIds = [] } = {}) {
+  const filter = buildQaDailyLogFilter({ taskIds, qaUserIds });
+  const rows = await Log.find(filter).setOptions(BYPASS).select('userId createdAt').lean();
+  const affectedUserIds = [...new Set(rows.map((r) => r.userId).filter(Boolean).map(String))];
+  const result = await Log.deleteMany(filter).setOptions(BYPASS);
+
+  for (const row of rows) {
+    if (row.userId && row.createdAt) {
+      refreshAttendanceMetricsForUserDay(row.userId, row.createdAt).catch(() => {});
+    }
+  }
+
+  return { deletedCount: result.deletedCount || 0, affectedUserIds };
 }
 
 function buildQaActivityLogFilter() {
@@ -298,8 +340,13 @@ async function purgeQaLeadsAndContacts() {
 }
 
 async function purgeQaTestData() {
-  const taskIds = await collectQaTaskIds();
-  const leadIds = await collectQaLeadIds();
+  const [taskIds, leadIds, qaUserIds] = await Promise.all([
+    collectQaTaskIds(),
+    collectQaLeadIds(),
+    collectQaUserIds(),
+  ]);
+
+  const dailyLogs = await purgeQaDailyLogs({ taskIds, qaUserIds });
 
   const [crm, tasks, users, finance, projects, notifications, gamification] = await Promise.all([
     purgeQaLeadsAndContacts(),
@@ -311,12 +358,20 @@ async function purgeQaTestData() {
     purgeQaGamificationData({ taskIds, leadIds }),
   ]);
 
+  const affectedUserIds = [
+    ...new Set([
+      ...(gamification.affectedUserIds || []).map(String),
+      ...(dailyLogs.affectedUserIds || []),
+    ]),
+  ];
+
   return {
     deleted: {
       contacts: crm.contacts,
       leads: crm.leads,
       audits: crm.audits,
-      logs: gamification.deletedQaLogs || 0,
+      logs: (gamification.deletedQaLogs || 0) + (dailyLogs.deletedCount || 0),
+      dailyLogs: dailyLogs.deletedCount || 0,
       users: users.deletedCount || 0,
       tasks: tasks.deletedCount || 0,
       taskAssignments: tasks.assignments || 0,
@@ -326,7 +381,7 @@ async function purgeQaTestData() {
       finance,
       projects,
     },
-    affectedUserIds: gamification.affectedUserIds || [],
+    affectedUserIds,
   };
 }
 
@@ -446,7 +501,7 @@ async function purgeQaRunArtifacts(testRun) {
 
 /** Count residual QA-pattern rows (for verification scripts). */
 async function countQaResiduals() {
-  const [leads, contacts, tasks, users, finance, projects, notifications] = await Promise.all([
+  const [leads, contacts, tasks, users, finance, projects, notifications, qaUserIds, taskIds] = await Promise.all([
     Lead.countDocuments(buildQaTestDataFilter()).setOptions(BYPASS),
     Contact.countDocuments(buildQaTestDataFilter()).setOptions(BYPASS),
     Task.countDocuments(buildQaTaskFilter()).setOptions(BYPASS),
@@ -454,8 +509,21 @@ async function countQaResiduals() {
     FinanceDocument.countDocuments(buildQaFinanceFilter()).setOptions(BYPASS),
     Project.countDocuments(buildQaProjectFilter()).setOptions(BYPASS),
     Notification.countDocuments({ title: { $regex: /^QA /i } }).setOptions(BYPASS),
+    collectQaUserIds(),
+    collectQaTaskIds(),
   ]);
-  return { leads, contacts, tasks, users, finance, projects, notifications, total: leads + contacts + tasks + users + finance + projects + notifications };
+  const dailyLogs = await Log.countDocuments(buildQaDailyLogFilter({ taskIds, qaUserIds })).setOptions(BYPASS);
+  return {
+    leads,
+    contacts,
+    tasks,
+    users,
+    finance,
+    projects,
+    notifications,
+    dailyLogs,
+    total: leads + contacts + tasks + users + finance + projects + notifications + dailyLogs,
+  };
 }
 
 module.exports = {
@@ -464,11 +532,13 @@ module.exports = {
   buildQaTestDataFilter,
   buildQaUserFilter,
   buildQaTaskFilter,
+  buildQaDailyLogFilter,
   buildQaActivityLogFilter,
   buildQaXpAuditFilter,
   buildDataHubExcludeFilter,
   purgeQaUsers,
   purgeQaTasks,
+  purgeQaDailyLogs,
   purgeQaGamificationData,
   purgeQaTestData,
   purgeQaIdentity,

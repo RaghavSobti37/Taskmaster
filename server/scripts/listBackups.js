@@ -3,7 +3,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const { listAvailableBackups, getBackupDbName } = require('../services/databaseBackupService');
+const { listAvailableBackups } = require('../services/databaseBackupService');
 
 const formatBytes = (bytes) => {
   if (!bytes) return '0 B';
@@ -19,16 +19,17 @@ const formatBytes = (bytes) => {
 
 const main = async () => {
   try {
-    const backups = await listAvailableBackups();
-    const backupDb = getBackupDbName();
+    const listing = await listAvailableBackups();
+    const snapshots = listing.snapshots || [];
 
-    if (!backups.length) {
-      console.log(`No backups found in database "${backupDb}".`);
+    if (!snapshots.length) {
+      console.log(`No backups found (${listing.destination || 'unknown'} / ${listing.backupDatabase || 'n/a'}).`);
       process.exit(0);
     }
 
-    console.log(`Backup database: ${backupDb}\n`);
-    for (const snap of backups) {
+    console.log(`Destination: ${listing.destination}`);
+    console.log(`Backup target: ${listing.backupDatabase}\n`);
+    for (const snap of snapshots) {
       console.log(`Date: ${snap.date}`);
       console.log(`  Status: ${snap.status}`);
       console.log(`  Created: ${snap.createdAt?.toISOString?.() || snap.createdAt}`);

@@ -22,6 +22,7 @@ npm run backup:daily --prefix server
 ```
 
 - `BACKUP_DESTINATION=supabase` default when Supabase configured.
+- **Render:** `SUPABASE_PG_MODE=rest` (auto) — requires `SUPABASE_URL` + `SUPABASE_SECRET_KEY`; `SUPABASE_DB_URL` optional on API.
 - Do not delete Mongo log/mail collections without explicit user approval — backups GridFS only auto-purge.
 
 ## Campaign location scripts

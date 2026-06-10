@@ -1,7 +1,8 @@
 const Campaign = require('../../models/Campaign');
 const MailCampaign = require('../../models/MailCampaign');
 const { isSupabaseEnabled } = require('../../config/supabase');
-const { queryPg } = require('./client');
+const { queryPg, preferRestPostgres } = require('./client');
+const { upsertRows, selectRows } = require('./restQuery');
 const { buildCumulativeRegisteredLocationBreakdown } = require('../../utils/campaignRegisteredLocation');
 const logger = require('../../utils/logger');
 
@@ -100,6 +101,43 @@ async function computeCumulativeMetricsForUser(userId) {
 }
 
 async function upsertMailRollupsForUser(userId, rollupDate, metrics) {
+  if (preferRestPostgres()) {
+    const tagRows = (metrics.aggregateData || []).map((row) => ({
+      rollup_date: rollupDate,
+      user_id: userId.toString(),
+      event_tag: row.eventTag || 'General',
+      total_sent: row.totalSent || 0,
+      total_opens: row.totalOpens || 0,
+      total_clicks: row.totalClicks || 0,
+      open_rate: row.openRate || 0,
+      ctr: row.ctr || 0,
+      synced_at: new Date().toISOString(),
+    }));
+    if (tagRows.length) {
+      await upsertRows('mail_event_tag_rollups', tagRows, {
+        onConflict: 'rollup_date,user_id,event_tag',
+      });
+    }
+
+    const geoRows = (metrics.dynamicBreakdown || []).map((row) => ({
+      rollup_date: rollupDate,
+      user_id: userId.toString(),
+      location: row.location || 'unknown',
+      city: row.city || null,
+      country: row.country || null,
+      opens: row.opens || 0,
+      clicks: row.clicks || 0,
+      total: row.total ?? ((row.opens || 0) + (row.clicks || 0)),
+      synced_at: new Date().toISOString(),
+    }));
+    if (geoRows.length) {
+      await upsertRows('mail_geo_rollups', geoRows, {
+        onConflict: 'rollup_date,user_id,location',
+      });
+    }
+    return;
+  }
+
   for (const row of metrics.aggregateData) {
     await queryPg(
       `insert into mail_event_tag_rollups (
@@ -170,15 +208,24 @@ async function syncMailRollupsForAllUsers(rollupDate = new Date().toISOString().
     }));
   }
 
-  await queryPg(
-    `insert into supabase_sync_state (stream, last_synced_at, meta, updated_at)
-     values ('mail_rollups', now(), $1::jsonb, now())
-     on conflict (stream) do update set
-       last_synced_at = now(),
-       meta = excluded.meta,
-       updated_at = now()`,
-    [JSON.stringify({ rollupDate, userCount: synced })]
-  );
+  if (preferRestPostgres()) {
+    await upsertRows('supabase_sync_state', [{
+      stream: 'mail_rollups',
+      last_synced_at: new Date().toISOString(),
+      meta: { rollupDate, userCount: synced },
+      updated_at: new Date().toISOString(),
+    }], { onConflict: 'stream' });
+  } else {
+    await queryPg(
+      `insert into supabase_sync_state (stream, last_synced_at, meta, updated_at)
+       values ('mail_rollups', now(), $1::jsonb, now())
+       on conflict (stream) do update set
+         last_synced_at = now(),
+         meta = excluded.meta,
+         updated_at = now()`,
+      [JSON.stringify({ rollupDate, userCount: synced })]
+    );
+  }
 
   logger.info('SupabaseMailRollup', `Synced rollups for ${synced} users`, { rollupDate });
   return { synced, rollupDate };
@@ -186,6 +233,50 @@ async function syncMailRollupsForAllUsers(rollupDate = new Date().toISOString().
 
 async function readLatestMailRollups(userId) {
   const userKey = userId.toString();
+
+  if (preferRestPostgres()) {
+    const allTagRows = await selectRows('mail_event_tag_rollups', {
+      columns: 'rollup_date,event_tag,total_sent,total_opens,total_clicks,open_rate,ctr',
+      filters: [['eq', ['user_id', userKey]]],
+      order: { column: 'rollup_date', ascending: false },
+    });
+    const latestRollupDate = allTagRows[0]?.rollup_date;
+    const tagRows = latestRollupDate
+      ? allTagRows.filter((row) => row.rollup_date === latestRollupDate)
+      : [];
+
+    const allGeoRows = await selectRows('mail_geo_rollups', {
+      columns: 'rollup_date,location,city,country,opens,clicks,total',
+      filters: [['eq', ['user_id', userKey]]],
+      order: { column: 'rollup_date', ascending: false },
+    });
+    const latestGeoDate = allGeoRows[0]?.rollup_date;
+    const geoRows = latestGeoDate
+      ? allGeoRows.filter((row) => row.rollup_date === latestGeoDate)
+      : [];
+
+    if (!tagRows.length && !geoRows.length) return null;
+
+    return {
+      aggregateData: tagRows.map((row) => ({
+        eventTag: row.event_tag,
+        totalSent: Number(row.total_sent || 0),
+        totalOpens: Number(row.total_opens || 0),
+        totalClicks: Number(row.total_clicks || 0),
+        openRate: Number(row.open_rate || 0),
+        ctr: Number(row.ctr || 0),
+      })),
+      dynamicBreakdown: geoRows.map((row) => ({
+        location: row.location,
+        city: row.city,
+        country: row.country,
+        opens: Number(row.opens || 0),
+        clicks: Number(row.clicks || 0),
+        total: Number(row.total || 0),
+      })),
+    };
+  }
+
   const { rows: tagRows } = await queryPg(
     `select event_tag as "eventTag", total_sent as "totalSent", total_opens as "totalOpens",
             total_clicks as "totalClicks", open_rate as "openRate", ctr

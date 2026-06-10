@@ -17,6 +17,13 @@ describe('supabase secondary store', () => {
     expect(isSupabaseEnabled()).toBe(false);
   });
 
+  it('prefers REST Postgres on Render (IPv4-only)', () => {
+    process.env.RENDER = 'true';
+    delete process.env.SUPABASE_PG_MODE;
+    const { preferRestPostgres } = require('../config/supabase');
+    expect(preferRestPostgres()).toBe(true);
+  });
+
   it('is enabled when url + service role + flag are set', () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role';

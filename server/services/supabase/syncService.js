@@ -6,7 +6,8 @@ const XPAuditLog = require('../../models/XPAuditLog');
 const QATestRun = require('../../models/QATestRun');
 const CRMStatSnapshot = require('../../models/CRMStatSnapshot');
 const { isSupabaseEnabled } = require('../../config/supabase');
-const { queryPg } = require('./client');
+const { queryPg, preferRestPostgres } = require('./client');
+const { upsertRows, selectRows } = require('./restQuery');
 const { insertMappedBatch } = require('./batchInsert');
 const { syncMailRollupsForAllUsers } = require('./mailRollupStore');
 const { mirrorCrmStatSnapshotsFromMongo } = require('./snapshotStore');
@@ -15,6 +16,14 @@ const logger = require('../../utils/logger');
 const BATCH_SIZE = 200;
 
 async function getSyncCursor(stream) {
+  if (preferRestPostgres()) {
+    const rows = await selectRows('supabase_sync_state', {
+      columns: 'last_mongo_id,last_synced_at',
+      filters: [['eq', ['stream', stream]]],
+      limit: 1,
+    });
+    return rows[0] || null;
+  }
   const { rows } = await queryPg(
     'select last_mongo_id, last_synced_at from supabase_sync_state where stream = $1',
     [stream]
@@ -23,6 +32,16 @@ async function getSyncCursor(stream) {
 }
 
 async function setSyncCursor(stream, lastMongoId, meta = {}) {
+  if (preferRestPostgres()) {
+    await upsertRows('supabase_sync_state', [{
+      stream,
+      last_synced_at: new Date().toISOString(),
+      last_mongo_id: lastMongoId || null,
+      meta,
+      updated_at: new Date().toISOString(),
+    }], { onConflict: 'stream' });
+    return;
+  }
   await queryPg(
     `insert into supabase_sync_state (stream, last_synced_at, last_mongo_id, meta, updated_at)
      values ($1, now(), $2, $3::jsonb, now())

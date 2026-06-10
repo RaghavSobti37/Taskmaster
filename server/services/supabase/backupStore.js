@@ -2,12 +2,30 @@ const zlib = require('zlib');
 const { promisify } = require('util');
 const { SUPABASE_BACKUP_BUCKET } = require('../../config/supabase');
 const { isSupabaseEnabled } = require('../../config/supabase');
-const { getSupabaseClient, queryPg } = require('./client');
+const { getSupabaseClient, queryPg, preferRestPostgres } = require('./client');
+const { upsertRows, selectRows, deleteRows } = require('./restQuery');
 const logger = require('../../utils/logger');
 
 const gzip = promisify(zlib.gzip);
 
+function snapshotRow(snapshot) {
+  return {
+    snapshot_date: snapshot.date,
+    status: snapshot.status || 'completed',
+    source_database: snapshot.sourceDatabase || null,
+    backup_database: snapshot.backupDatabase || 'supabase',
+    collection_count: snapshot.collectionCount || 0,
+    total_bytes: snapshot.totalBytes || 0,
+    collections: snapshot.collections || [],
+    source_db_stats: snapshot.sourceDbStats || null,
+  };
+}
+
 async function upsertSnapshotMetadata(snapshot) {
+  if (preferRestPostgres()) {
+    await upsertRows('backup_snapshots', [snapshotRow(snapshot)], { onConflict: 'snapshot_date' });
+    return;
+  }
   await queryPg(
     `insert into backup_snapshots (
       snapshot_date, status, source_database, backup_database,
@@ -42,6 +60,16 @@ async function upsertBackupFileMeta({
   documentCount,
   compressedBytes,
 }) {
+  if (preferRestPostgres()) {
+    await upsertRows('backup_files', [{
+      snapshot_date: snapshotDate,
+      collection_name: collectionName,
+      storage_path: storagePath,
+      document_count: documentCount,
+      compressed_bytes: compressedBytes,
+    }], { onConflict: 'snapshot_date,collection_name' });
+    return;
+  }
   await queryPg(
     `insert into backup_files (
       snapshot_date, collection_name, storage_path, document_count, compressed_bytes
@@ -200,22 +228,41 @@ async function pruneOldSupabaseSnapshots(maxSnapshots) {
   const client = getSupabaseClient();
   if (!client) return { deletedSnapshots: 0, deletedFiles: 0 };
 
-  const { rows: snapshots } = await queryPg(
-    `select snapshot_date::text as snapshot_date
-     from backup_snapshots
-     where status = 'completed'
-     order by snapshot_date desc`
-  );
+  let snapshots;
+  if (preferRestPostgres()) {
+    snapshots = await selectRows('backup_snapshots', {
+      columns: 'snapshot_date,status',
+      filters: [['eq', ['status', 'completed']]],
+      order: { column: 'snapshot_date', ascending: false },
+    });
+  } else {
+    const result = await queryPg(
+      `select snapshot_date::text as snapshot_date
+       from backup_snapshots
+       where status = 'completed'
+       order by snapshot_date desc`
+    );
+    snapshots = result.rows;
+  }
 
   const toDelete = snapshots.slice(maxSnapshots);
   let deletedFiles = 0;
 
   for (const snap of toDelete) {
-    const snapshotDate = snap.snapshot_date;
-    const { rows: files } = await queryPg(
-      'select storage_path from backup_files where snapshot_date = $1::date',
-      [snapshotDate]
-    );
+    const snapshotDate = String(snap.snapshot_date).slice(0, 10);
+    let files;
+    if (preferRestPostgres()) {
+      files = await selectRows('backup_files', {
+        columns: 'storage_path',
+        filters: [['eq', ['snapshot_date', snapshotDate]]],
+      });
+    } else {
+      const result = await queryPg(
+        'select storage_path from backup_files where snapshot_date = $1::date',
+        [snapshotDate]
+      );
+      files = result.rows;
+    }
 
     if (files.length) {
       const paths = files.map((f) => f.storage_path);
@@ -226,7 +273,11 @@ async function pruneOldSupabaseSnapshots(maxSnapshots) {
       deletedFiles += paths.length;
     }
 
-    await queryPg('delete from backup_snapshots where snapshot_date = $1::date', [snapshotDate]);
+    if (preferRestPostgres()) {
+      await deleteRows('backup_snapshots', [['eq', ['snapshot_date', snapshotDate]]]);
+    } else {
+      await queryPg('delete from backup_snapshots where snapshot_date = $1::date', [snapshotDate]);
+    }
     logger.info('SupabaseBackup', `Pruned snapshot ${snapshotDate}`, { maxSnapshots });
   }
 
@@ -234,26 +285,57 @@ async function pruneOldSupabaseSnapshots(maxSnapshots) {
 }
 
 async function verifySupabaseBackup(snapshotDate) {
-  const { rows: snapshots } = await queryPg(
-    `select snapshot_date::text as date, status, collection_count, total_bytes, created_at
-     from backup_snapshots where snapshot_date = $1::date`,
-    [snapshotDate]
-  );
+  let snapshots;
+  let fileRows;
+  let storagePathRows;
+
+  if (preferRestPostgres()) {
+    snapshots = await selectRows('backup_snapshots', {
+      columns: 'snapshot_date,status,collection_count,total_bytes,created_at',
+      filters: [['eq', ['snapshot_date', snapshotDate]]],
+    });
+    const files = await selectRows('backup_files', {
+      columns: 'compressed_bytes,storage_path',
+      filters: [['eq', ['snapshot_date', snapshotDate]]],
+    });
+    fileRows = [{
+      file_count: files.length,
+      total_bytes: files.reduce((sum, row) => sum + Number(row.compressed_bytes || 0), 0),
+    }];
+    storagePathRows = files.slice(0, 5);
+    snapshots = snapshots.map((row) => ({
+      date: row.snapshot_date,
+      status: row.status,
+      collection_count: row.collection_count,
+      total_bytes: row.total_bytes,
+      created_at: row.created_at,
+    }));
+  } else {
+    const snapResult = await queryPg(
+      `select snapshot_date::text as date, status, collection_count, total_bytes, created_at
+       from backup_snapshots where snapshot_date = $1::date`,
+      [snapshotDate]
+    );
+    snapshots = snapResult.rows;
+    const fileResult = await queryPg(
+      `select count(*)::int as file_count, coalesce(sum(compressed_bytes), 0)::bigint as total_bytes
+       from backup_files where snapshot_date = $1::date`,
+      [snapshotDate]
+    );
+    fileRows = fileResult.rows;
+    const pathResult = await queryPg(
+      'select storage_path from backup_files where snapshot_date = $1::date limit 5',
+      [snapshotDate]
+    );
+    storagePathRows = pathResult.rows;
+  }
+
   if (!snapshots.length) {
     return { ok: false, reason: `No snapshot metadata for ${snapshotDate}` };
   }
 
-  const { rows: fileRows } = await queryPg(
-    `select count(*)::int as file_count, coalesce(sum(compressed_bytes), 0)::bigint as total_bytes
-     from backup_files where snapshot_date = $1::date`,
-    [snapshotDate]
-  );
-
   const client = getSupabaseClient();
-  const storagePaths = await queryPg(
-    'select storage_path from backup_files where snapshot_date = $1::date limit 5',
-    [snapshotDate]
-  );
+  const storagePaths = { rows: storagePathRows };
 
   let storageOk = 0;
   if (client && storagePaths.rows.length) {
@@ -284,11 +366,27 @@ async function verifySupabaseBackup(snapshotDate) {
 }
 
 async function listSupabaseBackups() {
-  const { rows } = await queryPg(
-    `select snapshot_date::text as date, status, collection_count, total_bytes, created_at
-     from backup_snapshots
-     order by snapshot_date desc`
-  );
+  let rows;
+  if (preferRestPostgres()) {
+    const data = await selectRows('backup_snapshots', {
+      columns: 'snapshot_date,status,collection_count,total_bytes,created_at',
+      order: { column: 'snapshot_date', ascending: false },
+    });
+    rows = data.map((row) => ({
+      date: row.snapshot_date,
+      created_at: row.created_at,
+      status: row.status,
+      collection_count: row.collection_count,
+      total_bytes: row.total_bytes,
+    }));
+  } else {
+    const result = await queryPg(
+      `select snapshot_date::text as date, status, collection_count, total_bytes, created_at
+       from backup_snapshots
+       order by snapshot_date desc`
+    );
+    rows = result.rows;
+  }
   return rows.map((row) => ({
     date: row.date,
     createdAt: row.created_at,

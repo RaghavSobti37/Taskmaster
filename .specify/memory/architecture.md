@@ -30,14 +30,18 @@ flowchart LR
   mongo[(Mongo primary)]
   mirrors[post-save mirrors + cron sync]
   pg[(Supabase Postgres)]
+  rest[PostgREST HTTPS IPv4]
   rollups[mail_event_tag_rollups / geo_rollups]
   mongo --> mirrors --> pg
+  mirrors --> rest
+  rest --> pg
   analytics[/api/analytics/cumulative] --> rollups
   rollups --> pg
 ```
 
 - Schema: `server/supabase/schema.sql`
-- Services: `server/services/supabase/*`
+- **Render:** `SUPABASE_PG_MODE=rest` — no direct `pg` to `db.*.supabase.co` (IPv6).
+- Local/scripts: direct `SUPABASE_DB_URL` via `pg` pool.
 - Mongo not purged for logs/analytics until explicit user approval.
 
 ## Email campaign location analytics

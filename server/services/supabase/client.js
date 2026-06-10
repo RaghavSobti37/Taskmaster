@@ -1,12 +1,15 @@
+const dns = require('dns');
 const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
 const {
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_DB_URL,
   isSupabaseConfigured,
   isSupabaseEnabled,
+  preferRestPostgres,
 } = require('../../config/supabase');
-const { SUPABASE_DB_URL } = require('../../config/supabase');
+dns.setDefaultResultOrder('ipv4first');
 
 let supabaseClient = null;
 let pgPool = null;
@@ -38,6 +41,11 @@ function getPgPool() {
 }
 
 async function queryPg(text, params = []) {
+  if (preferRestPostgres()) {
+    throw new Error(
+      'Direct Postgres unavailable on IPv4-only runtime — use Supabase REST helpers (restQuery.js)'
+    );
+  }
   const pool = getPgPool();
   if (!pool) {
     throw new Error('SUPABASE_DB_URL is not configured');
@@ -92,7 +100,15 @@ async function pingSupabase() {
     checks.storage = { ok: false, message: 'SUPABASE_SERVICE_ROLE_KEY missing' };
   }
 
-  if (SUPABASE_DB_URL) {
+  if (preferRestPostgres() && client) {
+    try {
+      const { pingPostgresViaRest } = require('./restQuery');
+      const restPing = await pingPostgresViaRest();
+      checks.postgres = { ok: restPing.ok, message: restPing.message };
+    } catch (err) {
+      checks.postgres = { ok: false, message: err.message };
+    }
+  } else if (SUPABASE_DB_URL) {
     try {
       await queryPg('select 1 as ok');
       checks.postgres = { ok: true, message: 'Postgres reachable' };
@@ -126,4 +142,5 @@ module.exports = {
   queryPg,
   pingSupabase,
   closeSupabaseClients,
+  preferRestPostgres,
 };

@@ -527,11 +527,15 @@ MongoDB Atlas M0 quota is shared across prod, local, and legacy GridFS backups. 
 SUPABASE_SECONDARY_ENABLED=true
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SECRET_KEY=your_service_role_key
-SUPABASE_DB_URL=postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:5432/postgres
+SUPABASE_SECRET_KEY=your_service_role_key
+SUPABASE_DB_URL=postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres  # local/scripts (IPv6)
+SUPABASE_PG_MODE=rest                # auto on Render — PostgREST over HTTPS (IPv4)
 SUPABASE_BACKUP_BUCKET=taskmaster-backups
 BACKUP_DESTINATION=supabase          # default when Supabase configured
 BACKUP_PURGE_MONGO_AFTER_SUPABASE=true
 ```
+
+**Render note:** Direct `db.*.supabase.co` Postgres is IPv6-only. Production API sets `SUPABASE_PG_MODE=rest` automatically so backups, CRM snapshots, and mirrors use Supabase HTTPS (IPv4). Keep `SUPABASE_SECRET_KEY` + `SUPABASE_URL` on Render; `SUPABASE_DB_URL` is optional there.
 
 **Commands:**
 

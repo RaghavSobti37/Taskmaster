@@ -45,9 +45,13 @@ services:
         sync: false
       - key: SUPABASE_SECONDARY_ENABLED
         value: "true"
+      - key: SUPABASE_PG_MODE
+        value: rest
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
         sync: false
       - key: SUPABASE_DB_URL
         sync: false
@@ -92,9 +96,13 @@ services:
         sync: false
       - key: SUPABASE_SECONDARY_ENABLED
         value: "true"
+      - key: SUPABASE_PG_MODE
+        value: rest
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
         sync: false
       - key: SUPABASE_DB_URL
         sync: false
@@ -125,6 +133,18 @@ services:
         sync: false
       - key: BACKUP_FROM_EMAIL
         value: noreply@theshakticollective.in
+      - key: SUPABASE_SECONDARY_ENABLED
+        value: "true"
+      - key: SUPABASE_PG_MODE
+        value: rest
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_BACKUP_BUCKET
+        value: taskmaster-backups
+      - key: BACKUP_DESTINATION
+        value: supabase
   - type: cron
     name: CoreKnot-subscription-reminders
     schedule: "30 3 * * *"

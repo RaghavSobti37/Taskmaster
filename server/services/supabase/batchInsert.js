@@ -1,4 +1,5 @@
-const { queryPg } = require('./client');
+const { queryPg, preferRestPostgres } = require('./client');
+const { upsertRows } = require('./restQuery');
 
 function toIso(value) {
   if (!value) return new Date().toISOString();
@@ -173,12 +174,34 @@ const TABLE_MAPPERS = {
   },
 };
 
+function rowToObject(columns, row, castIndexes = {}) {
+  const obj = {};
+  columns.forEach((column, index) => {
+    let value = row[index];
+    if (castIndexes[index] === 'jsonb' && typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        // keep string
+      }
+    }
+    obj[column] = value;
+  });
+  return obj;
+}
+
 async function insertMappedBatch(table, docs) {
   const config = TABLE_MAPPERS[table];
   if (!config) throw new Error(`Unknown batch table: ${table}`);
 
   const rows = docs.map((doc) => config.map(doc?.toObject ? doc.toObject() : doc)).filter(Boolean);
   if (!rows.length) return 0;
+
+  if (preferRestPostgres()) {
+    const objects = rows.map((row) => rowToObject(config.columns, row, config.castIndexes));
+    await upsertRows(table, objects, { onConflict: 'mongo_id', ignoreDuplicates: true });
+    return rows.length;
+  }
 
   const flatParams = [];
   const valueGroups = rows.map((row, rowIndex) => {

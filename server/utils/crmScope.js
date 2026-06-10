@@ -1,5 +1,19 @@
+const mongoose = require('mongoose');
 const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
 const { isAdminUser, getDepartmentSlug, SALES_SLUG, ARTIST_SLUG } = require('./departmentPermissions');
+
+/** Legacy sales leads may predate the crmType field (schema default is not backfilled on read). */
+function applySalesCrmTypeFilter(query) {
+  query.$and = query.$and || [];
+  query.$and.push({
+    $or: [
+      { crmType: CRM_TYPES.SALES },
+      { crmType: { $exists: false } },
+      { crmType: null },
+      { crmType: '' },
+    ],
+  });
+}
 
 /**
  * Resolve CRM segment filter for the current user.
@@ -33,14 +47,20 @@ function resolveCrmScope(user, queryCrmType) {
 function applyCrmScopeToQuery(query, user, reqQuery = {}) {
   const { crmType, restrictToOwn } = resolveCrmScope(user, reqQuery.crmType);
 
-  if (crmType) {
+  if (crmType === CRM_TYPES.SALES) {
+    applySalesCrmTypeFilter(query);
+  } else if (crmType) {
     query.crmType = crmType;
-  } else if (reqQuery.crmType === CRM_TYPES.ARTIST || reqQuery.crmType === CRM_TYPES.SALES) {
+  } else if (reqQuery.crmType === CRM_TYPES.SALES) {
+    applySalesCrmTypeFilter(query);
+  } else if (reqQuery.crmType === CRM_TYPES.ARTIST) {
     query.crmType = reqQuery.crmType;
   }
 
   if (restrictToOwn && user?._id) {
-    query.assignedRepId = user._id;
+    query.assignedRepId = mongoose.Types.ObjectId.isValid(user._id)
+      ? new mongoose.Types.ObjectId(user._id)
+      : user._id;
   }
 
   return query;

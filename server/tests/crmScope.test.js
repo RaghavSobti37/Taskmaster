@@ -37,10 +37,15 @@ describe('crmScope', () => {
 
     const query = {};
     applyCrmScopeToQuery(query, salesUser);
-    expect(query).toEqual({
-      crmType: CRM_TYPES.SALES,
-      assignedRepId: salesUser._id,
-    });
+    expect(query.assignedRepId?.toString()).toBe(salesUser._id);
+    expect(query.$and).toEqual([{
+      $or: [
+        { crmType: CRM_TYPES.SALES },
+        { crmType: { $exists: false } },
+        { crmType: null },
+        { crmType: '' },
+      ],
+    }]);
   });
 
   it('admin can browse both CRM segments without rep filter', () => {

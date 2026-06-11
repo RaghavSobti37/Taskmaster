@@ -84,11 +84,13 @@ export default function StepAudienceMapping({
     { value: 'event_database', label: 'Event database' },
   ];
 
-  const dataHubFolderOptions = useMemo(
-    () => (dataHubFoldersQuery.data?.folders || []).map((f) => ({
-      value: f.key,
-      label: `${f.label}${f.count != null ? ` (${f.count})` : ''}`,
-    })),
+  const dataHubInletOptions = useMemo(
+    () => (dataHubFoldersQuery.data?.folders || [])
+      .filter((f) => f.key && f.key !== 'all')
+      .map((f) => ({
+        value: f.key,
+        label: `${f.label}${f.count != null ? ` (${f.count})` : ''}`,
+      })),
     [dataHubFoldersQuery.data?.folders],
   );
 
@@ -267,13 +269,23 @@ export default function StepAudienceMapping({
               Unified people from Admin Data Hub inlets
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <NexusDropdown
-              label="Data folder"
-              placeholder="All people"
-              options={dataHubFolderOptions}
-              value={audience.dataHubFolderFilter || 'all'}
-              onChange={(v) => audience.setDataHubFolderFilter?.(v)}
+              label="Include categories"
+              placeholder="All categories"
+              options={dataHubInletOptions}
+              value={audience.dataHubIncludeInlets || []}
+              onChange={(v) => audience.setDataHubIncludeInlets?.(v)}
+              multi
+              searchable
+            />
+            <NexusDropdown
+              label="Exclude categories"
+              placeholder="None excluded"
+              options={dataHubInletOptions}
+              value={audience.dataHubExcludeInlets || []}
+              onChange={(v) => audience.setDataHubExcludeInlets?.(v)}
+              multi
               searchable
             />
             <CampaignEngagementFilter audience={audience} inline />

@@ -25,10 +25,30 @@ exports.listExlyOfferings = async (req, res) => {
   }
 };
 
+function parseInletQueryList(raw) {
+  if (!raw) return [];
+  const items = Array.isArray(raw) ? raw : String(raw).split(',');
+  return items.map((s) => s.trim()).filter(Boolean);
+}
+
 exports.listDataHubContacts = async (req, res) => {
   try {
-    const { search = '', folder = 'all', limit, engagement = 'all' } = req.query;
-    const result = await listDataHubAudienceContacts({ search, folder, limit, engagement });
+    const {
+      search = '',
+      folder = 'all',
+      includeInlets,
+      excludeInlets,
+      limit,
+      engagement = 'all',
+    } = req.query;
+    const result = await listDataHubAudienceContacts({
+      search,
+      folder,
+      includeInlets: parseInletQueryList(includeInlets),
+      excludeInlets: parseInletQueryList(excludeInlets),
+      limit,
+      engagement,
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

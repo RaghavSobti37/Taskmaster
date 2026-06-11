@@ -3,6 +3,7 @@ const Lead = require('../../../models/Lead');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 const { normalizeEmail, isValidEmail } = require('../../../utils/emailValidation');
 const { escapeRegExp, buildFolderQuery, mapHubRow } = require('../../data-hub/queryHelpers');
+const { buildDataHubExcludeFilter } = require('../../../services/qa/qaTestData');
 const { resolveHubModel } = require('../../data-hub/folderCache');
 const { getFolderCounts } = require('../../data-hub/listService');
 const { DATA_INLETS, INLET_KEYS } = require('../../../../shared/dataInlets');
@@ -12,6 +13,74 @@ const CONTACT_BYPASS = bypassOptions('campaign_audience_exly');
 const DATA_HUB_BYPASS = bypassOptions('campaign_audience_data_hub');
 
 const CAMPAIGN_DATA_HUB_FOLDER_KEYS = INLET_KEYS.filter((k) => k !== 'unsubscribed');
+
+function sanitizeInletKeys(keys = []) {
+  const arr = Array.isArray(keys) ? keys : [keys];
+  return [...new Set(arr
+    .map((k) => String(k || '').trim())
+    .filter((k) => CAMPAIGN_DATA_HUB_FOLDER_KEYS.includes(k)))];
+}
+
+function buildInletFlagCondition(inletKey) {
+  switch (inletKey) {
+    case 'exly':
+      return { inExly: true };
+    case 'leads':
+      return { inCRM: true };
+    case 'tsc':
+    case 'outsourced':
+      return { $or: [{ inOutsourced: true }, { inTsc: true }] };
+    case 'newsletter':
+      return { inNewsletter: true };
+    case 'artist_path':
+      return { inArtistPath: true };
+    case 'artist_crm':
+      return { inArtistCrm: true };
+    case 'booked_calls':
+      return { inBookedCalls: true };
+    case 'enquiries':
+      return { inEnquiries: true };
+    case 'mail':
+      return { inMailer: true };
+    case 'community':
+      return { inCommunity: true };
+    case 'active':
+      return {
+        emailStatus: 'Active',
+        $or: [
+          { inMailer: true },
+          { inExly: true },
+          { inCRM: true },
+          { inletCount: { $gte: 1 } },
+        ],
+      };
+    case 'loyal':
+      return { isMultiInlet: true };
+    default:
+      return null;
+  }
+}
+
+function buildInletAudienceQuery({ includeInlets = [], excludeInlets = [], extra = {} } = {}) {
+  const safeInclude = sanitizeInletKeys(includeInlets);
+  const safeExclude = sanitizeInletKeys(excludeInlets);
+  const q = { ...extra };
+  q.$and = q.$and || [];
+
+  if (safeInclude.length > 0) {
+    const orClauses = safeInclude.map(buildInletFlagCondition).filter(Boolean);
+    if (orClauses.length === 1) q.$and.push(orClauses[0]);
+    else if (orClauses.length > 1) q.$and.push({ $or: orClauses });
+  }
+
+  for (const key of safeExclude) {
+    const cond = buildInletFlagCondition(key);
+    if (cond) q.$and.push({ $nor: [cond] });
+  }
+
+  q.$and.push(buildDataHubExcludeFilter());
+  return q;
+}
 
 function exlyContactToRowData(contact) {
   const offerings = (contact.exlyOfferings || [])
@@ -144,17 +213,30 @@ async function loadLeadMapByEmail(emails) {
   return map;
 }
 
-async function listDataHubAudienceContacts({ folder = 'all', search = '', limit = 100000, engagement = 'all' } = {}) {
+async function listDataHubAudienceContacts({
+  folder = 'all',
+  includeInlets = [],
+  excludeInlets = [],
+  search = '',
+  limit = 100000,
+  engagement = 'all',
+} = {}) {
+  const safeInclude = sanitizeInletKeys(includeInlets);
+  const safeExclude = sanitizeInletKeys(excludeInlets);
   const safeFolder = folder && folder !== 'all' && CAMPAIGN_DATA_HUB_FOLDER_KEYS.includes(folder)
     ? folder
-    : (folder === 'all' ? 'all' : 'all');
+    : 'all';
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 100000, 1), 100000);
   const HubModel = await resolveHubModel();
-  const query = buildFolderQuery(safeFolder, {
+  const baseExtra = {
     email: { $exists: true, $ne: '' },
     unsubscribed: { $ne: true },
     emailStatus: { $nin: ['Unsubscribed', 'Bounced', 'Invalid'] },
-  });
+  };
+  const useInletRules = safeInclude.length > 0 || safeExclude.length > 0;
+  const query = useInletRules
+    ? buildInletAudienceQuery({ includeInlets: safeInclude, excludeInlets: safeExclude, extra: baseExtra })
+    : buildFolderQuery(safeFolder, baseExtra);
 
   const escaped = search ? escapeRegExp(String(search).trim()) : '';
   if (escaped) {
@@ -191,7 +273,7 @@ async function listDataHubAudienceContacts({ folder = 'all', search = '', limit 
       emailStatus: person.emailStatus || lead?.emailStatus || 'Pending',
       inletLabels: person.inletLabels || [],
       leadStatus: lead?.leadStatus || 'Fresh',
-      folder: safeFolder,
+      folder: useInletRules ? 'all' : safeFolder,
       leadId: lead?._id,
       lead,
       rowData: {},
@@ -200,16 +282,24 @@ async function listDataHubAudienceContacts({ folder = 'all', search = '', limit 
       ? {
         name: lead.name || contact.name,
         email: contact.email,
-        source: DATA_INLETS[safeFolder]?.label || 'Data Hub',
+        source: useInletRules
+          ? ((contact.inletLabels || []).join(', ') || 'Data Hub')
+          : (DATA_INLETS[safeFolder]?.label || 'Data Hub'),
         inlets: (contact.inletLabels || []).join(', '),
       }
-      : dataHubContactToRowData(contact, safeFolder);
+      : dataHubContactToRowData(contact, useInletRules ? 'all' : safeFolder);
     return contact;
   });
 
   contacts = await filterContactsByEngagement(contacts, engagement);
 
-  return { contacts, total: contacts.length, folder: safeFolder };
+  return {
+    contacts,
+    total: contacts.length,
+    folder: useInletRules ? 'all' : safeFolder,
+    includeInlets: safeInclude,
+    excludeInlets: safeExclude,
+  };
 }
 
 async function listDataHubAudienceFolders() {
@@ -234,4 +324,7 @@ module.exports = {
   listDataHubAudienceFolders,
   dataHubContactToRowData,
   CAMPAIGN_DATA_HUB_FOLDER_KEYS,
+  sanitizeInletKeys,
+  buildInletFlagCondition,
+  buildInletAudienceQuery,
 };

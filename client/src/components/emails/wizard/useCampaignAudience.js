@@ -118,7 +118,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const [exlyLeadStatusFilter, setExlyLeadStatusFilter] = useState('all');
   const [exlyOfferingFilter, setExlyOfferingFilter] = useState('all');
   const [exlyLoadRequested, setExlyLoadRequested] = useState(false);
-  const [dataHubFolderFilter, setDataHubFolderFilter] = useState('all');
+  const [dataHubIncludeInlets, setDataHubIncludeInlets] = useState([]);
+  const [dataHubExcludeInlets, setDataHubExcludeInlets] = useState([]);
   const [dataHubLoadRequested, setDataHubLoadRequested] = useState(false);
   const [campaignEngagementFilter, setCampaignEngagementFilter] = useState('all');
   const [engagementByEmail, setEngagementByEmail] = useState({});
@@ -141,7 +142,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const dataHubAudienceQuery = useCampaignDataHubAudience(
     {
       search: searchTerm || undefined,
-      folder: dataHubFolderFilter || 'all',
+      includeInlets: dataHubIncludeInlets.length ? dataHubIncludeInlets.join(',') : undefined,
+      excludeInlets: dataHubExcludeInlets.length ? dataHubExcludeInlets.join(',') : undefined,
       engagement: campaignEngagementFilter || 'all',
       limit: 100000,
     },
@@ -239,7 +241,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
         return;
       }
       const count = result.data?.contacts?.length ?? 0;
-      if (count === 0) toast.warn('No Data Hub contacts found for the current folder.');
+      if (count === 0) toast.warn('No Data Hub contacts found for the current filters.');
       else toast.success(`Loaded ${count} Data Hub contact(s).`);
     } catch (e) {
       toast.error('Failed to load Data Hub contacts: ' + e.message);
@@ -412,7 +414,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     setAllContacts([]);
     setExlyLoadRequested(false);
     setDataHubLoadRequested(false);
-    setDataHubFolderFilter('all');
+    setDataHubIncludeInlets([]);
+    setDataHubExcludeInlets([]);
     setExlyOfferingFilter('all');
     setExlyOfferingIdsFilter([]);
     setExlyLeadStatusFilter('all');
@@ -445,7 +448,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     exlyOfferingIdsFilter, setExlyOfferingIdsFilter,
     exlyLeadStatusFilter, setExlyLeadStatusFilter,
     exlyOfferingFilter, setExlyOfferingFilter,
-    dataHubFolderFilter, setDataHubFolderFilter,
+    dataHubIncludeInlets, setDataHubIncludeInlets,
+    dataHubExcludeInlets, setDataHubExcludeInlets,
     campaignEngagementFilter, setCampaignEngagementFilter,
     engagementByEmail, engagementLoading,
     activeCsvRecipients,

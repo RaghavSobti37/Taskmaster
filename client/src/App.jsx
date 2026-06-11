@@ -117,6 +117,16 @@ const LegacyWorkspaceRedirect = () => {
   return <Navigate to={`/workspaces/${encodeURIComponent(name || '')}`} replace />;
 };
 
+const LegacyArtistAnalyticsRedirect = () => {
+  const { id, platform } = useParams();
+  const isPreview = window.location.pathname.startsWith('/preview/artist/');
+  const base = isPreview ? `/preview/artist/${id}` : `/artists/${id}`;
+  const target = platform
+    ? `${base}?tab=analytics&platform=${encodeURIComponent(platform)}`
+    : `${base}?tab=analytics`;
+  return <Navigate to={target} replace />;
+};
+
 function App() {
   React.useEffect(() => {
     let teardown;
@@ -140,6 +150,8 @@ function App() {
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/userdata" element={<UserDataDeletion />} />
+          <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
+          <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
@@ -286,6 +298,8 @@ function App() {
               <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
+                <Route path="/artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
+                <Route path="/artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />

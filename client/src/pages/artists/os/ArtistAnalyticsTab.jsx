@@ -1,15 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Link2 } from 'lucide-react';
-import { Button, TabSwitcher, Input, FullScreenWorkspace } from '../../../components/ui';
+import { useSearchParams } from 'react-router-dom';
+import { Plus, BarChart3 } from 'lucide-react';
+import { Button, TabSwitcher, Input, FullScreenWorkspace, SectionCard, MetricCard } from '../../../components/ui';
 import { useArtistAnalytics } from '../../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../../utils/analyticsDataUtils';
 import { analyticsIntegrations } from '../../../config/integrations.config';
 import UnifiedReachCard from '../../../components/artists/UnifiedReachCard';
 import PlatformSummaryCards from '../../../components/artists/PlatformSummaryCards';
-import ConnectSocialModal from '../../../components/artists/ConnectSocialModal';
 import MetricChart from '../../../components/artists/MetricChart';
 import AssetTable from '../../../components/artists/AssetTable';
-import { Card } from '../../../components/ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../../components/ui/QueryErrorBanner';
 import {
   TimeRangeProvider,
@@ -29,12 +28,57 @@ const TIMEFRAME_FROM_PRESET = {
   [TIME_RANGE_PRESETS.custom]: '28D',
 };
 
-function ScoreCard({ label, value }) {
+const SCORE_VARIANTS = {
+  audienceScore: 'mint',
+  growthScore: 'info',
+  engagementScore: 'apricot',
+  monetizationScore: 'slate',
+};
+
+const SCORE_LABELS = {
+  audienceScore: 'Audience',
+  growthScore: 'Growth',
+  engagementScore: 'Engagement',
+  monetizationScore: 'Monetization',
+};
+
+function AnalyticsInsightsPanel({ scores, correlations = [] }) {
+  if (!scores && !correlations.length) return null;
+
   return (
-    <Card className="p-3 rounded-xl text-center">
-      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{label}</p>
-      <p className="text-2xl font-black mt-1">{value ?? '—'}</p>
-    </Card>
+    <div className="space-y-4 h-full">
+      {scores && (
+        <div className="space-y-2">
+          <p className="tm-widget-label">OS Scores</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(SCORE_LABELS).map(([key, label]) => (
+              <MetricCard
+                key={key}
+                label={label}
+                value={scores[key] ?? '—'}
+                variant={SCORE_VARIANTS[key] || 'slate'}
+                className="!p-2.5"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {correlations.length > 0 && (
+        <div className="space-y-2 border-t border-[var(--color-bg-border)] pt-4">
+          <p className="tm-widget-label">Release → Growth</p>
+          <ul className="space-y-2">
+            {correlations.map((c) => (
+              <li key={c.releaseId} className="flex justify-between gap-2 text-xs border-b border-[var(--color-bg-border)]/60 pb-2">
+                <span className="font-bold truncate">{c.title}</span>
+                <span className={`shrink-0 tabular-nums font-bold ${c.spotifyDelta >= 0 ? 'tm-delta-positive' : 'tm-delta-negative'}`}>
+                  {c.spotifyDelta >= 0 ? '+' : ''}{c.spotifyDelta}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -57,13 +101,23 @@ function ArtistAnalyticsTabInner({
   onSetPrimary,
   addVideoMutation,
 }) {
-  const { preset } = useTimeRange();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { preset, range } = useTimeRange();
   const timeframe = TIMEFRAME_FROM_PRESET[preset] || '28D';
-  const [activeTab, setActiveTab] = useState('spotify');
+  const platformParam = searchParams.get('platform');
+  const initialTab = platformParam === 'meta' ? 'instagram' : platformParam;
+  const [activeTab, setActiveTab] = useState(initialTab || 'spotify');
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'analytics');
+    next.set('platform', tab);
+    setSearchParams(next, { replace: true });
+  };
   const [accountId] = useState(null);
   const [videoFilter, setVideoFilter] = useState('all');
   const [showAddVideo, setShowAddVideo] = useState(false);
-  const [showConnectModal, setShowConnectModal] = useState(false);
   const [newVideo, setNewVideo] = useState({ url: '', title: '', channelName: '' });
 
   const { data: scoresData, isError: scoresError, error: scoresQueryError, refetch: refetchScores } = useArtistOsScores(artistId, !!artistId && !isPreview);
@@ -93,6 +147,13 @@ function ArtistAnalyticsTabInner({
   }, [connectedProviders]);
 
   useEffect(() => {
+    if (platformParam) {
+      const resolved = platformParam === 'meta' ? 'instagram' : platformParam;
+      if (tabs.some((t) => t.id === resolved)) setActiveTab(resolved);
+    }
+  }, [platformParam, tabs]);
+
+  useEffect(() => {
     if (tabs.length && !tabs.some((t) => t.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
@@ -114,102 +175,95 @@ function ArtistAnalyticsTabInner({
   const videos = analyticsData?.videos || [];
   const posts = analyticsData?.posts || [];
 
-  return (
-    <div className="space-y-6">
-      <TimeRangePicker />
-      {(scoresError || analyticsError) && !isPreview && (
-        <QueryErrorBanner
-          message={getQueryErrorMessage(scoresQueryError || analyticsQueryError, 'Failed to load analytics')}
-          onRetry={() => {
-            if (scoresError) refetchScores();
-            if (analyticsError) refetchAnalytics();
-          }}
-        />
-      )}
-      <UnifiedReachCard
-        normalized={normalized || analyticsData?.normalized}
-        connectionCount={connections.filter((c) => c.accountHandle).length}
-        artist={artist}
-        connections={connections}
-        onReconnect={onSync}
-      />
+  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || activeTab;
+  const assetSectionTitle = activeTab === 'spotify' ? 'Top Tracks' : activeTab === 'youtube' ? 'Videos' : 'Recent Posts';
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-            Connected Platforms
-          </h3>
-          {!isPreview && artistId && (
-            <Button size="sm" onClick={() => setShowConnectModal(true)}>
-              <Link2 size={14} /> Connect Social Media
-            </Button>
-          )}
+  return (
+    <div className="space-y-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-bg-border)]">
+        <div className="flex items-center gap-2 min-w-0">
+          <BarChart3 size={16} className="text-[var(--color-action-primary)] shrink-0" />
+          <div>
+            <h2 className="tm-widget-label text-[var(--color-text-primary)] !text-[11px]">Audience Analytics</h2>
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+              Cross-platform reach, growth, and content performance
+            </p>
+          </div>
         </div>
+        <TimeRangePicker className="shrink-0" />
+      </div>
+
+      {(scoresError || analyticsError) && !isPreview && (
+        <div className="pt-4">
+          <QueryErrorBanner
+            message={getQueryErrorMessage(scoresQueryError || analyticsQueryError, 'Failed to load analytics')}
+            onRetry={() => {
+              if (scoresError) refetchScores();
+              if (analyticsError) refetchAnalytics();
+            }}
+          />
+        </div>
+      )}
+
+      <SectionCard title="Overview" bodyClassName="!py-4">
+        <UnifiedReachCard
+          normalized={normalized || analyticsData?.normalized}
+          connectionCount={connections.filter((c) => c.accountHandle).length}
+          artist={artist}
+          connections={connections}
+          onReconnect={onSync}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Platforms"
+        subtitle="Click a platform to view its chart and content"
+        bodyClassName="!py-4"
+      >
         <PlatformSummaryCards
           artist={artist}
           normalized={normalized || analyticsData?.normalized}
           connections={connections}
           onSetPrimary={onSetPrimary}
           providers={summaryProviders}
-          onAddPlatform={!isPreview && artistId ? () => setShowConnectModal(true) : undefined}
+          activeProvider={activeTab}
+          onSelect={handleTabChange}
+          compact
         />
+      </SectionCard>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 border-t border-[var(--color-bg-border)]">
+        <div className="xl:col-span-2 py-4 xl:pr-6 xl:border-r border-[var(--color-bg-border)] min-h-[260px]">
+          <MetricChart chartData={chartData} activeTab={activeTab} rangeLabel={range.label} />
+        </div>
+        <div className="py-4 xl:pl-6">
+          <AnalyticsInsightsPanel scores={scores} correlations={scoresData?.correlations} />
+        </div>
       </div>
 
-      <ConnectSocialModal
-        isOpen={showConnectModal}
-        onClose={() => setShowConnectModal(false)}
-        artistId={artistId}
-        connections={connections}
-      />
-
-      {scores && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <ScoreCard label="Audience" value={scores.audienceScore} />
-          <ScoreCard label="Growth" value={scores.growthScore} />
-          <ScoreCard label="Engagement" value={scores.engagementScore} />
-          <ScoreCard label="Monetization" value={scores.monetizationScore} />
-        </div>
-      )}
-
-      {scoresData?.correlations?.length > 0 && (
-        <Card className="p-4 rounded-2xl space-y-2">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Release → Growth</h4>
-          {scoresData.correlations.map((c) => (
-            <div key={c.releaseId} className="flex justify-between text-xs">
-              <span className="font-bold">{c.title}</span>
-              <span className={c.spotifyDelta >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                Spotify {c.spotifyDelta >= 0 ? '+' : ''}{c.spotifyDelta}
-              </span>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      <MetricChart
-        chartData={chartData}
-        activeTab={activeTab}
-        timeframe={timeframe}
-        onTimeframeChange={() => {}}
-      />
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <TabSwitcher
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            tabs={tabs.length ? tabs : [
-              { id: 'spotify', label: 'Spotify' },
-              { id: 'youtube', label: 'YouTube' },
-              { id: 'instagram', label: 'Instagram' },
-            ]}
-          />
-          {activeTab === 'youtube' && !isPreview && addVideoMutation && (
-            <Button size="sm" onClick={() => setShowAddVideo(true)}>
-              <Plus size={14} /> Add Featured Video
-            </Button>
-          )}
-        </div>
-
+      <SectionCard
+        title={assetSectionTitle}
+        subtitle={activeTabLabel}
+        bodyClassName="!py-0 !pt-2"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <TabSwitcher
+              activeTab={activeTab}
+              onChange={handleTabChange}
+              tabs={tabs.length ? tabs : [
+                { id: 'spotify', label: 'Spotify' },
+                { id: 'youtube', label: 'YouTube' },
+                { id: 'instagram', label: 'Instagram' },
+              ]}
+            />
+            {activeTab === 'youtube' && !isPreview && addVideoMutation && (
+              <Button size="sm" onClick={() => setShowAddVideo(true)}>
+                <Plus size={14} /> Add Featured Video
+              </Button>
+            )}
+          </div>
+        }
+      >
         <AssetTable
           activeTab={activeTab}
           tracks={tracks}
@@ -219,7 +273,7 @@ function ArtistAnalyticsTabInner({
           videoFilter={videoFilter}
           onVideoFilterChange={setVideoFilter}
         />
-      </div>
+      </SectionCard>
 
       {addVideoMutation && (
         <FullScreenWorkspace

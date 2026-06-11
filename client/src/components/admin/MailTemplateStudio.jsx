@@ -43,6 +43,8 @@ import {
   insertImageInQuill,
   uploadMailTemplateImage,
 } from '../../utils/mailTemplateImageUpload';
+import { blobToCroppedFile } from '../../utils/mailTemplateImageCrop';
+import MailTemplateImageCropModal from './MailTemplateImageCropModal';
 
 const PREVIEW_DEBOUNCE_MS = 450;
 const STATUS_LABELS = {
@@ -108,6 +110,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const [studioTab, setStudioTab] = useState('editor');
   const [reviewingId, setReviewingId] = useState(null);
   const [imageUploading, setImageUploading] = useState(false);
+  const [pendingCrop, setPendingCrop] = useState(null);
   const quillRef = useRef(null);
   const rawHtmlRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -153,13 +156,40 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     }
   }, [toast, trackUploadedAsset]);
 
-  const handleImageInputChange = useCallback(async (e) => {
+  const clearPendingCrop = useCallback(() => {
+    setPendingCrop((prev) => {
+      if (prev?.objectUrl) URL.revokeObjectURL(prev.objectUrl);
+      return null;
+    });
+  }, []);
+
+  const handleImageInputChange = useCallback((e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const url = await handleImageUpload(file);
+    clearPendingCrop();
+    setPendingCrop({
+      file,
+      objectUrl: URL.createObjectURL(file),
+    });
+  }, [clearPendingCrop]);
+
+  const handleCropCancel = useCallback(() => {
+    clearPendingCrop();
+  }, [clearPendingCrop]);
+
+  const handleCropConfirm = useCallback(async (croppedBlob) => {
+    const source = pendingCrop;
+    if (!croppedBlob || !source?.file) return;
+    const croppedFile = blobToCroppedFile(croppedBlob, source.file.name, source.file.type);
+    clearPendingCrop();
+    const url = await handleImageUpload(croppedFile);
     if (url) insertImageUrl(url);
-  }, [handleImageUpload, insertImageUrl]);
+  }, [pendingCrop, clearPendingCrop, handleImageUpload, insertImageUrl]);
+
+  useEffect(() => () => {
+    if (pendingCrop?.objectUrl) URL.revokeObjectURL(pendingCrop.objectUrl);
+  }, [pendingCrop?.objectUrl]);
 
   const openImagePicker = useCallback(() => {
     imageInputRef.current?.click();
@@ -714,6 +744,15 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
           )}
         </div>
       )}
+
+      <MailTemplateImageCropModal
+        isOpen={Boolean(pendingCrop)}
+        imageSrc={pendingCrop?.objectUrl}
+        fileName={pendingCrop?.file?.name}
+        sourceType={pendingCrop?.file?.type}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }

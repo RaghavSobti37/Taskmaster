@@ -224,6 +224,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Mail Template Studio & Outbound HTML Pipeline
 
+* **Image crop (raw HTML):** Optional aspect presets and crop modal before inline image upload in Mail Template Studio.
 * **Inline images (raw HTML):** Mail Template Studio uploads assets via Uploadthing, stores `MailTemplate.assets`, inserts `<img>` in raw HTML mode, and `buildFinalEmailHtml` normalizes absolute image URLs before send (locked tracking layer unchanged).
 * **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` ? visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft ? submit ? approve/reject workflow.
 * **Named approvers:** `shared/mailTemplateApprovers.js` lists emails who can approve/reject pending templates in addition to admin-department users (`canApproveMailTemplates` on client + server). Submit notifications go to both admin department and named approvers.

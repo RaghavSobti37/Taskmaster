@@ -4,13 +4,25 @@
 
 ---
 
+## 2026-06-11 - Mail template image crop before upload
+
+- **Request:** Crop and aspect-ratio mail template inline images before Uploadthing upload
+- **Root cause:** Raw HTML insert path uploaded full-size images with no crop UX
+- **Fix:** `mailTemplateImageCrop.js`, `MailTemplateImageCropModal.jsx` (`react-easy-crop`); wired in `MailTemplateStudio.jsx`
+- **Verify:** `npm run test --prefix client -- --run src/utils/mailTemplateImageCrop.test.js`; `npm run audit:exposure`; `npm run audit:deadcode`
+
+---
+
 ## 2026-06-11 - push-and-document (clean tree)
 
 - **Request:** Run push-and-document; resolve untracked tscacademy_logo.png at repo root
 - **Root cause:** Local TSC Academy brand asset with no app references; would clutter commits if left untracked
 - **Fix:** Gitignore tscacademy_logo.png (same pattern as TSC_BrandBook.pdf); note in operations/conventions.md
 - **Verify:** `npm run audit:exposure`; `npm run audit:deadcode`; clean `git status`
-## 2026-06-11 ÔøΩ Raw HTML mail template inline images
+
+---
+
+## 2026-06-11 ù Raw HTML mail template inline images
 
 - **Request:** Upload and embed inline `<img>` in raw HTML email templates through editor ? approval ? campaign send
 - **Root cause:** No upload path or insert UX in Mail Template Studio raw HTML mode; send pipeline had no img URL normalization
@@ -19,7 +31,7 @@
 
 ---
 
-## 2026-06-11 ÔøΩ Campaign recipient delivery log CSV export
+## 2026-06-11 ù Campaign recipient delivery log CSV export
 
 - **Request:** Download CSV of filtered campaign recipients (name, phone, email) from delivery log tabs
 - **Root cause:** No export path existed; paginated table only showed current page; `unsubscribed` filter missing from server status groups
@@ -28,16 +40,16 @@
 
 ---
 
-## 2026-06-11 ÔøΩ Remove duplicate registered location chart on campaign details
+## 2026-06-11 ù Remove duplicate registered location chart on campaign details
 
 - **Request:** Campaign analytics showed two registered-location charts; remove top standalone duplicate
-- **Root cause:** `CampaignDetails.jsx` rendered `RegisteredLocationBarChart` twice ÔøΩ once full-width above toolbar, again in bottom grid as breakdown
+- **Root cause:** `CampaignDetails.jsx` rendered `RegisteredLocationBarChart` twice ù once full-width above toolbar, again in bottom grid as breakdown
 - **Fix:** Removed top `RegisteredLocationBarChart` (`title="Registered location"`); kept Engagement Over Time + Registered location breakdown pair
 - **Verify:** `npm run build --prefix client`; `npm run audit:exposure`; `npm run audit:deadcode`
 
 ---
 
-## 2026-06-11 ÔøΩ Open task assignment (any user ? any tenant user)
+## 2026-06-11 ù Open task assignment (any user ? any tenant user)
 
 - **Request:** Anyone can assign tasks to anyone; assigner becomes `createdBy`; drop project-role gate for assignment
 - **Root cause:** `canAssignTasks` required admin/manager/artist_management; `assertAssigneesInTaskScope` required project membership
@@ -65,7 +77,7 @@
 - **Verify:** `npm test --prefix server -- artistWorkspace artistPortfolioPublic artistRouteAccess artistOs`; `npm run audit:exposure`; `npm run audit:deadcode`
 
 ---
-## 2026-06-11 ÔøΩ Connection hub socials RBAC alignment
+## 2026-06-11 ù Connection hub socials RBAC alignment
 
 - **Gap:** `tracked-video` + `setPrimaryConnection` used `artistOrAdmin`; hub/sync used `artistMembershipAccess('socials')`
 - **Fix:** Both endpoints now use `artistMembershipAccess('socials')`; added `mailTemplateAccess.test.js` + connection hub route tests
@@ -73,27 +85,27 @@
 
 ---
 
-## 2026-06-11 ÔøΩ Mail template submit RBAC regression
+## 2026-06-11 ù Mail template submit RBAC regression
 
-- **Error:** `Not authorized ÔøΩ page access required` on `POST /api/mail/templates/:id/submit` (TraceID f02378db-25d9-42f4-916f-4f2f6e9bcf7a)
-- **Root cause:** d1857129 added `requirePageAccess('emails')` on mail template routes and removed the Jun 4 universal `emails` bypass ÔøΩ users with custom department pagePermissions (no `emails` key) hit 403 on submit
+- **Error:** `Not authorized ù page access required` on `POST /api/mail/templates/:id/submit` (TraceID f02378db-25d9-42f4-916f-4f2f6e9bcf7a)
+- **Root cause:** d1857129 added `requirePageAccess('emails')` on mail template routes and removed the Jun 4 universal `emails` bypass ù users with custom department pagePermissions (no `emails` key) hit 403 on submit
 - **Fix:** Restored `hasPageAccess('emails')` universal grant for any authenticated user on client + server; updated `mailTemplateApprovers.test.js`
 - **Verify:** `npx jest mailTemplateApprovers.test.js`; `npm run audit:exposure`; `npm run audit:deadcode`
 
 ---
 
-## 2026-06-11 ÔøΩ Vercel installCommand fix
+## 2026-06-11 ù Vercel installCommand fix
 
-- **Root cause:** Vercel Root Directory `client/` ÔøΩ old `installCommand` called `node ../scripts/generateVercelConfig.js` ? file not found ? exit 127
+- **Root cause:** Vercel Root Directory `client/` ù old `installCommand` called `node ../scripts/generateVercelConfig.js` ? file not found ? exit 127
 - **Fix:** Canonical generator at `client/scripts/generateVercelConfig.cjs`; `vercel.json` / `client/vercel.json` / `client/package.json` scripts updated; root `scripts/generateVercelConfig.js` delegates to `.cjs`
 - **Deploy:** Set `RENDER_API_PROXY_URL` on Vercel; script writes `/api` + `/socket.io` rewrites at install time
 - **Fallback:** On Vercel without env, keeps committed `client/vercel.json` when rewrites already valid; root `scripts/generateVercelConfig.cjs` wrapper for monorepo-root installs
-- **Install root cause:** Monorepo `prepare: husky` ran during Vercel workspace install before husky on PATH ÔøΩ fixed via `scripts/prepare.js` (skip when `VERCEL`/`CI`/`HUSKY=0`) + `HUSKY=0` in installCommand
+- **Install root cause:** Monorepo `prepare: husky` ran during Vercel workspace install before husky on PATH ù fixed via `scripts/prepare.js` (skip when `VERCEL`/`CI`/`HUSKY=0`) + `HUSKY=0` in installCommand
 - **NestJS:** `server-nest/dist/` gitignored (prior commit)
 
 ---
 
-## 2026-06-11 ÔøΩ Access control, error UX, Artist OS
+## 2026-06-11 ù Access control, error UX, Artist OS
 
 - **Page permission API gates:** Mail, admin, workspace, CRM, proxy, and related Express routes enforce department pagePermissions (aligned with client hasPageAccess / navPageAccess).
 - **QueryErrorBanner:** Rolled out on query-driven pages for consistent failure states and retry actions.
@@ -104,7 +116,7 @@
 - **Tests:** Vitest for ForcePasswordChangeGate, QueryErrorBanner, query defaults, artist OS shell, login return path, session merge; server tests for gates.
 - **Audits:** audit:exposure allows YOUR-PRODUCTION-API placeholders in *.example env templates.
 
-## 2026-06-10 ÔøΩ Memory restructure
+## 2026-06-10 ù Memory restructure
 
 - Reorganized `.specify/memory/` into component folders with `INDEX.md` + `MASTER.md`
 - Removed duplicate `agentic_memory/` and stale flat memory files
@@ -112,7 +124,7 @@
 
 ---
 
-## 2026-06-10 ÔøΩ Supabase IPv4 fix for Render
+## 2026-06-10 ù Supabase IPv4 fix for Render
 
 - **Root cause:** `db.*.supabase.co` direct Postgres is IPv6-only; Render outbound is IPv4 ? `ENETUNREACH`
 - **Fix:** `SUPABASE_PG_MODE=rest` on Render. Runtime metadata writes use PostgREST (`restQuery.js`)
@@ -121,7 +133,7 @@
 
 ---
 
-## 2026-06-10 ÔøΩ Supabase secondary store & backup migration
+## 2026-06-10 ù Supabase secondary store & backup migration
 
 - Supabase Postgres + Storage offloads logs, audits, rollups, CRM snapshots, production backups from Atlas M0
 - Mongo primary for live CRM/email; mirrors async; GridFS purged after successful Supabase dump
@@ -129,7 +141,7 @@
 
 ---
 
-## 2026-06-10 ÔøΩ Mobile login stable
+## 2026-06-10 ù Mobile login stable
 
 - Committed `client/vercel.json` rewrite + proxy health fallback
 - Phone/PWA: same-origin `/api/*` via Vercel rewrite

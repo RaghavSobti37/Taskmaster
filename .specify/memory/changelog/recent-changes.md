@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-06-11 - push-and-document (clean tree)
+
+- **Request:** Run push-and-document; resolve untracked tscacademy_logo.png at repo root
+- **Root cause:** Local TSC Academy brand asset with no app references; would clutter commits if left untracked
+- **Fix:** Gitignore tscacademy_logo.png (same pattern as TSC_BrandBook.pdf); note in operations/conventions.md
+- **Verify:** `npm run audit:exposure`; `npm run audit:deadcode`; clean `git status`
 ## 2026-06-11 � Raw HTML mail template inline images
 
 - **Request:** Upload and embed inline `<img>` in raw HTML email templates through editor ? approval ? campaign send

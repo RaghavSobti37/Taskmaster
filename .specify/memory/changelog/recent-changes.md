@@ -10,6 +10,7 @@
 - **Fix:** Canonical generator at `client/scripts/generateVercelConfig.cjs`; `vercel.json` / `client/vercel.json` / `client/package.json` scripts updated; root `scripts/generateVercelConfig.js` delegates to `.cjs`
 - **Deploy:** Set `RENDER_API_PROXY_URL` on Vercel; script writes `/api` + `/socket.io` rewrites at install time
 - **Fallback:** On Vercel without env, keeps committed `client/vercel.json` when rewrites already valid; root `scripts/generateVercelConfig.cjs` wrapper for monorepo-root installs
+- **Install root cause:** Monorepo `prepare: husky` ran during Vercel workspace install before husky on PATH — fixed via `scripts/prepare.js` (skip when `VERCEL`/`CI`/`HUSKY=0`) + `HUSKY=0` in installCommand
 - **NestJS:** `server-nest/dist/` gitignored (prior commit)
 
 ---

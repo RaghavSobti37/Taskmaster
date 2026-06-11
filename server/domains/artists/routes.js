@@ -4,8 +4,18 @@ const artistController = require('./controllers/artistController');
 const artistAnalyticsController = require('./controllers/artistAnalyticsController');
 const artistShareController = require('./controllers/artistShareController');
 const artistOsController = require('./controllers/artistOsController');
+const artistMembershipController = require('./controllers/artistMembershipController');
+const artistWorkspaceController = require('./controllers/artistWorkspaceController');
 const connectionAuth = require('./controllers/connectionAuthController');
-const { protect, artistOrAdmin, artistTeamOrAdmin } = require('../../middleware/authMiddleware');
+const connectionHubController = require('./controllers/connectionHubController');
+const {
+  protect,
+  artistOrAdmin,
+  artistTeamOrAdmin,
+  artistMembershipAccess,
+  canManageArtistTeam,
+  artistOwnerOrAdmin,
+} = require('../../middleware/authMiddleware');
 const { validateBody } = require('../../validation/validateBody');
 const { validateParams } = require('../../validation/validateParams');
 const {
@@ -25,6 +35,9 @@ router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.post('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.get('/:id/preview', artistShareController.getArtistPreview);
 
+router.get('/public/:slug', artistController.getPublicArtistBySlug);
+router.post('/public/:slug/inquiry', artistController.createPublicInquiry);
+
 router.get('/auth/callback/spotify', callback('spotify'));
 router.get('/auth/callback/youtube', callback('youtube'));
 
@@ -36,22 +49,33 @@ router.get('/:id/auth/youtube', connectionAuth.legacyYoutubeRedirect);
 router.use(protect);
 
 router.get('/config/integrations', artistOrAdmin, artistController.getIntegrationsConfig);
+router.get('/portfolio/summary', artistOrAdmin, artistController.getPortfolioSummary);
 router.get('/', artistOrAdmin, artistController.getArtists);
 router.post('/', artistOrAdmin, validateBody(createArtistBody), artistController.createArtist);
 router.get('/:id/connections', artistTeamOrAdmin, artistController.getArtistConnections);
+router.get('/:id/connections/hub', artistMembershipAccess('socials'), connectionHubController.getConnectionHub);
+router.get('/:id/connections/health', artistMembershipAccess('socials'), connectionHubController.getConnectionHealth);
+router.post('/:id/connections/:platform/sync', artistMembershipAccess('socials'), connectionHubController.syncPlatformConnection);
+router.put('/:id/connections/:platform/manual', artistMembershipAccess('socials'), connectionHubController.saveManualConnection);
+router.get('/:id/members', artistOwnerOrAdmin, artistMembershipController.listMembers);
+router.get('/:id/membership/me', artistMembershipController.getMyMembership);
+router.post('/:id/members/invite', canManageArtistTeam, artistMembershipController.inviteMember);
+router.post('/:id/members/accept', artistMembershipController.acceptMembership);
+router.patch('/:id/members/:membershipId', canManageArtistTeam, artistMembershipController.updateMember);
+router.delete('/:id/members/:membershipId', canManageArtistTeam, artistMembershipController.removeMember);
 router.post('/:id/share-link', artistOrAdmin, artistShareController.createShareLink);
 router.post('/:id/claim', artistShareController.claimArtistWorkspace);
 router.put(
   '/:id/connections/:connectionId/primary',
-  artistOrAdmin,
+  artistMembershipAccess('socials'),
   validateParams(artistConnectionParams),
   artistController.setPrimaryConnection,
 );
 router.put('/:id', artistOrAdmin, validateBody(updateArtistBody), artistController.updateArtist);
 router.delete('/:id', artistOrAdmin, artistController.deleteArtist);
 router.post('/:id/inject-event', artistOrAdmin, validateBody(injectEventBody), artistController.injectEvent);
-router.post('/:id/sync-stats', artistOrAdmin, artistAnalyticsController.syncArtistStats);
-router.post('/:id/tracked-video', artistOrAdmin, validateBody(trackedVideoBody), artistAnalyticsController.addTrackedVideo);
+router.post('/:id/sync-stats', artistMembershipAccess('socials'), artistAnalyticsController.syncArtistStats);
+router.post('/:id/tracked-video', artistMembershipAccess('socials'), validateBody(trackedVideoBody), artistAnalyticsController.addTrackedVideo);
 router.post('/:id/webhooks/subscribe', artistOrAdmin, artistAnalyticsController.enableInstagramWebhooks);
 router.get('/:id/analytics/:platform', artistTeamOrAdmin, artistAnalyticsController.getPlatformAnalytics);
 
@@ -62,9 +86,9 @@ router.patch('/:id/os/inquiries/:inquiryId', artistTeamOrAdmin, artistOsControll
 router.get('/:id/os/gigs', artistTeamOrAdmin, artistOsController.getGigs);
 router.post('/:id/os/gigs', artistTeamOrAdmin, artistOsController.createGig);
 router.patch('/:id/os/gigs/:gigId', artistTeamOrAdmin, artistOsController.updateGig);
-router.get('/:id/os/finance', artistTeamOrAdmin, artistOsController.getFinance);
-router.post('/:id/os/finance', artistTeamOrAdmin, artistOsController.createFinanceEntry);
-router.post('/:id/os/finance/ocr', artistTeamOrAdmin, artistOsController.financeOcr);
+router.get('/:id/os/finance', artistMembershipAccess('finance'), artistOsController.getFinance);
+router.post('/:id/os/finance', artistMembershipAccess('finance'), artistOsController.createFinanceEntry);
+router.post('/:id/os/finance/ocr', artistMembershipAccess('finance'), artistOsController.financeOcr);
 router.get('/:id/os/calendar', artistTeamOrAdmin, artistOsController.getCalendar);
 router.post('/:id/os/calendar', artistTeamOrAdmin, artistOsController.createCalendarEvent);
 router.get('/:id/os/timeline', artistTeamOrAdmin, artistOsController.getTimeline);
@@ -78,6 +102,11 @@ router.get('/:id/os/notes', artistTeamOrAdmin, artistOsController.getNotes);
 router.post('/:id/os/notes', artistTeamOrAdmin, artistOsController.createNote);
 router.get('/:id/os/content', artistTeamOrAdmin, artistOsController.getContent);
 router.post('/:id/os/content', artistTeamOrAdmin, artistOsController.createContent);
+
+router.get('/:id/os/assets', artistTeamOrAdmin, artistWorkspaceController.getAssets);
+router.post('/:id/os/assets', artistTeamOrAdmin, artistWorkspaceController.createAsset);
+router.get('/:id/os/releases', artistTeamOrAdmin, artistWorkspaceController.getReleaseCampaigns);
+router.post('/:id/os/releases', artistTeamOrAdmin, artistWorkspaceController.createReleaseCampaign);
 
 router.get('/:id', artistTeamOrAdmin, artistController.getArtistById);
 

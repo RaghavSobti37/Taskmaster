@@ -55,7 +55,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 - **Mail Template Studio:** Raw HTML inline images (Uploadthing) with optional pre-upload crop (`react-easy-crop`, `MailTemplateImageCropModal`)
 - **Campaign wizard:** `CampaignWizardShell` seeds `subject` from `?subject=` via `URLSearchParams` only — no double `decodeURIComponent` (subjects with `%` safe)
-- **Campaign audience:** Source tiles CSV / HolySheet / CRM / **Exly** / Manual; Exly via `GET /api/mail/audience/exly` (`ExlyBooking`); CRM filters (`leadStatus`, `contactCategory`, `artistProject`); Select all + Deselect all
+- **Campaign audience:** Source tiles CSV / HolySheet / **Data Hub** (admin) / CRM / Exly / Manual; Data Hub via `GET /api/mail/audience/data-hub` (`PersonHubView`, inlet folders from `shared/dataInlets.js`); Exly via `GET /api/mail/audience/exly` (`ExlyBooking`); CRM filters (`leadStatus`, `contactCategory`, `artistProject`); Select all + Deselect all; CRM-linked Data Hub rows → `leadIds`, others → `customRecipients`
 - Email hub at `/emails/*` — templates, campaigns, profiles, analytics
 - `MailTemplateStudio` — draft → submit → approve workflow
 - HolySheet contact sync, indexed merge tokens (`{{1}}`, `{{2}}`)

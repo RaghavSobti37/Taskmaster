@@ -265,3 +265,18 @@ export const useCampaignExlyAudience = (params = {}, options = {}) => useQuery({
   staleTime: 1000 * 60 * 2,
   placeholderData: keepPreviousData,
 });
+
+export const useCampaignDataHubFolders = (options = {}) => useQuery({
+  queryKey: ['mail', 'audience', 'data-hub', 'folders'],
+  queryFn: async () => (await axios.get('/api/mail/audience/data-hub/folders')).data,
+  enabled: options.enabled !== false,
+  staleTime: 1000 * 60 * 10,
+});
+
+export const useCampaignDataHubAudience = (params = {}, options = {}) => useQuery({
+  queryKey: ['mail', 'audience', 'data-hub', params],
+  queryFn: async () => (await axios.get('/api/mail/audience/data-hub', { params })).data,
+  enabled: options.enabled ?? false,
+  staleTime: 1000 * 60 * 2,
+  placeholderData: keepPreviousData,
+});

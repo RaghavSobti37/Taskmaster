@@ -4,7 +4,7 @@ import { leadToRowData, collectAvailableColumns } from '../../../utils/indexedTe
 import { computeAudienceHealthCheck } from '../../../utils/audienceHealthCheck';
 import { isValidEmail, normalizeEmail, filterValidRecipientRows } from '../../../utils/emailValidation';
 import { useToast } from '../../../contexts/ToastContext';
-import { useCampaignExlyAudience } from '../../../hooks/queries/mail';
+import { useCampaignExlyAudience, useCampaignDataHubAudience } from '../../../hooks/queries/mail';
 
 const UNSENDABLE_EMAIL_STATUSES = new Set(['Invalid', 'Unsubscribed', 'Bounced']);
 
@@ -47,6 +47,29 @@ function matchesLeadStatusFilter(lead, filter) {
   return status === filter;
 }
 
+function dataHubContactToPreviewRow(contact) {
+  if (contact?.leadId && contact?.lead) {
+    return {
+      name: contact.name,
+      email: contact.email,
+      leadId: contact.leadId,
+      rowData: leadToRowData(contact.lead),
+    };
+  }
+  return {
+    name: contact.name,
+    email: contact.email,
+    rowData: contact.rowData && Object.keys(contact.rowData).length > 0
+      ? contact.rowData
+      : {
+        name: contact.name || '',
+        email: contact.email || '',
+        source: (contact.inletLabels || []).join(', ') || 'Data Hub',
+        inlets: (contact.inletLabels || []).join(', '),
+      },
+  };
+}
+
 function matchesExlyOfferingFilter(contact, offeringIds) {
   if (!Array.isArray(offeringIds) || offeringIds.length === 0) return true;
   const contactIds = (contact.exlyOfferings || [])
@@ -61,6 +84,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
 
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [selectedExlyIds, setSelectedExlyIds] = useState([]);
+  const [selectedDataHubIds, setSelectedDataHubIds] = useState([]);
   const [csvRecipients, setCsvRecipients] = useState([]);
   const [csvFileName, setCsvFileName] = useState('');
   const [excludedSources, setExcludedSources] = useState([]);
@@ -80,6 +104,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const [exlyLeadStatusFilter, setExlyLeadStatusFilter] = useState('all');
   const [exlyOfferingFilter, setExlyOfferingFilter] = useState('all');
   const [exlyLoadRequested, setExlyLoadRequested] = useState(false);
+  const [dataHubFolderFilter, setDataHubFolderFilter] = useState('all');
+  const [dataHubLoadRequested, setDataHubLoadRequested] = useState(false);
 
   const exlyOfferingQueryId = exlyOfferingIdsFilter.length === 1
     ? exlyOfferingIdsFilter[0]
@@ -94,8 +120,19 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     { enabled: exlyLoadRequested },
   );
 
+  const dataHubAudienceQuery = useCampaignDataHubAudience(
+    {
+      search: searchTerm || undefined,
+      folder: dataHubFolderFilter || 'all',
+      limit: 100000,
+    },
+    { enabled: dataHubLoadRequested },
+  );
+
   const allExlyContacts = exlyAudienceQuery.data?.contacts ?? [];
   const exlyContactsLoading = exlyAudienceQuery.isFetching;
+  const allDataHubContacts = dataHubAudienceQuery.data?.contacts ?? [];
+  const dataHubContactsLoading = dataHubAudienceQuery.isFetching;
 
   const loadCrmContactsData = useCallback(async (segment = crmSegment) => {
     setContactsLoading(true);
@@ -134,6 +171,22 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
       toast.error('Failed to load Exly contacts: ' + e.message);
     }
   }, [exlyAudienceQuery, toast]);
+
+  const loadDataHubContactsData = useCallback(async () => {
+    setDataHubLoadRequested(true);
+    try {
+      const result = await dataHubAudienceQuery.refetch();
+      if (result.error) {
+        toast.error('Failed to load Data Hub contacts: ' + (result.error.message || 'Unknown error'));
+        return;
+      }
+      const count = result.data?.contacts?.length ?? 0;
+      if (count === 0) toast.warn('No Data Hub contacts found for the current folder.');
+      else toast.success(`Loaded ${count} Data Hub contact(s).`);
+    } catch (e) {
+      toast.error('Failed to load Data Hub contacts: ' + e.message);
+    }
+  }, [dataHubAudienceQuery, toast]);
 
   const handleCsvUpload = useCallback((e) => {
     const file = e.target.files[0];
@@ -226,13 +279,22 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     return true;
   }), [allExlyContacts, searchTerm, exlyOfferingIdsFilter, exlyLeadStatusFilter]);
 
-  const displayContacts = useMemo(() => (
-    audienceSource === 'exly' ? filteredExlyContacts : filteredContacts
-  ), [audienceSource, filteredExlyContacts, filteredContacts]);
+  const filteredDataHubContacts = useMemo(() => allDataHubContacts.filter((c) => {
+    if (!c.email) return false;
+    if (searchTerm && !c.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !c.email?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  }), [allDataHubContacts, searchTerm]);
+
+  const displayContacts = useMemo(() => {
+    if (audienceSource === 'exly') return filteredExlyContacts;
+    if (audienceSource === 'datahub') return filteredDataHubContacts;
+    return filteredContacts;
+  }, [audienceSource, filteredExlyContacts, filteredDataHubContacts, filteredContacts]);
 
   const previewRecipients = useMemo(() => {
     const selectedCrm = allContacts.filter((c) => selectedLeadIds.includes(c._id));
     const selectedExly = allExlyContacts.filter((c) => selectedExlyIds.includes(c._id));
+    const selectedDataHub = allDataHubContacts.filter((c) => selectedDataHubIds.includes(c._id));
     return [
       ...activeCsvRecipients,
       ...manualRecipients,
@@ -242,8 +304,9 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
         email: c.email,
         rowData: exlyContactToRowData(c),
       })),
+      ...selectedDataHub.map(dataHubContactToPreviewRow),
     ];
-  }, [activeCsvRecipients, manualRecipients, selectedLeadIds, selectedExlyIds, allContacts, allExlyContacts]);
+  }, [activeCsvRecipients, manualRecipients, selectedLeadIds, selectedExlyIds, selectedDataHubIds, allContacts, allExlyContacts, allDataHubContacts]);
 
   const selectedCrmLeadIds = useMemo(
     () => previewRecipients.filter((r) => r.leadId).map((r) => r.leadId),
@@ -268,6 +331,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const resetAudience = useCallback(() => {
     setSelectedLeadIds([]);
     setSelectedExlyIds([]);
+    setSelectedDataHubIds([]);
     setCsvRecipients([]);
     setCsvFileName('');
     setExcludedSources([]);
@@ -275,6 +339,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     setManualRecipients([]);
     setAllContacts([]);
     setExlyLoadRequested(false);
+    setDataHubLoadRequested(false);
+    setDataHubFolderFilter('all');
     setExlyOfferingFilter('all');
     setExlyOfferingIdsFilter([]);
     setExlyLeadStatusFilter('all');
@@ -283,17 +349,18 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   return {
     selectedLeadIds, setSelectedLeadIds,
     selectedExlyIds, setSelectedExlyIds,
+    selectedDataHubIds, setSelectedDataHubIds,
     csvRecipients, setCsvRecipients, csvFileName,
     excludedSources, setExcludedSources,
     excludedEmails, setExcludedEmails,
-    loadingHolySheet, loadCrmContactsData, loadExlyContactsData,
-    contactsLoading, exlyContactsLoading,
+    loadingHolySheet, loadCrmContactsData, loadExlyContactsData, loadDataHubContactsData,
+    contactsLoading, exlyContactsLoading, dataHubContactsLoading,
     handleCsvUpload, fetchHolySheetData,
     searchTerm, setSearchTerm,
     audienceSource, setAudienceSource,
     manualRecipients, setManualRecipients,
-    allContacts, allExlyContacts,
-    filteredContacts, filteredExlyContacts, displayContacts,
+    allContacts, allExlyContacts, allDataHubContacts,
+    filteredContacts, filteredExlyContacts, filteredDataHubContacts, displayContacts,
     previewRecipients, availableColumns, audienceHealth,
     buildMergedRecipients, buildLeadIds, resetAudience,
     crmSegment, setCrmSegment,
@@ -304,6 +371,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     exlyOfferingIdsFilter, setExlyOfferingIdsFilter,
     exlyLeadStatusFilter, setExlyLeadStatusFilter,
     exlyOfferingFilter, setExlyOfferingFilter,
+    dataHubFolderFilter, setDataHubFolderFilter,
     activeCsvRecipients,
   };
 }

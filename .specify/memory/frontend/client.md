@@ -82,7 +82,7 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 | `dashboard/` | Widgets: todos, calendar, pinboard, leaderboard |
 | `dataHub/` | Person detail panel, folder sidebar |
 | `crm/` | `LeadArtistJourneySection` (webinar Q&A + artist journey on lead modal); `useLeadDetail` in `hooks/queries/crm.js`
-| `emails/` | Email hub, `CampaignWizardShell`, `StepAudienceMapping` (CRM/Exly/CSV tiles, audience filters, select/deselect all) |
+| `emails/` | Email hub, `CampaignWizardShell`, `StepAudienceMapping` (CSV/HolySheet/**Data Hub**/CRM/Exly/Manual tiles, inlet folder filter, audience filters, select/deselect all) |
 | `finance/` | Upload modal, needs-attention |
 | `forms/` | Project/member/workspace selects |
 | `tasks/` | Task list, detail modal, activity, completion |

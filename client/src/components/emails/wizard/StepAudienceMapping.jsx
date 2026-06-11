@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import {
-  Upload, RefreshCw, Users, Sheet, UserPlus, AlertCircle, Check, CheckCircle2, ShoppingBag,
+  Upload, RefreshCw, Users, Sheet, UserPlus, AlertCircle, Check, CheckCircle2, ShoppingBag, Database,
 } from 'lucide-react';
 import { Button, Input, Badge, DataTable, TabSwitcher, NexusDropdown } from '../../ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isAdminUser } from '../../../utils/departmentPermissions';
 import { useCRMConfig } from '../../../hooks/queries/crm';
-import { useCampaignExlyOfferings } from '../../../hooks/queries/mail';
+import { useCampaignExlyOfferings, useCampaignDataHubFolders } from '../../../hooks/queries/mail';
 
 const ALL_SOURCE_TILES = [
   { id: 'csv', label: 'CSV Upload', icon: Upload },
   { id: 'holysheet', label: 'HolySheet', icon: Sheet, adminOnly: true },
+  { id: 'datahub', label: 'Data Hub', icon: Database, adminOnly: true },
   { id: 'crm', label: 'CRM', icon: Users },
   { id: 'exly', label: 'Exly', icon: ShoppingBag },
   { id: 'manual', label: 'Manual', icon: UserPlus },
@@ -35,9 +36,12 @@ export default function StepAudienceMapping({
   const exlyOfferingsQuery = useCampaignExlyOfferings({
     enabled: audience.audienceSource === 'exly',
   });
+  const dataHubFoldersQuery = useCampaignDataHubFolders({
+    enabled: audience.audienceSource === 'datahub' && showHolySheet,
+  });
 
   useEffect(() => {
-    if (!showHolySheet && audience.audienceSource === 'holysheet') {
+    if (!showHolySheet && (audience.audienceSource === 'holysheet' || audience.audienceSource === 'datahub')) {
       audience.setAudienceSource('csv');
     }
   }, [showHolySheet, audience]);
@@ -79,13 +83,32 @@ export default function StepAudienceMapping({
     { value: 'event_database', label: 'Event database' },
   ];
 
+  const dataHubFolderOptions = useMemo(
+    () => (dataHubFoldersQuery.data?.folders || []).map((f) => ({
+      value: f.key,
+      label: `${f.label}${f.count != null ? ` (${f.count})` : ''}`,
+    })),
+    [dataHubFoldersQuery.data?.folders],
+  );
+
   const isExlySource = audience.audienceSource === 'exly';
+  const isDataHubSource = audience.audienceSource === 'datahub';
   const loadedCount = isExlySource
     ? (audience.allExlyContacts?.length ?? 0)
-    : (audience.allContacts?.length ?? 0);
+    : isDataHubSource
+      ? (audience.allDataHubContacts?.length ?? 0)
+      : (audience.allContacts?.length ?? 0);
   const filteredCount = audience.displayContacts?.length ?? 0;
-  const selectedIds = isExlySource ? audience.selectedExlyIds : audience.selectedLeadIds;
-  const setSelectedIds = isExlySource ? audience.setSelectedExlyIds : audience.setSelectedLeadIds;
+  const selectedIds = isExlySource
+    ? audience.selectedExlyIds
+    : isDataHubSource
+      ? audience.selectedDataHubIds
+      : audience.selectedLeadIds;
+  const setSelectedIds = isExlySource
+    ? audience.setSelectedExlyIds
+    : isDataHubSource
+      ? audience.setSelectedDataHubIds
+      : audience.setSelectedLeadIds;
 
   const setMapping = (idx, col) => {
     setValue('variableMapping', { ...variableMapping, [idx]: col }, { shouldValidate: true });
@@ -93,7 +116,7 @@ export default function StepAudienceMapping({
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className={`grid gap-3 ${sourceTiles.length >= 5 ? 'grid-cols-2 md:grid-cols-5' : sourceTiles.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'}`}>
+      <div className={`grid gap-3 ${sourceTiles.length >= 6 ? 'grid-cols-2 md:grid-cols-6' : sourceTiles.length >= 5 ? 'grid-cols-2 md:grid-cols-5' : sourceTiles.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'}`}>
         {sourceTiles.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -212,6 +235,46 @@ export default function StepAudienceMapping({
             <AudienceContactTable
               audience={audience}
               isExlySource={false}
+              filteredCount={filteredCount}
+              loadedCount={loadedCount}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+            />
+          )}
+        </div>
+      )}
+
+      {audience.audienceSource === 'datahub' && (
+        <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={audience.loadDataHubContactsData}
+              disabled={audience.dataHubContactsLoading}
+            >
+              <RefreshCw size={12} className={audience.dataHubContactsLoading ? 'animate-spin' : ''} /> Load Data Hub
+            </Button>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              Unified people from Admin Data Hub inlets
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <NexusDropdown
+              label="Data folder"
+              placeholder="All people"
+              options={dataHubFolderOptions}
+              value={audience.dataHubFolderFilter || 'all'}
+              onChange={(v) => audience.setDataHubFolderFilter?.(v)}
+              searchable
+            />
+          </div>
+
+          {loadedCount > 0 && (
+            <AudienceContactTable
+              audience={audience}
+              isExlySource={false}
+              isDataHubSource
               filteredCount={filteredCount}
               loadedCount={loadedCount}
               selectedIds={selectedIds}
@@ -362,6 +425,7 @@ export default function StepAudienceMapping({
 function AudienceContactTable({
   audience,
   isExlySource,
+  isDataHubSource = false,
   filteredCount,
   loadedCount,
   selectedIds,
@@ -430,6 +494,14 @@ function AudienceContactTable({
               </Badge>
             ),
           },
+          ...(isDataHubSource ? [{
+            header: 'Inlets',
+            render: (row) => (
+              <span className="text-[9px] text-[var(--color-text-muted)] truncate max-w-[140px] inline-block">
+                {(row.inletLabels || []).join(', ') || '—'}
+              </span>
+            ),
+          }] : []),
           ...(isExlySource ? [{
             header: 'Offering',
             render: (row) => (

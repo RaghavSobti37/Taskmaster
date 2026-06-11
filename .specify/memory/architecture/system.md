@@ -1,23 +1,23 @@
-# System Architecture
+﻿# System Architecture
 
 ## High-level diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     React SPA (Vite + PWA) — Vercel                     │
-│  Dashboard │ Projects │ CRM │ Finance │ Inbox │ Schedule │ Admin │ Hub  │
-│            TanStack Query  │  Service Worker (sw.js)  │  Socket.IO      │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │  Same-origin /api/* + /socket.io/* proxy
-┌────────────────────────────▼────────────────────────────────────────────┐
-│                    Express API (server.js) — Render                     │
-│  Auth │ Tasks │ Projects │ CRM │ Mail │ Notifications │ Data Hub        │
-│  SystemHealthService │ Rate Limiting │ Helmet │ Gzip │ Trace IDs        │
-└──────┬──────────────┬──────────────┬──────────────┬─────────────────────┘
-       │              │              │              │
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                     React SPA (Vite + PWA) â€” Vercel                     â”‚
+â”‚  Dashboard â”‚ Projects â”‚ CRM â”‚ Finance â”‚ Inbox â”‚ Schedule â”‚ Admin â”‚ Hub  â”‚
+â”‚            TanStack Query  â”‚  Service Worker (sw.js)  â”‚  Socket.IO      â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                             â”‚  Same-origin /api/* + /socket.io/* proxy
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    Express API (server.js) â€” Render                     â”‚
+â”‚  Auth â”‚ Tasks â”‚ Projects â”‚ CRM â”‚ Mail â”‚ Notifications â”‚ Data Hub        â”‚
+â”‚  SystemHealthService â”‚ Rate Limiting â”‚ Helmet â”‚ Gzip â”‚ Trace IDs        â”‚
+â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+       â”‚              â”‚              â”‚              â”‚
    MongoDB        Redis/BullMQ   Socket.IO     External APIs
-   (Mongoose)     (queues)       (realtime)    (Exly, Resend, Google, Meta…)
-       │
+   (Mongoose)     (queues)       (realtime)    (Exly, Resend, Google, Metaâ€¦)
+       â”‚
    Supabase Postgres (secondary mirror via post-save hooks + sync worker)
 ```
 
@@ -26,13 +26,14 @@
 ## Request lifecycle
 
 1. Browser hits `tsccoreknot.com` (or `localhost:5173` in dev)
-2. API calls use relative `/api/...` (Vercel/Vite proxy → Render API)
-3. `authMiddleware` verifies `coreknot_token_v3`, slides session if due
-4. Page-permission checks on gated Express routers (mail, admin, CRM, workspace, proxy)
-5. `tenantPlugin` scopes queries to user's tenant
-6. Controller → Service → Model
-7. `notificationDispatcher` / `systemLogService` / Supabase mirrors on write
-8. Socket.IO broadcasts realtime updates to subscribed channels
+2. **Local dev:** Vite proxies to `localhost:5000`; on OneDrive-synced repos, watch `awaitWriteFinish` and ignored `public/icons` reduce spurious HMR full reloads
+3. API calls use relative `/api/...` (Vercel/Vite proxy â†’ Render API)
+4. `authMiddleware` verifies `coreknot_token_v3`, slides session if due
+5. Page-permission checks on gated Express routers (mail, admin, CRM, workspace, proxy)
+6. `tenantPlugin` scopes queries to user's tenant
+7. Controller â†’ Service â†’ Model
+8. `notificationDispatcher` / `systemLogService` / Supabase mirrors on write
+9. Socket.IO broadcasts realtime updates to subscribed channels
 
 ---
 
@@ -40,30 +41,30 @@
 
 ```
 Taskmaster/
-├── client/              React 18 SPA (Vite 5, Tailwind v4)
-│   └── src/
-│       ├── App.jsx      Routes, lazy loading, auth gates
-│       ├── pages/       60+ routed pages
-│       ├── components/  24 subfolders (admin, dashboard, tasks, ui, brand…)
-│       ├── hooks/       useTaskmasterQueries, useStatusCounts, etc.
-│       ├── contexts/    Auth, Theme, Sidebar, Toast, Confirm
-│       └── lib/         realtime, systemLogBridge, loadingDisplay
-├── server/              Node.js Express API
-│   ├── app/             createApp, registerRoutes, startServer
-│   ├── domains/       auth, crm, mail, tasks, projects, artists, data-hub…
-│   ├── routes/          Legacy route shims (53 files)
-│   ├── models/          72 Mongoose models
-│   ├── services/        90+ service files
-│   ├── workers/         6 background workers
-│   └── scripts/         113+ maintenance scripts
-├── nestjs-server/       NestJS migration (port 5001)
-├── shared/              Cross-runtime contracts + business rules
-├── e2e/                 Playwright specs
-├── scripts/             Root audit/verify tooling
-└── docs/                Long-form specs
+â”œâ”€â”€ client/              React 18 SPA (Vite 5, Tailwind v4)
+â”‚   â””â”€â”€ src/
+â”‚       â”œâ”€â”€ App.jsx      Routes, lazy loading, auth gates
+â”‚       â”œâ”€â”€ pages/       60+ routed pages
+â”‚       â”œâ”€â”€ components/  24 subfolders (admin, dashboard, tasks, ui, brandâ€¦)
+â”‚       â”œâ”€â”€ hooks/       useTaskmasterQueries, useStatusCounts, etc.
+â”‚       â”œâ”€â”€ contexts/    Auth, Theme, Sidebar, Toast, Confirm
+â”‚       â””â”€â”€ lib/         realtime, systemLogBridge, loadingDisplay
+â”œâ”€â”€ server/              Node.js Express API
+â”‚   â”œâ”€â”€ app/             createApp, registerRoutes, startServer
+â”‚   â”œâ”€â”€ domains/       auth, crm, mail, tasks, projects, artists, data-hubâ€¦
+â”‚   â”œâ”€â”€ routes/          Legacy route shims (53 files)
+â”‚   â”œâ”€â”€ models/          72 Mongoose models
+â”‚   â”œâ”€â”€ services/        90+ service files
+â”‚   â”œâ”€â”€ workers/         6 background workers
+â”‚   â””â”€â”€ scripts/         113+ maintenance scripts
+â”œâ”€â”€ nestjs-server/       NestJS migration (port 5001)
+â”œâ”€â”€ shared/              Cross-runtime contracts + business rules
+â”œâ”€â”€ e2e/                 Playwright specs
+â”œâ”€â”€ scripts/             Root audit/verify tooling
+â””â”€â”€ docs/                Long-form specs
 ```
 
-**Path aliases (client):** `@` → `./src`, `@shared` → `../shared`
+**Path aliases (client):** `@` â†’ `./src`, `@shared` â†’ `../shared`
 
 ---
 
@@ -93,5 +94,5 @@ Vercel/Vite proxy flips individual `/api/<domain>` prefixes to NestJS as domains
 ## Realtime
 
 - Socket.IO on Express HTTP server (`server/config/realtime.js`)
-- Client: `client/src/lib/realtime.js` — `subscribeToChannel`
+- Client: `client/src/lib/realtime.js` â€” `subscribeToChannel`
 - JWT-authenticated connections

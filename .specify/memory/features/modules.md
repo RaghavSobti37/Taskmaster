@@ -24,6 +24,13 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 ---
 
+
+## Daily logs (productivity)
+
+- **Scope:** `GET /api/logs` defaults to authenticated user; `userId=all` admin-only; non-admins cannot pass another user's id
+- **Client:** `DailyLogPage` uses self or admin impersonation id only — no `?user=` override
+- **Page:** `/daily-log` (attendance metrics tie-in via `shared/attendanceMetrics.js`)
+
 ## CRM & Leads
 
 - Lead CRUD, follow-ups, EMIs, audit logs, stats

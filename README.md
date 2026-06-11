@@ -119,6 +119,8 @@ avPageAccess, pagePermissions) |
 | **Pagination** | `DataTable` / `TablePagination` default **10 entries** via `DEFAULT_TABLE_PAGE_SIZE`; server-side pages clamp when filters shrink; Followups + Booking Enquiries wired to full pagination API |
 | **Campaign location & mail studio** | Option C WYSIWYG block spacing (`shared/emailBlockSpacing.cjs`); campaign + aggregate analytics show **registered CRM city** breakdown (opens/clicks attributed via `Lead.location` / `Lead.city`, not IP geo); shared `RegisteredLocationBarChart`; rebuild: `node server/scripts/rebuildCampaignLocationBreakdown.js <id> [--prod]`; Resend backfill: `node server/scripts/backfillCampaignFromResend.js <id> [--prod]` |
 | **Supabase secondary store** | Offloads logs, audits, mail rollups, CRM snapshots, and **production backups** from Atlas M0; Mongo stays primary for live CRM/email; `Last Backup` widget + Data Hub **DB Backup** ? Supabase Storage (`taskmaster-backups`); auto-purges Mongo GridFS after successful Supabase dump ? see [Backup & Supabase](#backup--supabase-secondary-store) |
+| **Local dev stability (Jun 2026)** | OneDrive-friendly Vite `awaitWriteFinish` + ignored paths; `generateVercelConfig` skips noop writes; dev builds skip service worker registration |
+| **Daily logs RBAC** | Non-admins always see self logs; `userId=all` requires admin; client ignores `?user=` tampering |
 | **Local dev tools** | **Agentation** annotate button (`agentation` devDependency) ? only when `VITE_ENABLE_AGENTATION=true` in `client/.env.development`; compile-time stripped from production builds |
 
 Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) ? UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
@@ -222,6 +224,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Mail Template Studio & Outbound HTML Pipeline
 
+* **Inline images (raw HTML):** Mail Template Studio uploads assets via Uploadthing, stores `MailTemplate.assets`, inserts `<img>` in raw HTML mode, and `buildFinalEmailHtml` normalizes absolute image URLs before send (locked tracking layer unchanged).
 * **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` ? visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft ? submit ? approve/reject workflow.
 * **Named approvers:** `shared/mailTemplateApprovers.js` lists emails who can approve/reject pending templates in addition to admin-department users (`canApproveMailTemplates` on client + server). Submit notifications go to both admin department and named approvers.
 * **Emails page access:** `/emails` is available to every authenticated user (`hasPageAccess` bypass for `emails`); `emails` is included in `BASE_PAGE_KEYS` for department defaults.

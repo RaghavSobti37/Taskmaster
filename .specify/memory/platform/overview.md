@@ -19,11 +19,11 @@
 | **CRM & sales** | Leads, follow-ups, booked calls, artist CRM, phone validation, Exly integration |
 | **Data Hub** | Unified person/contact graph across multiple data inlets |
 | **Data Master** | Person golden-record spine (`Person`, `PersonIdentifier`, `PersonHubView`) |
-| **Email** | Campaigns, templates, HolySheet, open/click tracking, newsletter, Resend dispatch |
+| **Email** | Campaigns, templates, HolySheet, raw HTML inline image upload, open/click tracking, newsletter, Resend dispatch |
 | **Finance** | Document OCR, invoices, reimbursements, USD/INR, folder hierarchy |
 | **HR / attendance** | Manual Office/WFH check-in, worked vs daily-log metrics, leave requests |
 | **Artists** | Spotify/YouTube/Meta analytics, Artist Path questionnaire, booking enquiries |
-| **Artist OS** | Per-artist command center, documents, finance, gigs, inquiries — department page keys + team access |
+| **Artist OS** | Per-artist command center, documents, finance, gigs, inquiries ï¿½ department page keys + team access |
 | **Gamification** | XP, levels, weekly leaderboard (Monday IST reset), missions |
 | **Notifications** | In-app inbox, email, Web Push (VAPID), attendance checkout reminders |
 | **Admin / ops** | System logs, QA runner (209+ cases), curated script runner, platform roles |

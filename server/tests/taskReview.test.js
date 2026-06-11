@@ -134,7 +134,7 @@ describe('task review workflow', () => {
     expect(updated.completedAt).toBeFalsy();
   });
 
-  test('assignee list edits preserve original assigner for review routing', async () => {
+  test('assignee list edits preserve original assigner when assignees unchanged', async () => {
     const task = await Task.create({
       title: 'Preserve assigner',
       createdBy: creator._id,
@@ -155,6 +155,38 @@ describe('task review workflow', () => {
 
     const row = await TaskAssignment.findOne({ taskId: task._id }).lean();
     expect(row.assignedBy.toString()).toBe(creator._id.toString());
+    const persisted = await Task.findById(task._id).lean();
+    expect(persisted.createdBy.toString()).toBe(creator._id.toString());
+  });
+
+  test('reassigning task sets assigner as creator and assignedBy', async () => {
+    const otherAssignee = await User.create({
+      name: 'Other Assignee',
+      email: `other-assignee-${Date.now()}@test.com`,
+    });
+    const task = await Task.create({
+      title: 'Reassign creator',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(
+      task._id,
+      { assignees: [otherAssignee._id.toString()] },
+      assignee,
+      null
+    );
+
+    const row = await TaskAssignment.findOne({ taskId: task._id }).lean();
+    expect(row.userId.toString()).toBe(otherAssignee._id.toString());
+    expect(row.assignedBy.toString()).toBe(assignee._id.toString());
+    const persisted = await Task.findById(task._id).lean();
+    expect(persisted.createdBy.toString()).toBe(assignee._id.toString());
   });
 
   test('assignee can reopen completed task', async () => {

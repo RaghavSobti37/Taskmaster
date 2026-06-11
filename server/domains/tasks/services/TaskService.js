@@ -41,7 +41,7 @@ const { validateTaskTimelineForRequest } = require('../../../utils/dateValidatio
 const {
   normalizeAssigneeIds: normalizeTaskAssigneeIds,
   filterUserIdsByTaskScope,
-  assertAssigneesInTaskScope,
+  assertAssigneesAreTenantUsers,
   syncMentionAccessIds,
   userHasTaskScopeAccess,
 } = require('../../../utils/taskAccess');
@@ -137,9 +137,6 @@ const stripUnchangedTimelineFields = (coreUpdates, existing) => {
   }
 };
 
-/** Project memberRoles values that may assign tasks to others on that project. */
-const PROJECT_ASSIGN_ROLES = new Set(['admin', 'manager', 'artist_management']);
-
 const memberRoleUserId = (entry) => (entry?.user?._id || entry?.user)?.toString?.() || null;
 
 const getProjectRole = (project, userId) => {
@@ -155,11 +152,8 @@ const getProjectRole = (project, userId) => {
   return getProjectRoleForUser(project, userId);
 };
 
-const canAssignTasks = (project, user) => {
-  if (isAdminUser(user)) return true;
-  const role = getProjectRole(project, user._id);
-  return Boolean(role && PROJECT_ASSIGN_ROLES.has(role));
-};
+/** Any authenticated user who can mutate a task may assign to any tenant user. */
+const canAssignTasks = () => true;
 
 const userHasProjectAccess = (project, userId) => Boolean(getProjectRole(project, userId));
 
@@ -520,20 +514,9 @@ exports.createTask = async (taskData, user, session) => {
   const actorId = user._id.toString();
   const platformOwnerId = await getPlatformOwnerUserId(session);
   const others = othersExcludeActorAndRaghav(assigneeIds, actorId, platformOwnerId);
-  const mentionOnlyAssign = others.length > 0 && others.every((id) => scopedMentionSet.has(id));
-
-  if (others.length && project && !canAssignTasks(project, user) && !mentionOnlyAssign) {
-    throw new Error('Not authorized to assign tasks to others on this project');
-  }
 
   if (others.length) {
-    await assertAssigneesInTaskScope({
-      taskScope: { projectId: coreData.projectId, workspace: coreData.workspace },
-      assigneeIds: others,
-      actingUser: user,
-      project,
-      session,
-    });
+    await assertAssigneesAreTenantUsers({ assigneeIds: others, session });
   }
 
   const [task] = await Task.create([{ ...coreData, createdBy: user._id }], { session });
@@ -1025,13 +1008,20 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   let assigneesChanged = false;
   if (assignees && task) {
-    const project = task.projectId ? await Project.findById(task.projectId).session(session) : null;
-    const creatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
-    const newAssignees = normalizeTaskAssigneeIds(
-      assignees.map((a) => (typeof a === 'object' && a._id ? a._id : a).toString()),
-      creatorId || user._id
+    const existingCreatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
+    const incomingAssigneeIds = assignees.map(
+      (a) => (typeof a === 'object' && a._id ? a._id : a).toString()
+    );
+    const newAssigneesForCompare = normalizeTaskAssigneeIds(
+      incomingAssigneeIds,
+      existingCreatorId || user._id
     );
     const oldAssignees = assignments.map((a) => (a.userId?._id || a.userId).toString());
+    const assigneesUnchanged = newAssigneesForCompare.join(',') === oldAssignees.join(',');
+    const assignerCreatorId = user._id.toString();
+    const newAssignees = assigneesUnchanged
+      ? newAssigneesForCompare
+      : normalizeTaskAssigneeIds(incomingAssigneeIds, assignerCreatorId);
     let addingOthers = newAssignees.some((id) => id !== user._id.toString());
 
     if (addingOthers && platformOwnerId) {
@@ -1040,26 +1030,17 @@ exports.updateTask = async (taskId, updates, user, session) => {
       );
     }
 
-    const assigneesUnchanged = newAssignees.join(',') === oldAssignees.join(',');
-    if (!assigneesUnchanged && addingOthers && project && !canAssignTasks(project, user)) {
-      throw new Error('Not authorized to assign tasks to others on this project');
-    }
-
     if (!assigneesUnchanged && addingOthers) {
       const othersToValidate = newAssignees.filter(
         (id) => id !== user._id.toString() && id !== platformOwnerId
       );
-      await assertAssigneesInTaskScope({
-        taskScope: task,
-        assigneeIds: othersToValidate,
-        actingUser: user,
-        project,
-        session,
-      });
+      await assertAssigneesAreTenantUsers({ assigneeIds: othersToValidate, session });
     }
 
     if (!assigneesUnchanged) {
       assigneesChanged = true;
+      await Task.findByIdAndUpdate(task._id, { createdBy: user._id }, { session });
+      task.createdBy = user._id;
       const oldAssignmentsSnapshot = [...assignments];
       await TaskAssignment.deleteMany({ taskId: task._id }, { session });
       let insertedAssignments = [];
@@ -1068,7 +1049,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
           task._id,
           newAssignees,
           user._id,
-          creatorId,
+          assignerCreatorId,
           assignments
         );
         await TaskAssignment.insertMany(insertedAssignments, { session });

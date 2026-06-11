@@ -17,6 +17,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 - Status flow: `todo` → `in-progress` → `in-review` → `done`
 - Assignees via `TaskAssignment` join — creator on `task.createdBy` only
+- **Assignment:** Any authenticated user may assign any tenant user (directory-scoped); project role does not gate assignment. On create or reassignment, assigner becomes `createdBy`. Viewer role still blocks task mutations on a project.
 - Activity timeline, @mentions with unread receipts
 - Bug report FAB → `POST /api/tasks/bug` → Tech Stack project
 - Completed tasks hidden after 2 days (`taskListFilter.js`)

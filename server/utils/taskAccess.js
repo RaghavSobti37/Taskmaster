@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const User = require('../models/User');
 const Workspace = require('../models/Workspace');
 const { getProjectRoleForUser } = require('../../shared/projectRoles');
 const { normalizeId } = require('../../shared/taskReviewRules');
@@ -64,9 +65,22 @@ const filterUserIdsByTaskScope = async (task, userIds, session = null) => {
   return [...new Set(out)];
 };
 
+/** Assignees must exist as users in the current tenant (directory-scoped). */
+const assertAssigneesAreTenantUsers = async ({ assigneeIds, session = null }) => {
+  const ids = [...new Set((assigneeIds || []).map(normalizeId).filter(Boolean))];
+  if (!ids.length) return;
+
+  const q = User.find({ _id: { $in: ids } }).select('_id').lean();
+  const found = session ? await q.session(session) : await q;
+  if (found.length !== ids.length) {
+    throw new Error('Invalid assignee: user not found');
+  }
+};
+
 /**
  * Assignees must be project/workspace members unless a platform admin who is not on
  * the project assigns (explicit admin bypass for cross-team delegation).
+ * @deprecated Prefer assertAssigneesAreTenantUsers for task assignment.
  */
 const assertAssigneesInTaskScope = async ({
   taskScope,
@@ -132,6 +146,7 @@ module.exports = {
   userHasTaskScopeAccess,
   userHasProjectAccess,
   filterUserIdsByTaskScope,
+  assertAssigneesAreTenantUsers,
   assertAssigneesInTaskScope,
   syncMentionAccessIds,
   getProjectRole,

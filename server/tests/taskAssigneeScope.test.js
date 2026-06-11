@@ -9,7 +9,7 @@ const adminActor = (user) => ({
   departmentId: { slug: 'admin', permissionPreset: 'admin' },
 });
 
-describe('task assignee project scope (BUG-T5)', () => {
+describe('task assignee scope (open assignment)', () => {
   let sandbox;
   let projectLead;
   let projectMember;
@@ -48,21 +48,26 @@ describe('task assignee project scope (BUG-T5)', () => {
     });
   });
 
-  test('project lead cannot assign off-project user on create', async () => {
-    await expect(
-      TaskService.createTask(
-        {
-          title: 'Off-project create',
-          projectId: sandbox._id,
-          assignees: [offProjectUser._id.toString()],
-        },
-        adminActor(projectLead),
-        null
-      )
-    ).rejects.toThrow(/assignee must be a project member/);
+  test('project lead can assign any tenant user on create', async () => {
+    const { taskDto } = await TaskService.createTask(
+      {
+        title: 'Off-project create',
+        projectId: sandbox._id,
+        assignees: [offProjectUser._id.toString()],
+      },
+      adminActor(projectLead),
+      null
+    );
+
+    expect(taskDto._id).toBeTruthy();
+    expect(taskDto.createdBy?._id?.toString?.() || taskDto.createdBy?.toString?.())
+      .toBe(projectLead._id.toString());
+    const row = await TaskAssignment.findOne({ taskId: taskDto._id }).lean();
+    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
+    expect(row.assignedBy.toString()).toBe(projectLead._id.toString());
   });
 
-  test('project lead cannot assign off-project user on update', async () => {
+  test('project lead can assign any tenant user on update; assigner becomes creator', async () => {
     const { taskDto } = await TaskService.createTask(
       {
         title: 'Reassign scope',
@@ -73,20 +78,21 @@ describe('task assignee project scope (BUG-T5)', () => {
       null
     );
 
-    await expect(
-      TaskService.updateTask(
-        taskDto._id,
-        { assignees: [offProjectUser._id.toString()] },
-        adminActor(projectLead),
-        null
-      )
-    ).rejects.toThrow(/assignee must be a project member/);
+    const updated = await TaskService.updateTask(
+      taskDto._id,
+      { assignees: [offProjectUser._id.toString()] },
+      adminActor(projectLead),
+      null
+    );
 
     const row = await TaskAssignment.findOne({ taskId: taskDto._id }).lean();
-    expect(row.userId.toString()).toBe(projectMember._id.toString());
+    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
+    expect(row.assignedBy.toString()).toBe(projectLead._id.toString());
+    const creatorId = updated.taskDto.createdBy?._id || updated.taskDto.createdBy;
+    expect(creatorId.toString()).toBe(projectLead._id.toString());
   });
 
-  test('project member cannot assign off-project user', async () => {
+  test('project member assignee can assign any tenant user', async () => {
     const task = await Task.create({
       title: 'Member assign attempt',
       projectId: sandbox._id,
@@ -99,17 +105,20 @@ describe('task assignee project scope (BUG-T5)', () => {
       assignedBy: projectLead._id,
     });
 
-    await expect(
-      TaskService.updateTask(
-        task._id,
-        { assignees: [offProjectUser._id.toString()] },
-        projectMember,
-        null
-      )
-    ).rejects.toThrow(/authorized/);
+    const updated = await TaskService.updateTask(
+      task._id,
+      { assignees: [offProjectUser._id.toString()] },
+      projectMember,
+      null
+    );
+
+    const row = await TaskAssignment.findOne({ taskId: task._id }).lean();
+    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
+    const creatorId = updated.taskDto.createdBy?._id || updated.taskDto.createdBy;
+    expect(creatorId.toString()).toBe(projectMember._id.toString());
   });
 
-  test('platform admin not on project may assign off-project user (explicit bypass)', async () => {
+  test('platform admin not on project may assign off-project user', async () => {
     const { taskDto } = await TaskService.createTask(
       {
         title: 'Admin cross assign',

@@ -11,7 +11,7 @@ import { suppressAutoToasts } from '../lib/notifications';
 import { useSystemToast } from '../lib/systemLogBridge';
 import { mergeMentionedUserIdsIntoAssignees } from '../utils/mentionTokens';
 
-const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
+const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
   const createTaskMutation = useCreateTask();
   const { addToast } = useSystemToast();
@@ -19,14 +19,6 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
   const { data: fetchedProjects = [] } = useProjects();
   const { data: directoryUsers = [] } = useUserDirectory(isOpen);
   const projects = passedProjects || fetchedProjects;
-
-  const assigneePool = React.useMemo(() => {
-    if (!passedMembers?.length) return directoryUsers;
-    const memberIds = new Set(
-      passedMembers.map((m) => String(m._id || m.user?._id || m)).filter(Boolean)
-    );
-    return directoryUsers.filter((u) => memberIds.has(String(u._id)));
-  }, [passedMembers, directoryUsers]);
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -95,7 +87,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       projectId: formValues.projectId || null,
       assignees: mergeMentionedUserIdsIntoAssignees(
         formValues.assignees,
-        assigneePool,
+        directoryUsers,
         title,
         desc
       ).filter((id) => id !== user?._id),
@@ -135,7 +127,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             values={formValues}
             onChange={setFormValues}
             projects={projects}
-            members={assigneePool}
+            members={directoryUsers}
             excludeAssigneeUserId={user?._id}
             showProject={!initialProjectId}
             lockProject={!!initialProjectId}

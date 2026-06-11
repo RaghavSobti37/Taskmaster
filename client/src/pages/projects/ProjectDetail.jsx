@@ -399,7 +399,6 @@ const ProjectDetail = () => {
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
         projectId={id}
-        members={project.members}
         onTaskCreated={handleTaskCreated}
       />
 

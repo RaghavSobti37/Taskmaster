@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const OfficeContact = require('../models/OfficeContact');
-const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
+const { protect, opsOrAdmin, requirePageAccess } = require('../middleware/authMiddleware');
+
+const contactsPage = requirePageAccess('contacts');
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', contactsPage, async (req, res) => {
   try {
     const contacts = await OfficeContact.find()
       .populate('addedBy', 'name email')
@@ -16,7 +18,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', contactsPage, async (req, res) => {
   try {
     const contact = new OfficeContact({
       ...req.body,
@@ -30,7 +32,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', contactsPage, async (req, res) => {
   try {
     const updated = await OfficeContact.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('addedBy', 'name email');
     if (!updated) return res.status(404).json({ error: 'Contact not found' });
@@ -40,7 +42,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', opsOrAdmin, async (req, res) => {
+router.delete('/:id', contactsPage, async (req, res) => {
   try {
     await OfficeContact.findByIdAndDelete(req.params.id);
     res.json({ message: 'Contact removed' });

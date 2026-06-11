@@ -23,7 +23,7 @@ export default function ArtistEditDrawer({
       onClose={onClose}
       title={artist.name || 'Artist Profile'}
       subtitle={`Workspace ID · ${artist._id}`}
-      onSave={onSave}
+      onSave={isPreview ? undefined : onSave}
       hasChanges={!stableJsonEqual(editedArtist, artist)}
       onCancel={() => setEditedArtist(cloneSnapshot(artist))}
       sidebar={

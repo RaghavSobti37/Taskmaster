@@ -9,7 +9,7 @@ const TSC_FIELDS = [
   'originSource', 'dataType', 'destination', 'timestamp', 'mediaUrl', 'sourceFilename',
 ];
 
-export default function DataHubTscImport({ onImported, compact = false }) {
+export default function DataHubTscImport({ onImported, compact = false, className = '' }) {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importStep, setImportStep] = useState(1);
   const [importFile, setImportFile] = useState(null);
@@ -60,7 +60,7 @@ export default function DataHubTscImport({ onImported, compact = false }) {
 
   return (
     <>
-      <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={() => setShowImportModal(true)} title="Import TSC / HolySheet CSV">
+      <Button variant="secondary" size="sm" className={`!px-2.5 whitespace-nowrap ${className}`.trim()} onClick={() => setShowImportModal(true)} title="Import TSC / HolySheet CSV">
         <Upload size={14} />
         {compact ? 'Import' : 'Import TSC Data'}
       </Button>

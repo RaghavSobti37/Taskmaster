@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -21,14 +21,17 @@ const CHART_COLORS = [
   'var(--color-pastel-slate-text)',
 ];
 
-export default function DataMiniChart({
+const DataMiniChart = React.memo(function DataMiniChart({
   title,
   type = 'bar',
   data = [],
   height = 112,
   className = '',
 }) {
-  const series = (data || []).filter((d) => d && Number(d.value) > 0);
+  const series = useMemo(
+    () => (data || []).filter((d) => d && Number(d.value) > 0),
+    [data],
+  );
   if (series.length === 0) {
     return (
       <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
@@ -73,4 +76,6 @@ export default function DataMiniChart({
       )}
     </ChartSurface>
   );
-}
+});
+
+export default DataMiniChart;

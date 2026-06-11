@@ -1,55 +1,156 @@
 import axios from 'axios';
+
 import { queryClient } from './queryClient';
+
+import { QUERY_STALE_TIMES } from './queryDefaults';
+
+import { getNotificationsPayload } from '../utils/localNotificationStore';
+
+import { notificationsQueryKey } from '../hooks/queries/notifications';
+
+import { fetchCalendarEvents, getCalendarPrefetchRange } from '../hooks/queries/calendar';
+
+import { normalizeProjects } from '../utils/projectUtils';
+
+import { crmQueryParamsForUser } from '../utils/crmScope';
 
 const prefetched = new Set();
 
-function prefetchOnce(key, queryKey, queryFn) {
+const DEFAULT_TODO_PARAMS = {
+  page: 1,
+  limit: 10,
+  sort: 'dueDate',
+  order: 'asc',
+};
+
+const ROUTE_CHUNK_LOADERS = {
+  '/projects': () => import('../pages/projects/ProjectsView'),
+  '/crm': () => import('../pages/crm/LeadsPage'),
+  '/emails': () => import('../pages/emails/EmailHubLayout'),
+};
+
+function prefetchRouteChunk(path) {
+  const loader = ROUTE_CHUNK_LOADERS[path];
+  if (!loader) return;
+  const key = `chunk:${path}`;
   if (prefetched.has(key)) return;
   prefetched.add(key);
-  queryClient.prefetchQuery({ queryKey, queryFn, staleTime: 60_000 });
+  loader().catch(() => {
+    prefetched.delete(key);
+  });
 }
 
-/** Warm common routes during idle time (sidebar hover + app boot). */
-export function prefetchNavRoute(path, userId) {
+function prefetchOnce(key, queryKey, queryFn, staleTime = QUERY_STALE_TIMES.moderate) {
+  if (prefetched.has(key)) return;
+  prefetched.add(key);
+  queryClient.prefetchQuery({ queryKey, queryFn, staleTime });
+}
+
+/** Warm route chunks + common queries on sidebar hover. */
+export function prefetchNavRoute(path, userId, user = null) {
   if (!path) return;
+
   if (path === '/todo' || path.startsWith('/todo')) {
-    prefetchOnce('tasks', ['tasks'], async () => {
-      const { data } = await axios.get('/api/tasks', { params: { includeOldCompleted: '1' } });
-      return Array.isArray(data) ? data : data?.tasks || [];
+    prefetchOnce('tasks-todo-default', ['tasks', 'todo', DEFAULT_TODO_PARAMS], async () => {
+      const { data } = await axios.get('/api/tasks', { params: { scope: 'todo', ...DEFAULT_TODO_PARAMS } });
+      return data;
     });
     return;
   }
+
   if (path === '/inbox') {
-    prefetchOnce('notifications', ['notifications'], async () => (await axios.get('/api/notifications')).data);
+    if (!userId) return;
+    prefetchOnce(
+      `notifications-${userId}`,
+      notificationsQueryKey(userId),
+      async () => getNotificationsPayload(userId, ''),
+      QUERY_STALE_TIMES.immutable,
+    );
     return;
   }
+
   if (path === '/dashboard') {
     prefetchOnce('dashboard-summary', ['dashboard', 'summary'], async () => (await axios.get('/api/dashboard/summary')).data);
+    if (userId) {
+      prefetchOnce(
+        `logs-${userId}-default`,
+        ['logs', userId, 200, undefined, undefined],
+        async () => (await axios.get(`/api/logs?userId=${userId}&limit=200`)).data,
+      );
+    }
     return;
   }
-  if (path === '/projects') {
-    prefetchOnce('projects', ['projects'], async () => (await axios.get('/api/projects')).data);
+
+  if (path === '/projects' || path.startsWith('/projects')) {
+    prefetchRouteChunk('/projects');
+    prefetchOnce('projects', ['projects'], async () => {
+      const { data } = await axios.get('/api/projects');
+      return normalizeProjects(data);
+    });
     return;
   }
-  if (path === '/calendar') {
-    prefetchOnce('calendar', ['calendar'], async () => (await axios.get('/api/calendar')).data);
+
+  if (path === '/calendar' || path.startsWith('/calendar')) {
+    const { start, end } = getCalendarPrefetchRange();
+    prefetchOnce(
+      `calendar-events-${start}`,
+      ['calendarEvents', start, end],
+      () => fetchCalendarEvents({ start, end }),
+    );
     return;
   }
-  if (path === '/leads') {
-    prefetchOnce('leads', ['leads', { page: 1, limit: 10 }], async () => (await axios.get('/api/crm/leads', { params: { page: 1, limit: 10 } })).data);
+
+  if (path === '/crm' || path.startsWith('/crm') || path === '/leads' || path.startsWith('/leads')) {
+    prefetchRouteChunk('/crm');
+    const leadParams = crmQueryParamsForUser(user, { page: 1, limit: 10 });
+    prefetchOnce(
+      `leads-page-1-${leadParams.crmType || 'all'}`,
+      ['leads', leadParams],
+      async () => (await axios.get('/api/crm/leads', { params: leadParams })).data,
+    );
+    const statsParams = crmQueryParamsForUser(user, {});
+    prefetchOnce(
+      `crm-stats-${statsParams.crmType || 'all'}`,
+      ['crm', 'stats', statsParams],
+      async () => (await axios.get('/api/crm/stats', { params: statsParams })).data,
+    );
     return;
   }
-  if (path === '/notes') {
+
+  if (path === '/emails' || path.startsWith('/emails')) {
+    prefetchRouteChunk('/emails');
+    prefetchOnce('mail-campaigns', ['mail', 'campaigns'], async () => (await axios.get('/api/campaigns')).data);
+    prefetchOnce('mail-stats', ['mail', 'stats'], async () => (await axios.get('/api/mail/stats')).data);
+    return;
+  }
+
+  if (path === '/notes' || path.startsWith('/notes')) {
     prefetchOnce('notes', ['notes'], async () => (await axios.get('/api/notes')).data);
+    return;
+  }
+
+  if (path === '/assets' || path.startsWith('/assets')) {
+    prefetchOnce('assets', ['assets'], async () => (await axios.get('/api/assets')).data);
+    return;
+  }
+
+  if (path === '/management' || path.startsWith('/management') || path === '/artists') {
+    prefetchOnce('artists', ['artists'], async () => (await axios.get('/api/artists')).data);
+    return;
+  }
+
+  if (path === '/admin/console' || path.startsWith('/admin')) {
+    prefetchOnce('user-directory', ['userDirectory'], async () => (await axios.get('/api/users/directory?limit=1000')).data.users);
+    prefetchOnce('teams', ['teams'], async () => (await axios.get('/api/teams')).data);
   }
 }
 
-export function prefetchPrimaryRoutes(userId) {
-  ['/dashboard', '/todo', '/inbox'].forEach((path) => prefetchNavRoute(path, userId));
+export function prefetchPrimaryRoutes(userId, user = null) {
+  ['/dashboard', '/todo', '/inbox'].forEach((path) => prefetchNavRoute(path, userId, user));
 }
 
-export function scheduleIdlePrefetch(userId) {
-  const run = () => prefetchPrimaryRoutes(userId);
+export function scheduleIdlePrefetch(userId, user = null) {
+  const run = () => prefetchPrimaryRoutes(userId, user);
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
     window.requestIdleCallback(run, { timeout: 5000 });
   } else {

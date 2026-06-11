@@ -24,6 +24,7 @@
     "lighthouse:report": "node scripts/lighthouse-report-only.mjs"
   },
   "dependencies": {
+    "@coreknot/contracts": "1.0.0",
     "@datadog/browser-rum": "^6.33.0",
     "@fontsource-variable/geist": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
@@ -55,6 +56,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^4.3.3",
@@ -68,6 +73,7 @@
     "globals": "^16.5.0",
     "jsdom": "^26.1.0",
     "lighthouse": "^12.8.2",
+    "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.34.5",
     "to-ico": "^1.1.5",
     "vite": "^5.2.0",

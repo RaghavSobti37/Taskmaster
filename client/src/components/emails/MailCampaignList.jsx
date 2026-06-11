@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Mail, Play, Trash2 } from 'lucide-react';
 import { Card, Button, Badge, DataTable, PageSkeleton } from '../ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../ui/QueryErrorBanner';
 import {
   useMailCampaigns, useMailProfiles, useSendCampaign, useDeleteCampaign,
 } from '../../hooks/useTaskmasterQueries';
@@ -16,7 +17,13 @@ export default function MailCampaignList({ limit }) {
   const { confirm } = useConfirm();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { data: campaigns = [], isLoading: campaignsLoading } = useMailCampaigns();
+  const {
+    data: campaigns = [],
+    isLoading: campaignsLoading,
+    isError: campaignsError,
+    error: campaignsErr,
+    refetch: refetchCampaigns,
+  } = useMailCampaigns();
   const { isLoading: profilesLoading } = useMailProfiles();
   const sendCampaignMutation = useSendCampaign();
   const deleteCampaignMutation = useDeleteCampaign();
@@ -119,6 +126,13 @@ export default function MailCampaignList({ limit }) {
 
   return (
     <Card className="p-0 overflow-hidden">
+      {campaignsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(campaignsErr, 'Failed to load campaigns')}
+          onRetry={() => refetchCampaigns()}
+          className="m-3"
+        />
+      )}
       <DataTable
         columns={campaignColumns}
         data={displayCampaigns}

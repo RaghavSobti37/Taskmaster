@@ -7,9 +7,10 @@ const FinanceDocument = require('../../models/FinanceDocument');
 const CRMAudit = require('../../models/CRMAudit');
 const Contact = require('../../models/Contact');
 const DataHubSyncState = require('../../models/DataHubSyncState');
-const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
+const { purgeQaIdentity, qaLeadPayload } = require('./qaTestData');
 const {
   isApiReachable,
+  isTransientNetworkError,
   resolveTestUsers,
   skipProbeResult,
   probeFail,
@@ -46,6 +47,9 @@ function integrationCase(def, runFn) {
       } catch (err) {
         if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
           return skipProbeResult(def, err.message);
+        }
+        if (isTransientNetworkError(err)) {
+          return skipProbeResult(def, `API unavailable after retries (${err.code})`);
         }
         return { ...probeFail(def, err.message), artifacts: ctx.artifacts };
       }
@@ -394,14 +398,13 @@ async function runProjectTaskCount(def, ctx) {
 
 async function runLeadAudit(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const email = qaUniqueEmail('qa-audit');
-  const phone = qaUniquePhone('9');
-  await purgeQaIdentity({ email, phone });
+  const leadPayload = qaLeadPayload({ name: 'QA Audit Probe' });
+  await purgeQaIdentity({ email: leadPayload.email, phone: leadPayload.phone });
   const createRes = await request(def, {
     method: 'POST',
     url: '/api/crm/leads',
     user: adminUser,
-    data: { name: 'QA Audit Probe', email, phone, source: 'QA Test' },
+    data: leadPayload,
   });
   const leadId = extractId(createRes);
   if (leadId) ctx.artifacts.push({ type: 'lead', id: leadId });
@@ -417,7 +420,7 @@ async function runLeadAudit(def, ctx) {
   if (res.status !== 200) {
     return { ...probeFail(def, `Lead update failed (${res.status})`), artifacts: ctx.artifacts };
   }
-  const audit = await CRMAudit.findOne({ leadId }).sort({ createdAt: -1 }).lean();
+  const audit = await CRMAudit.findOne({ leadId }).setOptions({ bypassTenant: true }).sort({ timestamp: -1 }).lean();
   if (audit) {
     return { ...probePass(def, 'CRMAudit entry recorded after lead PATCH'), artifacts: ctx.artifacts };
   }

@@ -25,7 +25,7 @@ const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId, lastWee
       <LeaderboardRankBadge rank={member.rank} />
       <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)]">
         {member.avatar ? (
-          <img src={member.avatar} alt="" className="w-full h-full object-cover" />
+          <img src={member.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           member.name?.[0] || '?'
         )}

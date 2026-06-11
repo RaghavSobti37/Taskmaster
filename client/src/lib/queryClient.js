@@ -1,10 +1,13 @@
 import { QueryClient, keepPreviousData } from '@tanstack/react-query';
+import { QUERY_STALE_TIMES, QUERY_GC_TIMES, QUERY_STALE_BY_ROOT } from './queryDefaults';
+
+export { QUERY_STALE_TIMES, QUERY_GC_TIMES, QUERY_STALE_BY_ROOT, resolveQueryStaleTime } from './queryDefaults';
 
 /** GET responses stay fresh for 5 minutes before background revalidation. */
-export const GET_STALE_TIME_MS = 5 * 60 * 1000;
+export const GET_STALE_TIME_MS = QUERY_STALE_TIMES.default;
 
 /** Unused cache entries live 10 minutes (must be >= staleTime). */
-export const GET_GC_TIME_MS = 10 * 60 * 1000;
+export const GET_GC_TIME_MS = QUERY_GC_TIMES.default;
 
 const LIVE_QUERY_ROOTS = new Set(['notifications', 'statusCounts', 'attendance', 'inbox']);
 
@@ -33,11 +36,17 @@ export const defaultQueryOptions = {
 };
 
 export function createQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: defaultQueryOptions,
     },
   });
+
+  Object.entries(QUERY_STALE_BY_ROOT).forEach(([root, staleTime]) => {
+    client.setQueryDefaults([root], { staleTime });
+  });
+
+  return client;
 }
 
 export const queryClient = createQueryClient();

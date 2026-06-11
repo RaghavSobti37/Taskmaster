@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
@@ -27,7 +26,6 @@ import {
   CircleDollarSign,
   Shield,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, hasAnyPageAccess, getDepartmentName, getDepartmentSlug } from '../utils/departmentPermissions';
@@ -97,7 +95,7 @@ const PAGE_CONFIG = {
     icon: Shield,
     label: 'Admin',
     accessKey: 'admin_console',
-    matchPaths: ['/admin/console', '/admin/users', '/admin/teams', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
+    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
     end: true,
   },
 };
@@ -229,7 +227,6 @@ const OutletSidebar = () => {
   const { isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
   const asideRef = useRef(null);
@@ -318,25 +315,7 @@ const OutletSidebar = () => {
 
   const showLabels = isMobile ? isMobileOpen : isOpen;
 
-  const prefetchNavPage = (path) => {
-    prefetchNavRoute(path, user?._id);
-    if (path === '/dashboard') {
-      queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data });
-    } else if (path === '/calendar') {
-      queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
-    } else if (path === '/projects') {
-      queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data });
-    } else if (path === '/assets') {
-      queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data });
-    } else if (path === '/crm') {
-      queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data });
-    } else if (path === '/management') {
-      queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data });
-    } else if (path === '/admin/console') {
-      queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-      queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-    }
-  };
+  const prefetchNavPage = (path) => prefetchNavRoute(path, user?._id, user);
 
   const renderNavPages = (pages) => pages
     .filter((page) => page.path !== '/chat' && page.visible !== false && canShowNavPage(user, page.path))
@@ -370,7 +349,7 @@ const OutletSidebar = () => {
       );
     });
 
-  const hubsDefaultOpen = ['sales', 'operations', 'admin', 'artist-management'].includes(departmentSlug);
+  const hubsDefaultOpen = ['sales', 'ops', 'operations', 'admin', 'artist-management', 'creative'].includes(departmentSlug);
 
   const shellWidth = isMobile
     ? SIDEBAR_MOBILE_SHELL_WIDTH
@@ -528,7 +507,7 @@ const OutletSidebar = () => {
               <div className={`flex items-center ${showLabels ? 'gap-2.5' : 'justify-center'}`}>
                 <div className="relative shrink-0 group/avatar">
                   <div className={`rounded-lg bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative ${showLabels ? 'w-8 h-8' : 'w-7 h-7'}`}>
-                    {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
+                    {user?.avatar ? <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
                   </div>
                   {/* Gamification Ring */}
                   {user?.level && (

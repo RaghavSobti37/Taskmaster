@@ -190,7 +190,7 @@ const ProjectList = ({
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-[var(--color-bg-border)] flex items-center justify-center overflow-hidden border border-[var(--color-bg-border)]">
               {task.assignees?.[0]?.avatar ? (
-                <img src={task.assignees[0].avatar} alt="" className="w-full h-full object-cover" />
+                <img src={task.assignees[0].avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               ) : (
                 <User size={12} className="text-[var(--color-text-muted)]" />
               )}

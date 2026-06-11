@@ -1,19 +1,19 @@
-const { makeCheck, readText, readRepoText } = require('./qaCheckUtils');
+const { makeCheck, readText, readTextResolved, readRepoText } = require('./qaCheckUtils');
 
 /**
  * Suite 4 — v1.9.x feature static checks (OAuth, password reset, phone validation, perf tooling).
  */
 async function runSuite4V19Checks() {
   const checks = [];
-  const authRoutes = await readText('routes/authRoutes.js');
-  const authCtrl = await readText('controllers/authController.js');
+  const authRoutes = await readText('domains/auth/routes.js');
+  const authCtrl = await readText('domains/auth/controllers/authController.js');
   const userModel = await readText('models/User.js');
   const appJsx = await readRepoText('client/src/App.jsx');
-  const crmCtrl = await readText('controllers/crmController.js');
-  const metaDel = await readText('controllers/metaDataDeletionController.js');
+  const crmWriteSvc = await readTextResolved('domains/crm/services/leadWriteService.js');
+  const metaDel = await readText('domains/integrations/controllers/metaDataDeletionController.js');
   const metaModel = await readText('models/MetaDeletionRequest.js');
-  const intRoutes = await readText('routes/integrationsRoutes.js');
-  const intVerify = await readText('controllers/integrationsVerifyController.js');
+  const intRoutes = await readText('domains/integrations/integrationsRoutes.js');
+  const intVerify = await readText('domains/integrations/controllers/integrationsVerifyController.js');
   const phoneVal = await readText('utils/phoneCountryValidation.js');
   const leadRepair = await readText('services/leadPhoneRepair.js');
   const widgetLoaders = await readRepoText('client/src/lib/dashboardWidgetLoaders.js');
@@ -180,8 +180,8 @@ async function runSuite4V19Checks() {
       'crm-phone-country-validation',
       'input-validation',
       'Lead phone validated via phoneCountryValidation',
-      phoneVal && crmCtrl && crmCtrl.includes('phoneCountryValidation') ? 'pass' : 'fail',
-      'crmController uses phoneCountryValidation for E.164 national rules',
+      phoneVal && crmWriteSvc && /phoneCountryValidation|validatePhoneE164/.test(crmWriteSvc) ? 'pass' : 'fail',
+      'leadWriteService uses phoneCountryValidation for E.164 national rules',
       'utils/phoneCountryValidation.js',
       'critical'
     ),

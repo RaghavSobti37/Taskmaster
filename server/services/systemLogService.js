@@ -1,5 +1,8 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const SystemLog = require('../models/SystemLog');
+const { isLogsPrimarySupabase, MONGO_LOG_ARCHIVE } = require('../config/supabase');
+const { insertSystemLog } = require('./supabase/logStore');
 
 const PERSIST_SYSTEM_LOGS = String(process.env.PERSIST_SYSTEM_LOGS || 'false').toLowerCase() === 'true';
 const User = require('../models/User');
@@ -107,6 +110,32 @@ function formatStdoutLog(entry) {
   return `[SystemLog] ${entry.severity} ${entry.message} ${JSON.stringify(meta)}`;
 }
 
+async function archiveSystemLogToMongo(entry) {
+  if (!MONGO_LOG_ARCHIVE) return;
+  try {
+    await SystemLog.create(entry);
+  } catch (err) {
+    console.error('[SystemLog] Mongo archive failed', {
+      error: err.message,
+      traceId: entry.traceId,
+    });
+  }
+}
+
+async function persistSystemLog(entry) {
+  const plain = {
+    ...entry,
+    _id: entry._id || crypto.randomUUID(),
+    timestamp: entry.timestamp,
+    createdAt: entry.timestamp,
+  };
+
+  await insertSystemLog(plain);
+  const enriched = await enrichLogWithActorName(plain);
+  broadcastSystemLog(enriched);
+  setImmediate(() => archiveSystemLogToMongo(entry));
+}
+
 function writeSystemLog(rawEntry) {
   const entry = normalizeEntry(rawEntry);
 
@@ -117,6 +146,18 @@ function writeSystemLog(rawEntry) {
         ? 'warn'
         : 'log';
     console[level](formatStdoutLog(entry));
+    return entry;
+  }
+
+  if (isLogsPrimarySupabase()) {
+    setImmediate(() => {
+      persistSystemLog(entry).catch((err) => {
+        console.error('[SystemLog] Supabase persist failed', {
+          error: err.message,
+          traceId: entry.traceId,
+        });
+      });
+    });
     return entry;
   }
 

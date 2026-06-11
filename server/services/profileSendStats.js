@@ -1,5 +1,6 @@
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
+const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
 const { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, getDailyLimitForProvider, getProfileRotationProviders } = require('../utils/smtpPresets');
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -99,7 +100,7 @@ const getTodaySendCountsByProfileProvider = async () => {
   const start = startOfTodayUtc();
   const counts = new Map();
 
-  const rows = await MailEvent.aggregate([
+  const rows = await aggregateWithTenant(MailEvent, [
     {
       $match: {
         eventType: 'Send',

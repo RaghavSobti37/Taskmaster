@@ -1,9 +1,13 @@
 const PersonIndex = require('../models/PersonIndex');
 const PersonIdentityService = require('./PersonIdentityService');
 const PersonHubBuilder = require('./PersonHubBuilder');
+const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 const { sanitizeEmail, sanitizeName, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { SOURCE_TO_INLET, dedupeInletEntries } = require('../../shared/dataInlets');
+
+/** PersonIndex is global identity — match data-hub cross-tenant reads/writes. */
+const PERSON_INDEX_OPTS = bypassOptions('data_hub');
 
 const SOURCE_TYPE_FOR_LINK = {
   crm: 'lead',
@@ -64,6 +68,10 @@ class ContactService {
     await PersonHubBuilder.rebuildPerson(resolved.personId);
 
     const legacy = await this._mergeLegacyPersonIndex(data, source, inletKey, recordId, normalized);
+    if (legacy?._id) {
+      await this.recomputeInletCounts(legacy._id);
+      return PersonIndex.findById(legacy._id).setOptions(PERSON_INDEX_OPTS);
+    }
     return legacy || { _id: resolved.personId, personId: resolved.personId, ...resolved.person?.toObject?.() };
   }
 
@@ -101,17 +109,22 @@ class ContactService {
     else if (inletKey === 'community') updatePayload.$set.inCommunity = true;
 
     if (Object.keys(updatePayload.$addToSet).length === 0) delete updatePayload.$addToSet;
+    if (!filter.$or.length) return null;
 
-    const contact = await PersonIndex.findOneAndUpdate(filter, updatePayload, { upsert: true, new: true, runValidators: true });
+    const contact = await PersonIndex.findOneAndUpdate(filter, updatePayload, {
+      upsert: true,
+      new: true,
+      runValidators: true,
+    }).setOptions(PERSON_INDEX_OPTS);
     if (inletKey && inletKey !== 'all' && inletKey !== 'loyal') {
       const normalizedInlet = inletKey === 'tsc' ? 'outsourced' : inletKey;
       await this._upsertInletEntry(contact._id, normalizedInlet, recordId, data.summary || {}, now);
     }
-    return PersonIndex.findById(contact._id);
+    return PersonIndex.findById(contact._id).setOptions(PERSON_INDEX_OPTS);
   }
 
   async _upsertInletEntry(contactId, inletKey, recordId, summary, now) {
-    const contact = await PersonIndex.findById(contactId);
+    const contact = await PersonIndex.findById(contactId).setOptions(PERSON_INDEX_OPTS);
     if (!contact) return;
     const idx = (contact.inlets || []).findIndex((i) => i.key === inletKey);
     if (idx >= 0) {
@@ -139,7 +152,7 @@ class ContactService {
   }
 
   async recomputeInletCounts(contactId) {
-    const contact = await PersonIndex.findById(contactId);
+    const contact = await PersonIndex.findById(contactId).setOptions(PERSON_INDEX_OPTS);
     if (!contact) return null;
     contact.inlets = dedupeInletEntries(contact.inlets || []);
     contact.inletCount = contact.inlets.length;

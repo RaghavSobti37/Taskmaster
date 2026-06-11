@@ -1,0 +1,1347 @@
+// Taskmaster — MongoDB → PostgreSQL (Supabase) schema
+// ID strategy: String @id preserves existing Mongo ObjectId hex strings (24 chars).
+// tenantId on all tenant-scoped tables for RLS (current_setting('app.tenant_id')).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// TIER 1 — Foundation (tenants, users, org structure)
+// =============================================================================
+
+/// Mongo: tenants
+model Tenant {
+  id           String   @id
+  name         String
+  domain       String?  @unique
+  status       String   @default("trial") // active | suspended | trial
+  contactEmail String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users       User[]
+  departments Department[]
+  teams       Team[]
+  workspaces  Workspace[]
+}
+
+/// Mongo: users
+model User {
+  id                   String    @id
+  tenantId             String
+  name                 String
+  email                String    @unique
+  password             String?
+  avatar               String?
+  gender               String    @default("male") // male | female | other
+  dateOfBirth          DateTime?
+  phone                String    @default("")
+  lastOnline           DateTime  @default(now())
+  online               Boolean   @default(false)
+  teams                String[]  @default([])
+  departmentId         String?
+  exp                  Int       @default(0)
+  level                Int       @default(1)
+  dailyStreak          Int       @default(0)
+  googleId             String?
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  googleCalendarLinked Boolean   @default(false)
+  googleAccounts       Json      @default("[]")
+  repId                String?   @unique
+  mustChangePassword   Boolean   @default(false)
+  passwordChangedAt    DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  pushSubscriptions    Json      @default("[]")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department         Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  ownedProjects      Project[]           @relation("ProjectOwner")
+  projectMemberships ProjectMember[]
+  taskAssignments    TaskAssignment[]
+  taskActivities     TaskActivity[]      @relation("TaskActivityActor")
+  mentionReceipts    TaskMentionReceipt[]
+  notifications      Notification[]      @relation("NotificationRecipient")
+  attendances        Attendance[]
+  leaveRequests      LeaveRequest[]
+  dailyMissions      DailyMission[]
+  xpAuditLogs        XPAuditLog[]
+  dashboardPreset    DashboardPreset?
+  assignedLeads      Lead[]              @relation("LeadAssignedRep")
+  createdLeads       Lead[]              @relation("LeadCreatedBy")
+  projectKRAs        ProjectKRA[]        @relation("ProjectKRAUser")
+
+  @@index([tenantId])
+  @@index([tenantId, departmentId])
+  @@index([phone])
+  @@index([name])
+}
+
+/// Mongo: departments
+model Department {
+  id               String   @id
+  tenantId         String
+  name             String
+  slug             String
+  color            String   @default("#3b82f6")
+  sortOrder        Int      @default(0)
+  signupAllowed    Boolean  @default(true)
+  permissionPreset String   @default("standard")
+  pagePermissions  String[] @default([])
+  createdAt        DateTime @default(now())
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users     User[]
+  taskTypes TaskType[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+/// Mongo: teams
+model Team {
+  id          String   @id
+  tenantId    String
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+/// Mongo: workspaces
+model Workspace {
+  id             String   @id
+  tenantId       String
+  name           String
+  color          String   @default("#64748b")
+  order          Int      @default(0)
+  defaultMembers Json     @default("[]")
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// TIER 2 — Projects & tasks
+// =============================================================================
+
+/// Mongo: projects
+model Project {
+  id                  String   @id
+  tenantId            String
+  name                String
+  description         String?
+  outletId            String
+  ownerId             String
+  status              String   @default("active") // active | archived | completed
+  tags                String[] @default([])
+  teams               String[] @default([])
+  progress            Int      @default(0)
+  totalTasksCount     Int      @default(0)
+  completedTasksCount Int      @default(0)
+  linkedCalendars     Json     @default("[]")
+  color               String   @default("#3b82f6")
+  workspace           String   @default("General")
+  starred             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  owner     User                  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members   ProjectMember[]
+  phases    Phase[]
+  tasks     Task[]
+  goal      ProjectGoal?
+  kraRows   ProjectKRA[]
+  snapshots ProjectGoalSnapshot[]
+
+  @@index([tenantId])
+  @@index([outletId, createdAt(sort: Desc)])
+  @@index([ownerId])
+  @@index([workspace])
+}
+
+/// Flattened from Project.members + memberRoles
+model ProjectMember {
+  id        String @id
+  tenantId  String
+  projectId String
+  userId    String
+  role      String @default("member")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+/// Mongo: phases
+model Phase {
+  id          String    @id
+  tenantId    String
+  name        String
+  description String?
+  projectId   String
+  dueDate     DateTime?
+  status      String    @default("todo")
+  isExternal  Boolean   @default(false)
+  progress    Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([tenantId])
+  @@index([projectId, dueDate])
+}
+
+/// Mongo: tasks
+model Task {
+  id              String    @id
+  tenantId        String
+  title           String
+  description     String?
+  status          String    @default("todo")
+  priority        String    @default("medium")
+  type            String    @default("")
+  scheduleSlot    String    @default("FULL")
+  scheduleDate    DateTime?
+  notifiedWarning Boolean   @default(false)
+  projectId       String?
+  workspace       String    @default("General")
+  phaseId         String?
+  parentTaskId    String?
+  startDate       DateTime?
+  dueDate         DateTime?
+  duration        Int?
+  plannedHours    Float     @default(0)
+  actualHours     Float     @default(0)
+  progress        Int       @default(0)
+  completedAt     DateTime?
+  createdById     String?
+  notifiedOverdue Boolean   @default(false)
+  color           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project         Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase           Phase?               @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  parentTask      Task?                @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subtasks        Task[]               @relation("TaskSubtasks")
+  assignments     TaskAssignment[]
+  activities      TaskActivity[]
+  mentionReceipts TaskMentionReceipt[]
+  dependencies    TaskDependency[]     @relation("TaskDependsOn")
+  dependedBy      TaskDependency[]     @relation("TaskDependedBy")
+  mentionAccess   TaskMentionAccess[]
+  notifications   Notification[]
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([projectId, status])
+  @@index([phaseId, status])
+  @@index([projectId, dueDate])
+  @@index([workspace])
+}
+
+/// Mongo: taskassignments
+model TaskAssignment {
+  id           String   @id
+  tenantId     String
+  taskId       String
+  userId       String
+  assignedAt   DateTime @default(now())
+  assignedById String?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([tenantId])
+  @@index([userId, taskId])
+}
+
+/// Mongo: tasktypes
+model TaskType {
+  id           String   @id
+  tenantId     String
+  name         String
+  departmentId String?
+  projectRole  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, name, departmentId])
+}
+
+/// Mongo: taskactivities (already a separate collection — not embedded)
+model TaskActivity {
+  id               String   @id
+  tenantId         String
+  taskId           String
+  type             String
+  body             String   @default("")
+  actorId          String
+  assigneeId       String?
+  assignedById     String?
+  mentionedUserIds String[] @default([])
+  statusFrom       String?
+  statusTo         String?
+  fieldKey         String?
+  valueFrom        String?
+  valueTo          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  task  Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User @relation("TaskActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([taskId, createdAt])
+}
+
+/// Mongo: taskmentionreceipts
+model TaskMentionReceipt {
+  id            String    @id
+  tenantId      String
+  userId        String
+  taskId        String
+  unreadCount   Int       @default(0)
+  lastMentionAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([tenantId])
+  @@index([taskId])
+}
+
+/// Flattened from Task.dependencies[]
+model TaskDependency {
+  id              String @id
+  tenantId        String
+  taskId          String
+  dependsOnTaskId String
+
+  task          Task @relation("TaskDependsOn", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("TaskDependedBy", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@index([tenantId])
+}
+
+/// Flattened from Task.mentionAccessIds[]
+model TaskMentionAccess {
+  id       String @id
+  tenantId String
+  taskId   String
+  userId   String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// TIER 3 — Person spine, CRM, HR, gamification, notifications
+// =============================================================================
+
+/// Mongo: people
+model Person {
+  id              String   @id
+  tenantId        String
+  canonicalName   String
+  nameKey         String?
+  city            String?
+  country         String?
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+  identityVersion Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  identifiers           PersonIdentifier[]
+  sourceLinks           PersonSourceLink[]
+  commProfile           PersonCommunicationProfile?
+  hubView               PersonHubView?
+  leads                 Lead[]
+  artistPathResponses   ArtistPathResponse[]
+  bookedCalls           BookedCall[]
+  outsourcedRecords     OutsourcedRecord[]
+  exlyBookings          ExlyBooking[]
+  newsletterSubscribers NewsletterSubscriber[]
+
+  @@index([tenantId])
+  @@index([canonicalName])
+  @@index([lastSeenAt])
+}
+
+/// Mongo: personidentifiers
+model PersonIdentifier {
+  id              String   @id
+  tenantId        String
+  personId        String
+  type            String // email | phone
+  valueNormalized String
+  source          String   @default("unknown")
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type, valueNormalized])
+  @@index([tenantId])
+  @@index([personId, type])
+}
+
+/// Mongo: personsourcelinks
+model PersonSourceLink {
+  id          String   @id
+  tenantId    String
+  personId    String
+  sourceType  String
+  sourceId    String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  summary     Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, sourceType, sourceId])
+  @@index([tenantId])
+  @@index([sourceType, lastSeenAt(sort: Desc)])
+}
+
+/// Mongo: personcommunicationprofiles
+model PersonCommunicationProfile {
+  id                String   @id
+  tenantId          String
+  personId          String   @unique
+  emailStatus       String   @default("Pending")
+  unsubscribed      Boolean  @default(false)
+  bounceCount       Int      @default(0)
+  unsubscribeReason String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([emailStatus])
+  @@index([unsubscribed])
+}
+
+/// Mongo: personhubviews (materialized read model)
+model PersonHubView {
+  id                      String    @id
+  tenantId                String
+  personId                String    @unique
+  name                    String
+  email                   String?
+  phone                   String?
+  city                    String?
+  inletKeys               String[]  @default([])
+  inletCount              Int       @default(0)
+  isMultiInlet            Boolean   @default(false)
+  emailStatus             String    @default("Pending")
+  unsubscribed            Boolean   @default(false)
+  lastActivityAt          DateTime  @default(now())
+  firstSeenAt             DateTime?
+  inCRM                   Boolean   @default(false)
+  inExly                  Boolean   @default(false)
+  inMailer                Boolean   @default(false)
+  inOutsourced            Boolean   @default(false)
+  inBookedCalls           Boolean   @default(false)
+  inEnquiries             Boolean   @default(false)
+  inCommunity             Boolean   @default(false)
+  inNewsletter            Boolean   @default(false)
+  inArtistPath            Boolean   @default(false)
+  inArtistCrm             Boolean   @default(false)
+  latestArtistType        String?
+  artistPathResponseCount Int       @default(0)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@index([inletKeys])
+  @@index([lastActivityAt])
+}
+
+/// Mongo: leads
+model Lead {
+  id                    String    @id
+  tenantId              String
+  personId              String?
+  rowId                 String?   @unique
+  customerIdExly        String?
+  transactionIdExly     String?
+  exlyOfferingId        String?
+  exlyOfferingTitle     String?
+  crmType               String    @default("sales")
+  artistProject         String?
+  contactCategory       String?
+  name                  String
+  nameKey               String?
+  email                 String?
+  phone                 String?
+  city                  String?
+  webinarDates          String?
+  attended              String?
+  attendanceDurationMin String?
+  qnaAnswered           String?
+  artistType            String?
+  fullTimeWillingness   String?
+  primaryRole           String?
+  learningGoal          String?
+  learnedMusic          String?
+  currentJourney        String?
+  meaningfulConnect     String    @default("PENDING")
+  leadQuality           String    @default("1")
+  callStatus            String    @default("Pending")
+  leadStatus            String    @default("New")
+  remarks               String?
+  source                String    @default("Organic / Direct")
+  planOption            String?
+  nextFollowupDate      String?
+  nextFollowupTime      String?
+  setReminder           Boolean   @default(false)
+  assignedRepId         String?
+  createdById           String?
+  importId              String?
+  metadata              Json      @default("{}")
+  tags                  String[]  @default([])
+  emailStatus           String    @default("Pending")
+  status                String    @default("active")
+  location              String?
+  bounceCount           Int       @default(0)
+  unsubscribed          Boolean   @default(false)
+  unsubscribeReason     String?
+  lockedBy              String?
+  lockedAt              DateTime?
+  reminderSent          Boolean   @default(false)
+  notifiedOverdue       Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  person        Person?          @relation(fields: [personId], references: [id], onDelete: SetNull)
+  assignedRep   User?            @relation("LeadAssignedRep", fields: [assignedRepId], references: [id], onDelete: SetNull)
+  createdBy     User?            @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  import        CRMImport?       @relation(fields: [importId], references: [id], onDelete: SetNull)
+  notes         LeadNote[]
+  exlyOfferings LeadExlyOffering[]
+  emis          EMI[]
+  audits        CRMAudit[]
+  notifications Notification[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([personId])
+  @@index([assignedRepId])
+  @@index([crmType])
+  @@index([leadStatus])
+  @@index([createdAt(sort: Desc)])
+}
+
+/// Flattened from Lead.notes[]
+model LeadNote {
+  id       String   @id
+  tenantId String
+  leadId   String
+  text     String
+  author   String
+  date     DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leadId, date(sort: Desc)])
+}
+
+/// Flattened from Lead.exlyOfferings[]
+model LeadExlyOffering {
+  id          String    @id
+  tenantId    String
+  leadId      String
+  offeringId  String?
+  title       String?
+  purchasedAt DateTime?
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leadId])
+}
+
+/// Mongo: crmconfigs — dynamic dropdown values stored as Json arrays
+model CRMConfig {
+  id                        String   @id
+  tenantId                  String
+  configKey                 String   @default("default")
+  callStatuses              Json     @default("[]")
+  leadStatuses              Json     @default("[]")
+  artistTypes               Json     @default("[]")
+  meaningfulConnectStatuses Json     @default("[]")
+  qualities                 Json     @default("[]")
+  updatedById               String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@unique([tenantId, configKey])
+  @@index([tenantId])
+}
+
+/// Mongo: crmimports
+model CRMImport {
+  id            String   @id
+  tenantId      String
+  filename      String
+  leadCount     Int
+  crmType       String   @default("sales")
+  sheetTemplate String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  leads Lead[]
+
+  @@index([tenantId])
+  @@index([crmType])
+}
+
+/// Mongo: crmaudits
+model CRMAudit {
+  id           String   @id
+  tenantId     String
+  leadId       String?
+  leadRowId    String?
+  userId       String
+  userRole     String?
+  fieldChanged String
+  oldValue     String?
+  newValue     String?
+  timestamp    DateTime @default(now())
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leadId, timestamp(sort: Desc)])
+}
+
+/// Mongo: emis
+model EMI {
+  id            String   @id
+  tenantId      String
+  leadId        String
+  leadRowId     String?
+  installmentNo Int
+  dueDate       String
+  amount        String
+  status        String   @default("Pending")
+  paidAt        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leadId])
+}
+
+/// Mongo: attendances
+model Attendance {
+  id                 String    @id
+  tenantId           String
+  userId             String
+  username           String?
+  date               DateTime
+  inTimeRecord       Json      @default("{}")
+  outTimeRecord      Json      @default("{}")
+  isHalfDay          Boolean   @default(false)
+  onLeave            Boolean   @default(false)
+  reason             String?
+  createdById        String?
+  overtimeMinutes    Int       @default(0)
+  systemHours        Float     @default(0)
+  loggedHours        Float     @default(0)
+  unloggedMinutes    Int       @default(0)
+  discrepancyMinutes Int       @default(0)
+  xpGrantedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([date])
+}
+
+/// Mongo: leaverequests
+model LeaveRequest {
+  id           String    @id
+  tenantId     String
+  userId       String
+  username     String?
+  fromDate     DateTime
+  toDate       DateTime
+  reason       String    @default("")
+  status       String    @default("pending")
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+}
+
+/// Mongo: gamificationconfigs (singleton per tenant)
+model GamificationConfig {
+  id                     String    @id
+  tenantId               String    @unique
+  taskCompletion         Int       @default(10)
+  taskCreation           Int       @default(5)
+  projectCreation        Int       @default(15)
+  dailyLog               Int       @default(5)
+  attendanceLog          Int       @default(5)
+  attendanceDayBonus     Int       @default(20)
+  assetUpload            Int       @default(5)
+  leadCapture            Int       @default(10)
+  invoiceSubmission      Int       @default(10)
+  reviewApproval         Int       @default(5)
+  calendarEventCreated   Int       @default(5)
+  announcementCreated    Int       @default(5)
+  leaveApplied           Int       @default(0)
+  commentCreation        Int       @default(0)
+  dailyMissionBaseReward Int       @default(25)
+  stepXp                 Int       @default(5)
+  baseXp                 Int       @default(0)
+  lastRecalculatedAt     DateTime?
+  lastRecalcWeeklyPrior  Json?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+/// Mongo: dailymissions
+model DailyMission {
+  id           String   @id
+  tenantId     String
+  userId       String
+  title        String
+  description  String?
+  targetCount  Int
+  currentCount Int      @default(0)
+  expReward    Int
+  actionType   String
+  cadence      String   @default("daily")
+  weekKey      String?
+  completed    Boolean  @default(false)
+  date         DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId, date])
+}
+
+/// Mongo: xpauditlogs
+model XPAuditLog {
+  id             String   @id
+  tenantId       String
+  userId         String
+  amount         Int
+  action         String
+  details        Json?
+  previousAmount Int?
+  recalculatedAt DateTime?
+  recalcReason   String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+}
+
+/// Mongo: notifications (already a separate collection)
+model Notification {
+  id               String   @id
+  tenantId         String
+  recipientId      String
+  title            String
+  message          String
+  type             String   @default("reminder")
+  category         String   @default("system")
+  read             Boolean  @default(false)
+  relatedLeadId    String?
+  relatedTaskId    String?
+  relatedProjectId String?
+  actionUrl        String   @default("")
+  actorId          String?
+  iconType         String   @default("system")
+  emailSent        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  recipient   User  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  relatedLead Lead? @relation(fields: [relatedLeadId], references: [id], onDelete: SetNull)
+  relatedTask Task? @relation(fields: [relatedTaskId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([recipientId, read, createdAt(sort: Desc)])
+}
+
+/// Mongo: dashboardPresets — layout blobs as Json
+model DashboardPreset {
+  id         String   @id
+  tenantId   String
+  userId     String   @unique
+  name       String   @default("My Dashboard")
+  elements   Json     @default("[]")
+  department String   @default("custom")
+  isDefault  Boolean  @default(false)
+  presets    Json     @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// =============================================================================
+// TIER 4 — Mail, project goals, source facts, artists, CRM stats
+// =============================================================================
+
+/// Mongo: mailtemplates
+model MailTemplate {
+  id              String    @id
+  tenantId        String
+  name            String
+  content         String
+  format          String    @default("visual")
+  subject         String    @default("")
+  status          String    @default("draft")
+  dummyValues     Json      @default("{}")
+  approvedContent String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedById    String?
+  rejectionNote   String?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  campaigns Campaign[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+/// Mongo: emailprofiles
+model EmailProfile {
+  id                  String   @id
+  tenantId            String
+  name                String
+  email               String
+  smtpHost            String   @default("rotation")
+  smtpPort            Int      @default(587)
+  smtpUser            String
+  smtpPass            String
+  signature           String   @default("")
+  providerType        String   @default("rotation")
+  rotationEnabled     Boolean  @default(true)
+  rotationProviders   String[] @default([])
+  providerCredentials Json     @default("{}")
+  dailyLimit          Int      @default(500)
+  sendStats           Json     @default("{}")
+  providerUsage       Json     @default("{}")
+  isDefault           Boolean  @default(false)
+  createdById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  campaigns     Campaign[]
+  mailCampaigns MailCampaign[]
+  mailEvents    MailEvent[]
+
+  @@index([tenantId])
+}
+
+/// Mongo: campaigns (primary email engine)
+model Campaign {
+  id                String    @id
+  tenantId          String
+  campaignId        String    @unique
+  title             String
+  subject           String?
+  content           String?
+  senderProfileId   String?
+  senderMode        String    @default("single")
+  senderProfileIds  String[]  @default([])
+  systemProvider    String?
+  resendFromEmail   String?
+  includeSignature  Boolean   @default(true)
+  signature         String    @default("")
+  removeUnsubscribe Boolean   @default(false)
+  variableFallbacks Json      @default("{}")
+  mailTemplateId    String?
+  variableMapping   Json      @default("{}")
+  attachments       Json      @default("[]")
+  status            String    @default("Draft")
+  recipientCount    Int       @default(0)
+  stoppedAt         DateTime?
+  eventTag          String?
+  sentAt            DateTime  @default(now())
+  metrics           Json      @default("{}")
+  timeSeries        Json      @default("[]")
+  locationBreakdown Json      @default("{}")
+  createdById       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  senderProfile EmailProfile?       @relation(fields: [senderProfileId], references: [id], onDelete: SetNull)
+  mailTemplate  MailTemplate?       @relation(fields: [mailTemplateId], references: [id], onDelete: SetNull)
+  recipients    CampaignRecipient[]
+
+  @@index([tenantId])
+  @@index([eventTag])
+}
+
+/// Flattened from Campaign.recipients[]
+model CampaignRecipient {
+  id         String    @id
+  tenantId   String
+  campaignId String
+  leadId     String?
+  email      String?
+  name       String?
+  rowData    Json?
+  status     String    @default("Pending")
+  sentAt     DateTime?
+  error      String?
+  messageId  String?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([messageId])
+  @@index([email])
+}
+
+/// Mongo: mailcampaigns (legacy parallel model)
+model MailCampaign {
+  id                String    @id
+  tenantId          String
+  title             String
+  subject           String
+  content           String
+  senderProfileId   String?
+  attachments       Json      @default("[]")
+  status            String    @default("Draft")
+  stoppedAt         DateTime?
+  stats             Json      @default("{}")
+  locationBreakdown Json      @default("{}")
+  removeUnsubscribe Boolean   @default(false)
+  createdById       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  senderProfile EmailProfile?           @relation(fields: [senderProfileId], references: [id], onDelete: SetNull)
+  recipients    MailCampaignRecipient[]
+  mailEvents    MailEvent[]
+
+  @@index([tenantId])
+}
+
+/// Flattened from MailCampaign.recipients[]
+model MailCampaignRecipient {
+  id             String    @id
+  tenantId       String
+  mailCampaignId String
+  leadId         String?
+  email          String?
+  status         String    @default("Pending")
+  sentAt         DateTime?
+  error          String?
+  messageId      String?
+
+  mailCampaign MailCampaign @relation(fields: [mailCampaignId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([mailCampaignId])
+  @@index([messageId])
+  @@index([email])
+}
+
+/// Mongo: mailevents (campaignId column refs MailCampaign._id)
+model MailEvent {
+  id               String   @id
+  tenantId         String
+  messageId        String?
+  eventType        String
+  email            String?
+  timestamp        DateTime
+  metadata         Json?
+  mailCampaignId   String?  @map("campaignId")
+  senderProfileId  String?
+  rotationProvider String?
+  linkClicked      String?
+  ipAddress        String?
+  userAgent        String?
+  locationCountry  String?
+  locationCity     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  mailCampaign  MailCampaign? @relation(fields: [mailCampaignId], references: [id], onDelete: SetNull)
+  senderProfile EmailProfile? @relation(fields: [senderProfileId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([messageId])
+  @@index([email])
+  @@index([mailCampaignId, timestamp(sort: Desc)])
+  @@index([locationCountry, locationCity])
+}
+
+/// Mongo: emaillogs
+model EmailLog {
+  id         String   @id
+  tenantId   String
+  campaignId String
+  leadEmail  String
+  pixelId    String?  @unique
+  clickId    String?  @unique
+  opened     Boolean  @default(false)
+  clicked    Boolean  @default(false)
+  bounced    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([leadEmail])
+}
+
+/// Mongo: projectgoals — nested targets/sourceLinks as Json
+model ProjectGoal {
+  id              String    @id
+  tenantId        String
+  projectId       String    @unique
+  startDate       DateTime?
+  endDate         DateTime?
+  targets         Json      @default("{}")
+  sourceLinks     Json      @default("{}")
+  metricOverrides Json      @default("{}")
+  updatedById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Mongo: projectgoalsnapshots
+model ProjectGoalSnapshot {
+  id         String   @id
+  tenantId   String
+  projectId  String
+  weekKey    String
+  values     Json     @default("{}")
+  increments Json     @default("{}")
+  capturedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekKey])
+  @@index([tenantId])
+}
+
+/// Mongo: projectkras
+model ProjectKRA {
+  id           String   @id
+  tenantId     String
+  projectId    String
+  userId       String
+  closed       String   @default("")
+  moved        String   @default("")
+  assignedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation("ProjectKRAUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([tenantId])
+}
+
+/// Mongo: artistpathresponses
+model ArtistPathResponse {
+  id          String   @id
+  tenantId    String
+  personId    String
+  submittedAt DateTime @default(now())
+  importId    String?
+  sheetRowId  String?  @unique
+  answers     Json     @default("{}")
+  rawRow      Json     @default("{}")
+  source      String   @default("artist_path_sheet")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([personId, submittedAt(sort: Desc)])
+}
+
+/// Mongo: bookedcalls
+model BookedCall {
+  id          String    @id
+  tenantId    String
+  personId    String?
+  name        String
+  nameKey     String?
+  email       String?
+  phone       String?
+  city        String?
+  emailStatus String    @default("Pending")
+  bookedAt    DateTime?
+  source      String?
+  callStatus  String?
+  importId    String?
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  person Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([personId])
+  @@index([phone, email, bookedAt])
+}
+
+/// Mongo: outsourcedrecords
+model OutsourcedRecord {
+  id             String   @id
+  tenantId       String
+  personId       String?
+  name           String
+  nameKey        String?
+  email          String?
+  phone          String?
+  city           String?
+  emailStatus    String   @default("Pending")
+  state          String?
+  role           String?
+  campaign       String?
+  originSource   String?
+  destination    String?
+  dataType       String?
+  sourceFilename String?
+  importId       String?
+  metadata       Json     @default("{}")
+  tags           String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  person Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([personId])
+  @@index([campaign])
+}
+
+/// Mongo: exlybookings
+model ExlyBooking {
+  id                    String   @id
+  tenantId              String
+  personId              String?
+  name                  String
+  nameKey               String?
+  email                 String?
+  phone                 String
+  offeringTitle         String
+  offeringId            String
+  pricePaid             Float    @default(0)
+  bookedOn              DateTime
+  paymentType           String?
+  debitType             String?
+  offeringType          String?
+  offeringOwner         String?
+  promotionType         String?
+  promotionFromOffering String?
+  transactionId         String?
+  customerId            String?
+  state                 String?
+  payoutStatus          String?
+  emailStatus           String   @default("Pending")
+  bounceCount           Int      @default(0)
+  unsubscribed          Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  person Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([personId])
+  @@index([email, phone, offeringId, bookedOn])
+}
+
+/// Mongo: newslettersubscribers
+model NewsletterSubscriber {
+  id                String   @id
+  tenantId          String
+  personId          String?
+  name              String
+  nameKey           String?
+  email             String?
+  phone             String?
+  city              String?
+  emailStatus       String   @default("Pending")
+  subscribedAt      DateTime @default(now())
+  source            String?
+  unsubscribed      Boolean  @default(false)
+  unsubscribeReason String?
+  importId          String?
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  person Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([personId])
+  @@index([email])
+}
+
+/// Mongo: artists
+model Artist {
+  id           String   @id
+  tenantId     String
+  name         String
+  bio          String?
+  profileImage String?
+  website      String?
+  socials      Json     @default("{}")
+  events       Json     @default("[]")
+  discography  Json     @default("[]")
+  teamUserIds  String[] @default([])
+  createdAt    DateTime @default(now())
+
+  metrics     ArtistMetrics?
+  auth        ArtistAuth?
+  connections ArtistConnection[]
+
+  @@index([tenantId])
+}
+
+/// Mongo: artistmetrics
+model ArtistMetrics {
+  id               String   @id
+  tenantId         String
+  artistId         String   @unique
+  analytics        Json     @default("{}")
+  trackedVideos    Json     @default("[]")
+  history          Json     @default("[]")
+  analyticsHistory Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Mongo: artistauths
+model ArtistAuth {
+  id               String   @id
+  tenantId         String
+  artistId         String   @unique
+  oauthCredentials Json     @default("{}")
+  isSynced         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Mongo: artistconnections
+model ArtistConnection {
+  id           String   @id
+  tenantId     String
+  artistId     String
+  provider     String
+  externalId   String?
+  displayName  String?
+  accessToken  String?
+  refreshToken String?
+  metadata     Json     @default("{}")
+  connectedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([artistId])
+}
+
+/// Mongo: crmstatsnapshots
+model CRMStatSnapshot {
+  id        String   @id
+  tenantId  String
+  repId     String?
+  metrics   Json     @default("{}")
+  updatedAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([repId])
+}

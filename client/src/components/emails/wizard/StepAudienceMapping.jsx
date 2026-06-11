@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import {
   Upload, RefreshCw, Users, Sheet, UserPlus, AlertCircle, Check, CheckCircle2,
 } from 'lucide-react';
 import { Button, Input, Badge, DataTable, TabSwitcher } from '../../ui';
-const SOURCE_TILES = [
+import { useAuth } from '../../../contexts/AuthContext';
+import { isAdminUser } from '../../../utils/departmentPermissions';
+
+const ALL_SOURCE_TILES = [
   { id: 'csv', label: 'CSV Upload', icon: Upload },
-  { id: 'holysheet', label: 'HolySheet', icon: Sheet },
+  { id: 'holysheet', label: 'HolySheet', icon: Sheet, adminOnly: true },
   { id: 'crm', label: 'CRM', icon: Users },
   { id: 'manual', label: 'Manual', icon: UserPlus },
 ];
@@ -16,9 +19,21 @@ export default function StepAudienceMapping({
   approvedTemplates = [],
   templateIndices = [],
 }) {
+  const { user } = useAuth();
   const { watch, setValue } = useFormContext();
   const mailTemplateId = watch('mailTemplateId');
   const variableMapping = watch('variableMapping') || {};
+  const showHolySheet = isAdminUser(user);
+  const sourceTiles = useMemo(
+    () => ALL_SOURCE_TILES.filter((tile) => !tile.adminOnly || showHolySheet),
+    [showHolySheet],
+  );
+
+  useEffect(() => {
+    if (!showHolySheet && audience.audienceSource === 'holysheet') {
+      audience.setAudienceSource('csv');
+    }
+  }, [showHolySheet, audience]);
 
   const selectedTemplate = useMemo(
     () => approvedTemplates.find((t) => String(t._id) === String(mailTemplateId)),
@@ -34,8 +49,8 @@ export default function StepAudienceMapping({
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {SOURCE_TILES.map(({ id, label, icon: Icon }) => (
+      <div className={`grid gap-3 ${sourceTiles.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'}`}>
+        {sourceTiles.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"

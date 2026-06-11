@@ -36,12 +36,16 @@ const PRE_DEPLOY_LABELS = {
 
 const DYNAMIC_CATEGORY_LABELS = {
   backend: 'Backend / page scan',
-  permission: 'Permission',
+  permission: 'Permission matrix (L3)',
   bottleneck: 'Bottleneck / concurrency',
   data: 'Data integrity',
   frontend: 'Frontend',
   mobile: 'Mobile',
   desktop: 'Desktop',
+  'ui-discovery': 'UI discovery (L2)',
+  workflow: 'Workflow E2E (L4)',
+  'visual-regression': 'Visual regression (L5)',
+  integration: 'Integration E2E (L4)',
 };
 
 const LIGHTHOUSE_CATEGORY = 'lighthouse';
@@ -953,6 +957,46 @@ const QATestingPage = () => {
     );
   };
 
+  const renderExecutiveSummary = () => {
+    const exec = latestResults?.executiveSummary;
+    const cleanup = latestResults?.cleanupVerification;
+    if (!exec && !cleanup) return null;
+
+    const layerSummary = exec?.layerSummary || {};
+    return (
+      <div className="mb-8 p-5 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)]">
+        <h2 className="text-lg font-bold text-[var(--color-text-primary)] mb-3">Executive summary</h2>
+        {exec && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+            <div><span className="text-[var(--color-text-muted)]">Total</span><div className="font-bold">{exec.totalTests}</div></div>
+            <div><span className="text-[var(--color-text-muted)]">Pass</span><div className="font-bold text-emerald-600">{exec.passed}</div></div>
+            <div><span className="text-[var(--color-text-muted)]">Fail</span><div className="font-bold text-red-600">{exec.failed}</div></div>
+            <div><span className="text-[var(--color-text-muted)]">Coverage</span><div className="font-bold">{exec.passRate}%</div></div>
+          </div>
+        )}
+        {Object.keys(layerSummary).length > 0 && (
+          <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase mb-3">
+            {Object.entries(layerSummary).map(([layer, s]) => (
+              <span key={layer} className="px-2 py-1 rounded border border-[var(--color-bg-border)]">
+                {layer}: {s.passed}/{s.total} pass{s.failed ? ` · ${s.failed} fail` : ''}
+              </span>
+            ))}
+          </div>
+        )}
+        {cleanup && (
+          <p className={`text-xs font-mono ${cleanup.passed ? 'text-emerald-600' : 'text-red-600'}`}>
+            Cleanup: {cleanup.passed ? 'verified — 0 residuals' : `FAILED — ${cleanup.failReason || 'residual QA data'}`}
+            {cleanup.created && cleanup.deleted && (
+              <span className="text-[var(--color-text-muted)]">
+                {' '}· created tasks {cleanup.created.tasks ?? 0} / deleted {cleanup.deleted.tasks ?? 0}
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   // Render dynamic-scan bugs (excludes pre-deploy checklist failures shown above)
   const renderBugList = () => {
     if (!latestResults || !latestResults.testCases) return null;
@@ -1244,6 +1288,7 @@ const QATestingPage = () => {
         {/* Results Section */}
         {latestResults && !isRunning && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {renderExecutiveSummary()}
             {renderPreDeploymentChecklist()}
             {renderLighthousePanel()}
             {renderBugList()}

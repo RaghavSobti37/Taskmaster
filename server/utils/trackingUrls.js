@@ -83,8 +83,9 @@ const buildStaticUnsubscribePageUrl = () => {
 /** @deprecated Legacy per-recipient links — prefer buildStaticUnsubscribePageUrl */
 const buildUnsubscribePageUrl = (campaignId, leadEmail, recipientId) => {
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
+  const { getJwtSecretForHmac } = require('./jwtSecret');
   const token = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
+    .createHmac('sha256', getJwtSecretForHmac())
     .update(String(leadEmail).toLowerCase().trim())
     .digest('hex');
   const params = new URLSearchParams({

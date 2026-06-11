@@ -7,6 +7,14 @@ services:
     maxmemoryPolicy: noeviction
     ipAllowList: []
 
+  # Staging-only Redis — isolates BullMQ/cache from production (T0-4)
+  - type: keyvalue
+    name: taskmaster-redis-staging
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
   # Production API — sync env vars from Dashboard if service already exists manually
   - type: web
     name: CoreKnot-api
@@ -57,6 +65,17 @@ services:
         sync: false
       - key: SUPABASE_BACKUP_BUCKET
         value: taskmaster-backups
+      # URL vars — set real values from .cursor/production-hosts.local.json (derived.*)
+      - key: TRACKING_BASE_URL
+        value: https://YOUR-PRODUCTION-API
+      - key: SERVER_URL
+        value: https://YOUR-PRODUCTION-API
+      - key: APP_BASE_URL
+        value: https://YOUR-PRODUCTION-API
+      - key: FRONTEND_URL
+        value: https://YOUR-PRODUCTION-FRONTEND
+      - key: CLIENT_URL
+        value: https://YOUR-PRODUCTION-FRONTEND
 
   # Staging API — PR/preview testing; never points at production DB
   - type: web
@@ -87,7 +106,7 @@ services:
         sync: false
       - key: REDIS_URL
         fromService:
-          name: taskmaster-redis
+          name: taskmaster-redis-staging
           type: keyvalue
           property: connectionString
       - key: SENTRY_DSN
@@ -165,5 +184,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Real URL: .cursor/production-hosts.local.json → productionApiHealthUrl (derived.keepWarmUrl)
       - key: KEEP_WARM_URL
-        value: https://YOUR-RENDER-SERVICE.onrender.com/api/health
+        value: YOUR-PRODUCTION-API-HEALTH

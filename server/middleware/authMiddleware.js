@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Artist = require('../models/Artist');
 const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
 const { loadAuthUser } = require('../utils/authUserLookup');
@@ -14,6 +15,8 @@ const {
   isAdminUser,
   isOpsUser,
   isArtistManagerUser,
+  hasPageAccess,
+  hasAnyPageAccess,
   ADMIN_SLUG,
 } = require('../utils/departmentPermissions');
 const { verifySessionToken, isAbsoluteSessionExpired } = require('../utils/authSession');
@@ -37,6 +40,13 @@ const touchLastOnline = (userId) => {
 
 const { getTokenFromRequest } = require('../utils/authCookie');
 
+/** Localhost dev bypass — never enabled in production (T0-14). */
+const isDebugBypassEnabled = () => {
+  if (process.env.NODE_ENV === 'production') return false;
+  return process.env.NODE_ENV === 'development'
+    && String(process.env.DEBUG_BYPASS || '').trim() === 'true';
+};
+
 const protect = async (req, res, next) => {
   const token = getTokenFromRequest(req);
 
@@ -45,8 +55,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const isBypassEnabled = process.env.NODE_ENV === 'development'
-      && String(process.env.DEBUG_BYPASS).trim() === 'true';
+    const isBypassEnabled = isDebugBypassEnabled();
     const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
     const bypassToken = process.env.DEBUG_BYPASS_TOKEN || 'bypass_token';
     if (isBypassEnabled && isLocalhost && token === bypassToken) {
@@ -109,11 +118,52 @@ const opsOrAdmin = (req, res, next) => {
   }
 };
 
+const requirePageAccess = (pageKey) => (req, res, next) => {
+  if (req.user && hasPageAccess(req.user, pageKey)) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized — page access required' });
+  }
+};
+
+const requireAnyPageAccess = (...pageKeys) => (req, res, next) => {
+  if (req.user && hasAnyPageAccess(req.user, pageKeys)) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized — page access required' });
+  }
+};
+
 const artistOrAdmin = (req, res, next) => {
   if (req.user && isArtistManagerUser(req.user)) {
     next();
   } else {
     res.status(403).json({ error: 'Not authorized — artist management or admin required' });
+  }
+};
+
+const isUserOnArtistTeam = (user, team = []) => {
+  if (!user) return false;
+  const uid = String(user._id || user.id);
+  return team.some((member) => String(member?._id || member) === uid);
+};
+
+const artistTeamOrAdmin = async (req, res, next) => {
+  if (req.user && isArtistManagerUser(req.user)) {
+    return next();
+  }
+  const artistId = req.params.id;
+  if (!artistId || !req.user) {
+    return res.status(403).json({ error: 'Not authorized — artist management or team membership required' });
+  }
+  try {
+    const artist = await Artist.findById(artistId).select('team').lean();
+    if (artist && isUserOnArtistTeam(req.user, artist.team)) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Not authorized — artist management or team membership required' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -127,9 +177,14 @@ const orgAccountsAccess = (req, res, next) => {
 
 module.exports = {
   protect,
+  isDebugBypassEnabled,
   admin,
   opsOrAdmin,
+  requirePageAccess,
+  requireAnyPageAccess,
   artistOrAdmin,
+  artistTeamOrAdmin,
+  isUserOnArtistTeam,
   orgAccountsAccess,
   isOps: isOpsUser,
   isArtistManager: isArtistManagerUser,

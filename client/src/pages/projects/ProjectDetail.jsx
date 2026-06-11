@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Layout,
   BarChart3,
+  Briefcase,
 } from 'lucide-react';
 import ProjectList from '../../components/project/ProjectList';
 import ProjectKanban from '../../components/project/ProjectKanban';
@@ -16,7 +17,7 @@ import ProjectFinance from '../../components/project/ProjectFinance';
 import ProjectGoalsPanel from '../../components/project/ProjectGoalsPanel';
 import ProjectGoalsStrip from '../../components/project/ProjectGoalsStrip';
 import { useAuth } from '../../contexts/AuthContext';
-import { Badge, ProgressBar, PageSkeleton, NexusDropdown, TabSwitcher, PageContainer, PageHeader, Button, SearchInput } from '../../components/ui';
+import { Badge, ProgressBar, PageSkeleton, NexusDropdown, TabSwitcher, PageContainer, PageHeader, Button, SearchInput, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../../components/TaskCreateModal';
@@ -51,7 +52,7 @@ const ProjectDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: project, isLoading: projectLoading } = useProject(id);
+  const { data: project, isLoading: projectLoading, isError: projectError, error: projectErr, refetch: refetchProject, isFetched: projectFetched } = useProject(id);
   const { data: workspaces = [] } = useWorkspaces();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -296,7 +297,33 @@ const ProjectDetail = () => {
   const showTaskFilters = activeTab === 'list' || activeTab === 'kanban';
 
   if (loading && !project) return <PageSkeleton />;
-  if (!project) return <div className="p-20 text-center">Project not found.</div>;
+
+  if (projectError || (!project && projectFetched)) {
+    const isNotFound = projectErr?.response?.status === 404 || (!project && projectFetched && !projectError);
+    if (isNotFound) {
+      return (
+        <PageContainer className="!py-8">
+          <EmptyState
+            icon={Briefcase}
+            title="Project not found"
+            description="This project may have been removed or you may not have access."
+            actionLabel="Back to projects"
+            onAction={() => navigate('/projects')}
+          />
+        </PageContainer>
+      );
+    }
+    return (
+      <PageContainer className="!py-8">
+        <QueryErrorBanner
+          message={getQueryErrorMessage(projectErr, 'Could not load project')}
+          onRetry={() => refetchProject()}
+        />
+      </PageContainer>
+    );
+  }
+
+  if (!project) return null;
 
   return (
     <PageContainer className="!py-4 !space-y-4">

@@ -1,5 +1,7 @@
 const Asset = require('../models/Asset');
+const Project = require('../models/Project');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { canAccessProject, getAccessibleProjectsFilter } = require('../utils/projectAccess');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildMentionNotifications } = require('../utils/mentionNotifications');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
@@ -13,14 +15,31 @@ const dispatchMentionNotifications = (payloads = []) => {
 exports.getAssets = async (req, res) => {
   try {
     const { projectId } = req.query;
-    const query = {};
-    if (projectId) {
-      if (projectId === 'null') {
-        query.projectIds = { $size: 0 };
-      } else {
-        query.projectIds = projectId;
+    let query = {};
+
+    if (projectId === 'null') {
+      query.projectIds = { $size: 0 };
+    } else if (projectId) {
+      const project = await Project.findById(projectId).select('owner members').lean();
+      if (!project) return res.status(404).json({ error: 'Project not found' });
+      if (!canAccessProject(req.user, project)) {
+        return res.status(403).json({ error: 'Not authorized to view this project' });
+      }
+      query.projectIds = projectId;
+    } else {
+      const accessFilter = getAccessibleProjectsFilter(req.user);
+      if (Object.keys(accessFilter).length > 0) {
+        const accessibleProjects = await Project.find(accessFilter).select('_id').lean();
+        const accessibleIds = accessibleProjects.map((p) => p._id);
+        query = {
+          $or: [
+            { projectIds: { $size: 0 } },
+            { projectIds: { $in: accessibleIds } },
+          ],
+        };
       }
     }
+
     const assets = await Asset.find(query)
       .populate('projectIds', 'name')
       .populate('createdBy', 'name avatar')

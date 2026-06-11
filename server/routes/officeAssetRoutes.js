@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const OfficeAsset = require('../models/OfficeAsset');
-const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
+const { protect, requireAnyPageAccess } = require('../middleware/authMiddleware');
+
+const officeAssetsPage = requireAnyPageAccess('equipment', 'office_assets');
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', officeAssetsPage, async (req, res) => {
   try {
     const assets = await OfficeAsset.find().populate('updatedBy', 'name email avatar').sort('-createdAt');
     res.json(assets);
@@ -14,7 +16,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', officeAssetsPage, async (req, res) => {
   try {
     const asset = new OfficeAsset({
       ...req.body,
@@ -33,7 +35,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', officeAssetsPage, async (req, res) => {
   try {
     const asset = await OfficeAsset.findById(req.params.id);
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
@@ -68,7 +70,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', opsOrAdmin, async (req, res) => {
+router.delete('/:id', officeAssetsPage, async (req, res) => {
   try {
     await OfficeAsset.findByIdAndDelete(req.params.id);
     res.json({ message: 'Asset removed' });

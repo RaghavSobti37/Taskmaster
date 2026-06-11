@@ -14,27 +14,46 @@ server/coverage/
 client/.lighthouse.env
 test-results/
 playwright-report/
+e2e/.auth/
 node_modules
 *.csv
 server/uploads/
 *.log
+.keep-warm-state.json
 google_service_account.json
 .agents
 graphify-out/
+agentic_memory/
 *backups
 setup.cd
 .claude/
 *.mmdb
-# Specify — ignore all except README + curated memory files
+# Specify — ignore all except README + curated memory tree
 .specify/**
 !.specify/
 !.specify/README.md
 !.specify/memory/
-!.specify/memory/project-overview.md
-!.specify/memory/architecture.md
-!.specify/memory/features.md
-!.specify/memory/conventions.md
-!.specify/memory/recent-changes.md
+!.specify/memory/INDEX.md
+!.specify/memory/MASTER.md
+!.specify/memory/platform/
+!.specify/memory/platform/**
+!.specify/memory/architecture/
+!.specify/memory/architecture/**
+!.specify/memory/frontend/
+!.specify/memory/frontend/**
+!.specify/memory/backend/
+!.specify/memory/backend/**
+!.specify/memory/auth/
+!.specify/memory/auth/**
+!.specify/memory/features/
+!.specify/memory/features/**
+!.specify/memory/operations/
+!.specify/memory/operations/**
+!.specify/memory/changelog/
+!.specify/memory/changelog/**
+# Legacy agent tooling stays gitignored
+!.specify/memory/agents/
+.specify/memory/agents/**
 .gemini/
 *.zip
 *Basecamp Download*
@@ -51,3 +70,4 @@ eng.traineddata
 docs/workspaces_projects.txt
 .fallow/
 .vercel
+nestjs-server/generated/

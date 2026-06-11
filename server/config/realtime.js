@@ -75,7 +75,7 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
     });
   });
 
-  log().info('Realtime', 'Socket.io initialized');
+  log().debug('Realtime', 'Socket.io initialized');
   return io;
 };
 

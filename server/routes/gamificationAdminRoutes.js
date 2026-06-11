@@ -3,7 +3,9 @@ const router = express.Router();
 const GamificationConfig = require('../models/GamificationConfig');
 const GamificationService = require('../services/gamificationService');
 const logger = require('../utils/logger');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+
+const gamificationAccess = requirePageAccess('admin_gamification');
 const { validateBody } = require('../validation/validateBody');
 const { gamificationConfigBody } = require('../validation/schemas/gamification');
 
@@ -27,7 +29,7 @@ const ALLOWED_CONFIG_FIELDS = [
   'baseXp',
 ];
 
-router.get('/rules', protect, admin, async (req, res) => {
+router.get('/rules', protect, gamificationAccess, async (req, res) => {
   try {
     const config = await GamificationService.getConfigPlain();
     res.json({
@@ -39,7 +41,7 @@ router.get('/rules', protect, admin, async (req, res) => {
   }
 });
 
-router.get('/config', protect, admin, async (req, res) => {
+router.get('/config', protect, gamificationAccess, async (req, res) => {
   try {
     const config = await GamificationService.getConfig();
     res.json(config);
@@ -48,7 +50,7 @@ router.get('/config', protect, admin, async (req, res) => {
   }
 });
 
-router.put('/config', protect, admin, validateBody(gamificationConfigBody), async (req, res) => {
+router.put('/config', protect, gamificationAccess, validateBody(gamificationConfigBody), async (req, res) => {
   try {
     const updates = req.body;
     let config = await GamificationConfig.findOne().sort({ updatedAt: -1 });
@@ -132,7 +134,7 @@ router.put('/config', protect, admin, validateBody(gamificationConfigBody), asyn
   }
 });
 
-router.get('/config/:field', protect, admin, async (req, res) => {
+router.get('/config/:field', protect, gamificationAccess, async (req, res) => {
   try {
     const config = await GamificationService.getConfig();
     const { field } = req.params;
@@ -148,7 +150,7 @@ router.get('/config/:field', protect, admin, async (req, res) => {
   }
 });
 
-router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
+router.post('/recalculate-all-levels', protect, gamificationAccess, async (req, res) => {
   try {
     const config = await GamificationService.getConfig();
     const {

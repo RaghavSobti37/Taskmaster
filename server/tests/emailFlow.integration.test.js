@@ -17,6 +17,11 @@ const QUILL_INDENT_HTML = '<p class="ql-indent-2" style="padding-left: 3em;">Hel
 describe('Email flow integration', () => {
   let agent;
 
+  afterAll(async () => {
+    const { drainMemoryQueue } = require('../services/queueService');
+    await drainMemoryQueue();
+  });
+
   beforeEach(async () => {
     let adminDept = await Department.findOne({ slug: 'admin' });
     if (!adminDept) {

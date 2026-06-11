@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { Search, RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
+import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
 import { PageContainer, DataTable, Button, Badge } from '../../components/ui/primitives';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import SearchInput from '../../components/ui/SearchInput';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import DataOverviewSection from '../../components/ui/DataOverviewSection';
 import PageToolbar from '../../components/ui/PageToolbar';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
-import DataHubFolderSidebar from '../../components/dataHub/DataHubFolderSidebar';
-import DataHubTscImport from '../../components/dataHub/DataHubTscImport';
+import DataHubOpsMenu from '../../components/dataHub/DataHubOpsMenu';
 import {
   useDataHubFolders,
   useDataHubPeople,
@@ -42,13 +42,27 @@ const loadDataHubFilters = () => {
     activeFolder: 'all',
     pageSize: 10,
     emailStatusFilter: 'all',
-    showAnalytics: true,
+    showAnalytics: false,
+    sortField: 'lastActivity',
+    sortOrder: 'desc',
   };
 };
 
+const PAGE_SIZE_OPTIONS = [
+  { value: 10, label: '10 rows' },
+  { value: 25, label: '25 rows' },
+  { value: 50, label: '50 rows' },
+  { value: 100, label: '100 rows' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'lastActivity:desc', label: 'Activity (newest)' },
+  { value: 'updated:desc', label: 'Updated (newest)' },
+  { value: 'name:asc', label: 'Name (A–Z)' },
+];
+
 const AUTO_SYNC_MS = DATA_HUB_REFRESH_MS;
 
-const DataHubAnalyticsPanel = lazy(() => import('../../components/dataHub/DataHubAnalyticsPanel'));
 const DataHubPersonDetail = lazy(() => import('../../components/dataHub/DataHubPersonDetail'));
 
 function formatLastSynced(date) {
@@ -82,6 +96,9 @@ export function DataHubContent() {
   const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(savedFilters.showAnalytics);
   const [emailStatusFilter, setEmailStatusFilter] = useState(savedFilters.emailStatusFilter);
+  const [sortField, setSortField] = useState(savedFilters.sortField || 'lastActivity');
+  const [sortOrder, setSortOrder] = useState(savedFilters.sortOrder || 'desc');
+  const sortValue = `${sortField}:${sortOrder}`;
 
   useEffect(() => {
     try {
@@ -90,19 +107,23 @@ export function DataHubContent() {
         pageSize,
         emailStatusFilter,
         showAnalytics,
+        sortField,
+        sortOrder,
       }));
     } catch {
       /* ignore */
     }
-  }, [activeFolder, pageSize, emailStatusFilter, showAnalytics]);
+  }, [activeFolder, pageSize, emailStatusFilter, showAnalytics, sortField, sortOrder]);
 
   const queryClient = useQueryClient();
   const { confirm } = useConfirm();
   const toast = useToast();
-  const { data: folderData } = useDataHubFolders();
+  const { data: folderData, isError: foldersError, error: foldersErr } = useDataHubFolders();
   const reconcileMutation = useDataHubReconcile();
   const backupMutation = useDataHubProductionBackup();
   const { data: syncStatus } = useDataHubSyncStatus();
+  const reconcileEnabled = syncStatus?.reconcileEnabled !== false;
+  const localDevMode = Boolean(syncStatus?.localDevMode);
   const { data: backupStatus } = useDataHubBackups();
   const autoSyncInFlight = useRef(false);
   const [userSyncActive, setUserSyncActive] = useState(false);
@@ -122,6 +143,7 @@ export function DataHubContent() {
   }, []);
 
   useEffect(() => {
+    if (!reconcileEnabled) return undefined;
     const lastSync = syncStatus?.lastSyncedAt;
     const recentlySynced = lastSync && (Date.now() - new Date(lastSync).getTime() < 30 * 60 * 1000);
     if (!recentlySynced) {
@@ -129,7 +151,7 @@ export function DataHubContent() {
     }
     const id = setInterval(runIncrementalSync, AUTO_SYNC_MS);
     return () => clearInterval(id);
-  }, [runIncrementalSync, syncStatus?.lastSyncedAt]);
+  }, [runIncrementalSync, syncStatus?.lastSyncedAt, reconcileEnabled]);
 
   const peopleParams = useMemo(() => ({
     folder: activeFolder,
@@ -137,13 +159,31 @@ export function DataHubContent() {
     page,
     limit: pageSize,
     emailStatus: emailStatusFilter !== 'all' ? emailStatusFilter : undefined,
-  }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter]);
+    sort: sortField,
+    order: sortOrder,
+  }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter, sortField, sortOrder]);
 
-  const { data: peopleData, isLoading } = useDataHubPeople(peopleParams);
-  const { data: analytics } = useDataHubAnalytics(activeFolder, { enabled: showAnalytics });
+  const { data: peopleData, isLoading, isError: peopleError, error: peopleErr } = useDataHubPeople(peopleParams);
+  const { data: analytics, isError: analyticsError, error: analyticsErr } = useDataHubAnalytics(activeFolder, { enabled: showAnalytics });
+
+  const queryError = peopleError
+    ? peopleErr
+    : foldersError
+      ? foldersErr
+      : (showAnalytics && analyticsError)
+        ? analyticsErr
+        : null;
 
   const folders = folderData?.folders || [];
   const folderCounts = folderData?.counts || {};
+  const folderOptions = useMemo(
+    () => folders.map((folder) => ({
+      value: folder.key,
+      label: `${folder.label} (${folder.count ?? 0})`,
+    })),
+    [folders],
+  );
+  const activeFolderLabel = folders.find((f) => f.key === activeFolder)?.label || 'All people';
   const lastSyncedAt = syncStatus?.lastSyncedAt || syncStatus?.lastStats?.syncedAt;
   const latestBackup = backupStatus?.snapshots?.[0];
   const backupDestination = backupStatus?.destination || 'mongo';
@@ -310,79 +350,122 @@ export function DataHubContent() {
     },
   ];
 
+  const syncStatusLabel = showSyncing
+    ? 'Syncing…'
+    : `Synced ${formatLastSynced(lastSyncedAt)}${latestBackup?.date ? ` · Backup ${latestBackup.date}` : ''}`;
+
   return (
     <>
-      <div className="flex gap-4 min-h-[calc(100vh-14rem)]">
-        <DataHubFolderSidebar
-          folders={folders}
-          activeFolder={activeFolder}
-          onSelect={(key) => { setActiveFolder(key); setPage(1); }}
-        />
+      <div className="flex flex-col min-h-[calc(100vh-14rem)] w-full space-y-3 mb-8">
+        {localDevMode && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+            {syncStatus?.message || 'Local dev — CRM/person data not synced. Data Hub is empty by design.'}
+          </p>
+        )}
+        {queryError && (
+          <QueryErrorBanner
+            message={getQueryErrorMessage(queryError, 'Failed to load Data Hub data')}
+            onRetry={handleRefresh}
+          />
+        )}
 
-        <div className="flex-1 min-w-0 flex flex-col space-y-3 mb-8">
-          <DataOverviewSection stats={overview.stats} charts={overview.charts} eagerCharts={overview.eagerCharts} />
+        {showAnalytics && (
+          <DataOverviewSection
+            stats={overview.stats}
+            charts={overview.charts}
+            eagerCharts={overview.eagerCharts}
+          />
+        )}
 
-          <PageToolbar
-            actions={(
-              <>
-                <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden lg:inline mr-1">
-                  {showSyncing
-                    ? 'Syncing…'
-                    : `Synced ${formatLastSynced(lastSyncedAt)}`}
-                  {latestBackup?.date && !showSyncing && (
-                    <> · Backup {latestBackup.date}</>
-                  )}
-                </span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="!px-2.5 whitespace-nowrap"
-                  onClick={handleProductionBackup}
-                  disabled={backupMutation.isPending || reconcileMutation.isPending}
-                  title={`Full production DB backup → ${backupTargetLabel}`}
-                >
-                  <Database size={14} className={backupMutation.isPending ? 'animate-pulse' : ''} />
-                  {backupMutation.isPending ? 'Backing up…' : 'DB Backup'}
-                </Button>
-                <DataHubTscImport onImported={handleRefresh} compact />
-                <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleReconcile} disabled={reconcileMutation.isPending} title="Pull new/changed records from all inlets">
-                  <RefreshCw size={14} className={reconcileMutation.isPending ? 'animate-spin' : ''} />
-                  Incremental sync
-                </Button>
-                <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleFullReconcile} disabled={reconcileMutation.isPending} title="Full re-merge from all inlets — slower, use when data looks wrong">
-                  Full re-merge
-                </Button>
-                <Button variant="ghost" size="sm" className="!px-2.5 whitespace-nowrap" onClick={() => setShowAnalytics(!showAnalytics)}>
-                  <BarChart3 size={14} />
-                  Analytics
-                </Button>
-                <Button variant="ghost" size="sm" className="!px-2" onClick={handleRefresh} title="Refresh">
-                  <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-                </Button>
-              </>
-            )}
-          >
-            <SearchInput
-              placeholder="Search name, email, phone…"
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            />
-            <NexusDropdown
-              label="Status"
-              placeholder="All statuses"
-              value={emailStatusFilter}
-              onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
-              options={[
-                { value: 'all', label: 'All statuses' },
-                { value: 'Active', label: 'Active' },
-                { value: 'Unsubscribed', label: 'Unsubscribed' },
-                { value: 'Bounced', label: 'Bounced' },
-                { value: 'Pending', label: 'Pending' },
-              ]}
-            />
-          </PageToolbar>
+        <PageToolbar
+          toolbarFill
+          filterSheetTitle="Data Hub filters"
+          actions={(
+            <>
+              <Button
+                variant={showAnalytics ? 'secondary' : 'ghost'}
+                size="sm"
+                className="!px-2.5 whitespace-nowrap"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                title={showAnalytics ? 'Hide overview analytics' : 'Show overview analytics'}
+              >
+                <BarChart3 size={14} />
+                Analytics
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="!px-2"
+                onClick={handleRefresh}
+                title="Refresh"
+                data-mobile-primary
+              >
+                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+              </Button>
+              <DataHubOpsMenu
+                syncLabel={syncStatusLabel}
+                onBackup={handleProductionBackup}
+                onIncrementalSync={handleReconcile}
+                onFullReconcile={handleFullReconcile}
+                onImported={handleRefresh}
+                backupPending={backupMutation.isPending}
+                reconcilePending={reconcileMutation.isPending}
+                reconcileEnabled={reconcileEnabled}
+              />
+            </>
+          )}
+        >
+          <SearchInput
+            placeholder="Search name, email, phone…"
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+          />
+          <NexusDropdown
+            label="Folder"
+            placeholder="All people"
+            value={activeFolder}
+            onChange={(v) => { setActiveFolder(v); setPage(1); }}
+            options={folderOptions.length ? folderOptions : [{ value: 'all', label: 'All people' }]}
+          />
+          <NexusDropdown
+            label="Status"
+            placeholder="All statuses"
+            value={emailStatusFilter}
+            onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
+            options={[
+              { value: 'all', label: 'All statuses' },
+              { value: 'Active', label: 'Active' },
+              { value: 'Unsubscribed', label: 'Unsubscribed' },
+              { value: 'Bounced', label: 'Bounced' },
+              { value: 'Pending', label: 'Pending' },
+            ]}
+          />
+          <NexusDropdown
+            label="Sort"
+            placeholder="Activity (newest)"
+            value={sortValue}
+            onChange={(v) => {
+              const [field, order] = String(v).split(':');
+              setSortField(field || 'lastActivity');
+              setSortOrder(order || 'desc');
+              setPage(1);
+            }}
+            options={SORT_OPTIONS}
+          />
+          <NexusDropdown
+            label="Rows"
+            placeholder="10 rows"
+            value={pageSize}
+            onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+            options={PAGE_SIZE_OPTIONS}
+          />
+        </PageToolbar>
 
-          <div data-density="compact">
+        <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase -mt-1">
+          {activeFolderLabel} · {total.toLocaleString()} {total === 1 ? 'person' : 'people'}
+        </p>
+
+        <div data-density="compact" className="min-w-0">
           <DataTable
             columns={columns}
             data={peopleData?.data || []}
@@ -397,21 +480,9 @@ export function DataHubContent() {
             onPageChange={setPage}
             onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
             rowEstimateSize={56}
-            tableMaxHeight="70vh"
+            tableMaxHeight="calc(100vh - 18rem)"
           />
-          </div>
         </div>
-
-        {showAnalytics && (
-          <Suspense fallback={null}>
-            <DataHubAnalyticsPanel
-              analytics={analytics}
-              folder={activeFolder}
-              showPanel={showAnalytics}
-              onClose={() => setShowAnalytics(false)}
-            />
-          </Suspense>
-        )}
       </div>
 
       {selectedPersonId && (

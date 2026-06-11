@@ -2,18 +2,30 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Play, Mail, Eye, Plus, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import MailStatsSummary from '../../components/admin/MailStatsSummary';
 import MailCampaignList from '../../components/emails/MailCampaignList';
 import { useMailStats, useMailCampaigns } from '../../hooks/useTaskmasterQueries';
 
 export default function EmailsOverviewPage() {
   const navigate = useNavigate();
-  const { data: stats } = useMailStats();
+  const {
+    data: stats,
+    isError: statsError,
+    error: statsErr,
+    refetch: refetchStats,
+  } = useMailStats();
   const { data: campaigns = [] } = useMailCampaigns();
   const sending = campaigns.filter((c) => c.status === 'Sending').length;
 
   return (
     <div className="space-y-8">
+      {statsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(statsErr, 'Failed to load mail stats')}
+          onRetry={() => refetchStats()}
+        />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold tracking-tight">Overview</h2>

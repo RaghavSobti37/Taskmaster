@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Briefcase, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical, ClipboardCheck, Layers,
 } from 'lucide-react';
-import { Badge, ProgressBar, Button, Input, PageSkeleton, NexusDropdown, ListPageLayout, SearchInput } from '../../components/ui';
+import { Badge, ProgressBar, Button, Input, PageSkeleton, NexusDropdown, ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
 import { useProjects, useWorkspaces, useReviewTasks, useDashboardTasks } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -101,8 +101,8 @@ const ProjectsView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { data: projects = [], isLoading: loadingProjects } = useProjects();
-  const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
+  const { data: projects = [], isLoading: loadingProjects, isError: projectsError, error: projectsErr, refetch: refetchProjects } = useProjects();
+  const { data: workspaces = [], isLoading: loadingWorkspaces, isError: workspacesError, error: workspacesErr, refetch: refetchWorkspaces } = useWorkspaces();
   const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
   const { data: dashboardTasks = [] } = useDashboardTasks(user?._id, !!user?._id);
 
@@ -129,6 +129,11 @@ const ProjectsView = () => {
   }, [location.state, navigate]);
 
   const loading = loadingProjects || loadingWorkspaces;
+  const listQueryError = projectsError ? projectsErr : workspacesError ? workspacesErr : null;
+  const handleListRetry = () => {
+    if (projectsError) refetchProjects();
+    if (workspacesError) refetchWorkspaces();
+  };
 
   const toggleStar = useCallback(async (e, project) => {
     e.stopPropagation();
@@ -427,6 +432,12 @@ const ProjectsView = () => {
         </>
       }
     >
+      {listQueryError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(listQueryError, 'Failed to load projects')}
+          onRetry={handleListRetry}
+        />
+      )}
       <div className="flex flex-col">
         {draggingProjectId && (
           <div className="mb-4 p-3 rounded-xl border-2 border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5">

@@ -5,12 +5,12 @@ const { makeCheck, readText, readRepoText } = require('./qaCheckUtils');
  */
 async function runSuite5FeatureChecks() {
   const checks = [];
-  const taskRoutes = await readText('routes/taskRoutes.js');
-  const taskSvc = await readText('services/TaskService.js');
-  const taskCtrl = await readText('controllers/taskController.js');
-  const taskActivitySvc = await readText('services/TaskActivityService.js');
-  const taskActivityModel = await readText('models/TaskActivity.js');
-  const mentionReceipt = await readText('models/TaskMentionReceipt.js');
+  const taskRoutes = await readText('domains/tasks/routes.js');
+  const taskSvc = await readText('domains/tasks/services/TaskService.js');
+  const taskCtrl = await readText('domains/tasks/controllers/taskController.js');
+  const taskActivitySvc = await readText('domains/tasks/services/TaskActivityService.js');
+  const taskActivityModel = await readText('domains/tasks/models/TaskActivity.js');
+  const mentionReceipt = await readText('domains/tasks/models/TaskMentionReceipt.js');
   const taskAccess = await readText('utils/taskAccess.js');
   const mentionNotif = await readText('utils/mentionNotifications.js');
   const taskReviewShared = await readRepoText('shared/taskReviewRules.js');
@@ -33,7 +33,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'taskRoutes exposes thread read + post',
-      'routes/taskRoutes.js',
+      'domains/tasks/routes.js',
       'high'
     ),
     makeCheck(
@@ -46,7 +46,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'TaskActivityService handles created + message events',
-      'services/TaskActivityService.js',
+      'domains/tasks/services/TaskActivityService.js',
       'high'
     ),
     makeCheck(
@@ -60,7 +60,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'TaskActivity schema supports timeline event types',
-      'models/TaskActivity.js',
+      'domains/tasks/models/TaskActivity.js',
       'medium'
     ),
     makeCheck(
@@ -71,7 +71,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'TaskMentionReceipt model present for badge counts',
-      'models/TaskMentionReceipt.js',
+      'domains/tasks/models/TaskMentionReceipt.js',
       'high'
     ),
     makeCheck(
@@ -121,7 +121,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'Assignee list edits keep original reviewer chain',
-      'services/TaskService.js',
+      'domains/tasks/services/TaskService.js',
       'high'
     ),
     makeCheck(
@@ -134,7 +134,7 @@ async function runSuite5FeatureChecks() {
         ? 'pass'
         : 'fail',
       'Bug tasks auto-assign to platform owner with notification',
-      'controllers/taskController.js',
+      'domains/tasks/controllers/taskController.js',
       'high'
     ),
     makeCheck(

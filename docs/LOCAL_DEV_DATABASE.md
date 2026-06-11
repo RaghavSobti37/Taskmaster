@@ -40,7 +40,7 @@ The database name is the **path segment** in the URI (`.../taskmaster_local`), n
 
 ## Common mistakes
 
-1. **`client/.env` points at Render** — `VITE_API_URL=https://CoreKnot-jfw0.onrender.com` makes localhost UI write to production.
+1. **`client/.env` points at Render** — `VITE_API_URL=https://YOUR-PRODUCTION-API` (production API from `.cursor/production-hosts.local.json`) makes localhost UI write to production.
 2. **Same URI for `MONGODB_URI` and `MONGODB_URI_PROD`** — both environments share one DB.
 3. **`NODE_ENV=production` locally** — server uses `MONGODB_URI_PROD`.
 4. **`MAIL_USE_PROD_DB=true`** — local server uses **production** DB for **all** API writes, not just mail. Default must be `false`.
@@ -69,16 +69,47 @@ Cron backup service: only `MONGODB_URI_PROD` (see `render.yaml`).
 
 In development, if the resolved URI targets a database name containing `production`, the server **throws** unless `ALLOW_PROD_DB_IN_DEV=true` (or `MAIL_USE_PROD_DB` mail-sync mode, which logs a warning only).
 
-## Refresh local DB from production (full copy)
+## Refresh local DB from production
 
-**Warning:** This replaces everything in `taskmaster_local` with a snapshot of `taskmaster_production`. Production is read-only; only the local database is written.
+Production is read-only; only `taskmaster_local` is written.
 
-One-liner from repo root:
+### Operational sync (recommended)
+
+Copies **users, projects, tasks, workspaces, departments** — skips CRM / Data Hub spine (leads, personindexes, etc.). Purges stale CRM collections from prior full syncs.
 
 ```bash
-node server/scripts/syncProdToLocal.js --yes
+npm run sync:prod-to-local:operational
+node server/scripts/seedE2eUsers.js
+```
+
+In `server/.env`:
+
+```env
+DATA_HUB_RECONCILE_ENABLED=false
+SYNC_MODE=operational
+```
+
+Data Hub at `/admin` shows an empty local-dev banner; auto-reconcile is off.
+
+### Purge CRM / Data Hub only (after accidental full sync)
+
+```bash
+npm run purge:local-crm-datahub
+# or dry-run: node server/scripts/purgeLocalCrmDataHub.js --dry-run
+```
+
+### Full copy (all collections — includes real CRM data)
+
+**Warning:** Replaces everything in `taskmaster_local` including 2000+ leads.
+
+```bash
+npm run sync:prod-to-local
 ```
 
 Requires `MONGODB_URI` and `MONGODB_URI_PROD` in `server/.env`. After sync, keep `MAIL_USE_PROD_DB=false` and restart the local API server.
 
 For continuous prod→local mirroring (change streams), see `server/scripts/sync-prod-to-local.js` (long-running process).
+
+## Local Postgres (NestJS) — not Mongo
+
+Express local dev stays on `taskmaster_local` Mongo. NestJS / Prisma uses **Docker Postgres** (`nestjs-server/docker-compose.yml`), not a second Supabase cloud copy. See `docs/DATA_ENV_TOPOLOGY.md`.

@@ -1,0 +1,40 @@
+{
+  "defaultPassword": "1Million#",
+  "users": [
+    {
+      "archetype": "dept-admin",
+      "email": "e2e-dept-admin@test.coreknot.local",
+      "description": "Full admin — all major routes"
+    },
+    {
+      "archetype": "dept-ops",
+      "email": "e2e-dept-ops@test.coreknot.local",
+      "description": "Operations — management hub"
+    },
+    {
+      "archetype": "dept-sales",
+      "email": "e2e-dept-sales@test.coreknot.local",
+      "description": "Sales — CRM hub"
+    },
+    {
+      "archetype": "dept-artist-management",
+      "email": "e2e-dept-artist-management@test.coreknot.local",
+      "description": "Artist management"
+    },
+    {
+      "archetype": "dept-editor",
+      "email": "e2e-dept-editor@test.coreknot.local",
+      "description": "Standard member — editor preset"
+    },
+    {
+      "archetype": "dept-videographer",
+      "email": "e2e-dept-videographer@test.coreknot.local",
+      "description": "Standard member — videographer preset"
+    },
+    {
+      "archetype": "dept-cg-artist",
+      "email": "e2e-dept-cg-artist@test.coreknot.local",
+      "description": "Standard member — CG artist preset"
+    }
+  ]
+}

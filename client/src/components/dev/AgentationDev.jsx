@@ -14,12 +14,20 @@ export default function AgentationDev() {
 
   if (!Agentation) return null;
 
+  // localStorage-only by default — no :4747 MCP server required for normal dev.
+  // Set VITE_AGENTATION_ENDPOINT=http://localhost:4747 when agentation-mcp is running.
+  const endpoint = import.meta.env.VITE_AGENTATION_ENDPOINT?.trim();
+
   return (
     <Agentation
-      endpoint="http://localhost:4747"
-      onSessionCreated={(sessionId) => {
-        console.info('[Agentation] session started:', sessionId);
-      }}
+      {...(endpoint
+        ? {
+            endpoint,
+            onSessionCreated: (sessionId) => {
+              console.info('[Agentation] session started:', sessionId);
+            },
+          }
+        : {})}
     />
   );
 }

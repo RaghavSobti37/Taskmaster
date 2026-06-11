@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 
 const initSupabaseSyncWorker = () => {
   if (!isSupabaseEnabled()) {
-    logger.info('supabaseSyncWorker', 'Skipped — Supabase secondary store not configured');
+    logger.debug('supabaseSyncWorker', 'Skipped — Supabase secondary store not configured');
     return;
   }
 
@@ -20,7 +20,7 @@ const initSupabaseSyncWorker = () => {
     }
   });
 
-  logger.info('supabaseSyncWorker', 'Scheduled Mongo → Supabase sync every 6 hours');
+  logger.debug('supabaseSyncWorker', 'Scheduled Mongo → Supabase sync every 6 hours');
 };
 
 module.exports = { initSupabaseSyncWorker };

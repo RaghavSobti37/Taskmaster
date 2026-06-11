@@ -10,6 +10,7 @@ import QuickAddActionPanel from './QuickAddActionPanel';
 import { UserAvatar } from './ui/UserAvatar';
 import { getNavCountsForPath } from '../utils/navStatusCounts';
 import MobileProfileMenu from './mobile/MobileProfileMenu';
+import { prefetchNavRoute } from '../lib/navPrefetch';
 
 const NAV_FLOAT_BOTTOM = 'max(0.75rem, env(safe-area-inset-bottom))';
 const QUICK_ADD_BOTTOM = `calc(5rem + ${NAV_FLOAT_BOTTOM})`;
@@ -74,6 +75,7 @@ function BottomNavSlot({
   isHighlighted,
   addOpen,
   onSelect,
+  onPointerEnter,
 }) {
   const Icon = slot.icon;
   const isAdd = slot.action === 'add';
@@ -83,6 +85,7 @@ function BottomNavSlot({
       ref={slotRef}
       type="button"
       onClick={onSelect}
+      onPointerEnter={onPointerEnter}
       data-tour={slot.tourId || undefined}
       className="relative z-[1] flex flex-1 min-w-0 justify-center touch-manipulation"
       aria-label={slot.label}
@@ -235,6 +238,11 @@ const BottomNavigation = () => {
                   isHighlighted={activeSlotIndex === index}
                   addOpen={addOpen}
                   onSelect={() => handleSlotSelect(index)}
+                  onPointerEnter={
+                    slot.type === 'route'
+                      ? () => prefetchNavRoute(slot.to, user?._id, user)
+                      : undefined
+                  }
                 />
               ))}
             </div>

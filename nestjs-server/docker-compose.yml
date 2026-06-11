@@ -1,0 +1,27 @@
+# Local Postgres for NestJS Prisma / ETL (no psql install required).
+# Usage:
+#   docker compose up -d
+#   npx prisma db push
+# Stop: docker compose down
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: coreknot-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: coreknot
+    volumes:
+      - coreknot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d coreknot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  coreknot_pgdata:

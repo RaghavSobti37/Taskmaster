@@ -1,12 +1,11 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from './helpers/auth.js';
-
-const hasAuthCreds = Boolean(process.env.E2E_EMAIL && process.env.E2E_PASSWORD);
+import { hasAuthCreds } from './helpers/creds.js';
 
 test.describe('authenticated flows', () => {
   test.beforeEach(() => {
-    test.skip(!hasAuthCreds, 'Set E2E_EMAIL and E2E_PASSWORD for auth flows');
+    test.skip(!hasAuthCreds(), 'Set E2E_EMAIL and E2E_PASSWORD, or use seeded E2E users');
   });
 
   test('login → dashboard shell', async ({ page }) => {
@@ -17,9 +16,9 @@ test.describe('authenticated flows', () => {
 
   test('? opens keyboard shortcuts overlay', async ({ page }) => {
     await loginAsTestUser(page);
-    await page.keyboard.press('?');
+    await page.keyboard.press('Shift+?');
     await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeVisible();
-    await expect(page.getByText(/command palette/i)).toBeVisible();
+    await expect(page.getByText('Command palette', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeHidden();
   });

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import RegisteredLocationBarChart from '../components/emails/RegisteredLocationBarChart';
 import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
-import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar } from '../components/ui';
+import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
 import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
 import { formatTimestampWithTz } from '../utils/displayLabels';
@@ -35,7 +35,7 @@ export default function CampaignDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const backToEmails = location.state?.from || '/emails/campaigns';
-  const { data: campaign, isLoading, error, refetch } = useCampaignDetails(routeCampaignId);
+  const { data: campaign, isLoading, isError, error, refetch } = useCampaignDetails(routeCampaignId);
   const toast = useToast();
   const { data: profiles = [] } = useMailProfiles();
   const resendMutation = useResendCampaign();
@@ -223,12 +223,25 @@ export default function CampaignDetails() {
   };
 
   if (isLoading) return <PageSkeleton />;
-  if (error || !campaign) {
+  if (isError) {
+    return (
+      <PageContainer className="!py-8">
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load campaign')}
+          onRetry={() => refetch()}
+        />
+        <div className="mt-6 text-center">
+          <Button onClick={() => navigate(backToEmails)}>Return to Email Campaigns</Button>
+        </div>
+      </PageContainer>
+    );
+  }
+  if (!campaign) {
     return (
       <PageContainer className="!py-12 text-center font-mono">
         <AlertCircle size={48} className="mx-auto text-rose-500 mb-4" />
-        <h2 className="text-base font-black uppercase tracking-widest mb-2">Campaign Data Not Found</h2>
-        <p className="text-xs text-[var(--color-text-muted)] mb-6">{error?.message || 'The requested campaign identifier does not exist.'}</p>
+        <h2 className="text-base font-black uppercase tracking-widest mb-2">Campaign Not Found</h2>
+        <p className="text-xs text-[var(--color-text-muted)] mb-6">The requested campaign identifier does not exist.</p>
         <Button onClick={() => navigate(backToEmails)}>Return to Email Campaigns</Button>
       </PageContainer>
     );

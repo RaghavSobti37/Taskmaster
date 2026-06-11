@@ -1,8 +1,8 @@
 const logger = require('../utils/logger');
 
-/** @deprecated Logs and CRM audits now use 7-day MongoDB TTL indexes — no archival needed. */
+/** @deprecated Logs and CRM audits use 90-day Mongo cold-archive TTL — no worker archival needed. */
 const initLogArchiverWorker = () => {
-  logger.info('logArchiverWorker', 'Skipped — Log, SystemLog, and CRMAudit use 7-day TTL');
+  logger.debug('logArchiverWorker', 'Skipped — Log, SystemLog, and CRMAudit use 90-day cold-archive TTL');
 };
 
 module.exports = { initLogArchiverWorker };

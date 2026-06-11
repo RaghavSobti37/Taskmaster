@@ -6,6 +6,7 @@ import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
@@ -19,7 +20,13 @@ const ContactsPage = () => {
   const [formBaseline, setFormBaseline] = useState(EMPTY_CONTACT_FORM);
   const queryClient = useQueryClient();
 
-  const { data: contacts = [], isLoading } = useQuery({
+  const {
+    data: contacts = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['contacts'],
     queryFn: async () => (await axios.get('/api/contacts')).data,
   });
@@ -169,6 +176,12 @@ const ContactsPage = () => {
         </Button>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load contacts')}
+          onRetry={() => refetch()}
+        />
+      )}
       <DataTable
         columns={contactColumns}
         data={filtered}

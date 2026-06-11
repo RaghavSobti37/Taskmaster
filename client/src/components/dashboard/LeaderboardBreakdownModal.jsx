@@ -85,7 +85,7 @@ const LeaderboardBreakdownModal = ({
       <header className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
         <div className="w-12 h-12 shrink-0 rounded-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] flex items-center justify-center text-sm font-bold text-[var(--color-text-muted)]">
           {member.avatar ? (
-            <img src={member.avatar} alt="" className="w-full h-full object-cover" />
+            <img src={member.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
           ) : (
             member.name?.[0] || '?'
           )}

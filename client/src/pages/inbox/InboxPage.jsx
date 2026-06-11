@@ -9,6 +9,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import DataListRow from '../../components/ui/DataListRow';
 import CountBadge from '../../components/ui/CountBadge';
 import { DataLoading } from '../../components/ui/DataLoading';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { Button, Badge } from '../../components/ui/primitives';
 import {
   useNotifications,
@@ -61,7 +62,7 @@ const InboxPage = () => {
   useEffect(() => {
     savePageFilters(INBOX_FILTERS_KEY, { filter });
   }, [filter]);
-  const { data, isLoading } = useNotifications();
+  const { data, isLoading, isError, error, refetch } = useNotifications();
   const { data: statusCounts } = useStatusCounts(!!user);
   const { confirm } = useConfirm();
   const markRead = useMarkNotificationRead();
@@ -125,6 +126,13 @@ const InboxPage = () => {
 
   return (
     <PageLoadGuard loading={isLoading && !notifications.length} skeleton={PageSkeleton} className="!py-4">
+    {isError && (
+      <QueryErrorBanner
+        message={getQueryErrorMessage(error, 'Failed to load notifications')}
+        onRetry={() => refetch()}
+        className="mx-4"
+      />
+    )}
     <ListPageLayout
       containerClassName="!py-4"
       overview={{

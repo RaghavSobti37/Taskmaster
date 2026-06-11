@@ -15,7 +15,7 @@ const UserAvatar = ({ user, size = 'md' }) => {
   return (
     <div className={`${sizes[size]} rounded-lg bg-[var(--color-action-primary)]/10 flex items-center justify-center font-bold text-[var(--color-action-primary)] overflow-hidden shrink-0`}>
       {user?.avatar ? (
-        <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+        <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
       ) : (
         (user?.name || '?').substring(0, 2).toUpperCase()
       )}

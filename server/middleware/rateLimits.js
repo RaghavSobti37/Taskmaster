@@ -1,0 +1,63 @@
+const rateLimit = require('express-rate-limit');
+const { config } = require('../config');
+
+const limitMessage = (message) => ({ ok: false, error: message });
+
+const clientIp = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+
+const authRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: config.isProduction ? 5 : 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage('Too many auth requests. Try again in an hour.'),
+  keyGenerator: (req) => {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.trim()) {
+      return `auth:${email.trim().toLowerCase()}`;
+    }
+    return `auth-ip:${clientIp(req)}`;
+  },
+});
+
+const searchRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: config.isProduction ? 30 : 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage('Too many search requests. Slow down and try again.'),
+  keyGenerator: (req) => {
+    const userId = req.user?._id?.toString?.() || req.user?.id;
+    if (userId) return `search:user:${userId}`;
+    return `search-ip:${clientIp(req)}`;
+  },
+});
+
+const webhookRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: config.isProduction ? 120 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage('Too many webhook requests.'),
+  keyGenerator: (req) => `webhook:${clientIp(req)}`,
+});
+
+const uploadRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: config.isProduction ? 40 : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage('Too many uploads. Try again later.'),
+  keyGenerator: (req) => {
+    const userId = req.user?._id?.toString?.() || req.user?.id;
+    if (userId) return `upload:user:${userId}`;
+    return `upload-ip:${clientIp(req)}`;
+  },
+});
+
+module.exports = {
+  authRateLimit,
+  searchRateLimit,
+  webhookRateLimit,
+  uploadRateLimit,
+};

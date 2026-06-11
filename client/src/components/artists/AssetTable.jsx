@@ -10,7 +10,7 @@ const spotifyColumns = [
     render: (row) => (
       <div className="flex items-center gap-3 py-1">
         {row.albumImage ? (
-          <img src={row.albumImage} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          <img src={row.albumImage} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded-lg object-cover shrink-0" />
         ) : (
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500"><Disc size={16} /></div>
         )}

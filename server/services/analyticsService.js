@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { getSpotifyAccessToken } = require('./spotifyTokenManager');
+const { getSpotifyAccessToken } = require('../domains/artists/services/spotifyTokenManager');
 
 const fetchLiveAnalytics = async (artist) => {
   // ── Resolve IDs — NO hardcoded fallbacks ──────────────────────────────────

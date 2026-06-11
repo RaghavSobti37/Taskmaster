@@ -1,3 +1,4 @@
+/** @deprecated Inbox is local-only (device storage). Runtime dispatch does not write here. */
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 

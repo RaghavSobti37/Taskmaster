@@ -7,6 +7,7 @@ import { useLogs } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import WorkModeToggle from './WorkModeToggle';
 import AttendanceTimeline from './AttendanceTimeline';
+import HygieneProgressMeter from './HygieneProgressMeter';
 import {
   getSelfMarkPanelVisibility,
   isAtOrAfterMarkOutCutoff,
@@ -273,7 +274,9 @@ const UnifiedTimeCard = ({
     ? 'space-y-2'
     : hideTitleRow && !isSelfMode
       ? 'space-y-0'
-      : 'space-y-6';
+      : isSelfMode
+        ? 'space-y-3'
+        : 'space-y-6';
 
   const panelGridClass = compact
     ? panelVisibility.showInPanel && panelVisibility.showOutPanel
@@ -305,64 +308,84 @@ const UnifiedTimeCard = ({
   const showNotLogged = unloggedMinutes >= UNLOGGED_THRESHOLD_MINUTES;
   const showBadges = showOvertime || showHoursWorked || showNotLogged;
   const showMetaSection = showIdentity || showBadges;
+  const showHygieneMeter = showIdentity && hasIn && hasOut;
+
+  const workedPillClass =
+    'shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold tabular-nums '
+    + 'bg-[color-mix(in_srgb,var(--color-action-primary)_12%,transparent)] '
+    + 'text-[var(--color-action-primary)] '
+    + 'border border-[color-mix(in_srgb,var(--color-action-primary)_22%,transparent)]';
 
   return (
     <div className={wrapperClass}>
       {showMetaSection && (
-        <div className="space-y-2">
-          {showIdentity && (
-            <div className="relative flex items-start gap-3 min-w-0">
-              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                {subTitle && (
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                    {subTitle}
-                  </p>
-                )}
-                {title && (
-                  <p className="text-2xl font-black leading-tight">{title}</p>
-                )}
-              </div>
+        <div
+          className={
+            showHygieneMeter
+              ? 'rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-3.5 py-3 sm:px-4 sm:py-3.5'
+              : 'space-y-2'
+          }
+        >
+          <div className="flex items-start justify-between gap-3 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              {showIdentity && (
+                <>
+                  {subTitle && (
+                    <p className="tm-widget-label mb-0 truncate normal-case tracking-[0.12em]">
+                      {subTitle}
+                    </p>
+                  )}
+                  {title && (
+                    <p className="text-xl sm:text-2xl font-bold leading-tight tracking-tight text-[var(--color-text-primary)]">
+                      {title}
+                    </p>
+                  )}
+                </>
+              )}
+              {showBadges && (
+                <div className={`flex flex-wrap items-center gap-1.5 ${showIdentity ? 'mt-0.5' : ''}`}>
+                  {showOvertime && (
+                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-600 border border-violet-500/20 text-xs font-semibold tabular-nums">
+                      OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
+                    </span>
+                  )}
+                  {showHoursWorked && (
+                    <span className={workedPillClass}>
+                      Worked: {formatMinuteGap(workedMinutes)}
+                      <button
+                        type="button"
+                        title={HOURS_WORKED_INFO}
+                        aria-label={HOURS_WORKED_INFO}
+                        className="inline-flex items-center -mr-0.5 opacity-75 hover:opacity-100 transition-opacity"
+                      >
+                        <Info size={12} strokeWidth={2.5} />
+                      </button>
+                    </span>
+                  )}
+                  {showNotLogged && (
+                    <span
+                      className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-semibold tabular-nums`}
+                      role="status"
+                      aria-live="assertive"
+                    >
+                      Action Required: {formatMinuteGap(unloggedMinutes)} Not Logged
+                      <button
+                        type="button"
+                        title={NOT_LOGGED_INFO}
+                        aria-label={NOT_LOGGED_INFO}
+                        className="inline-flex items-center -mr-0.5 opacity-75 hover:opacity-100 transition-opacity"
+                      >
+                        <Info size={12} strokeWidth={2.5} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-          {showBadges && (
-            <div className="flex flex-wrap items-center gap-2">
-              {showOvertime && (
-                <span className="shrink-0 px-2 py-1 rounded-lg bg-violet-500/10 text-violet-600 border border-violet-500/20 text-xs font-bold">
-                  OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
-                </span>
-              )}
-              {showHoursWorked && (
-                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20 text-xs font-bold">
-                  Worked: {formatMinuteGap(workedMinutes)}
-                  <button
-                    type="button"
-                    title={HOURS_WORKED_INFO}
-                    aria-label={HOURS_WORKED_INFO}
-                    className="inline-flex items-center opacity-80 hover:opacity-100 transition-opacity"
-                  >
-                    <Info size={13} strokeWidth={2.5} />
-                  </button>
-                </span>
-              )}
-              {showNotLogged && (
-                <span
-                  className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}
-                  role="status"
-                  aria-live="assertive"
-                >
-                  Action Required: {formatMinuteGap(unloggedMinutes)} Not Logged
-                  <button
-                    type="button"
-                    title={NOT_LOGGED_INFO}
-                    aria-label={NOT_LOGGED_INFO}
-                    className="inline-flex items-center opacity-80 hover:opacity-100 transition-opacity"
-                  >
-                    <Info size={13} strokeWidth={2.5} />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
+            {showHygieneMeter && (
+              <HygieneProgressMeter unloggedMinutes={unloggedMinutes} className="pt-0.5" />
+            )}
+          </div>
         </div>
       )}
 

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+
+const subscriptionsAccess = requirePageAccess('subscriptions');
 const {
   getUsdInrRate,
   listSubscriptions,
@@ -12,9 +14,9 @@ const {
 router.use(protect);
 
 router.get('/usd-inr-rate', getUsdInrRate);
-router.get('/', opsOrAdmin, listSubscriptions);
-router.post('/', opsOrAdmin, createSubscription);
-router.put('/:id', opsOrAdmin, updateSubscription);
-router.delete('/:id', opsOrAdmin, deleteSubscription);
+router.get('/', subscriptionsAccess, listSubscriptions);
+router.post('/', subscriptionsAccess, createSubscription);
+router.put('/:id', subscriptionsAccess, updateSubscription);
+router.delete('/:id', subscriptionsAccess, deleteSubscription);
 
 module.exports = router;

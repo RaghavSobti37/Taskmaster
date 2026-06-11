@@ -2,14 +2,12 @@ const User = require('../models/User');
 const Lead = require('../models/Lead');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
-const { assignLeadToRep } = require('./crmController');
+const { assignLeadToRep, leadService: LeadService } = require('../domains/crm/crmFacade');
 const { assignNextBookedCallRep } = require('../utils/bookedCallRepAssignment');
-const LeadService = require('../services/LeadService');
 const { normalizePersonRecord } = require('../utils/personNormalization');
-const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
-const { processArtistPathWebhook } = require('../services/artistPathImportService');
+const { processArtistEnquiryLogic } = require('../domains/artists/artistFacade');
+const { processArtistPathWebhook } = require('../domains/artists/services/artistPathImportService');
 const {
-  rejectUnlessBookCallAuthorized,
   verifyArtistEnquirySecret,
   rejectUnlessArtistPathAuthorized,
   rejectUnlessNewsletterAuthorized,
@@ -331,10 +329,6 @@ exports.handleMasterclassReview = async (req, res) => {
 };
 
 exports.handleBookedCall = async (req, res) => {
-  if (!rejectUnlessBookCallAuthorized(req, res)) {
-    return;
-  }
-
   try {
     if (connection.status === 'ready') {
       await webhookQueue.add('book-call', req.body, {

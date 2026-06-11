@@ -17,7 +17,7 @@ try {
   
   redisConnection.connect()
     .then(() => {
-      logger.info('Followup Cache', 'Redis connected successfully.');
+      logger.debug('Followup Cache', 'Redis connected successfully.');
       redisAvailable = true;
     })
     .catch((err) => {

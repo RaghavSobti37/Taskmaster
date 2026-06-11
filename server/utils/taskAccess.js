@@ -3,6 +3,7 @@ const Workspace = require('../models/Workspace');
 const { getProjectRoleForUser } = require('../../shared/projectRoles');
 const { normalizeId } = require('../../shared/taskReviewRules');
 const { resolveMentionedUserIds } = require('./mentionNotifications');
+const { isAdminUser } = require('./pagePermissions');
 
 const getProjectRole = (project, userId) => {
   if (!project || !userId) return null;
@@ -63,6 +64,50 @@ const filterUserIdsByTaskScope = async (task, userIds, session = null) => {
   return [...new Set(out)];
 };
 
+/**
+ * Assignees must be project/workspace members unless a platform admin who is not on
+ * the project assigns (explicit admin bypass for cross-team delegation).
+ */
+const assertAssigneesInTaskScope = async ({
+  taskScope,
+  assigneeIds,
+  actingUser,
+  project = null,
+  session = null,
+}) => {
+  const ids = [...new Set((assigneeIds || []).map(normalizeId).filter(Boolean))];
+  if (!ids.length || !actingUser?._id) return;
+
+  let projectDoc = project;
+  if (!projectDoc && taskScope?.projectId) {
+    const projectId = taskScope.projectId?._id || taskScope.projectId;
+    const q = Project.findById(projectId).select('owner members memberRoles workspace').lean();
+    projectDoc = session ? await q.session(session) : await q;
+  }
+
+  if (projectDoc) {
+    const actorOnProject = userHasProjectAccess(projectDoc, actingUser._id);
+    const canBypass = isAdminUser(actingUser) && !actorOnProject;
+    if (canBypass) return;
+
+    for (const id of ids) {
+      if (!userHasProjectAccess(projectDoc, id)) {
+        throw new Error('Not authorized: assignee must be a project member');
+      }
+    }
+    return;
+  }
+
+  const actorInScope = await userHasTaskScopeAccess(taskScope, actingUser._id, session);
+  const canBypass = isAdminUser(actingUser) && !actorInScope;
+  if (canBypass) return;
+
+  const scoped = await filterUserIdsByTaskScope(taskScope, ids, session);
+  if (scoped.length !== ids.length) {
+    throw new Error('Not authorized: assignee must have access to this task workspace');
+  }
+};
+
 const syncMentionAccessIds = async (task, session = null) => {
   if (!task?._id) return [];
   const mentioned = await resolveMentionedUserIds(task.title, task.description);
@@ -87,6 +132,7 @@ module.exports = {
   userHasTaskScopeAccess,
   userHasProjectAccess,
   filterUserIdsByTaskScope,
+  assertAssigneesInTaskScope,
   syncMentionAccessIds,
   getProjectRole,
 };

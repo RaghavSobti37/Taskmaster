@@ -46,7 +46,7 @@ const runPurge = async () => {
 
 const init = () => {
   cron.schedule('15 3 * * *', runPurge);
-  logger.info('taskActivityPurge', 'Scheduled daily task activity purge (03:15)');
+  logger.debug('taskActivityPurge', 'Scheduled daily task activity purge (03:15)');
 };
 
 module.exports = { init, runPurge };

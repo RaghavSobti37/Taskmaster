@@ -50,15 +50,16 @@ describe('sessionRegistry', () => {
   });
 
   it('ensureSession backfills missing registry rows', async () => {
-    const jti = 'sess-ensure';
+    const userId = `user-ensure-${Date.now()}`;
+    const jti = `sess-ensure-${Date.now()}`;
     const decoded = jwt.decode(
-      jwt.sign({ id: 'user4', jti }, process.env.JWT_SECRET, { expiresIn: '1h' }),
+      jwt.sign({ id: userId, jti }, process.env.JWT_SECRET, { expiresIn: '1h' }),
     );
-    const created = await ensureSession(fakeReq(), 'user4', decoded);
+    const created = await ensureSession(fakeReq(), userId, decoded);
     expect(created).toBe(true);
-    const again = await ensureSession(fakeReq(), 'user4', decoded);
+    const again = await ensureSession(fakeReq(), userId, decoded);
     expect(again).toBe(false);
-    const sessions = await listUserSessions('user4', jti);
+    const sessions = await listUserSessions(userId, jti);
     expect(sessions).toHaveLength(1);
   });
 

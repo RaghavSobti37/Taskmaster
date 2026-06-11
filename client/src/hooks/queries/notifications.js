@@ -8,6 +8,7 @@ import {
   markAllNotificationsRead,
   clearAllNotifications,
   loadNotifications,
+  addNotification,
 } from '../../utils/localNotificationStore';
 
 const notificationsQueryKey = (userId) => ['notifications', userId];
@@ -87,4 +88,4 @@ export const useClearAllNotifications = () => {
   });
 };
 
-export { loadNotifications, notificationsQueryKey };
+export { loadNotifications, addNotification, notificationsQueryKey };

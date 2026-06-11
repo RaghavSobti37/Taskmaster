@@ -7,7 +7,7 @@ import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import ListCard from '../../components/ui/ListCard';
 import { UserLabel } from '../../components/ui/UserAvatar';
-import { Badge, TablePagination, EmptyState } from '../../components/ui';
+import { Badge, TablePagination, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { DataLoading } from '../../components/ui/DataLoading';
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
@@ -120,7 +120,7 @@ const TodoPage = () => {
     useSplitCompletedPagination, completedPage, completedPageSize,
   ]);
 
-  const { data, isLoading } = useTodoTasks(todoParams, user?._id);
+  const { data, isLoading, isError, error, refetch } = useTodoTasks(todoParams, user?._id);
   const tasks = data?.tasks || [];
   const taskIndicators = data?.stats || { open: 0, overdue: 0, today: 0, inReview: 0 };
   const totalPages = data?.pages || 1;
@@ -483,6 +483,12 @@ const TodoPage = () => {
         </>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load tasks')}
+          onRetry={() => refetch()}
+        />
+      )}
       <FlashHighlightListener />
 
       <div className="lg:hidden space-y-3">

@@ -14,6 +14,7 @@ const PersonIdentifier = require('../../models/PersonIdentifier');
 const PersonCommunicationProfile = require('../../models/PersonCommunicationProfile');
 const PersonSourceLink = require('../../models/PersonSourceLink');
 const { normalizePhone, sanitizeEmail } = require('../../utils/sanitizer');
+const { validatePhoneE164 } = require('../../utils/phoneCountryValidation');
 const { isRootAdminEmail } = require('../../../shared/rootAdminEmails');
 const { refreshAttendanceMetricsForUserDay } = require('../../utils/refreshAttendanceMetrics');
 const crypto = require('crypto');
@@ -30,12 +31,80 @@ function qaUniqueEmail(label = 'qa') {
   return `${label}-${Date.now()}-${crypto.randomInt(1000, 9999)}@example.com`;
 }
 
-async function purgePersonGoldenRecords({ email, phone } = {}) {
-  const normalizedEmail = email ? sanitizeEmail(email) || String(email).trim().toLowerCase() : null;
-  const normalizedPhone = phone ? normalizePhone(phone) || phone : null;
+/** Unique E.164 Indian mobile for QA probes. */
+function qaE164Phone(prefixDigit = '9') {
+  return `+91${qaUniquePhone(prefixDigit)}`;
+}
+
+/** Standard CRM lead payload for QA probes (valid E.164 phone). */
+function qaLeadPayload(overrides = {}) {
+  return {
+    name: 'QA Test Lead',
+    email: qaUniqueEmail('qa-lead'),
+    phone: qaE164Phone('9'),
+    source: 'QA Test',
+    ...overrides,
+  };
+}
+
+/** Same email/phone normalization as createLead (validatePhoneE164 + sanitizeEmail). */
+function normalizeQaLeadIdentity({ email, phone } = {}) {
+  const out = { email: null, phone: null, phoneDigits: null };
+  if (email) {
+    out.email = sanitizeEmail(email) || String(email).trim().toLowerCase();
+  }
+  if (phone) {
+    const check = validatePhoneE164(phone);
+    if (check.valid && check.phone) {
+      out.phone = check.phone;
+    } else {
+      out.phone = normalizePhone(phone) || String(phone).trim();
+    }
+    out.phoneDigits = String(out.phone || '').replace(/\D/g, '');
+  }
+  return out;
+}
+
+/** Broad Lead/Contact match — exact E.164 + legacy digit variants + corrupt -DUP suffixes. */
+function buildIdentityMatchClauses({ email, phone, phoneDigits } = {}) {
+  const clauses = [];
+  if (email) clauses.push({ email });
+  if (phone) {
+    clauses.push({ phone });
+    if (phoneDigits && phoneDigits.length >= 10) {
+      const national = phoneDigits.startsWith('91') && phoneDigits.length >= 12
+        ? phoneDigits.slice(2, 12)
+        : phoneDigits.slice(-10);
+      if (national) {
+        const escaped = national.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        clauses.push(
+          { phone: national },
+          { phone: `+91${national}` },
+          { phone: `91${national}` },
+          { phone: { $regex: new RegExp(`^(\\+?91)?${escaped}(-DUP-[a-f0-9]{24})?$`, 'i') } },
+        );
+      }
+    }
+  }
+  if (!clauses.length) return null;
+  return clauses.length === 1 ? clauses[0] : { $or: clauses };
+}
+
+async function purgePersonGoldenRecords({ email, phone, phoneDigits } = {}) {
+  const normalized = normalizeQaLeadIdentity({ email, phone });
+  const normalizedEmail = email != null ? (normalized.email || null) : null;
+  const normalizedPhone = phone != null ? (normalized.phone || null) : null;
+  const digits = phoneDigits || normalized.phoneDigits;
   const idClauses = [];
   if (normalizedEmail) idClauses.push({ type: 'email', valueNormalized: normalizedEmail });
   if (normalizedPhone) idClauses.push({ type: 'phone', valueNormalized: normalizedPhone });
+  if (digits && digits.length >= 10) {
+    const national = digits.startsWith('91') && digits.length >= 12 ? digits.slice(2, 12) : digits.slice(-10);
+    if (national) {
+      idClauses.push({ type: 'phone', valueNormalized: `+91${national}` });
+      idClauses.push({ type: 'phone', valueNormalized: national });
+    }
+  }
   if (!idClauses.length) return;
 
   const identifierRows = await PersonIdentifier.find({ $or: idClauses })
@@ -386,16 +455,12 @@ async function purgeQaTestData() {
 }
 
 async function purgeQaIdentity({ email, phone } = {}) {
-  const normalizedEmail = email ? sanitizeEmail(email) || String(email).trim().toLowerCase() : null;
-  const normalizedPhone = phone ? normalizePhone(phone) || phone : null;
-  const clauses = [];
-  if (normalizedEmail) clauses.push({ email: normalizedEmail });
-  if (normalizedPhone) clauses.push({ phone: normalizedPhone });
-  if (!clauses.length) return;
+  const { email: normalizedEmail, phone: normalizedPhone, phoneDigits } = normalizeQaLeadIdentity({ email, phone });
+  const match = buildIdentityMatchClauses({ email: normalizedEmail, phone: normalizedPhone, phoneDigits });
+  if (!match) return;
 
-  await purgePersonGoldenRecords({ email: normalizedEmail, phone: normalizedPhone });
+  await purgePersonGoldenRecords({ email: normalizedEmail, phone: normalizedPhone, phoneDigits });
 
-  const match = clauses.length === 1 ? clauses[0] : { $or: clauses };
   const leads = await Lead.find(match).setOptions(BYPASS).select('_id').lean();
   const leadIds = leads.map((l) => l._id);
 
@@ -532,6 +597,8 @@ module.exports = {
   buildQaTestDataFilter,
   buildQaUserFilter,
   buildQaTaskFilter,
+  buildQaFinanceFilter,
+  buildQaProjectFilter,
   buildQaDailyLogFilter,
   buildQaActivityLogFilter,
   buildQaXpAuditFilter,
@@ -541,9 +608,13 @@ module.exports = {
   purgeQaDailyLogs,
   purgeQaGamificationData,
   purgeQaTestData,
+  normalizeQaLeadIdentity,
+  buildIdentityMatchClauses,
   purgeQaIdentity,
   qaUniquePhone,
   qaUniqueEmail,
+  qaE164Phone,
+  qaLeadPayload,
   deleteTrackedArtifact,
   purgeQaRunArtifacts,
   countQaResiduals,

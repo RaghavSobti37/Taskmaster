@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
-import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
 import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
@@ -16,17 +16,41 @@ const formatBarMetric = (value, _name, item) => {
   return [String(value), metric];
 };
 
-function GenericDashboardCard({ componentId }) {
+const GenericDashboardCard = React.memo(function GenericDashboardCard({ componentId }) {
   const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
 
   const { data: tasks = [] } = useDashboardTasks(user?._id);
-  const { data: mailStats } = useMailStats(componentId === 'campaign-metrics');
-  const { data: activityData } = useActivityGrid(componentId === 'team-activity');
-  const { data: deptStats, isLoading: deptStatsLoading } = useDepartmentStats(
-    timeframe,
-    componentId === 'dept-stats'
-  );
+  const {
+    data: mailStats,
+    isError: mailStatsError,
+    error: mailStatsErr,
+    refetch: refetchMailStats,
+  } = useMailStats(componentId === 'campaign-metrics');
+  const {
+    data: activityData,
+    isError: activityError,
+    error: activityErr,
+    refetch: refetchActivity,
+  } = useActivityGrid(componentId === 'team-activity');
+  const {
+    data: deptStats,
+    isLoading: deptStatsLoading,
+    isError: deptStatsError,
+    error: deptStatsErr,
+    refetch: refetchDeptStats,
+  } = useDepartmentStats(timeframe, componentId === 'dept-stats');
+
+  const queryError =
+    componentId === 'campaign-metrics' && mailStatsError ? mailStatsErr
+      : componentId === 'team-activity' && activityError ? activityErr
+        : componentId === 'dept-stats' && deptStatsError ? deptStatsErr
+          : null;
+  const handleQueryRetry = () => {
+    if (componentId === 'campaign-metrics' && mailStatsError) refetchMailStats();
+    else if (componentId === 'team-activity' && activityError) refetchActivity();
+    else if (componentId === 'dept-stats' && deptStatsError) refetchDeptStats();
+  };
 
   const meta = COMPONENT_REGISTRY[componentId];
 
@@ -124,6 +148,13 @@ function GenericDashboardCard({ componentId }) {
         ) : null
       }
     >
+      {queryError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(queryError, 'Failed to load widget data')}
+          onRetry={handleQueryRetry}
+          className="mb-3"
+        />
+      )}
       <ChartSurface className="flex-1" height={200}>
         {!hasData && componentId === 'dept-stats' && deptStatsLoading ? (
           <div className="flex flex-col items-center justify-center h-full w-full py-8">
@@ -179,6 +210,6 @@ function GenericDashboardCard({ componentId }) {
       </ChartSurface>
     </DashboardWidgetShell>
   );
-}
+});
 
 export default GenericDashboardCard;

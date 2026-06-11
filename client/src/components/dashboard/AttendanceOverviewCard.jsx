@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner, MetricCard } from '../ui';
 import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { useAttendanceOverview } from '../../hooks/queries/dashboard';
 import { formatTimeframeLabel } from '../../utils/displayLabels';
@@ -39,7 +39,33 @@ const AttendanceTooltip = ({ active, payload, label }) => {
   );
 };
 
-function AttendanceOverviewCard() {
+function MarkedSparkline({ points = [] }) {
+  if (points.length < 2) return null;
+  const max = Math.max(...points, 1);
+  const min = Math.min(...points);
+  const span = max - min || 1;
+  const width = 72;
+  const height = 22;
+  const coords = points.map((v, i) => {
+    const x = (i / (points.length - 1)) * width;
+    const y = height - ((v - min) / span) * (height - 2) - 1;
+    return `${x},${y}`;
+  });
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="text-emerald-400/80" aria-hidden>
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={coords.join(' ')}
+      />
+    </svg>
+  );
+}
+
+const AttendanceOverviewCard = React.memo(function AttendanceOverviewCard() {
   const [timeframe, setTimeframe] = useState('7d');
   const { data, isLoading } = useAttendanceOverview(timeframe);
 
@@ -47,6 +73,18 @@ function AttendanceOverviewCard() {
   const hasData = chartData.some(
     (d) => d.marked > 0 || d.present > 0 || d.halfDay > 0 || d.leave > 0
   );
+
+  const markedMetric = useMemo(() => {
+    if (!chartData.length) return null;
+    const markedSeries = chartData.map((d) => d.marked || 0);
+    const latest = markedSeries[markedSeries.length - 1] ?? 0;
+    const prior = markedSeries.slice(0, -1);
+    const priorAvg = prior.length ? prior.reduce((s, v) => s + v, 0) / prior.length : 0;
+    const delta = Math.round(latest - priorAvg);
+    const deltaPercent = priorAvg ? Math.round((delta / priorAvg) * 100) : (latest ? 100 : 0);
+    const trend = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+    return { latest, delta, deltaPercent, trend, markedSeries };
+  }, [chartData]);
 
   const titleContent = (
     <>
@@ -63,6 +101,19 @@ function AttendanceOverviewCard() {
       icon={Users}
       actions={<TimeframeFilter value={timeframe} onChange={setTimeframe} />}
     >
+      {!isLoading && markedMetric && hasData && (
+        <MetricCard
+          label="Marked (latest day)"
+          value={markedMetric.latest}
+          delta={markedMetric.delta}
+          deltaPercent={markedMetric.deltaPercent}
+          trend={markedMetric.trend}
+          periodLabel={formatTimeframeLabel(timeframe)}
+          variant="mint"
+          sparkline={<MarkedSparkline points={markedMetric.markedSeries} />}
+          className="mb-3 shrink-0"
+        />
+      )}
       <ChartSurface className="flex-1" height={200}>
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-full w-full py-8">
@@ -110,6 +161,6 @@ function AttendanceOverviewCard() {
       </ChartSurface>
     </DashboardWidgetShell>
   );
-}
+});
 
 export default AttendanceOverviewCard;

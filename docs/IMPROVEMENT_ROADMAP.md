@@ -486,6 +486,23 @@ curl http://localhost:5000/api/openapi.json
 
 ---
 
+## Phase F — Full app review backlog (2026-06-10)
+
+**Source:** Jun 2026 page-by-page audit → [`FULL_APP_REVIEW_BACKLOG.md`](./FULL_APP_REVIEW_BACKLOG.md)
+
+| Tier | Focus | Status |
+|------|-------|--------|
+| T0 | **Urgent** — ops + tenancy + roles (second org in 6mo; admin page permissions) | planned |
+| T1 | Security polish (rate limits, asyncHandler, compound indexes) | planned |
+| T2 | User-facing reliability (error banners, 401, Followups lock, CRM dedup) | planned |
+| T3 | Data integrity (project counters, Person migration, Lead dates) | planned |
+| T4 | Maintainability (React Query migration, API envelope, validation) | planned |
+| T5 | Quality gates (CRM E2E, a11y lint, PageSkeleton) | planned |
+
+**Decision log** (tenancy, hosts, CRM, person migration, error UX): see backlog doc § Decision Log. Six items marked `[CONFIRM]` for product owner.
+
+---
+
 ## How to update
 
-When an item ships, move it to **Phase A** with PR link and date. Do not delete deferred items — mark `deferred` with reason.
+When an item ships, move it to **Phase A** with PR link and date. Do not delete deferred items — mark `deferred` with reason. Phase F items: mark `done` in `FULL_APP_REVIEW_BACKLOG.md` when shipped.

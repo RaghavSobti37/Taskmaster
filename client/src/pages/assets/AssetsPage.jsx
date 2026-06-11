@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
   Link2, Edit2, Plus, Trash2, Database,
@@ -17,9 +18,19 @@ import ProjectMultiSelect from '../../components/forms/ProjectMultiSelect';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { WorkspaceDot } from '../../components/forms/WorkspaceSelect';
 import { useAuth } from '../../contexts/AuthContext';
-import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import {
+  useWorkspaces,
+  useProjects,
+  useAssets,
+  useGoogleAccounts,
+  useCreateAsset,
+  useUpdateAsset,
+  useDeleteAsset,
+  useUnlinkGoogleAccount,
+  refreshGoogleAccounts,
+} from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection, DEFAULT_TABLE_PAGE_SIZE } from '../../components/ui';
+import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { format } from 'date-fns';
@@ -38,11 +49,28 @@ const openAssetLink = (link) => {
 
 const AssetsPage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: workspaces = [] } = useWorkspaces();
+  const {
+    data: assets = [],
+    isLoading: loadingAssets,
+    isError: assetsError,
+    error: assetsErr,
+    refetch: refetchAssets,
+  } = useAssets();
+  const {
+    data: projects = [],
+    isLoading: loadingProjects,
+    isError: projectsError,
+    error: projectsErr,
+    refetch: refetchProjects,
+  } = useProjects();
+  const { data: googleAccounts = [] } = useGoogleAccounts();
+  const createAsset = useCreateAsset();
+  const updateAsset = useUpdateAsset();
+  const deleteAsset = useDeleteAsset();
+  const unlinkGoogleAccount = useUnlinkGoogleAccount();
   const [searchParams] = useSearchParams();
-  const [assets, setAssets] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [workspaceFilter, setWorkspaceFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
@@ -50,43 +78,28 @@ const AssetsPage = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE);
-  // Google account link states
-  const [googleAccounts, setGoogleAccounts] = useState([]);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [simEmail, setSimEmail] = useState('');
   const [linking, setLinking] = useState(false);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newAsset, setNewAsset] = useState(EMPTY_ASSET_FORM);
-  const [submitting, setSubmitting] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [assetEditBaseline, setAssetEditBaseline] = useState(null);
 
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
-  useEffect(() => { fetchData(); }, []);
-
   useEffect(() => {
     if (searchParams.get('add') === '1') setIsDrawerOpen(true);
   }, [searchParams]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [assetsRes, projectsRes, googleRes] = await Promise.all([
-        axios.get('/api/assets'),
-        axios.get('/api/projects'),
-        axios.get('/api/google/accounts').catch(() => ({ data: [] }))
-      ]);
-      setAssets(assetsRes.data);
-      setProjects(projectsRes.data);
-      setGoogleAccounts(googleRes.data);
-    } catch (err) {
-      console.error('Error fetching assets:', err);
-    } finally {
-      setLoading(false);
-    }
+  const loading = loadingAssets || loadingProjects;
+  const listQueryError = assetsError ? assetsErr : projectsError ? projectsErr : null;
+  const handleListRetry = () => {
+    if (assetsError) refetchAssets();
+    if (projectsError) refetchProjects();
   };
+  const submitting = createAsset.isPending || updateAsset.isPending;
 
   const hasAssetEdits =
     !!editingAsset && !!assetEditBaseline && !stableJsonEqual(newAsset, assetEditBaseline);
@@ -105,45 +118,35 @@ const AssetsPage = () => {
     if (e) e.preventDefault();
     if (!newAsset.name || !newAsset.link) return;
 
-    setSubmitting(true);
+    const payload = {
+      projectIds: newAsset.projectIds,
+      name: newAsset.name,
+      link: newAsset.link.trim(),
+      type: newAsset.type || 'other',
+      notes: newAsset.notes?.trim() || '',
+    };
+
     try {
       if (editingAsset) {
-        const res = await axios.put(`/api/assets/${editingAsset._id}`, {
-          projectIds: newAsset.projectIds,
-          name: newAsset.name,
-          link: newAsset.link.trim(),
-          type: newAsset.type || 'other',
-          notes: newAsset.notes?.trim() || ''
-        });
-        setAssets(assets.map(a => a._id === editingAsset._id ? res.data : a));
+        await updateAsset.mutateAsync({ id: editingAsset._id, payload });
         setIsDrawerOpen(false);
         setEditingAsset(null);
         setAssetEditBaseline(null);
         setNewAsset(EMPTY_ASSET_FORM);
       } else {
-        const res = await axios.post('/api/assets', {
-          projectIds: newAsset.projectIds,
-          name: newAsset.name,
-          link: newAsset.link.trim(),
-          type: newAsset.type || 'other',
-          notes: newAsset.notes?.trim() || ''
-        });
-        setAssets([res.data, ...assets]);
+        await createAsset.mutateAsync(payload);
         setIsDrawerOpen(false);
         setNewAsset(EMPTY_ASSET_FORM);
       }
     } catch (err) {
       console.error('Save asset error:', err);
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const handleDeleteAsset = async () => {
     const { assetId } = deleteModal;
     try {
-      await axios.delete(`/api/assets/${assetId}`);
-      setAssets(assets.filter(a => a._id !== assetId));
+      await deleteAsset.mutateAsync(assetId);
       setDeleteModal({ open: false, assetId: null });
       setIsDrawerOpen(false);
       setEditingAsset(null);
@@ -154,8 +157,7 @@ const AssetsPage = () => {
 
   const handleUnlinkAccount = async (id) => {
     try {
-      await axios.delete(`/api/google/accounts/${id}`);
-      setGoogleAccounts(googleAccounts.filter(acc => acc._id !== id));
+      await unlinkGoogleAccount.mutateAsync(id);
     } catch (err) {
       console.error('Failed to unlink account:', err);
     }
@@ -167,9 +169,8 @@ const AssetsPage = () => {
     if (!emails.length || emails.some((email) => !email.includes('@'))) return;
     setLinking(true);
     try {
-      const res = await axios.post('/api/google/accounts/manual', { emails: emails.join(',') });
-      const refreshed = await axios.get('/api/google/accounts');
-      setGoogleAccounts(refreshed.data);
+      await axios.post('/api/google/accounts/manual', { emails: emails.join(',') });
+      await refreshGoogleAccounts(queryClient);
       setIsLinkModalOpen(false);
       setSimEmail('');
     } catch (err) {
@@ -178,8 +179,7 @@ const AssetsPage = () => {
           for (const email of emails) {
             await axios.post('/api/google/accounts/simulate', { email });
           }
-          const refreshed = await axios.get('/api/google/accounts');
-          setGoogleAccounts(refreshed.data);
+          await refreshGoogleAccounts(queryClient);
           setIsLinkModalOpen(false);
           setSimEmail('');
         } catch (simErr) {
@@ -423,6 +423,12 @@ const AssetsPage = () => {
         </Button>
       }
     >
+      {listQueryError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(listQueryError, 'Failed to load assets')}
+          onRetry={handleListRetry}
+        />
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-9 space-y-6 min-w-0">
            {/* Mobile card list */}

@@ -20,7 +20,7 @@ const logSchema = new mongoose.Schema({
   details: { type: mongoose.Schema.Types.Mixed },
   targetId: { type: mongoose.Schema.Types.ObjectId },
   targetType: { type: String },
-  createdAt: { type: Date, default: Date.now, index: true }
+  createdAt: { type: Date, default: Date.now, index: true, expires: '90d' },
 });
 
 // Middleware for backward compatibility (map old fields to new fields and vice versa)

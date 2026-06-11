@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "skipLibCheck": true,
+    "types": ["node"],
+    "maxNodeModuleJsDepth": 1,
+    "baseUrl": ".",
+    "paths": {
+      "@coreknot/contracts": ["shared/contracts/index.js"],
+      "@coreknot/contracts/*": ["shared/contracts/*"]
+    }
+  },
+  "include": [
+    "shared/contracts/**/*.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

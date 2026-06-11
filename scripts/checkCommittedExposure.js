@@ -80,7 +80,7 @@ const isPlaceholderUri = (match) =>
   /\.\.\.|user:pass|u:p@|USER:PASS|your_|example|localhost/i.test(match);
 
 const isAllowedRenderHost = (match) =>
-  /YOUR[-_]RENDER|YOUR[-_]SERVICE|YOUR[-_]STAGING|your[-_]render|your[-_]service|example\.test|<[^>]+>|CoreKnot-jfw0|coreknot-api/i.test(
+  /YOUR[-_]RENDER|YOUR[-_]SERVICE|YOUR[-_]STAGING|YOUR[-_]PRODUCTION|YOUR[-_]NESTJS|your[-_]render|your[-_]service|example\.test|<[^>]+>|CoreKnot-jfw0|coreknot-api/i.test(
     match
   );
 

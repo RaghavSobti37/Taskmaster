@@ -33,9 +33,14 @@ import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { getDepartmentSlug, isAdminUser } from '../utils/departmentPermissions';
 import { getDepartmentPaletteActions, QUICK_ACTIONS } from '../utils/commandPaletteActions';
+import {
+  canAccessNavPath,
+  filterActionsByPageAccess,
+  filterQuickActionsByPageAccess,
+} from '../utils/navPageAccess';
 import { resolvePaletteQuery } from '../utils/commandPaletteResolver';
 import { useToast } from '../contexts/ToastContext';
-import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useQuickAdd } from '../contexts/quickAddContextCore';
 import { getGlobalGChordRoutes } from '../lib/keyboardShortcuts';
 import { formatKeysForDisplay } from '../lib/shortcutBindingUtils';
@@ -126,25 +131,28 @@ const CommandPalette = () => {
   const { data: statusCounts = {} } = useStatusCounts(!!user);
 
   const gChordRoutes = useMemo(
-    () => getGlobalGChordRoutes(bindingsMap, { isAdmin }),
-    [bindingsMap, isAdmin]
+    () => getGlobalGChordRoutes(bindingsMap, { isAdmin, user }),
+    [bindingsMap, isAdmin, user]
   );
 
   const departmentSlug = getDepartmentSlug(user);
   const zeroStateActions = useMemo(
-    () => getDepartmentPaletteActions(departmentSlug),
-    [departmentSlug]
+    () => filterActionsByPageAccess(getDepartmentPaletteActions(departmentSlug), user),
+    [departmentSlug, user]
   );
 
   const quickActions = useMemo(
-    () => QUICK_ACTIONS.map((action) => {
-      const binding = bindingsMap?.[`action-${action.quickActionId}`];
-      return {
-        ...action,
-        shortcut: binding?.keys ? formatKeysForDisplay(binding.keys) : undefined,
-      };
-    }),
-    [bindingsMap]
+    () => filterQuickActionsByPageAccess(
+      QUICK_ACTIONS.map((action) => {
+        const binding = bindingsMap?.[`action-${action.quickActionId}`];
+        return {
+          ...action,
+          shortcut: binding?.keys ? formatKeysForDisplay(binding.keys) : undefined,
+        };
+      }),
+      user
+    ),
+    [bindingsMap, user]
   );
 
   const { data: searchData, isFetching: searchLoading } = useUnifiedSearch(search, {
@@ -167,16 +175,18 @@ const CommandPalette = () => {
 
   const searchResults = useMemo(() => {
     const results = searchData?.results || [];
-    return results.map((r) => ({
-      id: `search-${r.type}-${r.id}`,
-      label: r.label,
-      sublabel: r.sublabel,
-      path: r.path,
-      type: r.type,
-      source: 'search',
-      icon: SEARCH_TYPE_ICONS[r.type] || Zap,
-    }));
-  }, [searchData]);
+    return results
+      .filter((r) => !r.path || canAccessNavPath(user, r.path))
+      .map((r) => ({
+        id: `search-${r.type}-${r.id}`,
+        label: r.label,
+        sublabel: r.sublabel,
+        path: r.path,
+        type: r.type,
+        source: 'search',
+        icon: SEARCH_TYPE_ICONS[r.type] || Zap,
+      }));
+  }, [searchData, user]);
 
   const resolved = useMemo(() => resolvePaletteQuery(search), [search]);
 
@@ -292,10 +302,14 @@ const CommandPalette = () => {
     }
 
     if (item.path) {
+      if (!canAccessNavPath(user, item.path)) {
+        toast.error('You do not have access to that page');
+        return;
+      }
       navigate(item.path);
       handleClosePalette();
     }
-  }, [navigate, handleClosePalette, toast, runQuickAction]);
+  }, [navigate, handleClosePalette, toast, runQuickAction, user]);
 
   useEffect(() => {
     if (isOpen) {

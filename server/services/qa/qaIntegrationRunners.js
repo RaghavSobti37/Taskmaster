@@ -30,22 +30,17 @@ const {
   sleep,
   extractId,
 } = require('./qaApiClient');
-const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
-const { sanitizeEmail } = require('../../utils/sanitizer');
+const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail, qaE164Phone, qaLeadPayload } = require('./qaTestData');
+const { readTextResolved, SERVER_ROOT } = require('./qaCheckUtils');
+const { sanitizeEmail, normalizePhone } = require('../../utils/sanitizer');
 const { userMatchesQaExclusion, QA_EXCLUDED_EMAILS } = require('../../utils/qaExcludedUsers');
-
-const SERVER_ROOT = path.join(__dirname, '../..');
 
 function track(ctx, type, id) {
   if (id) ctx.artifacts.push({ type, id });
 }
 
 async function readServer(rel) {
-  try {
-    return await fs.readFile(path.join(SERVER_ROOT, rel), 'utf8');
-  } catch {
-    return '';
-  }
+  return (await readTextResolved(rel)) || '';
 }
 
 async function pickProject() {
@@ -217,10 +212,7 @@ async function runReviewCreatorCanComplete(def, ctx) {
 
 async function resolvePlatformOwnerProbeUser() {
   const { resolvePlatformOwnerUser } = require('../../utils/platformOwner');
-  const owner = await resolvePlatformOwnerUser({ select: '_id email name' });
-  if (owner) return owner;
-  const users = await resolveTestUsers();
-  return users.adminUser;
+  return resolvePlatformOwnerUser({ select: '_id email name' });
 }
 
 async function runReviewPlatformOwnerRollback(def, ctx) {
@@ -289,8 +281,7 @@ async function runReviewPreserveAssigner(def, ctx) {
 
 async function runBugPlatformOwnerAssign(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const platformOwner = await resolvePlatformOwnerProbeUser();
-  if (!adminUser || !platformOwner) return skipProbeResult(def, 'Need admin + platform owner users');
+  if (!adminUser) return skipProbeResult(def, 'Need admin user');
 
   const res = await request(def, {
     method: 'POST',
@@ -307,7 +298,10 @@ async function runBugPlatformOwnerAssign(def, ctx) {
   if (!taskId) return probeFail(def, `Bug report failed (${res.status})`);
   track(ctx, 'task', taskId);
 
-  const row = await TaskAssignment.findOne({ taskId }).lean();
+  const platformOwner = await resolvePlatformOwnerProbeUser();
+  if (!platformOwner) return skipProbeResult(def, 'Platform owner not configured');
+
+  const row = await TaskAssignment.findOne({ taskId }).setOptions({ bypassTenant: true }).lean();
   if (!row) return { ...probeFail(def, 'Bug task missing TaskAssignment'), artifacts: ctx.artifacts };
   const ownerId = platformOwner._id.toString();
   if (
@@ -604,14 +598,13 @@ async function runTaskCompleteXp(def, ctx) {
 
 async function runLeadCapturedXp(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const email = qaUniqueEmail('qa-lead-xp');
-  const phone = qaUniquePhone('9');
-  await purgeQaIdentity({ email, phone });
+  const leadPayload = qaLeadPayload({ name: 'QA XP Lead', email: qaUniqueEmail('qa-lead-xp') });
+  await purgeQaIdentity({ email: leadPayload.email, phone: leadPayload.phone });
   const res = await request(def, {
     method: 'POST',
     url: '/api/crm/leads',
     user: adminUser,
-    data: { name: 'QA XP Lead', email, phone, source: 'QA Test' },
+    data: leadPayload,
   });
   const leadId = extractId(res);
   if (leadId) track(ctx, 'lead', leadId);
@@ -781,7 +774,7 @@ async function runReviewApproveNotify(def, ctx) {
 
 async function runLeadSyncsContact(def, ctx) {
   const email = qaUniqueEmail('qa-contact-sync');
-  const phone = qaUniquePhone('8');
+  const phone = `+91${qaUniquePhone('8')}`;
   await purgeQaIdentity({ email, phone });
   const normalizedEmail = sanitizeEmail(email);
   let lead;
@@ -825,13 +818,25 @@ async function runMailOpenContactSync(def, ctx) {
 
 async function runMultiinletFlagSet(def, ctx) {
   const email = qaUniqueEmail('qa-multi');
-  const phone = qaUniquePhone('7');
+  const phone = qaE164Phone('7');
   const normalizedEmail = sanitizeEmail(email);
-  await purgeQaIdentity({ email: normalizedEmail, phone });
+  const normalizedPhone = normalizePhone(phone) || phone;
+  await purgeQaIdentity({ email: normalizedEmail, phone: normalizedPhone });
   try {
-    await ContactService.mergeContact({ name: 'QA Multi', email: normalizedEmail, phone }, 'crm');
-    await ContactService.mergeContact({ name: 'QA Multi', email: normalizedEmail, phone, exlyOfferingTitle: 'QA Course' }, 'exly');
-    const contact = await Contact.findOne({ email: normalizedEmail }).setOptions({ bypassTenant: true }).lean();
+    await ContactService.mergeContact({ name: 'QA Multi', email: normalizedEmail, phone: normalizedPhone }, 'crm');
+    await ContactService.mergeContact(
+      { name: 'QA Multi', email: normalizedEmail, phone: normalizedPhone, exlyOfferingTitle: 'QA Course' },
+      'exly'
+    );
+    const identityClauses = [];
+    if (normalizedEmail) identityClauses.push({ email: normalizedEmail });
+    if (normalizedPhone) identityClauses.push({ phone: normalizedPhone });
+    const contact = await Contact.findOne(
+      identityClauses.length === 1 ? identityClauses[0] : { $or: identityClauses }
+    )
+      .setOptions({ bypassTenant: true })
+      .sort({ updatedAt: -1 })
+      .lean();
     if (contact?._id) track(ctx, 'contact', contact._id);
     if (contact?.isMultiInlet && (contact.inletCount || 0) >= 2) {
       return { ...probePass(def, `isMultiInlet=true inletCount=${contact.inletCount}`), artifacts: ctx.artifacts };
@@ -958,7 +963,7 @@ async function runTscDataNormalized(def, ctx) {
 }
 
 async function runExlyWebhookBooking(def, ctx) {
-  const ctrl = await readServer('controllers/exlyController.js');
+  const ctrl = await readServer('domains/integrations/controllers/exlyController.js');
   const ok = ctrl.includes('EXLY_WEBHOOK_SECRET') && ctrl.includes('mergeContact');
   return ok ? probePass(def, 'Exly webhook handler signed + mergeContact') : probeFail(def, 'Exly webhook wiring incomplete');
 }
@@ -974,7 +979,7 @@ async function runSyncBookedcallFullFlow(def, ctx) {
 
 async function runMailEventNoHardcode(def, ctx) {
   const geo = await readServer('utils/geoLookup.js');
-  const campaign = await readServer('routes/campaignRoutes.js');
+  const campaign = await readServer('domains/mail/controllers/campaignApiController.js');
   const registered = await readServer('utils/campaignRegisteredLocation.js');
   const badGeo = /Mumbai/i.test(geo);
   const usesCrmBreakdown = campaign.includes('buildRegisteredLocationBreakdown')

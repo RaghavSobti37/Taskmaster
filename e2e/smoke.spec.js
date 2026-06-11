@@ -1,8 +1,7 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from './helpers/auth.js';
-
-const hasAuthCreds = Boolean(process.env.E2E_EMAIL && process.env.E2E_PASSWORD);
+import { hasAuthCreds } from './helpers/creds.js';
 
 test.describe('public smoke', () => {
   test('landing page loads', async ({ page }) => {
@@ -20,7 +19,7 @@ test.describe('public smoke', () => {
 
 test.describe('authenticated smoke', () => {
   test.beforeEach(() => {
-    test.skip(!hasAuthCreds, 'Set E2E_EMAIL and E2E_PASSWORD for auth smoke');
+    test.skip(!hasAuthCreds(), 'Set E2E_EMAIL and E2E_PASSWORD, or use seeded E2E users');
   });
 
   test('login → dashboard', async ({ page }) => {

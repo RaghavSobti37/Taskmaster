@@ -1,20 +1,26 @@
 // @ts-check
 import { test, expect, devices } from '@playwright/test';
-import { loginAsTestUser } from './helpers/auth.js';
+import { loginAsTestUser, logout } from './helpers/auth.js';
+import { hasAuthCreds } from './helpers/creds.js';
 
-const hasAuthCreds = Boolean(process.env.E2E_EMAIL && process.env.E2E_PASSWORD);
-
-test.use({ ...devices['iPhone 13'] });
+test.use({
+  ...devices['Desktop Chrome'],
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+});
 
 test.describe('mobile login', () => {
-  test.beforeEach(() => {
-    test.skip(!hasAuthCreds, 'Set E2E_EMAIL and E2E_PASSWORD for mobile login E2E');
+  test.beforeEach(async ({ context }) => {
+    test.skip(!hasAuthCreds(), 'Set E2E_EMAIL and E2E_PASSWORD, or use seeded E2E users');
+    await context.clearCookies();
   });
 
   test('iPhone login → logout → re-login', async ({ page }) => {
     await loginAsTestUser(page);
     await expect(page).toHaveURL(/\/dashboard/);
 
+    await logout(page);
     await page.goto('/login');
     await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
 

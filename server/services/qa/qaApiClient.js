@@ -2,7 +2,8 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 const Department = require('../../models/Department');
-const { ADMIN_SLUG, OPS_SLUG, SALES_SLUG } = require('../../utils/departmentPermissions');
+const { ADMIN_SLUG, OPS_SLUG, SALES_SLUG, ARTIST_SLUG } = require('../../utils/departmentPermissions');
+const { resolvePlatformOwnerUser } = require('../../utils/platformOwner');
 const { getDefaultSeedPassword } = require('../../utils/defaultPassword');
 const { buildQaUserFilter, qaUniqueEmail } = require('./qaTestData');
 const { reportQaActivity, sanitizePayload } = require('./qaActivity');
@@ -56,6 +57,9 @@ async function resolveTestUsers() {
   const adminDept = await Department.findOne({ slug: ADMIN_SLUG }).select('_id');
   const opsDept = await Department.findOne({ slug: OPS_SLUG }).select('_id');
   const salesDept = await Department.findOne({ slug: SALES_SLUG }).select('_id');
+  const artistDept = await Department.findOne({ slug: ARTIST_SLUG }).select('_id');
+  const standardDept = await Department.findOne({ permissionPreset: 'standard' }).select('_id')
+    || await Department.findOne({ slug: { $nin: [ADMIN_SLUG, OPS_SLUG, SALES_SLUG, ARTIST_SLUG] } }).select('_id');
 
   const adminUser = adminDept
     ? await findProbeUser({ departmentId: adminDept._id }, 'admin')
@@ -66,12 +70,36 @@ async function resolveTestUsers() {
   const salesUser = salesDept
     ? await findProbeUser({ departmentId: salesDept._id }, 'sales')
     : null;
+  const artistUser = artistDept
+    ? await findProbeUser({ departmentId: artistDept._id }, 'artist-mgmt')
+    : null;
+  const standardUser = standardDept
+    ? await findProbeUser({ departmentId: standardDept._id }, 'standard')
+    : anyUser;
+  const managerUser = adminUser || anyUser;
+
+  let platformOwnerUser = null;
+  try {
+    const owner = await resolvePlatformOwnerUser({ select: '_id email name departmentId' });
+    if (owner?._id) {
+      platformOwnerUser = await User.findById(owner._id)
+        .setOptions(BYPASS)
+        .populate({ path: 'departmentId', select: 'name slug' })
+        .lean();
+    }
+  } catch {
+    /* platform owner optional */
+  }
 
   cachedUsers = {
     anyUser: anyUser || adminUser,
     adminUser: adminUser || anyUser,
     opsUser: opsUser || adminUser || anyUser,
     salesUser: salesUser || anyUser,
+    artistUser: artistUser || adminUser || anyUser,
+    standardUser: standardUser || anyUser,
+    managerUser: managerUser || adminUser || anyUser,
+    platformOwnerUser: platformOwnerUser || adminUser || anyUser,
   };
   return cachedUsers;
 }
@@ -129,6 +157,31 @@ function probePass(def, detail, evidence = '') {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const TRANSIENT_NETWORK_CODES = new Set([
+  'ECONNRESET',
+  'ECONNABORTED',
+  'ETIMEDOUT',
+  'EPIPE',
+  'EAI_AGAIN',
+  'ERR_SOCKET_CLOSED',
+]);
+
+function isTransientNetworkError(err) {
+  return Boolean(err?.code && TRANSIENT_NETWORK_CODES.has(err.code));
+}
+
+const REQUEST_RETRY_ATTEMPTS = 4;
+const REQUEST_RETRY_BASE_MS = 800;
+
+async function waitForApiReachable(maxWaitMs = 12000) {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    if (await isApiReachable()) return true;
+    await sleep(REQUEST_RETRY_BASE_MS);
+  }
+  return false;
+}
+
 function extractId(res, field = '_id') {
   const body = res?.data;
   return body?.[field] || body?.data?.[field] || body?.data?._id || body?._id;
@@ -141,7 +194,7 @@ async function request(def, { method, url, data, headers, user, skipAuth = false
   const h = skipAuth
     ? { 'Content-Type': 'application/json', ...(headers || {}) }
     : { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...(headers || {}) };
-  if (def.category === 'business-logic' || def.category === 'permission') {
+  if (def.category === 'business-logic' || def.category === 'permission' || def.category === 'workflow') {
     h['x-qa-integration-probe'] = 'true';
   }
 
@@ -152,24 +205,42 @@ async function request(def, { method, url, data, headers, user, skipAuth = false
     phase: 'http',
   });
 
-  const started = Date.now();
-  const res = await axios({
-    method: httpMethod,
-    url: fullUrl,
-    data,
-    headers: h,
-    validateStatus: () => true,
-    timeout: def.timeout || (def.category === 'business-logic' ? 45000 : 12000),
-    maxRedirects: 0,
-  });
+  const timeoutMs = def.timeout || (def.category === 'business-logic' ? 45000 : 12000);
+  let lastErr;
+  for (let attempt = 1; attempt <= REQUEST_RETRY_ATTEMPTS; attempt += 1) {
+    const started = Date.now();
+    try {
+      const res = await axios({
+        method: httpMethod,
+        url: fullUrl,
+        data,
+        headers: h,
+        validateStatus: () => true,
+        timeout: timeoutMs,
+        maxRedirects: 0,
+      });
 
-  reportQaActivity({
-    httpStatus: res.status,
-    message: `${httpMethod} ${url} → ${res.status} (${Date.now() - started}ms)`,
-    elapsedMs: Date.now() - started,
-  });
+      reportQaActivity({
+        httpStatus: res.status,
+        message: `${httpMethod} ${url} → ${res.status} (${Date.now() - started}ms)`,
+        elapsedMs: Date.now() - started,
+      });
 
-  return res;
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientNetworkError(err) || attempt >= REQUEST_RETRY_ATTEMPTS) {
+        throw err;
+      }
+      reportQaActivity({
+        message: `${httpMethod} ${url} transient ${err.code} — retry ${attempt}/${REQUEST_RETRY_ATTEMPTS}`,
+        phase: 'http-retry',
+      });
+      await sleep(REQUEST_RETRY_BASE_MS * attempt);
+      await waitForApiReachable(REQUEST_RETRY_BASE_MS * attempt * 2);
+    }
+  }
+  throw lastErr;
 }
 
 module.exports = {
@@ -178,6 +249,8 @@ module.exports = {
   resolveTestUsers,
   clearResolveTestUsersCache,
   isApiReachable,
+  isTransientNetworkError,
+  waitForApiReachable,
   skipProbeResult,
   probeFail,
   probePass,

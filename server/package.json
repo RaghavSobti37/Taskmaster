@@ -4,6 +4,7 @@
   "description": "Enterprise Work Management API",
   "main": "server.js",
   "scripts": {
+    "typecheck": "tsc --noEmit -p ../tsconfig.json",
     "build": "cd ../client && npm install && npm run build",
     "start": "node server.js",
     "predev": "node scripts/freePort.js 5000 --wait",
@@ -43,12 +44,16 @@
     "render:ops-fix:deploy": "node scripts/applyRenderOpsFixes.js --deploy",
     "supabase:setup": "node scripts/supabaseSetup.js",
     "supabase:health": "node scripts/supabaseHealthCheck.js",
+    "audit:data-topology": "node scripts/auditDataTopology.js",
+    "audit:data-topology:purge-dry-run": "node scripts/auditDataTopology.js --purge-dry-run",
+    "mongo:ensure-cold-ttl": "node scripts/ensureColdArchiveTtlIndexes.js",
     "supabase:backfill": "node scripts/supabaseBackfill.js",
     "supabase:migrate": "node scripts/supabaseFastMigrate.js --prod",
     "supabase:migrate:local": "node scripts/supabaseFastMigrate.js",
     "backup:verify-supabase": "node scripts/verifySupabaseBackup.js"
   },
   "dependencies": {
+    "@coreknot/contracts": "1.0.0",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@sendgrid/mail": "^8.1.6",
     "@sentry/node": "^9.47.1",

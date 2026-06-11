@@ -40,15 +40,32 @@ export function refetchUserScopedQueries(queryClient) {
     ['announcements'],
     ['pinboard'],
     ['notes'],
-    ['notifications'],
+    ['notifications'], // prefix — all user-scoped notification caches
     ['statusCounts'],
     ['projects'],
     ['workspaces'],
     ['attendance'],
     ['leaveRequests'],
     ['my-reimbursements'],
+    ['adminRoles'],
+    ['artist-os'],
+    ['system-health'],
   ];
   keys.forEach((queryKey) => {
+    if (queryKey[0] === 'notifications') {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === 'notifications',
+      });
+      return;
+    }
+    if (queryKey[0] === 'artist-os') {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === 'artist-os',
+      });
+      return;
+    }
     queryClient.invalidateQueries({ queryKey });
   });
 }

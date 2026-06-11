@@ -275,7 +275,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                       <div className="relative shrink-0">
                         <div className="w-11 h-11 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] overflow-hidden flex items-center justify-center font-black text-sm text-[var(--color-action-primary)]">
                           {member.avatar ? (
-                            <img src={member.avatar} alt="" className="w-full h-full object-cover" />
+                            <img src={member.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           ) : (
                             member.name.substring(0, 2).toUpperCase()
                           )}

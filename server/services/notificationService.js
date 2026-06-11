@@ -155,7 +155,7 @@ const sendAttendanceCheckoutReminders = async () => {
 };
 
 const init = () => {
-  logger.info('System', 'Initializing Reminder Service...');
+  logger.debug('System', 'Initializing Reminder Service...');
   cron.schedule('* * * * *', () => {
     checkFollowups();
   });

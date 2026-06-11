@@ -3,6 +3,12 @@
   "private": true,
   "version": "1.0.7",
   "description": "CoreKnot monorepo — client + server",
+  "workspaces": [
+    "client",
+    "server",
+    "nestjs-server",
+    "shared/contracts"
+  ],
   "scripts": {
     "install:all": "npm install --prefix server && npm install --prefix client",
     "preflight": "node server/scripts/preflightEnv.js",
@@ -15,12 +21,25 @@
     "test": "npm test --prefix server",
     "lint": "npm run lint --prefix client",
     "build": "npm run build --prefix client",
-    "ci": "npm run audit:exposure && npm test --prefix server -- --coverage && npm test --prefix client -- --coverage && npm run lint --prefix client -- --quiet && npm run build --prefix client",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:server-exemplar": "tsc --noEmit -p tsconfig.server-exemplar.json",
+    "ci": "npm run audit:exposure && npm run typecheck && npm test --prefix server -- --coverage && npm run build --workspace=nestjs-server && npm run test:e2e --workspace=nestjs-server && npm test --prefix client -- --coverage && npm run lint --prefix client -- --quiet && npm run build --prefix client",
     "verify:mobile-proxy": "node scripts/verifyMobileApiProxy.js",
     "prepare": "husky",
     "test:e2e": "playwright test --config e2e/playwright.config.cjs",
     "test:e2e:public": "playwright test --config e2e/playwright.config.cjs --grep public",
     "test:e2e:auth": "playwright test --config e2e/playwright.config.cjs --grep \"authenticated\"",
+    "test:e2e:auth-setup": "playwright test --config e2e/playwright.config.cjs e2e/scripts/auth-setup.js",
+    "test:e2e:explore": "playwright test --config e2e/playwright.config.cjs e2e/explore-page.smoke.js",
+    "test:e2e:core-confidence": "playwright test --config e2e/playwright.config.cjs e2e/core-confidence.spec.js",
+    "sync:prod-to-local": "node server/scripts/syncProdToLocal.js --yes",
+    "sync:prod-to-local:operational": "node server/scripts/syncProdToLocal.js --yes --mode=operational",
+    "purge:local-crm-datahub": "node server/scripts/purgeLocalCrmDataHub.js --yes",
+    "verify:data-env": "node server/scripts/verifyDataEnvReadiness.js",
+    "preview:etl": "cd nestjs-server && npm run etl:preview-from-hosts",
+    "preview:vercel-env": "node scripts/print-vercel-preview-env.js",
+    "preview:e2e-smoke": "node scripts/run-preview-e2e-smoke.js",
+    "prod:cutover-etl": "cd nestjs-server && npm run etl:prod-cutover-from-hosts",
     "datahub:compare": "node server/scripts/compareDataHubDbs.js",
     "datahub:push-prod": "node server/scripts/syncDataHubToProd.js --yes",
     "datahub:push-prod:full": "node server/scripts/syncDataHubToProd.js --yes --full",
@@ -31,7 +50,8 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "concurrently": "^9.1.2",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18"

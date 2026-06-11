@@ -8,6 +8,8 @@ import {
   Button,
   ListPageLayout,
   Spinner,
+  QueryErrorBanner,
+  getQueryErrorMessage,
 } from '../../components/ui';
 import { useCalendarEvents, fetchCalendarHolidays, useStatusCounts } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,7 +26,15 @@ const CalendarView = () => {
     start: startOfWeek(startOfMonth(currentMonth)).toISOString(),
     end: endOfWeek(endOfMonth(currentMonth)).toISOString(),
   }), [currentMonth]);
-  const { data: calendarEvents = [], isLoading: eventsLoading, isFetching: eventsFetching, refetch: refetchAllEvents, googleSyncWarning } = useCalendarEvents(calendarRange);
+  const {
+    data: calendarEvents = [],
+    isLoading: eventsLoading,
+    isFetching: eventsFetching,
+    isError: eventsError,
+    error: eventsErr,
+    refetch: refetchAllEvents,
+    googleSyncWarning,
+  } = useCalendarEvents(calendarRange);
   const { data: statusCounts } = useStatusCounts(!!user);
   const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
@@ -320,6 +330,13 @@ const CalendarView = () => {
       }}
       className="flex flex-col min-h-[calc(100vh-6rem)]"
     >
+      {eventsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(eventsErr, 'Failed to load calendar events')}
+          onRetry={() => refetchAllEvents()}
+          className="mb-4"
+        />
+      )}
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
         <aside className="w-full lg:w-72 space-y-4 shrink-0">
            {renderMiniCalendar()}

@@ -88,7 +88,9 @@ class SystemHealthService {
   }
 }
 
-// Start periodic checks
-setInterval(SystemHealthService.checkDependencies, 15000);
+// Periodic checks — skip in Jest (setup.js syncs health after in-memory Mongo connects).
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(SystemHealthService.checkDependencies, 15000);
+}
 
 module.exports = SystemHealthService;

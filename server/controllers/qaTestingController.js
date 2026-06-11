@@ -1,6 +1,9 @@
 const QATestRun = require('../models/QATestRun');
 const QATestingService = require('../services/qaTestingService');
 const { purgeQaTestData } = require('../services/qa/qaTestData');
+const { buildFullReport } = require('../services/qa/qaReporting');
+const { generateAllPageManifests } = require('../services/qa/qaUiDiscovery');
+const { getAllActions, getRoleDefs } = require('../services/qa/qaActionRegistry');
 const DataHubService = require('../services/DataHubService');
 const logger = require('../utils/logger');
 const { broadcastRealtimeEvent } = require('../config/realtime');
@@ -136,6 +139,7 @@ exports.getTestResults = async (req, res, next) => {
     }
 
     // Categorize test cases by result
+    const fullReport = buildFullReport(testRun);
     const results = {
       testRunId: testRun._id,
       selectedCategories: testRun.selectedCategories || [],
@@ -158,6 +162,13 @@ exports.getTestResults = async (req, res, next) => {
         skip: checklistCases.filter((t) => t.checkStatus === 'skip' || t.status === 'skip').length,
         byCategory,
       },
+      executiveSummary: testRun.executiveSummary || fullReport.executiveSummary,
+      riskReport: testRun.riskReport || fullReport.riskReport,
+      performance: testRun.performanceReport || fullReport.performance,
+      cleanupVerification: testRun.cleanupVerification || fullReport.cleanup,
+      sideEffectScan: testRun.sideEffectScan || null,
+      pageManifests: testRun.pageManifests || null,
+      dbSnapshotBefore: testRun.dbSnapshotBefore || null,
       lighthouseReport: testRun.lighthouseReport || null,
       testCases: testRun.testCases,
       bugsCreated: testRun.bugsCreated || [],
@@ -248,12 +259,40 @@ exports.listCategories = async (req, res) => {
     'security-hardening',
   ];
   const dynamic = ['backend', 'permission', 'bottleneck', 'data', 'frontend', 'mobile', 'desktop'];
+  const layers = ['ui-discovery', 'workflow', 'visual-regression'];
   const lighthouse = ['lighthouse'];
   res.json({
     preDeploy,
     dynamic,
+    layers,
     lighthouse,
-    all: [...preDeploy, ...dynamic, ...lighthouse],
+    all: [...preDeploy, ...dynamic, ...layers, ...lighthouse],
+    layerMap: {
+      layer1: [...preDeploy, ...lighthouse],
+      layer2: ['frontend', 'ui-discovery'],
+      layer3: ['permission'],
+      layer4: ['business-logic', 'workflow'],
+      layer5: ['visual-regression', 'frontend'],
+    },
+  });
+};
+
+/** Page manifests from UI discovery engine */
+exports.listPageManifests = async (req, res, next) => {
+  try {
+    const manifests = await generateAllPageManifests();
+    res.json({ count: manifests.length, manifests });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** Action registry for permission matrix */
+exports.listActionRegistry = async (req, res) => {
+  res.json({
+    roles: getRoleDefs(),
+    actions: getAllActions(),
+    count: getAllActions().length,
   });
 };
 

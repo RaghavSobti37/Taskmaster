@@ -109,6 +109,9 @@ const qaTestRunSchema = new mongoose.Schema({
         'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
         'security-hardening',
         'lighthouse',
+        'ui-discovery',
+        'workflow',
+        'visual-regression',
       ],
       default: 'backend'
     },
@@ -147,6 +150,7 @@ const qaTestRunSchema = new mongoose.Schema({
       tasks: { type: Number, default: 0 },
       projects: { type: Number, default: 0 },
       logs: { type: Number, default: 0 },
+      dailyLogs: { type: Number, default: 0 },
       finance: { type: Number, default: 0 },
       leads: { type: Number, default: 0 },
       contacts: { type: Number, default: 0 },
@@ -156,9 +160,28 @@ const qaTestRunSchema = new mongoose.Schema({
       xpAudits: { type: Number, default: 0 },
       tracked: { type: Number, default: 0 },
     },
+    created: mongoose.Schema.Types.Mixed,
     phoneRepair: mongoose.Schema.Types.Mixed,
+    xpRecalc: mongoose.Schema.Types.Mixed,
     errors: [String],
   },
+  dbSnapshotBefore: {
+    capturedAt: Date,
+    counts: mongoose.Schema.Types.Mixed,
+  },
+  cleanupVerification: {
+    passed: Boolean,
+    before: mongoose.Schema.Types.Mixed,
+    after: mongoose.Schema.Types.Mixed,
+    delta: mongoose.Schema.Types.Mixed,
+    failReason: String,
+    verifiedAt: Date,
+  },
+  sideEffectScan: mongoose.Schema.Types.Mixed,
+  pageManifests: [mongoose.Schema.Types.Mixed],
+  executiveSummary: mongoose.Schema.Types.Mixed,
+  riskReport: mongoose.Schema.Types.Mixed,
+  performanceReport: mongoose.Schema.Types.Mixed,
   selectedCategories: [String],
   selectedLighthousePaths: [String],
   lighthouseReport: {
@@ -198,5 +221,6 @@ const qaTestRunSchema = new mongoose.Schema({
 qaTestRunSchema.index({ status: 1 });
 qaTestRunSchema.index({ startedAt: -1 });
 qaTestRunSchema.index({ initiatedBy: 1, createdAt: -1 });
+qaTestRunSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('QATestRun', qaTestRunSchema);

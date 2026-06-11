@@ -15,7 +15,7 @@ const configureWebPush = () => {
   }
   webpush.setVapidDetails(subject, publicKey, privateKey);
   configured = true;
-  logger.info('Push', 'Web Push configured', { subject });
+  logger.debug('Push', 'Web Push configured', { subject });
   return true;
 };
 

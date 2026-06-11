@@ -949,6 +949,10 @@ class GamificationService {
     return { userId, action, $or: entityMatch };
   }
 
+  static buildEntityDedupeKey(userId, action, entityKey, entityId) {
+    return `${userId}:${action}:${entityKey}:${String(entityId)}`;
+  }
+
   static async awardActionXp(userId, action = 'ACTION_TRACKED', details = {}, options = {}) {
     const config = await this.getConfig();
     const normalized = normalizeGamificationAction(action);
@@ -974,14 +978,22 @@ class GamificationService {
 
     if (entityKey && entityId) {
       const filter = this.buildEntityAwardFilter(userId, action, entityKey, entityId);
+      const dedupeKey = this.buildEntityDedupeKey(userId, action, entityKey, entityId);
       const insertDoc = {
         userId,
         amount,
         action,
         details: awardDetails,
+        dedupeKey,
         createdAt: new Date(),
       };
-      const upsert = await XPAuditLog.updateOne(filter, { $setOnInsert: insertDoc }, { upsert: true });
+      let upsert;
+      try {
+        upsert = await XPAuditLog.updateOne(filter, { $setOnInsert: insertDoc }, { upsert: true });
+      } catch (err) {
+        if (err?.code === 11000) return null;
+        throw err;
+      }
       if (upsert.upsertedCount !== 1) return null;
 
       const user = await User.findById(userId);

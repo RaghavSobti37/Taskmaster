@@ -10,6 +10,8 @@ import { captureException } from './sentry';
 import { inferModuleFromRoute, SEVERITY } from './systemLogContract';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from '../utils/projectUtils';
 import { normalizeTasks, normalizeSchedulePayload } from '../utils/normalizeTask';
+import { triggerUnauthorized } from './authUnauthorized';
+import { touchKeepWarmActivity } from './idleKeepWarm';
 
 const normalizeProjectsInResponse = (url, data) => {
   if (data == null) return data;
@@ -35,6 +37,7 @@ const normalizeProjectsInResponse = (url, data) => {
 /** Register global axios interceptors (deferred from App mount to shrink initial JS). */
 export function setupAxiosInterceptors() {
   const reqInterceptor = axios.interceptors.request.use((config) => {
+    touchKeepWarmActivity();
     if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
       config.headers['X-Trace-Id'] = getClientTraceId();
     }
@@ -82,6 +85,9 @@ export function setupAxiosInterceptors() {
         });
       }
       const status = error.response?.status;
+      if (status === 401) {
+        triggerUnauthorized(error);
+      }
       if (status >= 500) {
         captureException(error, {
           url: (error.config?.url || '').split('?')[0],

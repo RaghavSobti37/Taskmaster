@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const assetController = require('../controllers/assetController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+
+const assetsPage = requirePageAccess('assets');
 
 router.use(protect);
+router.use(assetsPage);
 
 router.get('/', assetController.getAssets);
 router.post('/', assetController.createAsset);

@@ -226,6 +226,7 @@ router.get('/leaderboard', protect, async (req, res) => {
       cacheHit: false,
     });
 
+    res.set('Cache-Control', 'private, max-age=60');
     res.json({
       entries: top,
       meta: {

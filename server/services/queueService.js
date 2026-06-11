@@ -14,6 +14,7 @@ const {
   markCampaignStopped,
   clearCampaignStopped,
 } = require('./campaignQueueState');
+const { processEmailJob } = require('./emailProcessor');
 
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
@@ -37,7 +38,6 @@ const processMemoryQueue = async () => {
   while (memoryQueue.length > 0) {
     const jobData = memoryQueue.shift();
     try {
-      const { processEmailJob } = require('./emailProcessor');
       await processEmailJob(jobData);
     } catch (err) {
       logger.error('Memory Queue', 'Job failed', { error: err.message });
@@ -156,9 +156,20 @@ const dispatchCampaignJobs = async (campaignId) => {
   return { success: true, queuedCount: recipients.length };
 };
 
+/** Wait for in-memory fallback queue to finish (tests / graceful shutdown). */
+const drainMemoryQueue = async (timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while ((memoryQueue.length > 0 || isProcessingMemoryQueue) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  memoryQueue.length = 0;
+  isProcessingMemoryQueue = false;
+};
+
 module.exports = {
   dispatchCampaignJobs,
   stopCampaign,
-  processEmailJob: (...args) => require('./emailProcessor').processEmailJob(...args),
+  processEmailJob,
+  drainMemoryQueue,
   isCampaignStopped,
 };

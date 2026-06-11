@@ -3,19 +3,23 @@ import axios from 'axios';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { saveAuthReturnPath } from '../../lib/authUnauthorized';
+import { isUserOnArtistTeam } from '../../utils/artistTeamAccess';
 
-export default function ClaimWorkspaceBanner({ artistId, shareToken, onClaimed }) {
+export default function ClaimWorkspaceBanner({ artistId, shareToken, team, onClaimed }) {
   const { user } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [claimed, setClaimed] = React.useState(false);
 
   if (!shareToken || claimed) return null;
 
-  const alreadyOnTeam = user && artistId;
+  const alreadyOnTeam = isUserOnArtistTeam(user, team);
 
   const handleClaim = async () => {
     if (!user) {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      saveAuthReturnPath();
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      window.location.href = `/login?redirect=${encodeURIComponent(returnPath)}`;
       return;
     }
     setLoading(true);

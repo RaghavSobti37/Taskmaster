@@ -92,10 +92,25 @@ const assertSafeDbTarget = (dbUri, context = {}) => {
   throw new Error(message);
 };
 
+const MONGOOSE_POOL_OPTIONS = Object.freeze({
+  maxPoolSize: 20,
+  minPoolSize: 5,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  heartbeatFrequencyMS: 10000,
+});
+
+const getMongooseConnectOptions = (overrides = {}) => ({
+  ...MONGOOSE_POOL_OPTIONS,
+  ...overrides,
+});
+
 module.exports = {
   getDbNameFromUri,
   maskMongoUri,
   resolveMongoUri,
   assertSafeDbTarget,
   isProdLikeDbName,
+  MONGOOSE_POOL_OPTIONS,
+  getMongooseConnectOptions,
 };

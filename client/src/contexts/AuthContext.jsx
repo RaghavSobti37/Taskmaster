@@ -13,9 +13,12 @@ import { getAxiosBaseURL } from '../utils/apiBase';
 import { isStandaloneDisplay } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
-import { AXIOS_SKIP_TOAST } from '../lib/notifications';
+import { mergeSessionUser } from '../utils/sessionUserMerge';
+import { probeAuthSession } from '../utils/authSessionProbe';
 import { setSentryUser, clearSentryUser } from '../lib/sentry';
 import { setDatadogUser, clearDatadogUser } from '../lib/datadog';
+import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
+import { startIdleKeepWarm } from '../lib/idleKeepWarm';
 
 const defaultAuthContext = {
   user: null,
@@ -85,7 +88,8 @@ function userSessionChanged(prev, next) {
     a.departmentId !== b.departmentId ||
     a.pagePermissions !== b.pagePermissions ||
     a.exp !== b.exp ||
-    a.level !== b.level
+    a.level !== b.level ||
+    a.mustChangePassword !== b.mustChangePassword
   );
 }
 
@@ -97,6 +101,7 @@ export const AuthProvider = ({ children }) => {
   const sessionReadyRef = useRef(sessionReady);
   const authEpochRef = useRef(0);
   const loggingOutRef = useRef(false);
+  const fetchUserInFlightRef = useRef(null);
 
   useEffect(() => {
     userRef.current = user;
@@ -131,59 +136,83 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [queryClient]);
 
+  useEffect(() => {
+    return registerUnauthorizedHandler(async () => {
+      if (loggingOutRef.current) return;
+      await logout();
+    });
+  }, [logout]);
+
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
-    const epoch = authEpochRef.current;
     const { clearOn401 = true, retries = SESSION_RETRIES } = options;
-
-    for (let attempt = 0; attempt < retries; attempt += 1) {
-      if (epoch !== authEpochRef.current) return null;
-      if (attempt > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
-        if (epoch !== authEpochRef.current) return null;
-      }
-
-      let res;
-      try {
-        res = await axios.get('/api/auth/me', {
-          ...AXIOS_SKIP_TOAST,
-          validateStatus: (status) => status === 200 || status === 401 || status === 403,
-        });
-      } catch {
-        if (attempt < retries - 1) continue;
-        setLoading(false);
-        return null;
-      }
-
-      if (epoch !== authEpochRef.current) return null;
-
-      if (res.status === 401 || res.status === 403) {
-        const sessionExpired = String(res.data?.error || '').includes('Session expired');
-        if (!sessionExpired && attempt < retries - 1) continue;
-        if (clearOn401) {
-          setUser(null);
-          setSessionReady(false);
-        }
-        setLoading(false);
-        return null;
-      }
-
-      const newData = res.data;
-      if (userSessionChanged(userRef.current, newData)) {
-        setUser(newData);
-        setSentryUser(newData);
-        setDatadogUser(newData);
-      }
-      if (newData && !userRef.current) {
-        recordAttendanceSessionLogin();
-      }
-      setLoading(false);
-      setSessionReady(true);
-      return newData;
+    if (fetchUserInFlightRef.current) {
+      return fetchUserInFlightRef.current;
     }
 
-    setLoading(false);
-    return null;
+    const run = async () => {
+      const epoch = authEpochRef.current;
+
+      for (let attempt = 0; attempt < retries; attempt += 1) {
+        if (epoch !== authEpochRef.current) return null;
+        if (attempt > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+          if (epoch !== authEpochRef.current) return null;
+        }
+
+        let probe;
+        try {
+          probe = await probeAuthSession();
+        } catch {
+          if (attempt < retries - 1) continue;
+          setLoading(false);
+          return null;
+        }
+
+        if (epoch !== authEpochRef.current) return null;
+
+        if (probe.status === 401) {
+          if (clearOn401) {
+            setUser(null);
+            setSessionReady(false);
+          }
+          setLoading(false);
+          return null;
+        }
+
+        if (probe.status === 403) {
+          setLoading(false);
+          setSessionReady(true);
+          return userRef.current;
+        }
+
+        const newData = probe.user;
+        if (userSessionChanged(userRef.current, newData)) {
+          setUser(newData);
+          setSentryUser(newData);
+          setDatadogUser(newData);
+        }
+        if (newData && !userRef.current) {
+          recordAttendanceSessionLogin();
+        }
+        setLoading(false);
+        setSessionReady(true);
+        return newData;
+      }
+
+      setLoading(false);
+      return null;
+    };
+
+    const promise = run();
+    fetchUserInFlightRef.current = promise;
+    try {
+      return await promise;
+    } finally {
+      if (fetchUserInFlightRef.current === promise) {
+        fetchUserInFlightRef.current = null;
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -231,6 +260,11 @@ export const AuthProvider = ({ children }) => {
   }, [user?._id, fetchUser]);
 
   useEffect(() => {
+    if (!user?._id) return undefined;
+    return startIdleKeepWarm({ enabled: true });
+  }, [user?._id]);
+
+  useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || loggingOutRef.current) return;
       applyAxiosBaseURL();
@@ -270,16 +304,18 @@ export const AuthProvider = ({ children }) => {
 
     const sessionUser = await fetchUser({ clearOn401: true, retries: SESSION_RETRIES });
     if (!sessionUser) {
+      setSessionReady(false);
       throw new Error('Session could not be established. Please try again.');
     }
 
+    setSessionReady(true);
     refetchUserScopedQueries(queryClient);
   }, [fetchUser, queryClient]);
 
   const applySessionUser = useCallback((nextUser) => {
     if (!nextUser) return;
     setUser((prev) => {
-      const merged = { ...prev, ...nextUser };
+      const merged = mergeSessionUser(prev, nextUser);
       setSentryUser(merged);
       setDatadogUser(merged);
       return merged;

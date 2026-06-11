@@ -1,11 +1,14 @@
 const express = require('express');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 const { getSupabaseHealthReport } = require('../services/supabase/health');
 const { closeSupabaseClients } = require('../services/supabase/client');
 
 const router = express.Router();
 
-router.use(protect, admin);
+// No dedicated UI — infra probe for Data Hub ops; same gate as data-hub routes (admin_data).
+const dataHubAccess = requirePageAccess('admin_data');
+
+router.use(protect, dataHubAccess);
 
 router.get('/health', async (_req, res) => {
   try {

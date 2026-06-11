@@ -52,6 +52,7 @@ const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
 const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminTeamsPage = lazyWithRetry(() => import('./pages/admin/AdminTeamsPage'));
+const AdminRolesPage = lazyWithRetry(() => import('./pages/admin/AdminRolesPage'));
 const AdminExly = lazyWithRetry(() => import('./pages/admin/AdminExly'));
 const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
 const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
@@ -109,6 +110,7 @@ const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
 const ManagementHub = lazyWithRetry(() => import('./pages/hubs/ManagementHub'));
 const AdminConsole = lazyWithRetry(() => import('./pages/hubs/AdminConsole'));
 const MainLayout = lazyWithRetry(() => import('./components/MainLayout'));
+const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 const LegacyWorkspaceRedirect = () => {
   const { name } = useParams();
@@ -157,7 +159,9 @@ function App() {
               <Route element={<PageRoute page="calendar" />}>
                 <Route path="/calendar" element={<CalendarView />} />
               </Route>
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route element={<PageRoute page="settings" />}>
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
               <Route element={<PageRoute page="logs" />}>
                 <Route path="/logs" element={<DailyLogPage />} />
@@ -198,7 +202,7 @@ function App() {
               <Route element={<PageRoute pages={['finance', 'announcements', 'ops_logs', 'artists']} />}>
                 <Route path="/management" element={<ManagementHub />} />
               </Route>
-              <Route element={<PageRoute pages={['admin_users', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics']} />}>
+              <Route element={<PageRoute pages={['admin_users', 'admin_teams', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics', 'admin_roles']} />}>
                 <Route path="/admin/console" element={<AdminConsole />} />
               </Route>
               <Route path="/leads" element={<Navigate to="/crm?tab=leads" replace />} />
@@ -222,9 +226,15 @@ function App() {
                   </Route>
                 </Route>
               </Route>
-              <Route path="/office-assets" element={<OfficeAssetsPage />} />
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/workflows" element={<WorkflowCanvas />} />
+              <Route element={<PageRoute page="office_assets" />}>
+                <Route path="/office-assets" element={<OfficeAssetsPage />} />
+              </Route>
+              <Route element={<PageRoute page="features" />}>
+                <Route path="/features" element={<FeaturesPage />} />
+              </Route>
+              <Route element={<PageRoute page="workflows" />}>
+                <Route path="/workflows" element={<WorkflowCanvas />} />
+              </Route>
 
               <Route element={<PageRoute pages={['admin_data', 'admin_artist_path']} />}>
                 <Route path="/admin/artist-path" element={<ArtistPathPage />} />
@@ -237,7 +247,12 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
+              </Route>
+              <Route element={<PageRoute page="admin_teams" />}>
                 <Route path="/admin/teams" element={<AdminTeamsPage />} />
+              </Route>
+              <Route element={<PageRoute page="admin_roles" />}>
+                <Route path="/admin/roles" element={<AdminRolesPage />} />
               </Route>
               <Route element={<PageRoute page="admin_exly" />}>
                 <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
@@ -273,6 +288,7 @@ function App() {
               <Route element={<PageRoute page="artists" />}>
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />
               </Route>
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>
 

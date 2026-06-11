@@ -97,7 +97,7 @@ class ExlyService {
     }
 
     // 2. Sync Bookings/Leads into CRM
-    const { assignLeadToRep } = require('../controllers/crmController');
+    const { assignLeadToRep } = require('../domains/crm/crmFacade');
     const { normalizePersonRecord } = require('../utils/personNormalization');
     
     let addedCount = 0;

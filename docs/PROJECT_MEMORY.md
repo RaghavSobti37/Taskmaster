@@ -1,185 +1,22 @@
-# CoreKnot: Unified Project Memory & Architecture
+# CoreKnot: Project Memory (superseded)
 
-This document serves as the single source of truth for the CoreKnot project. It synthesizes infrastructure setup, backend logic, frontend design rules, and the multi-platform analytics engine into an AI-optimized format.
+> **This file is superseded.** Use the structured agent memory instead:
+>
+> - **Navigation:** [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md)
+> - **Complete reference:** [`.specify/memory/MASTER.md`](../.specify/memory/MASTER.md)
+> - **Latest changes:** [`.specify/memory/changelog/recent-changes.md`](../.specify/memory/changelog/recent-changes.md)
 
-### Production gaps (Jun 2026)
+The memory folder is organized by major components:
 
-- **Render cron jobs** (daily backup, subscription reminders, keep-warm): defined in `render.yaml` only — **not provisioned / not running**. Use admin DB Backup or `npm run backup:daily` for backups.
-- **Sentry + Datadog**: SDK integrated in code — **not active** in production (DSN/API keys unset). In-app SystemLog is the live diagnostics path.
-
----
-
-## 1. System Architecture & Local Runtime
-
-CoreKnot is designed to run locally as a frontend/backed pair with a protected proxy interface for third-party APIs.
-
-```mermaid
-graph TD
-    Browser[React Frontend] --> |HTTPS| Vite[Vite Dev Server]
-    Vite --> |/api/* Proxy| Backend[Express Backend]
-    Backend --> |MongoDB| DB[(MongoDB)]
-    Backend --> |Redis| Cache[(Redis)]
-    Backend --> |External APIs| Services[(YouTube / OpenAI / Exly / Holysheet)]
-```
-
-### Key Runtime Rules:
-* **Local frontend proxy**: `client/vite.config.js` proxies `/api` to `http://localhost:5000`.
-* **Backend auth**: All proxy calls require valid auth via `Authorization: Bearer <token>`.
-* **Local bypass**: `DEBUG_BYPASS=true` and `Authorization: Bearer bypass_token` enables localhost API testing without a real login.
-* **Build & static assets**: In production, `server/` serves `client/dist`.
-
----
-
-## 2. Analytics & Proxy Integration
-
-The backend integrates with external analytics services, but keeps keys safe on the server.
-
-```mermaid
-sequenceDiagram
-    participant UI as Frontend
-    participant API as Backend
-    participant DB as MongoDB
-    participant Ext as External API
-
-    UI->>API: Request proxy resource
-    API->>DB: Load user auth / config
-    API->>Ext: Forward request with server-side key
-    Ext-->>API: Return data
-    API-->>UI: Return sanitized response
-```
-
-### Proxy rules:
-* **Auth required**: `protect` middleware guards `/api/proxy/*`.
-* **Allowed services**: `youtube`, `openai`, `exly`, `holysheet`.
-* **HTTP verbs**: GET, POST, PATCH, PUT, DELETE are allowed as configured.
-* **Header cleanup**: `host`, `cookie`, `authorization`, `content-length`, `origin`, and `referer` are stripped before forwarding.
-* **Server key injection**: Keys are added by auth type: path, header, bearer, or query.
-
----
-
-## 3. Backend Logic & Database Rules
-
-```mermaid
-flowchart LR
-    Request --> Sanitize[Sanitization Layer]
-    Sanitize --> Auth[Auth / Proxy]
-    Auth --> DB[MongoDB]
-    DB --> Audit[Audit Logging]
-    DB --> Queue[Redis / BullMQ]
-```
-
-* **Sanitization**: Trim whitespace, force lowercase emails, strip HTML, and normalize phone numbers using Mongoose hooks.
-* **Deduplication**: Compound unique keys and upsert behavior prevent duplicate CRM records.
-* **Query performance**: Read routes use `.lean()` and aggregation pipelines rather than repeated `countDocuments()`.
-* **Audit tracing**: Mutation events are recorded into audit logs for CRM changes and user actions.
-* **Exly revenue metrics** (v1.7.28+): Paid bookings = `pricePaid > 0`; revenue = sum of `pricePaid`; AOV = paid revenue ÷ paid count. Shared logic in `server/utils/exlyMetrics.js`; UI at `/admin/exly-campaigns`.
-
----
-
-## 4. Frontend & UX Design Rules
-
-* **4px hard grid** for spacing and layout.
-* **High density** with compact cards, lists, and tables.
-* **No mock states**: every page loads real server data.
-* **Optimistic updates** with `react-query` to reduce loading states.
-* **Semantic color palette**:
-  * Success: `#E6F4EA`
-  * Warning: `#FEF7E0`
-  * Danger: `#FCE8E6`
-  * Info: `#F1F3F4`
-* **Dark mode**: low-glow UI surfaces, minimal shadows.
-* **Row-first actions**: tables prefer row-click behavior over explicit action buttons.
-
----
-
-## 7. Mail Engine (v1.7.34+)
-
-### Campaign metrics
-* Stats derived from recipient statuses via `server/utils/campaignStats.js` — delivered = Sent/Opened/Clicked only.
-* Activity stream logs `Send`, `Failed`, `Skipped` events with error metadata.
-
-### SMTP send resilience
-* Rotation retries on connection timeout; falls back to Resend API when SMTP exhausted.
-
-### Campaign create payload
-* Large HTML + base64 attachments caused `PayloadTooLargeError` when frontend proxied through Vercel (~4.5MB cap).
-* Fix: `VITE_API_URL` on static host; attachments via `POST /api/campaigns/upload-attachment`.
-
-### Filtered resend
-* Campaign Details → Delivery Log status filter → **Resend [Filter]** creates new campaign `{title} [{FilterLabel}]` with only filtered recipients.
-* Endpoint: `POST /api/campaigns/:id/resend-filtered` with `recipientEmails`, `filterLabel`, sender config.
-
-### Sender modes (`Campaign.senderMode`)
-| Mode | Behavior |
-|------|----------|
-| `single` | One `EmailProfile` SMTP (or global Resend if configured) |
-| `pool` | Round-robin across `senderProfileIds`; skips profiles at daily limit |
-| `system_resend` | Uses `RESEND_API_KEY` env |
-| `system_smtp` | Uses `SMTP_HOST/USER/PASS` env |
-
-### Tracking
-* Centralized in `server/utils/trackingUrls.js`: `TRACKING_BASE_URL` > `APP_BASE_URL` (or localhost with `TRACKING_USE_LOCAL=true`).
-* Unsubscribe → `FRONTEND_URL/unsubscribe?email=...&token=...`; not wrapped in click tracker.
-* Live production API: `CoreKnot-jfw0.onrender.com` (Vercel `/api` proxy); avoid suspended `CoreKnot-api.onrender.com`.
-* `track.js` records opens/clicks via `EmailLog` + `MailEvent`.
-
-### SMTP profiles
-* `EmailProfile`: `providerType`, `dailyLimit`, `sendStats` (today/total).
-* Presets in `server/utils/smtpPresets.js` and `client/src/utils/smtpPresets.js`.
-* Signatures: client toggle + raw HTML editor; server appends via `emailSignature.js` if missing at send time.
-
----
-
-## 5. Current Verified Local Behavior
-
-- The backend is confirmed working on `http://localhost:5000`.
-- The proxy server responds correctly when authenticated.
-- Local bypass mode with `DEBUG_BYPASS=true` and `Authorization: Bearer bypass_token` works for proxy testing.
-- The client uses `client/vite.config.js` to forward `/api` traffic to the backend.
-
-## 6. Setup Checklist
-
-* Ensure `server/.env` is populated with all required keys.
-* Ensure `client/.env` has `VITE_API_URL` if explicit backend configuration is needed.
-* **Production mail:** set `VITE_API_URL=https://CoreKnot-jfw0.onrender.com` on Vercel; set `TRACKING_BASE_URL` or `APP_BASE_URL` to the same API origin on Render.
-* Start MongoDB before launching the backend.
-* Start Redis if you require queue and cache features.
-* Start backend first, then frontend.
-* Use the bypass token for direct proxy tests if real auth is not yet available.
-
----
-
-## 7. Email Engine (LOCKED — May 2026)
-
-**Do not change tracking/geo/template logic without explicit user request.**
-
-See **`docs/EMAIL_ENGINE_LOCKED.md`** and **`.cursor/rules/email-engine-locked.mdc`** for the full frozen spec (open/click tracking, ip-api geo, Gmail proxy handling, HolySheet deselect defaults, raw HTML templates).
-
-Campaign cleanup script: `node server/scripts/keepOnlyCampaign.js "Artist Path Delay Email"`
-
----
-
-## 8. TSC Website → Taskmaster webhooks (v1.0.5+)
-
-Public marketing site **theshakticollective.in** (TSC-Website repo) forwards all form POSTs to Taskmaster on Render — no Google Sheets / HolySheet / site-side AiSensy on TSC after cutover.
-
-| TSC route | Taskmaster endpoint |
+| Component | Path |
 | --- | --- |
-| `POST /api/book-call` | `POST /api/webhooks/book-call` |
-| `POST /api/query` | `POST /api/webhooks/artist-enquiry` |
-| `POST /api/artist-path` | `POST /api/webhooks/artist-path` |
-| `POST /api/newsletter` | `POST /api/webhooks/newsletter` |
-| `POST /api/reviews`, `/api/reviews02` | `POST /api/webhooks/masterclass-review` |
-| `GET /api/reviews`, `/api/reviews02` | `GET /api/public/masterclass-reviews?campaign=review01\|review02` |
+| Platform overview & deployment | `.specify/memory/platform/` |
+| System & data architecture | `.specify/memory/architecture/` |
+| Frontend (React SPA) | `.specify/memory/frontend/` |
+| Backend (Express + NestJS) | `.specify/memory/backend/` |
+| Auth & security | `.specify/memory/auth/` |
+| Feature modules | `.specify/memory/features/` |
+| Operations & testing | `.specify/memory/operations/` |
+| Changelog | `.specify/memory/changelog/` |
 
-**Production API:** see `.cursor/production-hosts.local.json` → `productionApiUrl` (gitignored).
-
-**Auth:** Five shared secrets (`BOOK_CALL`, `ARTIST_ENQUIRY`, `ARTIST_PATH`, `NEWSLETTER`, `MASTERCLASS_REVIEW` `_WEBHOOK_SECRET`) on Render + Vercel. Enquiry/newsletter/review = `X-Webhook-Secret` only; book-call + artist-path also accept HMAC.
-
-**Docs:** `docs/TSC_TASKMASTER_INTEGRATION.md`, `docs/tsc-integration.env.example`
-
-**Smoke:** `node server/scripts/smoke-tsc-webhooks.js` (direct Taskmaster); TSC repo `node scripts/test-tsc-webhooks.mjs` (via Vercel routes).
-
-**Deploy order:** Taskmaster first → direct webhook smoke → TSC → proxy smoke → remove legacy `GOOGLE_*` / `HOLYSHEET_*` / `AISENSY_*` from Vercel.
-
-**Review approval:** `PATCH /api/admin/masterclass-reviews/:id/approve` (admin JWT) before reviews appear on site GET.
+For long-form locked specs, see `docs/DOCUMENTATION_INDEX.md`.

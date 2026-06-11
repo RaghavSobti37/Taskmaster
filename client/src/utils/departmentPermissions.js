@@ -1,6 +1,7 @@
 export const ADMIN_SLUG = 'admin';
 export const SALES_SLUG = 'sales';
-export const OPS_SLUG = 'operations';
+export const OPS_SLUG = 'ops';
+export const CREATIVE_SLUG = 'creative';
 export const ARTIST_SLUG = 'artist-management';
 const STANDARD_PRESET = 'standard';
 

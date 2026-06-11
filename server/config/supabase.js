@@ -46,6 +46,12 @@ const SUPABASE_BACKUP_BUCKET = (
 
 const SUPABASE_SECONDARY_ENABLED = readBool('SUPABASE_SECONDARY_ENABLED', true);
 
+/** When Supabase is enabled, system/app log reads and writes use Postgres first. */
+const LOGS_PRIMARY_SUPABASE = readBool('LOGS_PRIMARY_SUPABASE', true);
+
+/** Optional cold archive of logs into Mongo (large/low-access retention). Off by default. */
+const MONGO_LOG_ARCHIVE = readBool('MONGO_LOG_ARCHIVE', false);
+
 /** Render and other IPv4-only hosts cannot reach db.*.supabase.co (IPv6 direct). */
 function preferRestPostgres() {
   const mode = String(process.env.SUPABASE_PG_MODE || '').trim().toLowerCase();
@@ -73,6 +79,10 @@ function isSupabaseEnabled() {
   return SUPABASE_SECONDARY_ENABLED && isSupabaseConfigured();
 }
 
+function isLogsPrimarySupabase() {
+  return isSupabaseEnabled() && LOGS_PRIMARY_SUPABASE;
+}
+
 function getSupabaseConfig() {
   return {
     url: SUPABASE_URL,
@@ -82,6 +92,8 @@ function getSupabaseConfig() {
     backupBucket: SUPABASE_BACKUP_BUCKET,
     enabled: isSupabaseEnabled(),
     configured: isSupabaseConfigured(),
+    logsPrimary: isLogsPrimarySupabase(),
+    mongoLogArchive: MONGO_LOG_ARCHIVE,
   };
 }
 
@@ -92,9 +104,12 @@ module.exports = {
   SUPABASE_DB_URL,
   SUPABASE_BACKUP_BUCKET,
   SUPABASE_SECONDARY_ENABLED,
+  LOGS_PRIMARY_SUPABASE,
+  MONGO_LOG_ARCHIVE,
   preferRestPostgres,
   getSupabaseProjectRef,
   isSupabaseConfigured,
   isSupabaseEnabled,
+  isLogsPrimarySupabase,
   getSupabaseConfig,
 };

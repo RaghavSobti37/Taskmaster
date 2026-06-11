@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StickyNote, Clock, Lock, Users } from 'lucide-react';
-import { PageContainer, PageHeader, DataListRow, PageSkeleton } from '../../components/ui';
+import { PageContainer, PageHeader, DataListRow, PageSkeleton, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import NoteComposer from '../../components/notes/NoteComposer';
 import { useUserNotes } from '../../hooks/useTaskmasterQueries';
@@ -26,7 +26,7 @@ const visibilityLabel = (note) => {
 export default function NotesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: notes = [], isLoading } = useUserNotes();
+  const { data: notes = [], isLoading, isError, error, refetch } = useUserNotes();
 
   const noteById = useMemo(
     () => new Map(notes.map((note) => [String(note._id), note])),
@@ -51,6 +51,13 @@ export default function NotesPage() {
       />
 
       <NoteComposer className="mb-8" />
+
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load notes')}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {drafts.length > 0 && (
         <section className="mb-8">

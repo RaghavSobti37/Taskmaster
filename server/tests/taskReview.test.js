@@ -1,8 +1,10 @@
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const TaskActivity = require('../models/TaskActivity');
 const TaskAssignment = require('../models/TaskAssignment');
 const User = require('../models/User');
 const TaskService = require('../services/TaskService');
+const taskController = require('../domains/tasks/controllers/taskController');
 const {
   needsReviewOnComplete,
   canUserApproveOrRollback,
@@ -12,6 +14,10 @@ describe('task review workflow', () => {
   let creator;
   let assignee;
   let platformOwner;
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   beforeEach(async () => {
     creator = await User.create({ name: 'Creator', email: 'creator-review@test.com' });
@@ -179,6 +185,55 @@ describe('task review workflow', () => {
     const rollbackRow = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
     expect(rollbackRow?.body).toBe('Reopened for additional work');
     expect(rollbackRow?.statusFrom).toBe('done');
+  });
+
+  test('rollback on non-rollbackable status rejects with clear error (BUG-T13)', async () => {
+    const task = await Task.create({
+      title: 'In progress rollback',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await expect(
+      TaskService.updateTask(
+        task._id,
+        { reviewAction: 'rollback', description: 'Should fail' },
+        creator,
+        null
+      )
+    ).rejects.toThrow('Only in-review or completed tasks can be rolled back');
+  });
+
+  test('updateTask controller maps rollback wrong-status to 400 (BUG-T13)', async () => {
+    const fakeSession = {
+      withTransaction: jest.fn(async (fn) => fn()),
+      endSession: jest.fn(),
+    };
+    jest.spyOn(mongoose, 'startSession').mockResolvedValue(fakeSession);
+    jest.spyOn(TaskService, 'updateTask').mockRejectedValue(
+      new Error('Only in-review or completed tasks can be rolled back')
+    );
+
+    const req = {
+      params: { id: new mongoose.Types.ObjectId().toString() },
+      body: { reviewAction: 'rollback' },
+      user: { _id: new mongoose.Types.ObjectId() },
+    };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+
+    await taskController.updateTask(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Only in-review or completed tasks can be rolled back',
+    });
+    expect(next).not.toHaveBeenCalled();
   });
 
   test('platform owner can rollback in-review task they did not assign', async () => {

@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, Globe, Database, Trash2, Edit2, Link as LinkIcon, Mic2
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
-import { Badge, DataTable, Button, TabSwitcher, PageSkeleton, Input, ListPageLayout, SearchInput } from '../../components/ui';
+import { Badge, DataTable, Button, TabSwitcher, PageSkeleton, Input, ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
@@ -30,7 +30,7 @@ export default function ArtistsCollection() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
 
-  const { data: artists = [], isLoading, refetch } = useArtists();
+  const { data: artists = [], isLoading, isError, error, refetch } = useArtists();
   const createMutation = useCreateArtist();
   const syncMutation = useSyncArtistStats();
 
@@ -68,7 +68,7 @@ export default function ArtistsCollection() {
       setSyncingId(null);
     } catch (err) {
       setSyncingId(null);
-      alert('Sync completed or simulated. Data streams refreshed.');
+      alert(`Sync failed: ${err.response?.data?.message || err.message}`);
     }
   };
 
@@ -183,7 +183,7 @@ export default function ArtistsCollection() {
     }
   ];
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading && !isError) return <PageSkeleton />;
 
   return (
     <>
@@ -223,6 +223,12 @@ export default function ArtistsCollection() {
       )}
     >
       <div className="space-y-4">
+        {isError && (
+          <QueryErrorBanner
+            message={getQueryErrorMessage(error, 'Failed to load artists')}
+            onRetry={() => refetch()}
+          />
+        )}
         <DataTable
           columns={columns}
           data={filteredArtists}

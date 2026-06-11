@@ -1,6 +1,7 @@
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { KeyboardShortcutsContext } from './keyboardShortcutsContext.shared';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { isAdminUser } from '../utils/departmentPermissions';
@@ -17,8 +18,7 @@ import {
   isTypingTarget,
   bindingMatchesSequenceComplete,
 } from '../lib/keyboardShortcuts';
-
-const KeyboardShortcutsContext = createContext(null);
+import { filterActionsByPageAccess } from '../utils/navPageAccess';
 
 export function KeyboardShortcutsProvider({ children }) {
   const navigate = useNavigate();
@@ -29,6 +29,11 @@ export function KeyboardShortcutsProvider({ children }) {
   const bindingsMap = useMemo(
     () => shortcutPrefs?.effectiveBindings || mergeShortcutBindings(shortcutPrefs?.bindings),
     [shortcutPrefs]
+  );
+
+  const allowedShortcutActions = useMemo(
+    () => filterActionsByPageAccess(filterActionsForUser(SHORTCUT_ACTIONS, { isAdmin }), user),
+    [isAdmin, user]
   );
 
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -122,9 +127,7 @@ export function KeyboardShortcutsProvider({ children }) {
 
   const completeSequence = useCallback((finalKey) => {
     const prefix = sequencePrefixRef.current || [];
-    const actionsList = filterActionsForUser(SHORTCUT_ACTIONS, { isAdmin });
-
-    for (const action of actionsList) {
+    for (const action of allowedShortcutActions) {
       const binding = bindingsMap[action.id];
       if (!binding?.keys || !isSequenceBinding(binding.keys)) continue;
       if (bindingMatchesSequenceComplete(binding.keys, prefix, finalKey)) {
@@ -137,7 +140,7 @@ export function KeyboardShortcutsProvider({ children }) {
     cancelSequence();
     flashChord(`No shortcut for ${prefix.join(' ')} ${finalKey}`.trim());
     return false;
-  }, [bindingsMap, isAdmin, cancelSequence, executeAction, flashChord]);
+  }, [bindingsMap, allowedShortcutActions, cancelSequence, executeAction, flashChord]);
 
   useEffect(() => () => {
     clearSequenceTimer();
@@ -178,9 +181,7 @@ export function KeyboardShortcutsProvider({ children }) {
         return;
       }
 
-      const actionsList = filterActionsForUser(SHORTCUT_ACTIONS, { isAdmin });
-
-      for (const action of actionsList) {
+      for (const action of allowedShortcutActions) {
         const binding = bindingsMap[action.id];
         if (!binding?.keys?.length) continue;
 
@@ -213,7 +214,7 @@ export function KeyboardShortcutsProvider({ children }) {
     helpOpen,
     gChordPending,
     bindingsMap,
-    isAdmin,
+    allowedShortcutActions,
     closePalette,
     cancelSequence,
     completeSequence,
@@ -243,10 +244,4 @@ export function KeyboardShortcutsProvider({ children }) {
   );
 }
 
-export function useKeyboardShortcuts() {
-  const ctx = useContext(KeyboardShortcutsContext);
-  if (!ctx) {
-    throw new Error('useKeyboardShortcuts must be used within KeyboardShortcutsProvider');
-  }
-  return ctx;
-}
+export { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';

@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "shared/contracts/**/*.js",
+    "server/domains/crm/services/leadService.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "server/coverage"
+  ]
+}

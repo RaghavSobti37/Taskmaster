@@ -53,11 +53,22 @@ export const PAGE_GROUPS = [
     ],
   },
   {
+    id: 'tools',
+    label: 'App Tools',
+    pages: [
+      { key: 'settings', label: 'Settings', path: '/settings' },
+      { key: 'office_assets', label: 'Office Assets', path: '/office-assets' },
+      { key: 'features', label: 'Features', path: '/features' },
+      { key: 'workflows', label: 'Workflows', path: '/workflows' },
+    ],
+  },
+  {
     id: 'admin',
     label: 'Admin',
     pages: [
       { key: 'admin_users', label: 'Users', path: '/admin/users' },
       { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
+      { key: 'admin_roles', label: 'Roles', path: '/admin/roles' },
       { key: 'admin_data', label: 'Data Hub', path: '/admin' },
       { key: 'admin_artist_path', label: 'Artist Path', path: '/admin/artist-path' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
@@ -72,16 +83,21 @@ export const PAGE_GROUPS = [
 export const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 
 export const BASE_PAGE_KEYS = [
-  'dashboard', 'calendar', 'todo', 'inbox',
+  'dashboard', 'calendar', 'todo', 'inbox', 'settings',
   'projects', 'assets', 'schedule', 'logs', 'notes', 'emails',
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
+const OPS_EXTRA_PAGES = ['finance', 'announcements', 'ops_logs', 'office_assets'];
+const CREATIVE_EXTRA_PAGES = ['assets', 'features', 'workflows', 'office_assets'];
+
 export const PRESET_PAGES = {
   admin: ALL_PAGE_KEYS,
-  operations: [...BASE_PAGE_KEYS, 'finance', 'announcements', 'ops_logs'],
+  ops: [...BASE_PAGE_KEYS, ...OPS_EXTRA_PAGES],
+  operations: [...BASE_PAGE_KEYS, ...OPS_EXTRA_PAGES],
   sales: [...BASE_PAGE_KEYS, 'leads', 'followups', 'bookings'],
   'artist-management': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
+  creative: [...BASE_PAGE_KEYS, ...CREATIVE_EXTRA_PAGES],
   standard: BASE_PAGE_KEYS,
 };
 
@@ -89,14 +105,15 @@ const ADMIN_PAGE_KEYS = new Set(
   PAGE_GROUPS.find((g) => g.id === 'admin')?.pages.map((p) => p.key) || []
 );
 
-const CRM_PAGE_KEYS = ['leads', 'followups', 'bookings'];
+export const CRM_PAGE_KEYS = ['leads', 'followups', 'bookings'];
 const OPS_PAGE_KEYS = ['finance', 'announcements', 'ops_logs'];
 
 export const PERMISSION_PRESET_OPTIONS = [
   { value: 'admin', label: 'Admin (all pages)', description: 'Full access to every page' },
-  { value: 'operations', label: 'Operations', description: 'Base workspace + finance, announcements, ops logs' },
+  { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, ops logs, office assets' },
   { value: 'sales', label: 'Sales', description: 'Base workspace + CRM pages' },
-  { value: 'artist-management', label: 'Artist Management', description: 'Base workspace + artists + artist CRM (press, events, bookings)' },
+  { value: 'artist-management', label: 'Artist Management', description: 'Base workspace + artists + artist CRM' },
+  { value: 'creative', label: 'Creative', description: 'Base workspace + assets, features, workflows, office assets' },
   { value: 'standard', label: 'Standard', description: 'Dashboard, tasks, projects, and office tools only' },
 ];
 
@@ -123,9 +140,10 @@ export function resolveDepartmentPages(dept) {
   if (!dept) return BASE_PAGE_KEYS;
   if (isDepartmentAdmin(dept)) return [...ALL_PAGE_KEYS];
 
-  const preset = dept.permissionPreset
+  const slugPreset = dept.slug === 'operations' ? 'ops' : dept.slug;
+  const preset = dept.permissionPreset === 'operations' ? 'ops' : dept.permissionPreset
     || (dept.slug === ADMIN_SLUG ? ADMIN_SLUG : null)
-    || (dept.slug && PRESET_PAGES[dept.slug] ? dept.slug : null);
+    || (slugPreset && PRESET_PAGES[slugPreset] ? slugPreset : null);
 
   let pages;
   if (Array.isArray(dept.pagePermissions) && dept.pagePermissions.length > 0) {
@@ -142,12 +160,15 @@ export function resolveDepartmentPages(dept) {
 }
 
 export function getUserPagePermissions(user) {
+  if (isDepartmentAdmin(user?.departmentId)) return [...ALL_PAGE_KEYS];
+  if (Array.isArray(user?.pagePermissions) && user.pagePermissions.length > 0) {
+    return user.pagePermissions.filter((k) => ALL_PAGE_KEYS.includes(k));
+  }
   return resolveDepartmentPages(user?.departmentId);
 }
 
 export function hasPageAccess(user, pageKey) {
   if (!pageKey) return true;
-  if (pageKey === 'emails' && user) return true;
   if (pageKey === 'admin_artist_path') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);
@@ -165,8 +186,12 @@ export function isAdminUser(user) {
   return isDepartmentAdmin(user?.departmentId);
 }
 
-export function isSalesUser(user) {
+export function hasCrmPageAccess(user) {
   return isAdminUser(user) || hasAnyPageAccess(user, CRM_PAGE_KEYS);
+}
+
+export function isSalesUser(user) {
+  return hasCrmPageAccess(user);
 }
 
 export function isOpsUser(user) {

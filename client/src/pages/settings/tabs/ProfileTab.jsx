@@ -21,11 +21,10 @@ import {
   Ghost,
   Heart,
 } from 'lucide-react';
-import { Input, Button, Badge, NexusDropdown } from '../../../components/ui';
+import { Input, Button, Badge } from '../../../components/ui';
 import { ModalShell } from '../../../components/ui/modals';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useDepartments } from '../../../hooks/useTaskmasterQueries';
-import { isAdminUser } from '../../../utils/departmentPermissions';
+import { getDepartmentName } from '../../../utils/departmentPermissions';
 import { validatePasswordStrength } from '../../../utils/passwordValidation';
 import PasswordRequirements from '../../../components/auth/PasswordRequirements';
 import {
@@ -37,11 +36,6 @@ import { useUnsavedChanges, stableJsonEqual } from '../../../hooks/useUnsavedCha
 import { useNavigate } from 'react-router-dom';
 
 const formatDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
-const toDepartmentId = (dept) => {
-  if (!dept) return '';
-  if (typeof dept === 'object') return String(dept._id || '');
-  return String(dept);
-};
 
 const CATEGORY_ICONS = {
   'Cartoon Male': User,
@@ -73,28 +67,16 @@ export default function ProfileTab() {
   const [allTeams, setAllTeams] = useState([]);
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(AVATAR_CATEGORY_IDS[0]);
-
-  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
-  const [departmentId, setDepartmentId] = useState('');
-
-  const departmentOptions = useMemo(() => {
-    const currentId = toDepartmentId(user?.departmentId);
-    return departments
-      .filter(
-        (d) =>
-          isAdminUser(user) ||
-          d.signupAllowed !== false ||
-          (currentId && String(d._id) === currentId)
-      )
-      .map((d) => ({ value: String(d._id), label: d.name }));
-  }, [departments, user]);
 
   const activeAvatars = AVATAR_CATALOG[activeCategory] || [];
 
@@ -112,9 +94,9 @@ export default function ProfileTab() {
     setPhone(source.phone || '+91 ');
     setDateOfBirth(formatDateInput(source?.dateOfBirth));
     setTeams(source.teams ? source.teams.map((t) => ({ value: t, label: t })) : []);
-    setDepartmentId(toDepartmentId(source.departmentId));
     setPassword('');
     setNewPassword('');
+    setConfirmPassword('');
     setPasswordError('');
   }, []);
 
@@ -129,11 +111,10 @@ export default function ProfileTab() {
       phone,
       dateOfBirth,
       teams: teams.map((t) => (typeof t === 'object' ? t.value : t)),
-      departmentId,
       password,
       newPassword,
     }),
-    [name, avatar, phone, dateOfBirth, teams, departmentId, password, newPassword]
+    [name, avatar, phone, dateOfBirth, teams, password, newPassword]
   );
 
   const savedProfileSnapshot = useMemo(
@@ -145,7 +126,6 @@ export default function ProfileTab() {
             phone: user.phone || '+91 ',
             dateOfBirth: formatDateInput(user?.dateOfBirth),
             teams: user.teams || [],
-            departmentId: toDepartmentId(user.departmentId),
             password: '',
             newPassword: '',
           }
@@ -153,15 +133,65 @@ export default function ProfileTab() {
     [user]
   );
 
-  const hasProfileChanges =
-    !!savedProfileSnapshot && !stableJsonEqual(profileSnapshot, savedProfileSnapshot);
+  const mustChangePassword = Boolean(user?.mustChangePassword);
+  const canSkipCurrentPassword = Boolean(
+    user?.authProviders?.canSetPasswordWithoutCurrent || mustChangePassword
+  );
 
-  const isGoogleInitialPassword = Boolean(user?.authProviders?.canSetPasswordWithoutCurrent);
+  const hasProfileChanges = useMemo(() => {
+    if (!savedProfileSnapshot) return false;
+    if (mustChangePassword) {
+      const { password: _p, newPassword: _n, ...draft } = profileSnapshot;
+      const { password: _sp, newPassword: _sn, ...saved } = savedProfileSnapshot;
+      return !stableJsonEqual(draft, saved);
+    }
+    return !stableJsonEqual(profileSnapshot, savedProfileSnapshot);
+  }, [profileSnapshot, savedProfileSnapshot, mustChangePassword]);
+
+  const handleSaveRequiredPassword = async () => {
+    setPasswordError('');
+    setSaveError('');
+
+    if (!newPassword || !confirmPassword) {
+      setPasswordError('Enter and confirm your new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    const error = validatePasswordStrength(newPassword);
+    if (error) {
+      setPasswordError(error);
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const { data: updatedUser } = await axios.post('/api/auth/change-required-password', {
+        newPassword,
+        confirmPassword,
+      });
+      applySessionUser(updatedUser);
+      setPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setSaveError(err.response?.data?.error || 'Failed to update password');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     setPasswordError('');
     setSaveError('');
-    if (newPassword && !isGoogleInitialPassword && !password) {
+    if (mustChangePassword && newPassword) {
+      setPasswordError('Use "Save new password" below before saving other profile changes.');
+      return;
+    }
+    if (newPassword && !canSkipCurrentPassword && !password) {
       setPasswordError('Enter your current password to set a new password.');
       return;
     }
@@ -181,9 +211,8 @@ export default function ProfileTab() {
         phone,
         teams: teamStrings,
         dateOfBirth: dateOfBirth || null,
-        departmentId: departmentId || null,
       };
-      if (newPassword && (password || isGoogleInitialPassword)) {
+      if (newPassword && (password || canSkipCurrentPassword)) {
         if (password) payload.currentPassword = password;
         payload.newPassword = newPassword;
       }
@@ -191,6 +220,7 @@ export default function ProfileTab() {
       applySessionUser(updatedUser);
       setPassword('');
       setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
       setSaveError(err.response?.data?.error || 'Failed to update profile');
     } finally {
@@ -269,21 +299,26 @@ export default function ProfileTab() {
             icon={CalendarDays}
             className="!text-xs"
           />
-          <NexusDropdown
-            label="Department"
-            options={departmentOptions}
-            value={departmentId}
-            onChange={setDepartmentId}
-            placeholder={departmentsLoading ? 'Loading…' : 'Select department'}
-            disabled={departmentsLoading}
-          />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
+              Department / Role
+            </label>
+            <p className="text-sm text-[var(--color-text-primary)] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+              {getDepartmentName(user)}
+            </p>
+            <p className="text-[9px] text-[var(--color-text-muted)] ml-1">
+              Contact an administrator to change your role.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-3">
-            {isGoogleInitialPassword ? (
+            {canSkipCurrentPassword ? (
               <p className="text-xs text-[var(--color-text-secondary)] font-medium ml-1">
-                Your account uses Google sign-in. Set a password below to also sign in with your email.
+                {mustChangePassword
+                  ? 'Your account uses a temporary password. Set a new password below — current password not required.'
+                  : 'Your account uses Google sign-in. Set a password below to also sign in with your email.'}
               </p>
             ) : (
               <Input
@@ -298,16 +333,37 @@ export default function ProfileTab() {
             )}
             <Input
               type={showNewPassword ? 'text' : 'password'}
-              label={isGoogleInitialPassword ? 'Password' : 'New Password'}
+              label={canSkipCurrentPassword ? 'Password' : 'New Password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               icon={Shield}
               className="!text-xs"
               endAdornment={passwordToggle(showNewPassword, setShowNewPassword)}
             />
+            {mustChangePassword && (
+              <Input
+                type={showConfirmPassword ? 'text' : 'password'}
+                label="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                icon={Shield}
+                className="!text-xs"
+                endAdornment={passwordToggle(showConfirmPassword, setShowConfirmPassword)}
+              />
+            )}
             <div className="p-3 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
               <PasswordRequirements password={newPassword} />
             </div>
+            {mustChangePassword && (
+              <Button
+                type="button"
+                onClick={handleSaveRequiredPassword}
+                disabled={passwordSaving || !newPassword || !confirmPassword}
+                className="w-full sm:w-auto"
+              >
+                {passwordSaving ? 'Saving…' : 'Save new password'}
+              </Button>
+            )}
             {passwordError && <p className="text-xs text-rose-500 font-medium">{passwordError}</p>}
             {saveError && <p className="text-xs text-rose-500 font-medium">{saveError}</p>}
           </div>

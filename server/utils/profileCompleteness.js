@@ -17,8 +17,10 @@ const isDobMissing = (dateOfBirth) => {
 const needsPasswordChange = (user) => Boolean(user?.mustChangePassword);
 
 /** Google OAuth-only accounts with no saved password may set one without the OAuth seed. */
-const canSetPasswordWithoutCurrent = (user) =>
-  Boolean(user?.googleId) && !user?.passwordChangedAt && !user?.password;
+const canSetPasswordWithoutCurrent = (user) => {
+  if (needsPasswordChange(user)) return true;
+  return Boolean(user?.googleId) && !user?.passwordChangedAt && !user?.password;
+};
 
 const getProfileCompletionIssues = (user) => {
   if (!user) return [];

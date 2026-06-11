@@ -4,6 +4,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const publicDir = path.resolve(__dirname, 'public')
 const iconsDir = path.join(publicDir, 'icons')
@@ -17,6 +18,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const agentationEnabled =
     mode === 'development' && env.VITE_ENABLE_AGENTATION === 'true'
+  // Attendance strangler: VITE_NEST_ATTENDANCE=true → NestJS :5001; override via VITE_ATTENDANCE_PROXY
+  const attendanceProxyTarget =
+    env.VITE_ATTENDANCE_PROXY
+    || (env.VITE_NEST_ATTENDANCE === 'true' ? 'http://127.0.0.1:5001' : 'http://127.0.0.1:5000')
 
   return {
   define: {
@@ -48,7 +53,13 @@ export default defineConfig(({ mode }) => {
         enabled: false,
         type: 'module'
       }
-    })
+    }),
+    visualizer({
+      filename: 'dist/bundle-analysis.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+    }),
   ],
   resolve: {
     alias: {
@@ -59,6 +70,12 @@ export default defineConfig(({ mode }) => {
   },
   server: {
     proxy: {
+      // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
+      '/api/attendance': {
+        target: attendanceProxyTarget,
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
@@ -91,6 +108,12 @@ export default defineConfig(({ mode }) => {
   },
   preview: {
     proxy: {
+      // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
+      '/api/attendance': {
+        target: attendanceProxyTarget,
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,

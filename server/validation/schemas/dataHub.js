@@ -10,6 +10,8 @@ const dataHubPeopleQuery = z.object({
   campaign: z.string().optional(),
   originSource: z.string().optional(),
   emailStatus: z.string().optional(),
+  sort: z.enum(['lastActivity', 'updated', 'name']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
 });
 
 const dataHubPersonQuery = z.object({

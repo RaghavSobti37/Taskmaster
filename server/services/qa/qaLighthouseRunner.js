@@ -128,17 +128,39 @@ async function loginCookie() {
   return null;
 }
 
-async function loadLighthouseModules() {
-  const lighthouseMod = path.join(CLIENT_ROOT, 'node_modules/lighthouse/core/index.js');
-  const chromeMod = path.join(CLIENT_ROOT, 'node_modules/chrome-launcher/dist/index.js');
+async function resolveLighthouseModulePaths() {
+  const candidates = [
+    CLIENT_ROOT,
+    REPO_ROOT,
+    path.join(REPO_ROOT, 'node_modules'),
+  ];
+  for (const root of candidates) {
+    const lighthouseMod = path.join(root, 'node_modules/lighthouse/core/index.js');
+    const chromeMod = path.join(root, 'node_modules/chrome-launcher/dist/index.js');
+    try {
+      await fs.access(lighthouseMod);
+      await fs.access(chromeMod);
+      return { lighthouseMod, chromeMod };
+    } catch {
+      /* try next root */
+    }
+  }
+  // Workspace hoisting: packages live directly under repo node_modules/
+  const hoistedLighthouse = path.join(REPO_ROOT, 'node_modules/lighthouse/core/index.js');
+  const hoistedChrome = path.join(REPO_ROOT, 'node_modules/chrome-launcher/dist/index.js');
   try {
-    await fs.access(lighthouseMod);
-    await fs.access(chromeMod);
+    await fs.access(hoistedLighthouse);
+    await fs.access(hoistedChrome);
+    return { lighthouseMod: hoistedLighthouse, chromeMod: hoistedChrome };
   } catch {
     throw new Error(
       'Lighthouse not installed. Run: cd client && npm install (needs lighthouse + chrome-launcher)'
     );
   }
+}
+
+async function loadLighthouseModules() {
+  const { lighthouseMod, chromeMod } = await resolveLighthouseModulePaths();
   const lighthouse = (await import(pathToFileURL(lighthouseMod))).default;
   const chromeLauncher = await import(pathToFileURL(chromeMod));
   const launchChrome = chromeLauncher.launch || chromeLauncher.default?.launch;

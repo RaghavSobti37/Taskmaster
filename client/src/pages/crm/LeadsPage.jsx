@@ -4,7 +4,7 @@ import {
   Search, Plus, Trash2, CheckCircle2,
   Database, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus, Mail
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown } from '../../components/ui';
+import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -26,6 +26,7 @@ import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmContext } from '
 import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
 import { isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
+import { isLockedByOther, formatLockToast, closeLeadEditor } from '../../utils/crmLeadLock';
 
 const CRM_LEADS_FILTERS_KEY = 'crm-leads-filters';
 
@@ -47,32 +48,6 @@ const loadLeadsFilters = () => {
     assignedRepId: 'all',
     pageSize: 10,
   };
-};
-
-const isLockedByOther = (lead, currentUserId) => {
-  if (!lead?.lockedBy || !currentUserId) return false;
-  return String(lead.lockedBy) !== String(currentUserId);
-};
-
-const formatLockToast = (err) => {
-  const name = err.response?.data?.lockedByUser?.name || 'Another user';
-  return `${name} is editing this lead`;
-};
-
-const releaseLeadLock = async (leadId) => {
-  if (!leadId) return;
-  try {
-    await axios.post(`/api/crm/leads/${leadId}/unlock`, null, {
-      headers: { 'x-skip-toast': 'true' },
-    });
-  } catch {
-    /* best-effort */
-  }
-};
-
-const closeLeadEditor = (leadId, setSelectedLead) => {
-  releaseLeadLock(leadId);
-  setSelectedLead(null);
 };
 
 export default function LeadsPage() {
@@ -354,7 +329,7 @@ export default function LeadsPage() {
 
 
 
-  const { data, isLoading } = useLiveLeads(queryParams);
+  const { data, isLoading, isError, error, refetch } = useLiveLeads(queryParams);
   const statsParams = useMemo(() => (artistMode ? { crmType: 'artist' } : {}), [artistMode]);
   const { data: statsData } = useCRMStats(true, { queryParams: statsParams });
   const { data: salesTeam = [] } = useSalesReps(!artistRepContext);
@@ -672,6 +647,12 @@ export default function LeadsPage() {
         </>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load leads')}
+          onRetry={() => refetch()}
+        />
+      )}
       {artistMode && <ArtistCrmImportPanel />}
       <DataTable
         columns={columns}
@@ -833,7 +814,7 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-2.5 pt-1">
                   <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
                     {selectedLead.assignedRep.avatar ? (
-                      <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" />
+                      <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" loading="lazy" decoding="async" />
                     ) : (
                       <Users size={16} className="text-[var(--color-text-muted)]" />
                     )}

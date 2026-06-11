@@ -9,7 +9,7 @@ async function ensureDataHubBootstrap() {
     if (personCount === 0) {
       const legacyCount = await require('mongoose').connection.db.collection('contacts').countDocuments();
       if (legacyCount > 0) {
-        logger.info('dataHubBootstrap', 'Running contacts split migration');
+        logger.debug('dataHubBootstrap', 'Running contacts split migration');
         await require('../scripts/migrateContactsSplit').main({ embedded: true });
       }
     }
@@ -17,7 +17,7 @@ async function ensureDataHubBootstrap() {
     const outCount = await require('../models/OutsourcedRecord').countDocuments();
     const tscCount = await require('mongoose').connection.db.collection('tscdatas').countDocuments();
     if (tscCount > 0 && outCount === 0) {
-      logger.info('dataHubBootstrap', 'Running TSC fragment migration');
+      logger.debug('dataHubBootstrap', 'Running TSC fragment migration');
       await require('../scripts/migrateTscDataFragment').main({ embedded: true });
     }
 
@@ -26,7 +26,7 @@ async function ensureDataHubBootstrap() {
     const indexCount = await require('../models/PersonIndex').countDocuments();
     const hubIncomplete = hubViewCount > 0 && indexCount > 0 && hubViewCount < indexCount * 0.9;
     if (personSpineCount === 0 || hubViewCount === 0 || hubIncomplete) {
-      logger.info('dataHubBootstrap', 'Running personId backfill + hub rebuild', {
+      logger.debug('dataHubBootstrap', 'Running personId backfill + hub rebuild', {
         personSpineCount,
         hubViewCount,
         indexCount,

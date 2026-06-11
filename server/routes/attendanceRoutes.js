@@ -5,7 +5,6 @@ const { protect } = require('../middleware/authMiddleware');
 const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
-const User = require('../models/User');
 const { awardAttendanceXpOnDayLocked, isAttendanceDayLocked } = require('../utils/attendanceXp');
 const { refreshAttendanceMetrics } = require('../utils/refreshAttendanceMetrics');
 const {
@@ -18,7 +17,6 @@ const {
   getWeekRange,
   validateAttendanceTimes,
 } = require('../utils/attendanceDate');
-const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const { syncApprovedLeaveToAttendance } = require('../utils/leaveApprovalSync');
 const { createNotification } = require('../services/notificationDispatcher');
 const { validateQuery } = require('../validation/validateQuery');
@@ -29,7 +27,21 @@ const {
   leaveRequestBody,
   leaveRequestsQuery,
   leaveReviewBody,
+  rosterUsersQuery,
 } = require('../validation/schemas/attendance');
+const { getVisibleRosterUsers } = require('../utils/attendanceRosterService');
+const { publishDomainEvent } = require('../services/sync/eventBus');
+const { mapAttendanceRow } = require('../services/sync/syncPayloadMappers');
+const {
+  getAttendanceStatsCache,
+  setAttendanceStatsCache,
+} = require('../services/hybridCache');
+
+const emitAttendanceEvent = (eventType, doc) => {
+  const row = mapAttendanceRow(doc?.toObject ? doc.toObject() : doc);
+  if (!row) return;
+  publishDomainEvent(eventType, row, { entityId: row.id }).catch(() => {});
+};
 
 const isOps = (user) => isOpsUser(user);
 
@@ -39,6 +51,24 @@ const DISCREPANCY_THRESHOLD_MINUTES = 30;
 const computeAttendanceMetrics = (attendanceDoc) => refreshAttendanceMetrics(attendanceDoc);
 
 router.use(protect);
+
+router.get('/roster-users', validateQuery(rosterUsersQuery), async (req, res) => {
+  try {
+    if (!isOps(req.user)) {
+      return res.status(403).json({ error: 'Operations access required' });
+    }
+
+    const users = await getVisibleRosterUsers({
+      viewMode: req.query.viewMode,
+      monthStart: req.query.monthStart,
+      monthEnd: req.query.monthEnd,
+    });
+
+    res.json({ users });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get('/', validateQuery(attendanceQuery), async (req, res) => {
   try {
@@ -57,6 +87,13 @@ router.get('/', validateQuery(attendanceQuery), async (req, res) => {
       if (end) query.date.$lte = endOfDayFromKey(end);
     }
 
+    const rangeKey = JSON.stringify({ start, end, mine, week, weekStart });
+    const cacheUserId = String(query.userId || req.user._id);
+    const cached = await getAttendanceStatsCache(cacheUserId, rangeKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const rows = await Attendance.find(query).sort({ date: -1 });
     await Promise.all(
       rows.map((row) => {
@@ -66,7 +103,9 @@ router.get('/', validateQuery(attendanceQuery), async (req, res) => {
         return null;
       })
     );
-    res.json(rows.map((row) => (row.toObject ? row.toObject() : row)));
+    const payload = rows.map((row) => (row.toObject ? row.toObject() : row));
+    await setAttendanceStatsCache(cacheUserId, rangeKey, payload);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -114,6 +153,7 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
     }
 
     const payload = attendance.toObject ? attendance.toObject() : attendance;
+    emitAttendanceEvent('attendance.checked', payload);
     res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -192,7 +232,9 @@ router.patch('/:id/approve', async (req, res) => {
       xpAward = await awardAttendanceXpOnDayLocked(updatedRow);
     }
 
-    res.json({ ...updatedRow.toObject(), xpAward });
+    const payload = { ...updatedRow.toObject(), xpAward };
+    emitAttendanceEvent('attendance.updated', updatedRow);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -231,7 +273,9 @@ router.put('/upsert/by-user-date', async (req, res) => {
       xpAward = await awardAttendanceXpOnDayLocked(row);
     }
 
-    res.json({ ...(row.toObject ? row.toObject() : row), xpAward });
+    const upsertPayload = { ...(row.toObject ? row.toObject() : row), xpAward };
+    emitAttendanceEvent('attendance.updated', row);
+    res.json(upsertPayload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

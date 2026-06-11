@@ -1,4 +1,4 @@
-const { isSupabaseEnabled } = require('../../config/supabase');
+const { isSupabaseEnabled, isLogsPrimarySupabase } = require('../../config/supabase');
 const logger = require('../../utils/logger');
 const {
   mirrorAsync,
@@ -11,9 +11,19 @@ const {
 
 let registered = false;
 
+function isEventBusSyncEnabled() {
+  const raw = String(process.env.EVENT_BUS_SYNC || '').trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
 function registerSupabaseMirrors() {
   if (registered || !isSupabaseEnabled()) return;
   registered = true;
+
+  if (isEventBusSyncEnabled()) {
+    logger.debug('SupabaseMirror', 'Skipped post-save mirrors — EVENT_BUS_SYNC=true');
+    return;
+  }
 
   const Log = require('../../models/Log');
   const SystemLog = require('../../models/SystemLog');
@@ -25,9 +35,11 @@ function registerSupabaseMirrors() {
     mirrorAsync(insertAppLog, doc);
   });
 
-  SystemLog.schema.post('save', function onSystemLogSaved(doc) {
-    mirrorAsync(insertSystemLog, doc);
-  });
+  if (!isLogsPrimarySupabase()) {
+    SystemLog.schema.post('save', function onSystemLogSaved(doc) {
+      mirrorAsync(insertSystemLog, doc);
+    });
+  }
 
   CRMAudit.schema.post('save', function onCrmAuditSaved(doc) {
     mirrorAsync(insertCrmAudit, doc);
@@ -41,7 +53,7 @@ function registerSupabaseMirrors() {
     mirrorAsync(insertQaTestRun, doc);
   });
 
-  logger.info('SupabaseMirror', 'Realtime Mongo → Supabase mirrors registered');
+  logger.debug('SupabaseMirror', 'Realtime Mongo → Supabase mirrors registered');
 }
 
-module.exports = { registerSupabaseMirrors };
+module.exports = { registerSupabaseMirrors, isEventBusSyncEnabled };

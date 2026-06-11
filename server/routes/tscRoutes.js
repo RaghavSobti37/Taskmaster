@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const tscController = require('../controllers/tscController');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+
+const dataHubAccess = requirePageAccess('admin_data');
+const { uploadRateLimit } = require('../middleware/rateLimits');
 const multer = require('multer');
 const path = require('path');
 
@@ -11,11 +14,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-router.get('/', protect, admin, tscController.getTscData);
-router.get('/stats', protect, admin, tscController.getTscStats);
-router.post('/upload', protect, admin, upload.single('file'), tscController.uploadTscFile);
-router.post('/import', protect, admin, tscController.importTscData);
-router.post('/bulk-delete', protect, admin, tscController.bulkDeleteTscData);
-router.delete('/import/:id', protect, admin, tscController.deleteTscImport);
+router.get('/', protect, dataHubAccess, tscController.getTscData);
+router.get('/stats', protect, dataHubAccess, tscController.getTscStats);
+router.post('/upload', protect, dataHubAccess, uploadRateLimit, upload.single('file'), tscController.uploadTscFile);
+router.post('/import', protect, dataHubAccess, tscController.importTscData);
+router.post('/bulk-delete', protect, dataHubAccess, tscController.bulkDeleteTscData);
+router.delete('/import/:id', protect, dataHubAccess, tscController.deleteTscImport);
 
 module.exports = router;

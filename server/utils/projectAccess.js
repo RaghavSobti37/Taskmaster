@@ -11,7 +11,7 @@ const canAccessProject = (user, project) => {
   if (isAdminUser(user)) return true;
   const uid = user._id.toString();
   if (project.owner?.toString?.() === uid || project.owner?.toString() === uid) return true;
-  return (project.members || []).some((m) => m.toString() === uid);
+  return (project.members || []).some((m) => memberIdStr(m) === uid);
 };
 
 const getAccessibleProjectsFilter = (user) => {

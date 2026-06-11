@@ -1,8 +1,2 @@
-const express = require('express');
-const router = express.Router();
-const { protect, admin } = require('../middleware/authMiddleware');
-const { getOAuthReadiness } = require('../controllers/integrationsVerifyController');
-
-router.get('/oauth-readiness', protect, admin, getOAuthReadiness);
-
-module.exports = router;
+/** @deprecated Import from domains/integrations/integrationsRoutes */
+module.exports = require('../domains/integrations/integrationsRoutes');

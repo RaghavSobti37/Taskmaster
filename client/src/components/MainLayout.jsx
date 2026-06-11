@@ -5,7 +5,6 @@ import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
 import QuickAddMenu from './QuickAddMenu';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
-import ForcePasswordChangeModal from './auth/ForcePasswordChangeModal';
 import { useIsDesktop } from '../hooks/useBreakpoint';
 import MobileRouteGuard from './mobile/MobileRouteGuard';
 import NetworkStatusBanner from './NetworkStatusBanner';
@@ -23,6 +22,7 @@ const PageAnalyticsTracker = lazy(() => import('./PageAnalyticsTracker'));
 const NotificationBridge = lazy(() => import('./NotificationBridge'));
 const MobileAppShell = lazy(() => import('./mobile/MobileAppShell'));
 const ProfileCompletionAlerts = lazy(() => import('./ProfileCompletionAlerts'));
+const ForcePasswordChangeGate = lazy(() => import('./auth/ForcePasswordChangeGate'));
 const FlashHighlightListener = lazy(() => import('./ui/FlashHighlight'));
 const KeyboardShortcutsOverlay = lazy(() => import('./KeyboardShortcutsOverlay'));
 const GChordHint = lazy(() => import('./GChordHint'));
@@ -34,7 +34,7 @@ const MainLayout = () => {
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
 
   useEffect(() => {
-    if (user?._id) scheduleIdlePrefetch(user._id);
+    if (user?._id) scheduleIdlePrefetch(user._id, user);
   }, [user?._id]);
 
   useEffect(() => {
@@ -72,7 +72,6 @@ const MainLayout = () => {
         <GChordHint />
       </Suspense>
       <OnboardingTour />
-      <ForcePasswordChangeModal />
       {attendancePromptReady && (
         <Suspense fallback={null}>
           <AttendancePromptModal />
@@ -94,6 +93,7 @@ const MainLayout = () => {
           <div className="w-full lg:min-h-0">
             <Suspense fallback={null}>
               <ProfileCompletionAlerts />
+              <ForcePasswordChangeGate />
             </Suspense>
             <MobileRouteGuard>
               <RouteErrorBoundary>

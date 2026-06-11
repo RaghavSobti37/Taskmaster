@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
+const { canAccessProject } = require('../utils/projectAccess');
 const { format, addDays, startOfDay, endOfDay, parseISO } = require('date-fns');
 const { toDateKey } = require('../../shared/dateValidation');
 const {
@@ -114,7 +115,7 @@ const sortDepartmentUsers = (departments, workload, rangeStartKey, rangeEndKey) 
   return departments;
 };
 
-async function getScheduleForUser({ userId, start, end, projectId, departmentId }) {
+async function getScheduleForUser({ user, userId, start, end, projectId, departmentId }) {
   const { startDate, endDate } = parseDateRange(start, end);
   const rangeStartKey = toDateKey(startDate) || format(startDate, 'yyyy-MM-dd');
   const rangeEndKey = toDateKey(endDate) || format(endDate, 'yyyy-MM-dd');
@@ -125,6 +126,11 @@ async function getScheduleForUser({ userId, start, end, projectId, departmentId 
     if (!project) {
       const err = new Error('Project not found');
       err.statusCode = 404;
+      throw err;
+    }
+    if (!canAccessProject(user, project)) {
+      const err = new Error('Not authorized to view this project');
+      err.statusCode = 403;
       throw err;
     }
     userProjects = [project];

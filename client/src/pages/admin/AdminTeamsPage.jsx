@@ -6,8 +6,9 @@ import { useUserDirectory, useDepartments } from '../../hooks/useTaskmasterQueri
 import { distributionFromField } from '../../utils/buildChartSeries';
 
 const AdminTeamsPage = () => {
-  const { data: users = [], isLoading: usersLoading } = useUserDirectory();
-  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
+  const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
+  const { data: departments = [], isLoading: departmentsLoading, isError: deptError, error: deptErr } = useDepartments();
+  const loadError = usersError ? usersErr : deptError ? deptErr : null;
 
   const deptChart = React.useMemo(
     () =>
@@ -56,9 +57,16 @@ const AdminTeamsPage = () => {
           : [],
       }}
     >
+      {loadError && (
+        <p className="text-sm text-rose-500 mb-4">
+          {loadError?.response?.data?.error || loadError?.message || 'Failed to load teams data.'}
+        </p>
+      )}
+      {!loadError && (
       <div className="max-w-2xl">
         <DepartmentsPanel users={users} departments={departments} />
       </div>
+      )}
     </ListPageLayout>
   );
 };

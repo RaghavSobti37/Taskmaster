@@ -63,6 +63,22 @@ self.addEventListener('push', (event) => {
           notificationId: payload.notificationId || null,
         },
       });
+
+      const inboxPayload = {
+        _id: payload.notificationId || tag,
+        title: payload.title,
+        message: payload.body || payload.message || '',
+        category: payload.category || 'system',
+        actionUrl: payload.actionUrl || '/inbox',
+        iconType: payload.iconType || 'system',
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clientList) {
+        client.postMessage({ type: 'coreknot-push-notification', payload: inboxPayload });
+      }
     })()
   );
 });

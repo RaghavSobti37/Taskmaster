@@ -13,10 +13,7 @@ const verifyWebhookSignature = (req, secretEnvKey) => {
 
   const secret = process.env[secretEnvKey];
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      return { ok: false, error: 'Webhook secret not configured' };
-    }
-    return { ok: true, skipped: true };
+    return { ok: false, error: 'Webhook secret not configured' };
   }
 
   const rawBody = req.rawBody;
@@ -69,7 +66,7 @@ const verifyArtistEnquirySecret = (req) => {
 const verifyBookCallWebhookSecret = (req) => {
   const secret = process.env.BOOK_CALL_WEBHOOK_SECRET;
   if (!secret) {
-    return process.env.NODE_ENV !== 'production';
+    return false;
   }
   const received = req.headers['x-webhook-secret'];
   if (!received || typeof received !== 'string') return false;

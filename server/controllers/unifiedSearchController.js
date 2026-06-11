@@ -1,4 +1,5 @@
 const UnifiedSearchService = require('../services/UnifiedSearchService');
+const { apiError } = require('../utils/apiResponse');
 
 exports.search = async (req, res) => {
   try {
@@ -8,12 +9,12 @@ exports.search = async (req, res) => {
     const tenantId = req.user?.tenantId;
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Tenant required' });
+      return apiError(res, 'Tenant required', 400);
     }
 
     const data = await UnifiedSearchService.unifiedSearch({ tenantId, q, types, limit });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Search failed' });
+    return apiError(res, err.message || 'Search failed', 500);
   }
 };

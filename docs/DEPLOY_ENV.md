@@ -82,7 +82,7 @@ Alert setup: [`SENTRY_ALERTS.md`](./SENTRY_ALERTS.md), [`MONITORING_ALERTS.md`](
 
 | Component | Production | Staging |
 |-----------|------------|---------|
-| API | Render `CoreKnot-jfw0` | Render `coreknot-api-staging` (provision in Dashboard) |
+| API | Render production API (see `.cursor/production-hosts.local.json`) | Render `coreknot-api-staging` (provision in Dashboard) |
 | Frontend | Vercel Production | Vercel Preview (PR builds) |
 | Database | `taskmaster_production` | `taskmaster_staging` |
 | `VITE_API_URL` (Preview) | — | Staging API URL (never prod) |

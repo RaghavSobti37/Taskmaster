@@ -39,7 +39,7 @@ const initWebhookWorker = () => {
   });
   worker.on('error', (err) => {});
   
-  logger.info('webhookWorker', 'Webhook BullMQ worker initialized');
+  logger.debug('webhookWorker', 'Webhook BullMQ worker initialized');
 };
 
 module.exports = { initWebhookWorker };

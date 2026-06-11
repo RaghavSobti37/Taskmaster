@@ -7,6 +7,7 @@ import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
@@ -62,7 +63,13 @@ const EquipmentPage = () => {
   const queryClient = useQueryClient();
   const { data: users = [] } = useUserDirectory();
 
-  const { data: assets = [], isLoading } = useQuery({
+  const {
+    data: assets = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['office-assets'],
     queryFn: async () => (await axios.get('/api/office-assets')).data,
   });
@@ -211,6 +218,12 @@ const EquipmentPage = () => {
         </Button>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load equipment')}
+          onRetry={() => refetch()}
+        />
+      )}
       <DataTable
         columns={equipmentColumns}
         data={filteredAssets}

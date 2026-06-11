@@ -4,12 +4,22 @@
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 const PersonIdentityService = require('../services/PersonIdentityService');
 const PersonHubBuilder = require('../services/PersonHubBuilder');
 
 const BATCH = 200;
 
-async function backfillCollection(Model, sourceType, getIdentity) {
+function logStep(embedded, message, meta) {
+  if (embedded) {
+    logger.debug('backfillPersonIds', message, meta);
+    return;
+  }
+  if (meta !== undefined) console.log(message, meta);
+  else console.log(message);
+}
+
+async function backfillCollection(Model, sourceType, getIdentity, { embedded = false } = {}) {
   let skip = 0;
   let updated = 0;
   const total = await Model.countDocuments({ personId: { $exists: false } });
@@ -29,7 +39,7 @@ async function backfillCollection(Model, sourceType, getIdentity) {
       updated++;
     }
     skip += BATCH;
-    console.log(`${Model.modelName}: ${Math.min(skip, total)}/${total}`);
+    logStep(embedded, `${Model.modelName}: ${Math.min(skip, total)}/${total}`);
   }
   return { updated, total };
 }
@@ -51,9 +61,9 @@ async function main({ embedded = false } = {}) {
   const NewsletterSubscriber = require('../models/NewsletterSubscriber');
   const ArtistPathResponse = require('../models/ArtistPathResponse');
 
-  console.log('Migrating PersonIndex → Person spine...');
+  logStep(embedded, 'Migrating PersonIndex → Person spine...');
   const idxResult = await PersonHubBuilder.rebuildFromPersonIndex({ embedded: true });
-  console.log('PersonIndex migrated:', idxResult);
+  logStep(embedded, 'PersonIndex migrated:', idxResult);
 
   const jobs = [
     [Lead, 'lead', (d) => ({ name: d.name, email: d.email, phone: d.phone, city: d.city, summary: { leadStatus: d.leadStatus } })],
@@ -65,17 +75,19 @@ async function main({ embedded = false } = {}) {
   ];
 
   for (const [Model, type, fn] of jobs) {
-    console.log(`\nBackfilling ${Model.modelName}...`);
-    const r = await backfillCollection(Model, type, fn);
-    console.log(r);
+    logStep(embedded, `Backfilling ${Model.modelName}...`);
+    const r = await backfillCollection(Model, type, fn, { embedded });
+    logStep(embedded, `${Model.modelName} backfill:`, r);
   }
 
-  console.log('\nRebuilding PersonHubView for all persons...');
-  const hub = await PersonHubBuilder.rebuildAll({ onProgress: (m) => console.log(m) });
-  console.log('Hub rebuild:', hub);
+  logStep(embedded, 'Rebuilding PersonHubView for all persons...');
+  const hub = await PersonHubBuilder.rebuildAll({
+    onProgress: embedded ? (m) => logger.debug('backfillPersonIds', m) : (m) => console.log(m),
+  });
+  logStep(embedded, 'Hub rebuild:', hub);
 
   if (!embedded) await mongoose.disconnect();
-  console.log('done');
+  logStep(embedded, 'done');
 }
 
 if (require.main === module) {

@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isAdminUser } from '../utils/departmentPermissions';
-import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { mergeShortcutBindings } from '../lib/shortcutDefaultsShared';
 import { buildShortcutSectionsForUser, filterShortcutSections } from '../lib/keyboardShortcuts';
+import { filterActionsByPageAccess } from '../utils/navPageAccess';
+import { NAV_ACTIONS } from '../lib/shortcutDefaultsShared';
 import { useShortcutPreferences } from '../hooks/useShortcutPreferences';
 
 export default function KeyboardShortcutsOverlay() {
@@ -17,11 +19,20 @@ export default function KeyboardShortcutsOverlay() {
   const sections = useMemo(() => {
     const bindingsMap = shortcutPrefs?.effectiveBindings
       || mergeShortcutBindings(shortcutPrefs?.bindings);
+    const allowedNavIds = new Set(
+      filterActionsByPageAccess(NAV_ACTIONS, user).map((action) => action.id)
+    );
     return filterShortcutSections(
       buildShortcutSectionsForUser(bindingsMap, { isAdmin }),
       { isAdmin }
-    );
-  }, [shortcutPrefs, isAdmin]);
+    )
+      .map((section) => (
+        section.items.some((item) => String(item.id).startsWith('nav-'))
+          ? { ...section, items: section.items.filter((item) => allowedNavIds.has(item.id)) }
+          : section
+      ))
+      .filter((section) => section.items.length > 0);
+  }, [shortcutPrefs, isAdmin, user]);
 
   return (
     <AnimatePresence>

@@ -4,6 +4,12 @@ const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 const { getTenantId } = require('../utils/tenantContext');
 const SystemLog = require('../models/SystemLog');
 const { writeSystemLog, enrichLogsWithActorNames, PERSIST_SYSTEM_LOGS } = require('../services/systemLogService');
+const { isLogsPrimarySupabase } = require('../config/supabase');
+const {
+  querySystemLogs,
+  getSystemLogTrail,
+  getTopPagesAnalytics,
+} = require('../services/supabase/systemLogReadStore');
 const {
   SEVERITY,
   isValidSeverity,
@@ -98,13 +104,21 @@ router.post('/', protect, clientLogLimiter, (req, res) => {
 });
 
 router.get('/analytics/top-pages', protect, opsOrAdmin, async (req, res) => {
-  if (!PERSIST_SYSTEM_LOGS) {
+  if (!PERSIST_SYSTEM_LOGS && !isLogsPrimarySupabase()) {
     return res.json({ days: parseInt(req.query.days, 10) || 7, pages: [], persistenceDisabled: true });
   }
   try {
     const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 7));
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const tenantId = getTenantId();
+
+    if (isLogsPrimarySupabase()) {
+      const analytics = await getTopPagesAnalytics({ days, tenantId });
+      if (analytics) {
+        return res.json({ ...analytics, source: 'supabase' });
+      }
+    }
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const match = {
       errorCode: 'PAGE_VIEW',
       timestamp: { $gte: since },
@@ -139,7 +153,7 @@ router.get('/analytics/top-pages', protect, opsOrAdmin, async (req, res) => {
 });
 
 router.get('/', protect, opsOrAdmin, async (req, res) => {
-  if (!PERSIST_SYSTEM_LOGS) {
+  if (!PERSIST_SYSTEM_LOGS && !isLogsPrimarySupabase()) {
     const pageNum = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
     return res.json({
@@ -160,6 +174,43 @@ router.get('/', protect, opsOrAdmin, async (req, res) => {
       limit = 50,
       excludePageViews,
     } = req.query;
+
+    const tenantId = getTenantId();
+    if (isLogsPrimarySupabase()) {
+      const supabaseResult = await querySystemLogs(
+        {
+          module,
+          severity,
+          traceId,
+          search,
+          from,
+          to,
+          tenantId,
+          excludePageViews,
+        },
+        { page, limit }
+      );
+
+      if (supabaseResult) {
+        const { isAdminUser } = require('../utils/departmentPermissions');
+        const isAdmin = isAdminUser(req.user);
+        const ADMIN_ONLY_MODULES = new Set(['ADMIN', 'SCRIPTS', 'GAMIFICATION', 'USERS']);
+        const filtered = isAdmin
+          ? supabaseResult.logs
+          : supabaseResult.logs.filter((l) => !ADMIN_ONLY_MODULES.has(l.module));
+
+        return res.json({
+          logs: await enrichLogsWithActorNames(filtered),
+          source: 'supabase',
+          pagination: {
+            page: supabaseResult.page,
+            limit: supabaseResult.limit,
+            total: supabaseResult.total,
+            pages: Math.ceil(supabaseResult.total / supabaseResult.limit),
+          },
+        });
+      }
+    }
 
     const filter = {};
     if (module) filter.module = module;
@@ -211,11 +262,23 @@ router.get('/', protect, opsOrAdmin, async (req, res) => {
 });
 
 router.get('/:traceId/trail', protect, opsOrAdmin, async (req, res) => {
-  if (!PERSIST_SYSTEM_LOGS) {
+  if (!PERSIST_SYSTEM_LOGS && !isLogsPrimarySupabase()) {
     return res.json({ traceId: req.params.traceId, logs: [], persistenceDisabled: true });
   }
   try {
     const { traceId } = req.params;
+
+    if (isLogsPrimarySupabase()) {
+      const trail = await getSystemLogTrail(traceId);
+      if (trail) {
+        return res.json({
+          traceId,
+          logs: await enrichLogsWithActorNames(trail),
+          source: 'supabase',
+        });
+      }
+    }
+
     const logs = await SystemLog.find({ traceId })
       .sort({ timestamp: 1 })
       .lean();

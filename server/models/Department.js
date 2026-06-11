@@ -9,7 +9,7 @@ const departmentSchema = new mongoose.Schema({
   signupAllowed: { type: Boolean, default: true },
   permissionPreset: {
     type: String,
-    enum: ['admin', 'operations', 'sales', 'artist-management', 'standard'],
+    enum: ['admin', 'ops', 'operations', 'sales', 'artist-management', 'creative', 'standard'],
     default: 'standard',
   },
   pagePermissions: {

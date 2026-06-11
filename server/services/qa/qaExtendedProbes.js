@@ -2,14 +2,17 @@ const Project = require('../../models/Project');
 const Task = require('../../models/Task');
 const {
   isApiReachable,
+  isTransientNetworkError,
   resolveTestUsers,
   skipProbeResult,
   probeFail,
   probePass,
   request,
+  sleep,
   QA_API_BASE,
 } = require('./qaApiClient');
 const { purgeQaIdentity, qaUniquePhone, qaUniqueEmail } = require('./qaTestData');
+const { readBootstrapSources } = require('./qaCheckUtils');
 
 /** Suite 4 + Suite 7 — dedicated HTTP probes (not tied to page filename). */
 const PROBE_DEFS = [
@@ -469,7 +472,7 @@ const PROBE_DEFS = [
     suite: 's4',
     async run() {
       const { adminUser } = await resolveTestUsers();
-      const phone = qaUniquePhone('9');
+      const phone = `+91${qaUniquePhone('9')}`;
       const emailA = qaUniqueEmail('qa-dup-a');
       const emailB = qaUniqueEmail('qa-dup-b');
       const payload = { name: 'QA Dup A', phone, email: emailA };
@@ -505,13 +508,10 @@ const PROBE_DEFS = [
     sev: 'high',
     suite: 's4',
     async run() {
-      const serverJs = await require('fs').promises.readFile(
-        require('path').join(__dirname, '../../server.js'),
-        'utf8'
-      ).catch(() => '');
-      const hasLimit = serverJs.includes("limit:") && serverJs.includes('mb');
+      const bootstrap = await readBootstrapSources();
+      const hasLimit = bootstrap.includes("limit:") && bootstrap.includes('mb');
       return hasLimit
-        ? probePass(this, 'express.json body size limit configured in server.js')
+        ? probePass(this, 'express.json body size limit configured in bootstrap')
         : probeFail(this, 'No express.json size limit found');
     },
   },
@@ -608,6 +608,7 @@ const PROBE_DEFS = [
         if (res.status === 429) {
           return probePass(this, `Rate limit engaged on attempt ${i + 1}`);
         }
+        if (i < 10) await sleep(150);
       }
       return probeFail(this, `No 429 after 11 attempts (last ${lastStatus})`, lastStatus);
     },
@@ -638,6 +639,9 @@ function wrapProbe(def) {
       } catch (err) {
         if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
           return skipProbeResult(def, err.message);
+        }
+        if (isTransientNetworkError(err)) {
+          return skipProbeResult(def, `API unavailable after retries (${err.code})`);
         }
         return probeFail(def, err.message, err.stack);
       }

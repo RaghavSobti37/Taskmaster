@@ -26,13 +26,13 @@ export default function ProfileCompletionAlerts() {
   return (
     <div className="mb-4 space-y-3">
       {passwordIssue && (
-        <div role="alert" className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-rose-900 dark:text-rose-100 text-sm rounded-xl font-medium flex gap-3">
-          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+        <div role="alert" className={alertClassName}>
+          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <p className="leading-relaxed">
             {passwordIssue.message}{' '}
             <Link
               to="/settings?tab=profile"
-              className="font-bold text-rose-800 dark:text-rose-200 underline underline-offset-2 hover:opacity-80"
+              className="font-bold text-amber-800 dark:text-amber-200 underline underline-offset-2 hover:opacity-80"
             >
               Change password
             </Link>

@@ -3,11 +3,13 @@ const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
 const CRMStatSnapshot = require('../models/CRMStatSnapshot');
 const logger = require('../utils/logger');
+const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
+const { runForEachTenant } = require('../utils/workerTenantContext');
 
 const { warmPipelineQuery } = require('../utils/crmPipelineFilters');
 
 const calculateStats = async (matchStage) => {
-  const stats = await Lead.aggregate([
+  const stats = await aggregateWithTenant(Lead, [
     { $match: matchStage },
     {
       $facet: {
@@ -58,59 +60,58 @@ const calculateStats = async (matchStage) => {
   };
 };
 
-const updateStats = async () => {
-  try {
-    const startTime = Date.now();
-    logger.info('statsWorker', 'Starting CRM stats snapshot job');
-    
-    // 1. Calculate Global Stats
-    const globalStats = await calculateStats({});
-    
-    // 2. Identify active Reps
-    const activeReps = await Lead.distinct('assignedRepId', { assignedRepId: { $ne: null } });
-    
-    const bulkOps = [];
-    
-    // Global Upsert
-    bulkOps.push({
+const updateStatsForTenant = async ({ quiet = false } = {}) => {
+  const startTime = Date.now();
+
+  const globalStats = await calculateStats({});
+  const activeReps = await Lead.distinct('assignedRepId', { assignedRepId: { $ne: null } });
+
+  const bulkOps = [
+    {
       updateOne: {
         filter: { repId: null },
         update: { $set: { metrics: globalStats, updatedAt: new Date() } },
-        upsert: true
-      }
+        upsert: true,
+      },
+    },
+  ];
+
+  for (const repId of activeReps) {
+    if (!mongoose.Types.ObjectId.isValid(repId)) continue;
+    const repStats = await calculateStats({ assignedRepId: new mongoose.Types.ObjectId(repId) });
+    bulkOps.push({
+      updateOne: {
+        filter: { repId },
+        update: { $set: { metrics: repStats, updatedAt: new Date() } },
+        upsert: true,
+      },
     });
+  }
 
-    // 3. Calculate Per-Rep Stats
-    for (const repId of activeReps) {
-      if (!mongoose.Types.ObjectId.isValid(repId)) continue;
-      const repStats = await calculateStats({ assignedRepId: new mongoose.Types.ObjectId(repId) });
-      
-      bulkOps.push({
-        updateOne: {
-          filter: { repId },
-          update: { $set: { metrics: repStats, updatedAt: new Date() } },
-          upsert: true
-        }
-      });
-    }
-
-    // Execute zero-downtime bulk write
-    if (bulkOps.length > 0) {
-      await CRMStatSnapshot.bulkWrite(bulkOps);
-      try {
-        const { isSupabaseEnabled } = require('../config/supabase');
-        const { mirrorCrmStatSnapshotsFromMongo } = require('../services/supabase/snapshotStore');
-        if (isSupabaseEnabled()) {
-          const snapshots = await CRMStatSnapshot.find({}).lean();
-          await mirrorCrmStatSnapshotsFromMongo(snapshots);
-        }
-      } catch (mirrorErr) {
-        logger.warn('statsWorker', 'Supabase CRM snapshot mirror failed', { error: mirrorErr.message });
+  if (bulkOps.length > 0) {
+    await CRMStatSnapshot.bulkWrite(bulkOps);
+    try {
+      const { isSupabaseEnabled } = require('../config/supabase');
+      const { mirrorCrmStatSnapshotsFromMongo } = require('../services/supabase/snapshotStore');
+      if (isSupabaseEnabled()) {
+        const snapshots = await CRMStatSnapshot.find({}).lean();
+        await mirrorCrmStatSnapshotsFromMongo(snapshots);
       }
+    } catch (mirrorErr) {
+      logger.warn('statsWorker', 'Supabase CRM snapshot mirror failed', { error: mirrorErr.message });
     }
-    
-    const duration = Date.now() - startTime;
+  }
+
+  const duration = Date.now() - startTime;
+  if (!quiet) {
     logger.info('statsWorker', `Completed CRM stats snapshot job in ${duration}ms for ${activeReps.length + 1} entities`);
+  }
+};
+
+const updateStats = async ({ quiet = false } = {}) => {
+  try {
+    if (!quiet) logger.info('statsWorker', 'Starting CRM stats snapshot job');
+    await runForEachTenant(() => updateStatsForTenant({ quiet }));
   } catch (err) {
     logger.error('statsWorker', 'Stats aggregation failed', { error: err.message || err });
   }
@@ -119,10 +120,10 @@ const updateStats = async () => {
 // Initialize Worker
 const initWorker = () => {
   // Run every 5 minutes
-  cron.schedule('*/5 * * * *', updateStats);
-  logger.info('statsWorker', 'Scheduled node-cron for CRM Stat Snapshots (every 5 mins)');
-  
-  setTimeout(updateStats, 5000);
+  cron.schedule('*/5 * * * *', () => updateStats());
+  logger.debug('statsWorker', 'Scheduled node-cron for CRM Stat Snapshots (every 5 mins)');
+
+  setTimeout(() => updateStats({ quiet: true }), 5000);
 };
 
 module.exports = { initWorker, updateStats, calculateStats };

@@ -3,6 +3,9 @@ const {
   isSalesUser,
   isOpsUser,
   isArtistManagerUser,
+  hasCrmPageAccess,
+  CRM_PAGE_KEYS,
+  OPS_PAGE_KEYS,
   hasPageAccess,
   hasAnyPageAccess,
   getUserPagePermissions,
@@ -13,11 +16,14 @@ const {
 
 const ADMIN_SLUG = 'admin';
 const SALES_SLUG = 'sales';
-const OPS_SLUG = 'operations';
+const OPS_SLUG = 'ops';
+const CREATIVE_SLUG = 'creative';
 const ARTIST_SLUG = 'artist-management';
 const STANDARD_PRESET = 'standard';
 
-const PRESET_VALUES = new Set([ADMIN_SLUG, SALES_SLUG, OPS_SLUG, ARTIST_SLUG, STANDARD_PRESET]);
+const PRESET_VALUES = new Set([
+  ADMIN_SLUG, SALES_SLUG, OPS_SLUG, 'operations', ARTIST_SLUG, CREATIVE_SLUG, STANDARD_PRESET,
+]);
 
 const getDepartmentSlug = (user) => {
   const dept = user?.departmentId;
@@ -44,10 +50,7 @@ const ROLE_TO_SLUG = {
   operations: OPS_SLUG,
   ops: OPS_SLUG,
   Operations: OPS_SLUG,
-  editor: 'editor',
-  videographer: 'videographer',
-  cg_artist: 'cg-artist',
-  'cg-artist': 'cg-artist',
+  creative: CREATIVE_SLUG,
   user: null,
 };
 
@@ -55,6 +58,7 @@ module.exports = {
   ADMIN_SLUG,
   SALES_SLUG,
   OPS_SLUG,
+  CREATIVE_SLUG,
   ARTIST_SLUG,
   STANDARD_PRESET,
   PRESET_VALUES,
@@ -65,6 +69,9 @@ module.exports = {
   isSalesUser,
   isOpsUser,
   isArtistManagerUser,
+  hasCrmPageAccess,
+  CRM_PAGE_KEYS,
+  OPS_PAGE_KEYS,
   hasPageAccess,
   hasAnyPageAccess,
   getUserPagePermissions,

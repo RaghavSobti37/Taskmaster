@@ -25,12 +25,14 @@ const systemLogSchema = new mongoose.Schema({
   errorCode: { type: String },
   payload: { type: mongoose.Schema.Types.Mixed },
   relatedEntities: [relatedEntitySchema],
-  createdAt: { type: Date, default: Date.now, expires: '7d' },
+  createdAt: { type: Date, default: Date.now, expires: '90d' },
 });
 
 systemLogSchema.index({ module: 1, severity: 1, timestamp: -1 });
 systemLogSchema.index({ tenantId: 1, timestamp: -1 });
 systemLogSchema.index({ traceId: 1, timestamp: 1 });
+systemLogSchema.index({ errorCode: 1, timestamp: -1 });
+systemLogSchema.index({ module: 1, timestamp: -1 });
 
 systemLogSchema.plugin(tenantPlugin);
 

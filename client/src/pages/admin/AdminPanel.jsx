@@ -34,6 +34,7 @@ import {
   getTotalDataRecords,
 } from '../../utils/adminRibbonMetrics';
 import { useConfirm } from '../../contexts/confirmContext';
+import { useToast } from '../../contexts/ToastContext';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
@@ -41,6 +42,7 @@ import UserDeleteAction from '../../components/admin/UserDeleteAction';
 
 const AdminPanel = () => {
   const { confirm } = useConfirm();
+  const toast = useToast();
   const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'users');
@@ -97,9 +99,9 @@ const AdminPanel = () => {
       setSelectedUser(null);
     } catch (err) {
       console.error(err);
-      alert(`User modification error: ${err.message}`);
+      toast.error(err.response?.data?.error || err.message || 'Failed to update user');
     }
-  }, [selectedUser, editUserData, updateUserMutation]);
+  }, [selectedUser, editUserData, updateUserMutation, toast]);
 
   const handleDeleteUser = useCallback(async (userId) => {
     const ok = await confirm({
@@ -113,9 +115,9 @@ const AdminPanel = () => {
       await deleteUserMutation.mutateAsync(userId);
       setSelectedUser(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete user');
+      toast.error(err.response?.data?.error || 'Failed to delete user');
     }
-  }, [confirm, deleteUserMutation]);
+  }, [confirm, deleteUserMutation, toast]);
 
   const getDeleteBlockReason = useCallback(
     (targetUser) => getDeleteUserBlockReason(currentUser, targetUser),
@@ -128,9 +130,9 @@ const AdminPanel = () => {
       await createTeamMutation.mutateAsync({ name: newTeamName });
       setNewTeamName('');
     } catch (err) {
-      alert('Failed to create team: ' + err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to create team');
     }
-  }, [newTeamName, createTeamMutation]);
+  }, [newTeamName, createTeamMutation, toast]);
 
   const pageMeta = {
     users: { title: 'Users & Teams' },
@@ -324,7 +326,7 @@ const AdminPanel = () => {
                                   await deleteTeamMutation.mutateAsync(team._id);
                                 } catch (err) {
                                   console.error(err);
-                                  alert(`Team removal error: ${err.message}`);
+                                  toast.error(err.response?.data?.error || err.message || 'Failed to remove team');
                                 }
                               }}
                             disabled={deleteTeamMutation.isPending}

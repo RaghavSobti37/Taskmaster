@@ -1,29 +1,38 @@
 const path = require('path');
-const { makeCheck, readText, readRepoText, listFiles, SERVER_ROOT, REPO_ROOT } = require('./qaCheckUtils');
+const { makeCheck, readTextResolved, readRepoText, listFiles, SERVER_ROOT, REPO_ROOT } = require('./qaCheckUtils');
+const { ROUTE_ALLOWLIST: BYPASS_ROUTE_ALLOWLIST } = require('../../infrastructure/database/bypassTenantPolicy');
 
 /**
  * Suite 3 — 20 extended static checks (code/config analysis).
  */
 async function runSuite3StaticChecks() {
   const checks = [];
-  const leadModel = await readText('models/Lead.js');
-  const contactModel = await readText('models/PersonIndex.js');
-  const taskModel = await readText('models/Task.js');
+  const leadModel = await readTextResolved('models/Lead.js');
+  const contactModel = await readTextResolved('models/PersonIndex.js');
+  const taskModel = await readTextResolved('models/Task.js');
   const clientDate = await readRepoText('client/src/utils/dateValidation.js');
-  const crmCtrl = await readText('controllers/crmController.js');
-  const taskSvc = await readText('services/TaskService.js');
-  const announcementRoutes = await readText('routes/announcementRoutes.js');
-  const uploadthing = await readText('config/uploadthing.js');
-  const taskAssignment = await readText('models/TaskAssignment.js');
-  const projectModel = await readText('models/Project.js');
-  const xpAudit = await readText('models/XPAuditLog.js');
-  const notifDisp = await readText('services/notificationDispatcher.js');
-  const bgQueue = await readText('services/backgroundQueue.js');
-  const crmSnapshot = await readText('models/CRMStatSnapshot.js');
-  const financeRoutes = await readText('routes/financeRoutes.js');
-  const dataHubRoutes = await readText('routes/dataHubRoutes.js');
-  const dataHubSvc = await readText('services/DataHubService.js');
-  const artistPathHubSvc = await readText('services/artistPathHubService.js');
+  const crmWriteSvc = await readTextResolved('domains/crm/services/leadWriteService.js');
+  const taskSvc = await readTextResolved('services/TaskService.js');
+  const announcementRoutes = await readTextResolved('routes/announcementRoutes.js');
+  const uploadthing = await readTextResolved('config/uploadthing.js');
+  const taskAssignment = await readTextResolved('models/TaskAssignment.js');
+  const projectModel = await readTextResolved('models/Project.js');
+  const xpAudit = await readTextResolved('models/XPAuditLog.js');
+  const notifDisp = await readTextResolved('services/notificationDispatcher.js');
+  const bgQueue = await readTextResolved('services/backgroundQueue.js');
+  const crmSnapshot = await readTextResolved('models/CRMStatSnapshot.js');
+  const financeRoutes = await readTextResolved('routes/financeRoutes.js');
+  const dataHubRoutes = await readTextResolved('routes/dataHubRoutes.js');
+  const dataHubSvc = await readTextResolved('services/DataHubService.js');
+  const artistPathHubSvc = await readTextResolved('services/artistPathHubService.js');
+  const attendanceModel = await readTextResolved('models/Attendance.js');
+  const mailTemplateModel = await readTextResolved('domains/mail/models/MailTemplate.js');
+  const navbarPref = await readTextResolved('models/NavbarPreference.js');
+  const shortcutPref = await readTextResolved('models/ShortcutPreference.js');
+  const workspacePref = await readTextResolved('models/WorkspacePreference.js');
+  const crmStatsSvc = await readTextResolved('domains/crm/services/crmStatsService.js');
+  const mailEventQuerySvc = await readTextResolved('domains/mail/services/mailEventQueryService.js');
+  const statsWorker = await readTextResolved('workers/statsWorker.js');
 
   checks.push(
     makeCheck(
@@ -86,9 +95,9 @@ async function runSuite3StaticChecks() {
       'san-crm-controller-sanitizes',
       'input-validation',
       'CRM controller calls sanitizer before lead save',
-      crmCtrl && /sanitizeEmail|sanitizeName|normalizePhone/.test(crmCtrl) ? 'pass' : 'fail',
-      'crmController uses sanitizer utilities',
-      'controllers/crmController.js',
+      crmWriteSvc && /sanitizeEmail|sanitizeName|normalizePhone/.test(crmWriteSvc) ? 'pass' : 'fail',
+      'leadWriteService uses sanitizer utilities',
+      'domains/crm/services/leadWriteService.js',
       'high'
     ),
     makeCheck(
@@ -208,9 +217,58 @@ async function runSuite3StaticChecks() {
       'models/Lead.js',
       'critical'
     ),
+    makeCheck(
+      'auth-tenant-on-attendance',
+      'authorization',
+      'tenantPlugin applied to Attendance model',
+      attendanceModel && attendanceModel.includes('tenantPlugin') ? 'pass' : 'fail',
+      'attendanceSchema.plugin(tenantPlugin)',
+      'models/Attendance.js',
+      'high'
+    ),
+    makeCheck(
+      'auth-tenant-on-mail-template',
+      'authorization',
+      'tenantPlugin applied to MailTemplate model',
+      mailTemplateModel && mailTemplateModel.includes('tenantPlugin') ? 'pass' : 'fail',
+      'mailTemplateSchema.plugin(tenantPlugin)',
+      'domains/mail/models/MailTemplate.js',
+      'high'
+    ),
+    makeCheck(
+      'auth-tenant-on-preferences',
+      'authorization',
+      'tenantPlugin applied to user preference models',
+      navbarPref?.includes('tenantPlugin')
+        && shortcutPref?.includes('tenantPlugin')
+        && workspacePref?.includes('tenantPlugin')
+        ? 'pass'
+        : 'fail',
+      'Navbar/Shortcut/Workspace preference schemas use tenantPlugin',
+      'models/*Preference.js',
+      'medium'
+    ),
+    makeCheck(
+      'auth-aggregate-with-tenant-crm',
+      'authorization',
+      'CRM stats aggregations use aggregateWithTenant',
+      crmStatsSvc?.includes('aggregateWithTenant') && statsWorker?.includes('aggregateWithTenant')
+        ? 'pass'
+        : 'fail',
+      'crmStatsService + statsWorker wrap Lead.aggregate',
+      'domains/crm/services/crmStatsService.js',
+      'high'
+    ),
+    makeCheck(
+      'auth-aggregate-with-tenant-mail',
+      'authorization',
+      'Mail event aggregations use aggregateWithTenant',
+      mailEventQuerySvc?.includes('aggregateWithTenant') ? 'pass' : 'fail',
+      'mailEventQueryService wraps MailEvent.aggregate',
+      'domains/mail/services/mailEventQueryService.js',
+      'high'
+    ),
   );
-
-  const BYPASS_ROUTE_ALLOWLIST = new Set(['track.js', 'campaignRoutes.js', 'calendarRoutes.js']);
   const routeFiles = await listFiles(path.join(SERVER_ROOT, 'routes'));
   const bypassInRoutes = [];
   for (const file of routeFiles) {

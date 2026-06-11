@@ -3,7 +3,9 @@ const router = express.Router();
 const Department = require('../models/Department');
 const User = require('../models/User');
 const TaskType = require('../models/TaskType');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, requireAnyPageAccess } = require('../middleware/authMiddleware');
+
+const deptAdminAccess = requireAnyPageAccess('admin_users', 'admin_roles');
 const { seedDepartments } = require('../services/departmentService');
 const { PRESET_VALUES } = require('../utils/departmentPermissions');
 const {
@@ -49,7 +51,7 @@ router.get('/public', async (req, res) => {
 
 router.use(protect);
 
-router.get('/page-registry', admin, (req, res) => {
+router.get('/page-registry', deptAdminAccess, (req, res) => {
   res.json({ groups: PAGE_GROUPS, presets: PRESET_PAGES });
 });
 
@@ -66,7 +68,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/team/monthly-report', admin, async (req, res) => {
+router.get('/team/monthly-report', deptAdminAccess, async (req, res) => {
   try {
     const report = await buildTeamMonthlyReport(req.query.month, req.query);
     res.json(report);
@@ -95,7 +97,7 @@ router.get('/task-types', async (req, res) => {
   }
 });
 
-router.get('/:id/monthly-report', admin, async (req, res) => {
+router.get('/:id/monthly-report', deptAdminAccess, async (req, res) => {
   try {
     const report = await buildDepartmentMonthlyReport(req.params.id, req.query.month, req.query);
     res.json(report);
@@ -107,7 +109,7 @@ router.get('/:id/monthly-report', admin, async (req, res) => {
   }
 });
 
-router.post('/', admin, async (req, res) => {
+router.post('/', deptAdminAccess, async (req, res) => {
   try {
     const {
       name,
@@ -146,7 +148,7 @@ router.post('/', admin, async (req, res) => {
   }
 });
 
-router.patch('/:id', admin, async (req, res) => {
+router.patch('/:id', deptAdminAccess, async (req, res) => {
   try {
     const dept = await Department.findById(req.params.id);
     if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -197,7 +199,7 @@ router.patch('/:id', admin, async (req, res) => {
   }
 });
 
-router.delete('/:id', admin, async (req, res) => {
+router.delete('/:id', deptAdminAccess, async (req, res) => {
   try {
     const dept = await Department.findById(req.params.id);
     if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -224,7 +226,7 @@ router.delete('/:id', admin, async (req, res) => {
   }
 });
 
-router.patch('/users/:userId', admin, async (req, res) => {
+router.patch('/users/:userId', deptAdminAccess, async (req, res) => {
   try {
     const { departmentId } = req.body;
     const user = await User.findByIdAndUpdate(

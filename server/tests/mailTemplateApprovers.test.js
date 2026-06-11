@@ -16,7 +16,13 @@ describe('mail template approvers', () => {
 });
 
 describe('emails page access', () => {
-  test('any authenticated user can access emails page', () => {
+  test('sales preset includes emails via BASE_PAGE_KEYS', () => {
     expect(hasPageAccess({ departmentId: { slug: 'sales', pagePermissions: [] } }, 'emails')).toBe(true);
+  });
+
+  test('custom pagePermissions without emails denies access', () => {
+    expect(
+      hasPageAccess({ departmentId: { slug: 'sales', pagePermissions: ['dashboard'] } }, 'emails')
+    ).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 export default function GChordHint() {
   const { gChordPending, gChordFlash } = useKeyboardShortcuts();

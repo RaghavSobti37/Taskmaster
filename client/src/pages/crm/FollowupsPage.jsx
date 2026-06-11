@@ -14,6 +14,8 @@ import {
   FullScreenWorkspace,
   ListPageLayout,
   UserLabel,
+  QueryErrorBanner,
+  getQueryErrorMessage,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { crmQueryParamsForUser, crmRestrictsToOwnLeads } from '../../utils/crmScope';
@@ -28,7 +30,10 @@ import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import { MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
+import LeadLockIndicator from '../../components/crm/LeadLockIndicator';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
+import { isLockedByOther, formatLockToast, closeLeadEditor } from '../../utils/crmLeadLock';
+
 const FOLLOWUP_PAGE_SIZE = 10;
 const CRM_FOLLOWUPS_FILTERS_KEY = 'crm-followups-filters';
 
@@ -58,7 +63,7 @@ export default function FollowupsPage() {
   const [leadLogs, setLeadLogs] = useState([]);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useLiveLeads(crmQueryParamsForUser(user, {
+  const { data, isLoading, isError, error, refetch } = useLiveLeads(crmQueryParamsForUser(user, {
     page: followupPage,
     limit: followupPageSize,
     sort: sortField,
@@ -141,15 +146,22 @@ export default function FollowupsPage() {
       setEditBaseline(loaded);
       applyLeadValidation(loaded);
 
-      // Fetch audit trail for the selected lead
       axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
         .then(res => setLeadLogs(res.data))
-        .catch(err => console.error('Failed to fetch lead logs', err));
-    } else {
-      setLeadLogs([]);
-      setFieldErrors({});
-      setEditBaseline(null);
+        .catch(() => setLeadLogs([]));
+
+      const heartbeat = window.setInterval(() => {
+        axios.post(`/api/crm/leads/${selectedLead._id}/lock-heartbeat`, null, {
+          headers: { 'x-skip-toast': 'true' },
+        }).catch(() => {});
+      }, 30_000);
+
+      return () => window.clearInterval(heartbeat);
     }
+    setLeadLogs([]);
+    setFieldErrors({});
+    setEditBaseline(null);
+    return undefined;
   }, [selectedLead]);
 
   const hasLeadChanges = leadEditHasChanges(editLeadData, editBaseline);
@@ -179,6 +191,10 @@ export default function FollowupsPage() {
         .then(res => setLeadLogs(res.data))
         .catch(err => console.error('Failed to fetch lead logs', err));
     } catch (err) {
+      if (err.response?.status === 423) {
+        toast.error(formatLockToast(err));
+        return;
+      }
       toast.error(err.response?.data?.error || err.message || 'Failed to save lead');
     }
   };
@@ -198,7 +214,7 @@ export default function FollowupsPage() {
         .then(r => setLeadLogs(r.data))
         .catch(err => console.error('Failed to fetch lead logs', err));
     } catch (err) {
-      alert('Failed to add note');
+      toast.error(err.response?.data?.error || 'Failed to add note');
     } finally {
       setAddingNote(false);
     }
@@ -273,7 +289,11 @@ export default function FollowupsPage() {
                 queryClient.invalidateQueries({ queryKey: ['leads'] });
                 queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
               } catch (err) {
-                alert(err.response?.data?.error || err.message);
+                if (err.response?.status === 423) {
+                  toast.error(formatLockToast(err));
+                  return;
+                }
+                toast.error(err.response?.data?.error || err.message || 'Failed to complete follow-up');
               }
           }}
         />
@@ -283,9 +303,10 @@ export default function FollowupsPage() {
       header: 'Customer Details',
       sortKey: 'name',
       render: (row) => (
-        <div className="flex flex-col gap-1">
+        <div className={`flex flex-col gap-1 ${isLockedByOther(row, user?._id) ? 'opacity-60' : ''}`}>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-bold text-xs tracking-tight">{row?.name}</span>
+            <LeadLockIndicator lead={row} currentUserId={user?._id} />
             {row.source && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
                 {row?.source}
@@ -414,6 +435,12 @@ export default function FollowupsPage() {
         </Button>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load follow-ups')}
+          onRetry={() => refetch()}
+        />
+      )}
       <DataTable
         columns={columns}
         data={tableLeads}
@@ -437,7 +464,7 @@ export default function FollowupsPage() {
 
       <FullScreenWorkspace
         isOpen={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
+        onClose={() => closeLeadEditor(selectedLead?._id, setSelectedLead)}
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id.substring(0, 8)}` : ''}
         onSave={handleSaveLead}
@@ -471,8 +498,12 @@ export default function FollowupsPage() {
                   data: updatedData
                 });
                 toast.success('Follow-up marked done');
-                setSelectedLead(null);
+                closeLeadEditor(selectedLead._id, setSelectedLead);
               } catch (err) {
+                if (err.response?.status === 423) {
+                  toast.error(formatLockToast(err));
+                  return;
+                }
                 toast.error(err.response?.data?.error || err.message || 'Failed to update lead');
               }
             }}
@@ -512,7 +543,7 @@ export default function FollowupsPage() {
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Assigned Agent</h4>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden">
-                  {selectedLead?.assignedRep?.avatar ? <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={18} className="text-[var(--color-text-muted)]" />}
+                  {selectedLead?.assignedRep?.avatar ? <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" loading="lazy" decoding="async" /> : <Users size={18} className="text-[var(--color-text-muted)]" />}
                 </div>
                 <div>
                   <p className="text-[11px] font-bold">{selectedLead?.assignedRep?.name || 'Unassigned'}</p>

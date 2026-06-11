@@ -30,7 +30,7 @@ Import or recreate from [`datadog/monitors-template.json`](./datadog/monitors-te
 
 Create two HTTP tests:
 
-1. **Health** — `GET https://CoreKnot-jfw0.onrender.com/api/health` — expect 200, body `"ok":true`
+1. **Health** — `GET https://YOUR-PRODUCTION-API/api/health` — expect 200, body `"ok":true` (real URL in `.cursor/production-hosts.local.json` → `productionApiHealthUrl`)
 2. **Landing** — `GET https://tsccoreknot.com/` — expect 200, title contains CoreKnot
 
 Frequency: 1 minute. Alert on 2 consecutive failures.

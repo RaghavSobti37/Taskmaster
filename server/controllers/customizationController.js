@@ -22,7 +22,9 @@ const HUB_PATH_CHILD_KEYS = {
   '/management': ['finance', 'announcements', 'ops_logs', 'artists'],
   '/admin/console': [
     'admin_users',
+    'admin_roles',
     'admin_data',
+    'admin_artist_path',
     'admin_exly',
     'admin_scripts',
     'admin_gamification',
@@ -58,7 +60,13 @@ const NAV_PATH_ACCESS = {
   '/admin/scripts': 'admin_scripts',
   '/admin/gamification': 'admin_gamification',
   '/admin/project-analytics': 'admin_project_analytics',
+  '/admin/roles': 'admin_roles',
+  '/admin/artist-path': 'admin_artist_path',
   '/admin/qa': 'admin_data',
+  '/settings': 'settings',
+  '/office-assets': 'office_assets',
+  '/features': 'features',
+  '/workflows': 'workflows',
   '/crm': 'crm_hub',
   '/office': 'office_hub',
   '/management': 'management_hub',
@@ -66,7 +74,7 @@ const NAV_PATH_ACCESS = {
 };
 
 const canAccessNavPath = (user, path) => {
-  if (path === '/settings') return !!user;
+  if (!user) return false;
   const key = NAV_PATH_ACCESS[path];
   if (!key) return true;
   if (key.endsWith('_hub') || key === 'admin_console') {

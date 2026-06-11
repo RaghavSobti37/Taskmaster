@@ -40,6 +40,8 @@ export function UserAvatar({
         src={src}
         alt=""
         title={resolvedTitle}
+        loading="lazy"
+        decoding="async"
         className={`rounded-full object-cover shrink-0 border border-[var(--color-bg-border)] ${sizeClass} ${className}`}
       />
     );

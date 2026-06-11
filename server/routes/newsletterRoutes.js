@@ -3,8 +3,10 @@ const express = require('express');
 const NewsletterIssue = require('../models/NewsletterIssue');
 const NewsletterArticle = require('../models/NewsletterArticle');
 const Campaign = require('../models/Campaign');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
+
+const emailsAccess = requirePageAccess('emails');
 const { validateBody } = require('../validation/validateBody');
 const {
   previewLinkBody,
@@ -25,7 +27,7 @@ const { annotateRecipient, isValidEmail } = require('../utils/emailValidation');
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, emailsAccess);
 
 const requireAdmin = (req, res, next) => {
   if (!isAdminUser(req.user)) {
@@ -223,7 +225,7 @@ router.delete('/articles/:id', async (req, res) => {
   }
 });
 
-router.patch('/issues/:id/curate', requireAdmin, validateBody(curateIssueBody), async (req, res) => {
+router.patch('/issues/:id/curate', validateBody(curateIssueBody), async (req, res) => {
   try {
     const issue = await NewsletterIssue.findById(req.params.id);
     if (!issue) return res.status(404).json({ error: 'Issue not found' });
@@ -256,7 +258,7 @@ router.patch('/issues/:id/curate', requireAdmin, validateBody(curateIssueBody), 
   }
 });
 
-router.post('/issues/:id/compile', requireAdmin, async (req, res) => {
+router.post('/issues/:id/compile', async (req, res) => {
   try {
     const issue = await NewsletterIssue.findById(req.params.id);
     if (!issue) return res.status(404).json({ error: 'Issue not found' });
@@ -288,7 +290,7 @@ router.post('/issues/:id/compile', requireAdmin, async (req, res) => {
   }
 });
 
-router.get('/issues/:id/preview', requireAdmin, async (req, res) => {
+router.get('/issues/:id/preview', async (req, res) => {
   try {
     const issue = await NewsletterIssue.findById(req.params.id);
     if (!issue) return res.status(404).json({ error: 'Issue not found' });
@@ -307,7 +309,7 @@ router.get('/issues/:id/preview', requireAdmin, async (req, res) => {
   }
 });
 
-router.post('/issues/:id/audience-preview', requireAdmin, validateBody(audiencePreviewBody), async (req, res) => {
+router.post('/issues/:id/audience-preview', validateBody(audiencePreviewBody), async (req, res) => {
   try {
     const result = await resolveNewsletterAudience(req.body.audience, req.body.excludedEmails);
     res.json(result);
@@ -316,7 +318,7 @@ router.post('/issues/:id/audience-preview', requireAdmin, validateBody(audienceP
   }
 });
 
-router.post('/issues/:id/send', requireAdmin, validateBody(sendIssueBody), async (req, res) => {
+router.post('/issues/:id/send', validateBody(sendIssueBody), async (req, res) => {
   try {
     const issue = await NewsletterIssue.findById(req.params.id);
     if (!issue) return res.status(404).json({ error: 'Issue not found' });

@@ -1,0 +1,363 @@
+// Phase 3 ETL target — PostgreSQL (separate from sandbox Mongo schema.prisma)
+// Mongo _id preserved as String id on every model.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/etl-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String   @id
+  name         String
+  domain       String?
+  status       String   @default("trial")
+  contactEmail String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  users          User[]
+  departments    Department[]
+  projects       Project[]
+  persons        Person[]
+  teams          Team[]
+  tasks          Task[]
+  leads          Lead[]
+  exlyBookings   ExlyBooking[]
+  taskActivities TaskActivity[]
+  mailEvents     MailEvent[]
+  notifications  Notification[]
+}
+
+model User {
+  id                   String    @id
+  tenantId             String?
+  name                 String
+  email                String    @unique
+  password             String?
+  avatar               String?
+  gender               String?
+  dateOfBirth          DateTime?
+  phone                String    @default("")
+  lastOnline           DateTime?
+  online               Boolean   @default(false)
+  teams                String[]  @default([])
+  departmentId         String?
+  exp                  Int       @default(0)
+  level                Int       @default(1)
+  dailyStreak          Int       @default(0)
+  googleId             String?
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  googleCalendarLinked Boolean   @default(false)
+  googleAccounts       Json?
+  repId                String?
+  mustChangePassword   Boolean   @default(false)
+  passwordChangedAt    DateTime?
+  pushSubscriptions    Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Department {
+  id               String   @id
+  tenantId         String?
+  name             String
+  slug             String
+  color            String   @default("#3b82f6")
+  sortOrder        Int      @default(0)
+  signupAllowed    Boolean  @default(true)
+  permissionPreset String   @default("standard")
+  pagePermissions  String[] @default([])
+  createdAt        DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, slug])
+}
+
+model PlatformSettings {
+  id                          String   @id
+  singletonKey                String   @unique @default("global")
+  rootAdminUserIds            String[] @default([])
+  platformOwnerUserId         String?
+  attendanceExcludedUserIds   String[] @default([])
+  qaExcludedUserIds           String[] @default([])
+  mailTemplateApproverUserIds String[] @default([])
+  autoProjectMemberUserIds    String[] @default([])
+  qaAdminUserId               String?
+  updatedBy                   String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model Project {
+  id                  String   @id
+  tenantId            String?
+  name                String
+  description         String?
+  outletId            String
+  ownerId             String
+  members             String[] @default([])
+  memberRoles         Json?
+  status              String   @default("active")
+  tags                String[] @default([])
+  teams               String[] @default([])
+  progress            Int      @default(0)
+  totalTasksCount     Int      @default(0)
+  completedTasksCount Int      @default(0)
+  linkedCalendars     Json?
+  color               String   @default("#3b82f6")
+  workspace           String   @default("General")
+  starred             Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Person {
+  id              String   @id
+  tenantId        String?
+  canonicalName   String
+  nameKey         String?
+  city            String?
+  country         String?
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+  identityVersion Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Team {
+  id          String   @id
+  tenantId    String?
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, name])
+}
+
+model Task {
+  id               String    @id
+  tenantId         String?
+  title            String
+  description      String?
+  status           String    @default("todo")
+  priority         String    @default("medium")
+  type             String    @default("")
+  scheduleSlot     String    @default("FULL")
+  scheduleDate     DateTime?
+  notifiedWarning  Boolean   @default(false)
+  projectId        String?
+  workspace        String    @default("General")
+  phaseId          String?
+  parentTaskId     String?
+  startDate        DateTime?
+  dueDate          DateTime?
+  duration         Int?
+  plannedHours     Float     @default(0)
+  actualHours      Float     @default(0)
+  progress         Int       @default(0)
+  completedAt      DateTime?
+  dependencies     String[]  @default([])
+  createdById      String?
+  mentionAccessIds String[]  @default([])
+  notifiedOverdue  Boolean   @default(false)
+  color            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Lead {
+  id                    String    @id
+  tenantId              String?
+  personId              String?
+  rowId                 String?
+  customerIdExly        String?
+  transactionIdExly     String?
+  exlyOfferingId        String?
+  exlyOfferingTitle     String?
+  exlyOfferings         Json?
+  crmType               String    @default("sales")
+  artistProject         String?
+  contactCategory       String?
+  name                  String
+  nameKey               String?
+  email                 String?
+  phone                 String?
+  city                  String?
+  webinarDates          String?
+  attended              String?
+  attendanceDurationMin String?
+  qnaAnswered           String?
+  artistType            String?
+  fullTimeWillingness   String?
+  primaryRole           String?
+  learningGoal          String?
+  learnedMusic          String?
+  currentJourney        String?
+  meaningfulConnect     String    @default("PENDING")
+  leadQuality           String    @default("1")
+  callStatus            String    @default("Pending")
+  leadStatus            String    @default("New")
+  remarks               String?
+  notes                 Json?
+  source                String    @default("Organic / Direct")
+  planOption            String?
+  nextFollowupDate      String?
+  nextFollowupTime      String?
+  setReminder           Boolean   @default(false)
+  assignedRepId         String?
+  createdById           String?
+  importId              String?
+  metadata              Json?
+  tags                  String[]  @default([])
+  emailStatus           String    @default("Pending")
+  status                String    @default("active")
+  location              String?
+  bounceCount           Int       @default(0)
+  unsubscribed          Boolean   @default(false)
+  unsubscribeReason     String?
+  lockedBy              String?
+  lockedAt              DateTime?
+  reminderSent          Boolean   @default(false)
+  notifiedOverdue       Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model ExlyBooking {
+  id                    String   @id
+  tenantId              String?
+  personId              String?
+  name                  String
+  nameKey               String?
+  email                 String?
+  phone                 String
+  offeringTitle         String
+  offeringId            String
+  pricePaid             Float    @default(0)
+  bookedOn              DateTime
+  paymentType           String?
+  debitType             String?
+  offeringType          String?
+  offeringOwner         String?
+  promotionType         String?
+  promotionFromOffering String?
+  transactionId         String?
+  customerId            String?
+  state                 String?
+  payoutStatus          String?
+  emailStatus           String   @default("Pending")
+  bounceCount           Int      @default(0)
+  unsubscribed          Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Attendance {
+  id                 String    @id
+  userId             String
+  username           String?
+  date               DateTime
+  inTimeRecord       Json?
+  outTimeRecord      Json?
+  isHalfDay          Boolean   @default(false)
+  onLeave            Boolean   @default(false)
+  reason             String?
+  createdById        String?
+  overtimeMinutes    Int       @default(0)
+  systemHours        Float     @default(0)
+  loggedHours        Float     @default(0)
+  unloggedMinutes    Int       @default(0)
+  discrepancyMinutes Int       @default(0)
+  xpGrantedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, date])
+}
+
+model TaskActivity {
+  id               String   @id
+  tenantId         String?
+  taskId           String
+  type             String
+  body             String   @default("")
+  actorId          String
+  assigneeId       String?
+  assignedById     String?
+  mentionedUserIds String[] @default([])
+  statusFrom       String?
+  statusTo         String?
+  fieldKey         String?
+  valueFrom        String?
+  valueTo          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model MailEvent {
+  id               String   @id
+  tenantId         String?
+  messageId        String?
+  eventType        String
+  email            String?
+  timestamp        DateTime
+  metadata         Json?
+  campaignId       String?
+  senderProfileId  String?
+  rotationProvider String?
+  linkClicked      String?
+  ipAddress        String?
+  userAgent        String?
+  location         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id               String   @id
+  tenantId         String?
+  recipientId      String
+  title            String
+  message          String
+  type             String   @default("reminder")
+  category         String   @default("system")
+  read             Boolean  @default(false)
+  relatedLeadId    String?
+  relatedTaskId    String?
+  relatedProjectId String?
+  actionUrl        String   @default("")
+  actorId          String?
+  iconType         String   @default("system")
+  emailSent        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+}

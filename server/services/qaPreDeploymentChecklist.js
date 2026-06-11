@@ -6,62 +6,21 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
-
-const SERVER_ROOT = path.join(__dirname, '..');
-const REPO_ROOT = path.join(__dirname, '../..');
-
-const makeCheck = (id, category, title, status, detail, evidence = '', severity = 'medium') => ({
-  id,
-  category,
-  title,
-  status,
-  detail,
-  evidence: String(evidence).slice(0, 2000),
-  severity,
-});
-
-async function readText(relFromServer) {
-  try {
-    return await fs.readFile(path.join(SERVER_ROOT, relFromServer), 'utf8');
-  } catch {
-    return null;
-  }
-}
-
-async function readRepoText(relFromRepo) {
-  try {
-    return await fs.readFile(path.join(REPO_ROOT, relFromRepo), 'utf8');
-  } catch {
-    return null;
-  }
-}
-
-async function listFiles(dir, pattern = /\.js$/) {
-  const out = [];
-  const walk = async (d) => {
-    let entries;
-    try {
-      entries = await fs.readdir(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const ent of entries) {
-      const full = path.join(d, ent.name);
-      if (ent.isDirectory() && ent.name !== 'node_modules') {
-        await walk(full);
-      } else if (ent.isFile() && pattern.test(ent.name)) {
-        out.push(full);
-      }
-    }
-  };
-  await walk(dir);
-  return out;
-}
+const {
+  makeCheck,
+  readText,
+  readTextResolved,
+  readBootstrapSources,
+  readRepoText,
+  listFiles,
+  SERVER_ROOT,
+  REPO_ROOT,
+} = require('./qa/qaCheckUtils');
 
 async function runAuthorizationChecks() {
   const checks = [];
   const authMw = await readText('middleware/authMiddleware.js');
-  const taskCtrl = await readText('controllers/taskController.js');
+  const taskCtrl = await readTextResolved('controllers/taskController.js');
 
   checks.push(
     makeCheck(
@@ -97,12 +56,22 @@ async function runAuthorizationChecks() {
     'spotifyAuthRoutes.js',
     'youtubeAuthRoutes.js',
     'qaRoutes.js',
+    'sesRoutes.js',
+    'publicRoutes.js',
+    'openApiRoutes.js',
   ]);
+  const nonRouteModules = new Set(['artistPathRoutes.handlers.js']);
   const unprotected = [];
   for (const file of routeFiles) {
     const base = path.basename(file);
-    if (publicRouteNames.has(base)) continue;
-    const content = await fs.readFile(file, 'utf8');
+    if (publicRouteNames.has(base) || nonRouteModules.has(base)) continue;
+    const rel = path.relative(SERVER_ROOT, file).replace(/\\/g, '/');
+    let content = await readTextResolved(rel);
+    if (base === 'mailRoutes.js') {
+      const mailIndex = await readTextResolved('domains/mail/routes/index.js');
+      const campaignApi = await readTextResolved('domains/mail/routes/campaignApiRouter.js');
+      content = [content, mailIndex, campaignApi].filter(Boolean).join('\n');
+    }
     const usesProtect =
       /protect/.test(content) ||
       /admin\s*,/.test(content) ||
@@ -150,9 +119,9 @@ async function runPasswordResetChecks() {
 
 async function runInputValidationChecks() {
   const checks = [];
-  const serverJs = await readText('server.js');
+  const serverJs = await readBootstrapSources();
   const contactSvc = await readText('services/ContactService.js');
-  const taskSvc = await readText('services/TaskService.js');
+  const taskSvc = await readTextResolved('services/TaskService.js');
   const sanitizer = await readText('utils/sanitizer.js');
 
   checks.push(
@@ -234,7 +203,7 @@ async function runInputValidationChecks() {
 
 async function runCorsChecks() {
   const checks = [];
-  const serverJs = await readText('server.js');
+  const serverJs = await readBootstrapSources();
 
   const wildcardOrigin =
     serverJs &&
@@ -293,8 +262,8 @@ async function runCorsChecks() {
 
 async function runRateLimitChecks() {
   const checks = [];
-  const serverJs = await readText('server.js');
-  const authRoutes = await readText('routes/authRoutes.js');
+  const serverJs = await readBootstrapSources();
+  const authRoutes = await readText('domains/auth/routes.js');
 
   const loginMax =
     authRoutes && /authLoginLimiter/.test(authRoutes)
@@ -315,7 +284,7 @@ async function runRateLimitChecks() {
         : loginMax != null
           ? `Login limiter max=${loginMax}, expected 10`
           : 'No dedicated login rate limiter on POST /login',
-      'routes/authRoutes.js',
+      'domains/auth/routes.js',
       'high'
     )
   );
@@ -325,7 +294,7 @@ async function runRateLimitChecks() {
       'rate-api-global',
       'rate-limiting',
       'Global /api/ rate limiter configured',
-      serverJs && serverJs.includes("app.use('/api/', limiter)") ? 'pass' : 'fail',
+      serverJs && (serverJs.includes("app.use('/api/', apiLimiter)") || serverJs.includes("app.use('/api/', limiter)")) ? 'pass' : 'fail',
       'express-rate-limit on /api/',
       'server.js',
       'medium'
@@ -393,8 +362,8 @@ async function runErrorHandlingChecks() {
 
 async function runDatabaseIndexChecks() {
   const checks = [];
-  const taskModel = await readText('models/Task.js');
-  const leadModel = await readText('models/Lead.js');
+  const taskModel = await readTextResolved('models/Task.js');
+  const leadModel = await readTextResolved('models/Lead.js');
   const userModel = await readText('models/User.js');
 
   const countIndexes = (src) => (src ? (src.match(/\.index\(/g) || []).length : 0);
@@ -549,17 +518,17 @@ async function runSecurityHardeningChecks() {
   const checks = [];
   const webhookAuth = await readText('utils/webhookAuth.js');
   const authCookie = await readText('utils/authCookie.js');
-  const authCtrl = await readText('controllers/authController.js');
+  const authCtrl = await readText('domains/auth/controllers/authController.js');
   const webhookCtrl = await readText('controllers/webhookController.js');
-  const exlyCtrl = await readText('controllers/exlyController.js');
-  const artistV2 = await readText('routes/artistV2Routes.js');
-  const artistRoutes = await readText('routes/artistRoutes.js');
+  const exlyCtrl = await readText('domains/integrations/controllers/exlyController.js');
+  const artistV2 = await readText('domains/artists/v2Routes.js');
+  const artistRoutes = await readText('domains/artists/routes.js');
   const subscriptionRoutes = await readText('routes/subscriptionRoutes.js');
   const proxyRoutes = await readText('routes/proxyRoutes.js');
   const webhookRoutes = await readText('routes/webhookRoutes.js');
   const authMw = await readText('middleware/authMiddleware.js');
   const pwdValidation = await readText('utils/passwordValidation.js');
-  const authRoutes = await readText('routes/authRoutes.js');
+  const authRoutes = await readText('domains/auth/routes.js');
   const authCtx = await readRepoText('client/src/contexts/AuthContext.jsx');
   const envExample = await readText('.env.example');
 
@@ -673,16 +642,18 @@ async function runSecurityHardeningChecks() {
     makeCheck(
       'sec-artist-analytics-protected',
       'security-hardening',
-      'Artist platform analytics requires auth + artistOrAdmin',
+      'Artist platform analytics requires auth + artistTeamOrAdmin',
       artistRoutes &&
         !/router\.get\('\/:id\/analytics\/:platform'/.test(
           (artistRoutes.split('router.use(protect)')[0] || '')
         ) &&
-        artistRoutes.includes("router.get('/:id/analytics/:platform', artistOrAdmin")
+        /router\.get\('\/:id\/analytics\/:platform',\s*(artistTeamOrAdmin|artistOrAdmin)/.test(
+          artistRoutes
+        )
         ? 'pass'
         : 'fail',
-      'Analytics route mounted after protect with artistOrAdmin guard',
-      'routes/artistRoutes.js',
+      'Analytics route mounted after protect with artistTeamOrAdmin (or artistOrAdmin) guard',
+      'domains/artists/routes.js',
       'high'
     )
   );
@@ -691,14 +662,14 @@ async function runSecurityHardeningChecks() {
     makeCheck(
       'sec-subscriptions-ops-only',
       'security-hardening',
-      'Subscription mutations require opsOrAdmin',
+      'Subscription mutations require subscriptions page access',
       subscriptionRoutes &&
-        /router\.post\('\/',\s*opsOrAdmin/.test(subscriptionRoutes) &&
-        /router\.put\('\/:id',\s*opsOrAdmin/.test(subscriptionRoutes) &&
-        /router\.get\('\/',\s*opsOrAdmin/.test(subscriptionRoutes)
+        /subscriptionsAccess/.test(subscriptionRoutes) &&
+        /router\.post\('\/',\s*subscriptionsAccess/.test(subscriptionRoutes) &&
+        /router\.get\('\/',\s*subscriptionsAccess/.test(subscriptionRoutes)
         ? 'pass'
         : 'fail',
-      'list/create/update/delete subscription routes gated by opsOrAdmin',
+      'list/create/update/delete subscription routes gated by subscriptions page key',
       'routes/subscriptionRoutes.js',
       'high'
     )
@@ -725,9 +696,14 @@ async function runSecurityHardeningChecks() {
     makeCheck(
       'sec-proxy-ops-only',
       'security-hardening',
-      'API proxy routes require opsOrAdmin',
-      proxyRoutes && /protect,\s*opsOrAdmin/.test(proxyRoutes) ? 'pass' : 'fail',
-      'HolySheet/Exly/YouTube/OpenAI proxy limited to ops or admin',
+      'API proxy routes require ops or admin_data page access',
+      proxyRoutes &&
+        /requireAnyPageAccess/.test(proxyRoutes) &&
+        /finance/.test(proxyRoutes) &&
+        /admin_data/.test(proxyRoutes)
+        ? 'pass'
+        : 'fail',
+      'HolySheet/Exly/YouTube/OpenAI proxy limited to ops pages or admin_data',
       'routes/proxyRoutes.js',
       'high'
     )
@@ -776,7 +752,7 @@ async function runSecurityHardeningChecks() {
         ? 'pass'
         : 'fail',
       'POST /api/auth/logout clears session cookies (v2 + legacy)',
-      'routes/authRoutes.js',
+      'domains/auth/routes.js',
       'medium'
     )
   );
@@ -1070,10 +1046,10 @@ async function buildSecurityRuntimeTestCases() {
 
 async function runBusinessLogicChecks() {
   const checks = [];
-  const taskSvc = await readText('services/TaskService.js');
+  const taskSvc = await readTextResolved('services/TaskService.js');
   const gamSvc = await readText('services/gamificationService.js');
   const bgQueue = await readText('services/backgroundQueue.js');
-  const crmCtrl = await readText('controllers/crmController.js');
+  const crmWriteSvc = await readTextResolved('domains/crm/services/leadWriteService.js');
   const dataHubSvc = await readText('services/DataHubService.js');
   const sharedDate = await readRepoText('shared/dateValidation.js');
 
@@ -1129,9 +1105,9 @@ async function runBusinessLogicChecks() {
       'biz-crm-lead-xp',
       'business-logic',
       'CRM lead capture triggers gamification event',
-      crmCtrl && crmCtrl.includes('LEAD_CAPTURED') ? 'pass' : 'warn',
-      'crmController queues LEAD_CAPTURED',
-      'controllers/crmController.js',
+      crmWriteSvc && crmWriteSvc.includes('LEAD_CAPTURED') ? 'pass' : 'warn',
+      'leadWriteService queues LEAD_CAPTURED',
+      'domains/crm/services/leadWriteService.js',
       'low'
     )
   );

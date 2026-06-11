@@ -8,6 +8,23 @@
   "productionApiHealthUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/health",
   "stagingApiUrl": "https://YOUR-STAGING-SERVICE.onrender.com",
 
+  "supabase": {
+    "preview": {
+      "projectRef": "YOUR-PREVIEW-PROJECT-REF",
+      "databaseUrl": "postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres",
+      "note": "Full prod ETL for Vercel preview QA only — separate from prod project"
+    },
+    "production": {
+      "projectRef": "YOUR-PROD-PROJECT-REF",
+      "databaseUrl": "postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres",
+      "note": "Canonical after cutover; Mongo retired"
+    },
+    "local": {
+      "databaseUrl": "postgresql://postgres:postgres@localhost:5432/coreknot",
+      "note": "Docker Postgres via nestjs-server/docker-compose — not Supabase cloud"
+    }
+  },
+
   "derived": {
     "viteApiUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
     "renderApiProxyUrl": "https://YOUR-RENDER-SERVICE.onrender.com",

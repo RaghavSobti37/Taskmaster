@@ -37,6 +37,8 @@ import { useConfirm } from '../../contexts/confirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
 import CreateUserModal from '../../components/admin/CreateUserModal';
+import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
+import { resolveDepartmentPages } from '../../utils/pagePermissions';
 
 const formatDateInput = (value) => {
   if (!value) return '';
@@ -52,7 +54,7 @@ const AdminUsers = () => {
   const [editUserBaseline, setEditUserBaseline] = useState(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
 
-  const { data: users = [], isLoading: usersLoading } = useUserDirectory();
+  const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
   const { data: departments = [] } = useDepartments();
   const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
   const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
@@ -70,6 +72,10 @@ const AdminUsers = () => {
         phone: selectedUser.phone || '',
         dateOfBirth: formatDateInput(selectedUser.dateOfBirth),
         departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || '',
+        useCustomPagePermissions: Array.isArray(selectedUser.pagePermissions) && selectedUser.pagePermissions.length > 0,
+        pagePermissions: selectedUser.pagePermissions?.length
+          ? [...selectedUser.pagePermissions]
+          : resolveDepartmentPages(selectedUser.departmentId || {}),
         newPassword: '',
         confirmPassword: '',
       };
@@ -106,6 +112,7 @@ const AdminUsers = () => {
         departmentId: editUserData.departmentId || null,
         dateOfBirth: editUserData.dateOfBirth || null,
         teams: [],
+        pagePermissions: editUserData.useCustomPagePermissions ? editUserData.pagePermissions : [],
       };
       if (editUserData.newPassword) payload.newPassword = editUserData.newPassword;
       await updateUserMutation.mutateAsync({ id: selectedUser._id, data: payload });
@@ -242,12 +249,19 @@ const AdminUsers = () => {
         </Button>
       }
     >
+      {usersError && (
+        <p className="text-sm text-rose-500 mb-4">
+          {usersErr?.response?.data?.error || usersErr?.message || 'Failed to load user directory.'}
+        </p>
+      )}
+      {!usersError && (
       <DataTable
         columns={userColumns}
         data={filteredUsers}
         onRowClick={(u) => setSelectedUser(u)}
         getRowId={(u) => u._id}
       />
+      )}
 
       <FullScreenWorkspace
         isOpen={!!selectedUser}
@@ -321,6 +335,40 @@ const AdminUsers = () => {
                   ))}
                 </select>
               </div>
+            </Card>
+
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                <Database size={12} /> Page Access Override
+              </h4>
+              <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!editUserData.useCustomPagePermissions}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setEditUserData((prev) => ({
+                      ...prev,
+                      useCustomPagePermissions: enabled,
+                      pagePermissions: enabled
+                        ? (prev.pagePermissions?.length
+                          ? prev.pagePermissions
+                          : resolveDepartmentPages(
+                            departments.find((d) => String(d._id) === String(prev.departmentId)) || selectedUser?.departmentId || {}
+                          ))
+                        : [],
+                    }));
+                  }}
+                  className="rounded border-[var(--color-bg-border)]"
+                />
+                Custom page access (overrides role defaults)
+              </label>
+              {editUserData.useCustomPagePermissions && (
+                <PagePermissionsEditor
+                  selectedPages={editUserData.pagePermissions || []}
+                  onChange={(pages) => setEditUserData({ ...editUserData, pagePermissions: pages })}
+                />
+              )}
             </Card>
 
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">

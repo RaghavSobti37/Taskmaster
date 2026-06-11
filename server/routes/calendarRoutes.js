@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const CalendarEvent = require('../models/CalendarEvent');
 const { seedMusicContentCalendar } = require('../services/musicCalendarSeedService');
@@ -22,7 +22,10 @@ function normalizeMeetingLink(link) {
   return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
 }
 
+const calendarPage = requirePageAccess('calendar');
+
 router.use(protect);
+router.use(calendarPage);
 
 async function getUserProjectIds(userId) {
   const projects = await Project.find({ members: userId }).select('_id').lean();

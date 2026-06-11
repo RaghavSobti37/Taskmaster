@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const navbarPreferenceSchema = new mongoose.Schema({
   userId: {
@@ -30,6 +31,7 @@ const navbarPreferenceSchema = new mongoose.Schema({
 });
 
 navbarPreferenceSchema.index({ userId: 1 });
+navbarPreferenceSchema.plugin(tenantPlugin);
 
 // Default navbar groups — 3-zone usage-driven IA
 const DEFAULT_NAVBAR_GROUPS = [

@@ -8,13 +8,13 @@ const { PRESET_PAGES } = require('../utils/pagePermissions');
 
 const DEFAULT_DEPARTMENTS = [
   { name: 'Admin', slug: 'admin', sortOrder: 0, signupAllowed: false, permissionPreset: 'admin', pagePermissions: PRESET_PAGES.admin },
-  { name: 'Operations', slug: 'operations', sortOrder: 1, signupAllowed: true, permissionPreset: 'operations', pagePermissions: PRESET_PAGES.operations },
-  { name: 'Sales', slug: 'sales', sortOrder: 2, signupAllowed: true, permissionPreset: 'sales', pagePermissions: PRESET_PAGES.sales },
-  { name: 'Artist Management', slug: 'artist-management', sortOrder: 3, signupAllowed: true, permissionPreset: 'artist-management', pagePermissions: PRESET_PAGES['artist-management'] },
-  { name: 'Editor', slug: 'editor', sortOrder: 4, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
-  { name: 'Videographer', slug: 'videographer', sortOrder: 5, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
-  { name: 'CG Artist', slug: 'cg-artist', sortOrder: 6, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
+  { name: 'Artist Management', slug: 'artist-management', sortOrder: 1, signupAllowed: true, permissionPreset: 'artist-management', pagePermissions: PRESET_PAGES['artist-management'] },
+  { name: 'Operations', slug: 'ops', sortOrder: 2, signupAllowed: true, permissionPreset: 'ops', pagePermissions: PRESET_PAGES.ops },
+  { name: 'Sales', slug: 'sales', sortOrder: 3, signupAllowed: true, permissionPreset: 'sales', pagePermissions: PRESET_PAGES.sales },
+  { name: 'Creative', slug: 'creative', sortOrder: 4, signupAllowed: true, permissionPreset: 'creative', pagePermissions: PRESET_PAGES.creative },
 ];
+
+const BASE_ROLE_SLUGS = new Set(DEFAULT_DEPARTMENTS.map((d) => d.slug));
 
 /** General task categories (replaces granular Edit/Final Cut/etc. duplicates). */
 const TASK_CATEGORIES = [
@@ -29,12 +29,21 @@ const TASK_CATEGORIES = [
 ];
 
 const slugToDeptName = {
-  editor: 'Editor',
-  videographer: 'Videographer',
-  'cg-artist': 'CG Artist',
+  creative: 'Creative',
+  ops: 'Operations',
   operations: 'Operations',
   sales: 'Sales',
   'artist-management': 'Artist Management',
+};
+
+const migrateLegacyOpsSlug = async () => {
+  const legacyOps = await Department.findOne({ slug: 'operations' });
+  const opsDept = await Department.findOne({ slug: 'ops' });
+  if (legacyOps && !opsDept) {
+    legacyOps.slug = 'ops';
+    if (legacyOps.permissionPreset === 'operations') legacyOps.permissionPreset = 'ops';
+    await legacyOps.save();
+  }
 };
 
 const inferTypeFromTitle = (title) => {
@@ -49,6 +58,7 @@ const inferTypeFromTitle = (title) => {
 };
 
 const seedDepartments = async () => {
+  await migrateLegacyOpsSlug();
   const results = [];
   for (const dept of DEFAULT_DEPARTMENTS) {
     const existing = await Department.findOne({ slug: dept.slug });
@@ -138,6 +148,7 @@ const mineTaskTypes = async () => {
 
 module.exports = {
   DEFAULT_DEPARTMENTS,
+  BASE_ROLE_SLUGS,
   seedDepartments,
   mineTaskTypes,
   inferTypeFromTitle,

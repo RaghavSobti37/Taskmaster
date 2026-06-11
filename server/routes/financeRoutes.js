@@ -30,19 +30,21 @@ const upload = multer({
   limits: { fileSize: 32 * 1024 * 1024, files: 12 },
 });
 
-const { isOpsUser } = require('../utils/departmentPermissions');
+const { isOpsUser, hasPageAccess } = require('../utils/departmentPermissions');
 const { validateBody } = require('../validation/validateBody');
 const { submitInvoiceBody, createFolderBody } = require('../validation/schemas/finance');
+const { uploadRateLimit } = require('../middleware/rateLimits');
 
-// Department gate: ops or admin
-const opsOnly = (req, res, next) => {
-  const allowed = req.user && isOpsUser(req.user);
+// Department gate: ops/admin or explicit finance page permission
+const financeAccess = (req, res, next) => {
+  const allowed = req.user && (isOpsUser(req.user) || hasPageAccess(req.user, 'finance'));
   if (allowed) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized for Finance/Ops' });
   }
 };
+const opsOnly = financeAccess;
 
 router.use(protect);
 
@@ -51,18 +53,18 @@ router.get('/usd-inr-rate', getUsdInrRate);
 // Any authenticated user can submit an invoice for ops review
 router.post('/submit-invoice', validateBody(submitInvoiceBody), submitInvoice);
 router.get('/my-invoices', listMyInvoices);
-router.post('/upload-invoice', upload.single('file'), uploadFile);
+router.post('/upload-invoice', uploadRateLimit, upload.single('file'), uploadFile);
 
 // Ops-only invoice review routes (before /:id catch-all)
-router.get('/pending', opsOnly, listPendingInvoices);
+router.get('/pending', financeAccess, listPendingInvoices);
 router.patch('/:id/approve', opsOnly, approveInvoice);
 router.patch('/:id/reject', opsOnly, rejectInvoice);
 
-// Remaining finance routes require ops role
-router.use(opsOnly);
+// Remaining finance routes require finance page access or ops role
+router.use(financeAccess);
 
-router.post('/upload', upload.single('file'), uploadFile);
-router.post('/upload-many', (req, res, next) => {
+router.post('/upload', uploadRateLimit, upload.single('file'), uploadFile);
+router.post('/upload-many', uploadRateLimit, (req, res, next) => {
   upload.array('files', 12)(req, res, (err) => {
     if (err?.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({

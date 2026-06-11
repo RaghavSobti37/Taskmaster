@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
 
 function defaultCalendarRange() {
@@ -15,7 +15,15 @@ function buildRangeParams(range) {
   return { start, end };
 }
 
-async function fetchCalendarEvents(range) {
+/** Month grid range — matches CalendarView initial load for prefetch alignment. */
+export function getCalendarPrefetchRange(date = new Date()) {
+  return {
+    start: startOfWeek(startOfMonth(date)).toISOString(),
+    end: endOfWeek(endOfMonth(date)).toISOString(),
+  };
+}
+
+export async function fetchCalendarEvents(range) {
   const { start, end } = buildRangeParams(range);
   const params = { start, end };
 

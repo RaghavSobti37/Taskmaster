@@ -9,6 +9,8 @@ import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
+import { consumeAuthReturnPath } from '../../lib/authUnauthorized';
+import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { formatLoginError } from '../../utils/loginError';
 import { postLogin } from '../../utils/loginRequest';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
@@ -28,11 +30,20 @@ const LoginPage = () => {
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
 
+  const resolveReturnPath = React.useCallback(
+    () => resolveLoginReturnPath({
+      stateFrom: location.state?.from,
+      search: location.search,
+      storedReturnPath: consumeAuthReturnPath(),
+    }),
+    [location.state, location.search]
+  );
+
   React.useEffect(() => {
     if (!authLoading && user) {
-      navigate('/dashboard', { replace: true });
+      navigate(resolveReturnPath(), { replace: true });
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, user, navigate, resolveReturnPath]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -72,7 +83,7 @@ const LoginPage = () => {
     try {
       await postLogin(trimmedEmail, password);
       await login();
-      navigate('/dashboard', { replace: true });
+      navigate(resolveReturnPath(), { replace: true });
     } catch (err) {
       setError(formatLoginError(err).message);
     } finally {

@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation, XCircle } from 'lucide-react';
-import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection, Spinner } from '../../components/ui';
+import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection, Spinner, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import {
   useAttendance,
+  useAttendanceRosterUsers,
   useUpsertAttendance,
   useLeaveRequests,
   useApproveLeaveRequest,
@@ -12,17 +13,11 @@ import {
   useAttendanceCheck,
   useUndoAttendanceCheck,
   useApproveAttendance,
-  useUserDirectory,
   useResetAttendance,
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { isOpsUser, isAdminUser } from '../../utils/departmentPermissions';
-import { isAttendanceExcluded } from '../../utils/attendanceUsers';
-import {
-  filterAttendanceRosterUsers,
-  resolveRowEntry,
-  ROSTER_LOOKBACK_DAYS,
-} from '../../utils/attendanceRosterVisibility';
+import { resolveRowEntry } from '../../utils/attendanceRosterVisibility';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
@@ -40,17 +35,7 @@ import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendance
 import SelfMonthlyAttendanceCalendar from '../../components/attendance/SelfMonthlyAttendanceCalendar';
 import TeamAttendanceMobileList from '../../components/attendance/TeamAttendanceMobileList';
 import UnifiedTimeCard from '../../components/attendance/UnifiedTimeCard';
-import HygieneProgressMeter from '../../components/attendance/HygieneProgressMeter';
 import AttendanceStatusLegend from '../../components/attendance/AttendanceStatusLegend';
-import {
-  hasRecordedCheckIn,
-  hasRecordedCheckOut,
-} from '../../utils/attendanceUtils';
-import {
-  getLoggedMinutesFromDailyLogs,
-  getUnloggedMinutesFromEntry,
-} from '../../utils/attendanceMetrics';
-import { useLogs } from '../../hooks/useTaskmasterQueries';
 
 const VIEW_MODES = {
   DAILY: 'daily',
@@ -201,37 +186,36 @@ const AttendancePage = () => {
     : format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
 
   const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit && showTeamOverview);
-  const activityLookbackStart = useMemo(
-    () => format(addDays(today, -(ROSTER_LOOKBACK_DAYS - 1)), 'yyyy-MM-dd'),
-    [today]
-  );
-  const { data: activityLookbackRows = [] } = useAttendance(
-    { start: activityLookbackStart, end: todayKey },
+  const rosterParams = useMemo(() => ({
+    viewMode,
+    ...(viewMode === VIEW_MODES.MONTH
+      ? {
+        monthStart: format(startOfMonth(monthView), 'yyyy-MM-dd'),
+        monthEnd: format(endOfMonth(monthView), 'yyyy-MM-dd'),
+      }
+      : {}),
+  }), [viewMode, monthView]);
+  const { data: visibleUsers = [], isLoading: usersLoading } = useAttendanceRosterUsers(
+    rosterParams,
     canEdit && showTeamOverview
   );
   const { data: approvedLeaves = [] } = useLeaveRequests(
     { status: 'approved' },
     canEdit && showTeamOverview
   );
-  const { data: selfMonthRows = [] } = useAttendance(
+  const {
+    data: selfMonthRows = [],
+    isError: selfAttendanceError,
+    error: selfAttendanceErr,
+    refetch: refetchSelfAttendance,
+  } = useAttendance(
     { start: format(startOfMonth(monthView), 'yyyy-MM-dd'), end: format(endOfMonth(monthView), 'yyyy-MM-dd'), mine: 'true' },
     true // always fetch for self-view
   );
   
   const { data: selfTodayRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const selfTodayEntry = selfTodayRows[0];
-  const selfHasIn = hasRecordedCheckIn(selfTodayEntry);
-  const selfHasOut = hasRecordedCheckOut(selfTodayEntry);
-  const { data: selfDailyLogs = [] } = useLogs(user?._id, 500, Boolean(user?._id && selfHasIn && selfHasOut));
-  const selfUnloggedMinutes = React.useMemo(() => {
-    if (!selfHasIn || !selfHasOut) return 0;
-    const logged = getLoggedMinutesFromDailyLogs(selfTodayEntry, selfDailyLogs);
-    return getUnloggedMinutesFromEntry(selfTodayEntry, {
-      loggedMinutesOverride: logged ?? undefined,
-    });
-  }, [selfTodayEntry, selfDailyLogs, selfHasIn, selfHasOut]);
 
-  const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit);
   
   const upsertAttendance = useUpsertAttendance();
@@ -252,23 +236,6 @@ const AttendancePage = () => {
   const resetAttendance = useResetAttendance();
   const checkIn = useAttendanceCheck();
   const undoCheck = useUndoAttendanceCheck();
-
-  const baseUsers = useMemo(() => users.filter((u) => !isAttendanceExcluded(u)), [users]);
-
-  const visibleUsers = useMemo(
-    () => filterAttendanceRosterUsers({
-      users: baseUsers,
-      activityRows: activityLookbackRows,
-      monthActivityRows: viewMode === VIEW_MODES.MONTH ? rows : [],
-      approvedLeaves,
-      today,
-      viewMode,
-      monthRange: viewMode === VIEW_MODES.MONTH
-        ? { start: startOfMonth(monthView), end: endOfMonth(monthView) }
-        : null,
-    }),
-    [baseUsers, activityLookbackRows, rows, approvedLeaves, today, viewMode, monthView]
-  );
 
   const rowMap = useMemo(() => {
     const map = new Map();
@@ -430,6 +397,12 @@ const AttendancePage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
+      {selfAttendanceError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(selfAttendanceErr, 'Failed to load attendance')}
+          onRetry={() => refetchSelfAttendance()}
+        />
+      )}
       <DataOverviewSection
         stats={[
           {
@@ -493,11 +466,6 @@ const AttendancePage = () => {
       {/* Unified Time Card for Current User */}
       {!showTeamOverview && (
         <div className="space-y-4">
-          {selfHasIn && selfHasOut && (
-            <div className="flex justify-end">
-              <HygieneProgressMeter unloggedMinutes={selfUnloggedMinutes} />
-            </div>
-          )}
         <UnifiedTimeCard
           entry={selfTodayEntry}
           subTitle={user?.name}

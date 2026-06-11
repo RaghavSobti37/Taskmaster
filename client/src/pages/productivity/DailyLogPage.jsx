@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading, Spinner } from '../../components/ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
@@ -86,12 +87,24 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     endDate: endOfDay(selectedDate).toISOString(),
   }), [selectedDate]);
 
-  const { data: logs = [], isLoading: logsLoading, isFetching: logsFetching } = useLogs(targetUserId, { limit: 500, ...logDateRange });
+  const {
+    data: logs = [],
+    isLoading: logsLoading,
+    isFetching: logsFetching,
+    isError: logsError,
+    error: logsErr,
+    refetch: refetchLogs,
+  } = useLogs(targetUserId, { limit: 500, ...logDateRange });
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
   const { data: userDirectory = [] } = useUserDirectory();
-  const { data: activityGrid = [] } = useActivityGrid();
+  const {
+    data: activityGrid = [],
+    isError: activityGridError,
+    error: activityGridErr,
+    refetch: refetchActivityGrid,
+  } = useActivityGrid();
 
   const loading = logsLoading;
   const logsRefetching = logsFetching && !logsLoading;
@@ -350,6 +363,18 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         <LeadAuditsContent />
       ) : (
         <>
+      {logsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(logsErr, 'Failed to load daily logs')}
+          onRetry={() => refetchLogs()}
+        />
+      )}
+      {activityGridError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(activityGridErr, 'Failed to load activity grid')}
+          onRetry={() => refetchActivityGrid()}
+        />
+      )}
       {/* Analytical Ribbon - Plain English */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Time" value={formatTime(totalMinutes)} icon={Timer} variant="mint" info="Total hours logged on this date." />

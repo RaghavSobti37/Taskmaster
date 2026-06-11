@@ -83,5 +83,17 @@ describe('Authentication API', () => {
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('error', 'Invalid input format');
     });
+
+    it('should login by normalized display name (case-insensitive)', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test user',
+          password: TEST_PASSWORD,
+        });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.email).toEqual('test@example.com');
+    });
   });
 });

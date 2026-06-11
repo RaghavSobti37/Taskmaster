@@ -92,13 +92,21 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Email hub** | `/emails/*` replaces legacy AdminMail monolith; `CampaignWizardShell` + Zod validation; Resend from-address picker; orphan scan via `npm run audit:deadcode` |
 | **Artist CRM** | Separate pipeline for TSC Artists: 6-sheet CSV import (~700 contacts), `crmType: artist`, booking enquiries from TSC `/query` webhook, `ArtistBookingEnquiryPanel` in lead modal, Bookings tab + Akash default assignee |
 | **Project goals** | `ProjectGoal` / KRA models, metrics strip on project detail, snapshot history |
-| **Agent memory** | `.specify/memory/` — structured context for Cursor; see [`.specify/README.md`](.specify/README.md) for first-time setup |
+| **Agent memory** | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) — component docs + [`MASTER.md`](.specify/memory/MASTER.md) complete reference |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
 | **Unified login (v1.0.7)** | Same-origin `/api` on every device (Vercel + Vite proxy); login gated on `/api/auth/me`; simplified JWT `protect`; `/socket.io` Vercel rewrite; local dev always uses Vite proxy |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
-| **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings → Profile |
+
+| **Access control** | Server-side page-permission gates on mail, admin, workspace, CRM, proxy, and related routes; client nav uses the same page keys (
+avPageAccess, pagePermissions) |
+| **Error UX** | QueryErrorBanner on data-heavy screens for consistent TanStack Query failure + retry messaging |
+| **CRM** | Lock parity and scoped delete for sales workflows; legacy leads without crmType visible to reps |
+| **Tenant hardening** | Partial tenant isolation improvements on sensitive paths (ongoing � see .specify/memory/auth/security.md) |
+| **Artist OS** | Artist workspace tabs (command center, documents, finance, gigs, etc.), React Query loaders, team access helpers |
+| **Assets & nav** | Assets hub React Query patterns; bottom nav / outlet sidebar respect department page permissions |
+| **Tests** | Client Vitest for auth gate, query defaults, artist OS shell, session merge; server coverage for permission gates || **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings → Profile |
 | **Finance** | Document tables migrated to shared `DataTable`; OCR upload state badges; unsaved-changes bar on edits |
 | **Tasks & gamification** | `TaskReviewActions` component; in-review approve CTA; leaderboard shows XP gap to next rank |
 | **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard; spotlight onboarding tour |
@@ -356,7 +364,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Inbox filters:** Category chips with per-category unread `CountBadge`; overview header uses `DataOverviewSection` pattern.
 * **Inbox actions:** **Mark all read** and **Clear all** (with confirm) — `DELETE /api/notifications` removes your notification history; badges refresh via `status-counts`.
 * **Todo table:** Desktop `/todo` grid supports sort on every column (Task, Type, Assigned by, Status, Priority, Due); toolbar search aligns with labeled filter dropdowns.
-* **Attendance roster:** `shared/attendanceExcludedUsers.js` — ops department, named staff emails, and legacy test accounts excluded from ops matrix and morning check-in prompt (work emails stay on roster when not listed).
+* **Attendance roster:** `shared/attendanceExcludedUsers.js` + `shared/attendanceRosterVisibility.js` — test/QA/E2E accounts hidden; inactive staff (7-day lookback) hidden unless on approved leave; all departments including Operations shown.
 * **Task list hygiene:** Server `taskListFilter.js` hides completed tasks older than 2 days (`COMPLETED_VISIBLE_DAYS`); client `taskIndicators.js` drives Todo overview KPIs; `taskListFilter.test.js` covers cutoff logic.
 * **Calendar polish:** `CalendarView` layout refresh; `calendarEventTime.js` helpers; notification routes expose richer status-count payloads for nav badges.
 

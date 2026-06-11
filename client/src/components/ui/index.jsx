@@ -49,11 +49,13 @@ export { default as DataOverviewSection } from './DataOverviewSection';
 export { default as DashboardWidgetShell } from './DashboardWidgetShell';
 export { default as DataListRow } from './DataListRow';
 export { default as DeltaBadge } from './DeltaBadge';
+export { default as MetricCard } from './MetricCard';
 export { default as ListCard } from './ListCard';
 export { default as CountBadge } from './CountBadge';
 export { default as MobileCollapsibleSection } from './MobileCollapsibleSection';
 export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner';
 export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as PageSkeleton } from './PageSkeleton';
+export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';
 
 // Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

@@ -1,10 +1,11 @@
 const express = require('express');
 const qaTestingController = require('../controllers/qaTestingController');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+const dataHubAccess = requirePageAccess('admin_data');
 
-router.use(protect, admin);
+router.use(protect, dataHubAccess);
 
 /**
  * @POST /api/qa/start
@@ -14,6 +15,8 @@ router.post('/start', qaTestingController.startQATesting);
 
 router.get('/categories', qaTestingController.listCategories);
 router.get('/lighthouse-routes', qaTestingController.listLighthouseRoutes);
+router.get('/page-manifests', qaTestingController.listPageManifests);
+router.get('/action-registry', qaTestingController.listActionRegistry);
 
 /**
  * @GET /api/qa/progress

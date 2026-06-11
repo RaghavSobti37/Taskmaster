@@ -6,9 +6,11 @@ Read **one** primary doc for your task; avoid conflicting older guides.
 
 | Priority | Document | Audience |
 |----------|----------|----------|
-| 1 | [`ENVIRONMENT_MATRIX.md`](./ENVIRONMENT_MATRIX.md) | Hosts, DBs, `VITE_API_URL`, webhooks |
-| 2 | [`AI_AGENT_PROJECT_CONTEXT.md`](./AI_AGENT_PROJECT_CONTEXT.md) | Complete architecture (agents + senior devs) |
-| 3 | [`STARTUP_GUIDE.md`](./STARTUP_GUIDE.md) | Local install & run |
+| 1 | [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) | **Agent memory hub** — component docs + navigation |
+| 2 | [`.specify/memory/MASTER.md`](../.specify/memory/MASTER.md) | Complete project context (single file) |
+| 3 | [`ENVIRONMENT_MATRIX.md`](./ENVIRONMENT_MATRIX.md) | Hosts, DBs, `VITE_API_URL`, webhooks |
+| 4 | [`AI_AGENT_PROJECT_CONTEXT.md`](./AI_AGENT_PROJECT_CONTEXT.md) | Legacy long agent reference |
+| 5 | [`STARTUP_GUIDE.md`](./STARTUP_GUIDE.md) | Local install & run |
 
 ## By topic
 
@@ -40,7 +42,8 @@ Read **one** primary doc for your task; avoid conflicting older guides.
 |----------|--------|
 | [`../IMPLEMENTATION_GUIDE.md`](../IMPLEMENTATION_GUIDE.md) | Jun 2026 deployment snapshot — use matrix + agent context for current truth |
 | [`comprehensive_audit_report.md`](./comprehensive_audit_report.md) | Static route audit — spot-check before acting |
-| [`PROJECT_MEMORY.md`](./PROJECT_MEMORY.md) | Synthesized notes — prefer agent context for API details |
+| [`PROJECT_MEMORY.md`](./PROJECT_MEMORY.md) | Superseded — use `.specify/memory/INDEX.md` |
+| [`../.specify/memory/`](../.specify/memory/INDEX.md) | **Canonical agent memory** (component folders + MASTER) |
 
 ## Naming
 

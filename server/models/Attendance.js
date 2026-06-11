@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const attendanceSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -38,5 +39,9 @@ const attendanceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 attendanceSchema.index({ userId: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ date: 1, userId: 1 });
+attendanceSchema.index({ tenantId: 1, userId: 1, date: 1 });
+
+attendanceSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Attendance', attendanceSchema);

@@ -17,7 +17,7 @@ import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAcco
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable } from '../../components/ui';
+import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { buildFinanceTableColumns } from '../../components/finance/buildFinanceTableColumns';
 import { FINANCE_CATEGORIES, buildFinanceTableRows, formatFinanceBytes } from '../../utils/financeDisplay';
 import { NexusModal } from '../../components/ui/modals';;
@@ -198,7 +198,7 @@ const FinancePage = () => {
     [projects, selectedWorkspace]
   );
 
-  const { data: docsRes, isLoading } = useQuery({
+  const { data: docsRes, isLoading, isError: docsError, error: docsErr } = useQuery({
     queryKey: ['finance-docs', selectedProject, selectedCategory, startDate, endDate, searchQuery, currentPage, pageSize, currentFolderId, sortConfig.field, sortConfig.order],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -727,6 +727,12 @@ const FinancePage = () => {
         </>
       )}
     >
+      {docsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(docsErr, 'Failed to load finance documents')}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['finance-docs'] })}
+        />
+      )}
       <NeedsAttentionAccordion
         pendingInvoices={pendingInvoices}
         onApprove={(id) => approveInvoiceMutation.mutate(id)}

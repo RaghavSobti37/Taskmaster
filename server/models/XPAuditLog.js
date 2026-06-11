@@ -9,10 +9,13 @@ const schema = new mongoose.Schema({
   previousAmount: { type: Number },
   recalculatedAt: { type: Date },
   recalcReason: { type: String },
+  /** Stable key for entity-scoped awards — prevents duplicate inserts under concurrent upserts. */
+  dedupeKey: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
 schema.index({ userId: 1, createdAt: -1 });
 schema.index({ action: 1, createdAt: -1 });
+schema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('XPAuditLog', schema);

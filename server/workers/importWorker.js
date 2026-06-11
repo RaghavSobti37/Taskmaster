@@ -5,7 +5,9 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
+const Department = require('../models/Department');
 const CRMImport = require('../models/CRMImport');
+const { SALES_SLUG } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 
@@ -28,7 +30,9 @@ const initImportWorker = () => {
     logger.info('importWorker', `Starting CSV import job ${job.id} for file ${originalname}`);
 
     try {
-      const reps = await User.find({ role: 'sales' });
+      const salesDept = await Department.findOne({ slug: SALES_SLUG }).select('_id');
+      const repFilter = salesDept ? { departmentId: salesDept._id } : { _id: null };
+      const reps = await User.find(repFilter).select('_id name');
       const repMap = {};
       reps.forEach(r => {
         if (r.name) repMap[r.name.toLowerCase().trim()] = r._id;
@@ -177,7 +181,7 @@ const initImportWorker = () => {
   worker.on('failed', (job, err) => logger.error('importWorker', `Job ${job.id} failed: ${err.message}`));
   worker.on('error', (err) => {});
   
-  logger.info('importWorker', 'CSV Import worker initialized');
+  logger.debug('importWorker', 'CSV Import worker initialized');
 };
 
 module.exports = { initImportWorker, importQueue };

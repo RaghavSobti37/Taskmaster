@@ -15,10 +15,28 @@ beforeAll(async () => {
   }
 
   await mongoose.connect(mongoUri);
+
+  const SystemHealthService = require('../services/SystemHealthService');
+  await SystemHealthService.checkDependencies();
 });
 
 afterAll(async () => {
+  try {
+    const { drainMemoryQueue } = require('../services/queueService');
+    await drainMemoryQueue();
+  } catch {
+    // queueService may not have loaded in this suite
+  }
+
+  try {
+    const { shutdownBackgroundQueue } = require('../services/backgroundQueue');
+    await shutdownBackgroundQueue();
+  } catch {
+    // backgroundQueue may not have loaded in this suite
+  }
+
   if (mongoose.connection.readyState !== 0) {
+    mongoose.connection.removeAllListeners();
     await mongoose.disconnect();
   }
   if (mongoServer) {
@@ -27,6 +45,13 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
+  try {
+    const { drainMemoryQueue } = require('../services/queueService');
+    await drainMemoryQueue();
+  } catch {
+    // queueService may not have loaded in this suite
+  }
+
   if (mongoose.connection.readyState !== 0) {
     const collections = mongoose.connection.collections;
     for (const key in collections) {

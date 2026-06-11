@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
   online: { type: Boolean, default: false },
   teams: [{ type: String }],
   departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', index: true },
+  /** Admin-set page access override; empty = inherit from department role. */
+  pagePermissions: { type: [String], default: [] },
   exp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   dailyStreak: { type: Number, default: 0 },

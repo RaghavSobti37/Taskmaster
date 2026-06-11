@@ -30,10 +30,17 @@ const leaveReviewBody = z.object({
   reviewNote: z.string().optional(),
 });
 
+const rosterUsersQuery = z.object({
+  viewMode: z.enum(['daily', 'compact', 'week', 'month']).optional(),
+  monthStart: dateKey,
+  monthEnd: dateKey,
+});
+
 module.exports = {
   attendanceQuery,
   attendanceCheckBody,
   leaveRequestBody,
   leaveRequestsQuery,
   leaveReviewBody,
+  rosterUsersQuery,
 };

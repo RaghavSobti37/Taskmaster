@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { pushCustomToast } from '../lib/notifications';
 import { invalidateTaskDomain, invalidateReviewTasks, invalidateStatusCounts } from '../lib/queryInvalidation';
 import { addNotification, notificationsQueryKey } from './queries/notifications';
+import { initPushInboxBridge } from '../lib/pushInboxBridge';
 
 /** Socket.io channels — dynamic import so public routes do not load socket.io-client. */
 export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
@@ -12,7 +13,7 @@ export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
     if (!sessionReady || !userId) return undefined;
 
     let cancelled = false;
-    let cleanups = [];
+    let cleanups = [initPushInboxBridge({ userId, queryClient })];
 
     const setup = async () => {
       const { subscribeToChannel } = await import('../lib/realtime');

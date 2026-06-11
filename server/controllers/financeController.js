@@ -1,8 +1,13 @@
 const FinanceDocument = require('../models/FinanceDocument');
 const Project = require('../models/Project');
 const axios = require('axios');
-const { parseDocument } = require('../utils/documentParser');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
+
+/** Lazy-load OCR stack (pdf-parse/tesseract) — avoids Jest native handle leaks at import. */
+async function runDocumentOcr(buffer, mimeType) {
+  const { parseDocument } = require('../utils/documentParser');
+  return parseDocument(buffer, mimeType);
+}
 const { queueGamificationEvent } = require('../services/backgroundQueue');
 const {
   utapi,
@@ -50,7 +55,7 @@ const uploadDocument = async (req, res) => {
         const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
         const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
-        const parsed = await parseDocument(buffer, mimeType);
+        const parsed = await runDocumentOcr(buffer, mimeType);
         extractedText = parsed.extractedText;
         docMetadata = parsed.metadata;
       } catch (err) {
@@ -115,7 +120,7 @@ const uploadDocumentsBulk = async (req, res) => {
         const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
         const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
-        const parsed = await parseDocument(buffer, mimeType);
+        const parsed = await runDocumentOcr(buffer, mimeType);
         extractedText = parsed.extractedText;
         docMetadata = parsed.metadata;
       } catch (err) {

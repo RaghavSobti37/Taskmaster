@@ -18,6 +18,13 @@ const DataHubService = require('./DataHubService');
 const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
 const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
 const { buildIntegrationTestCases } = require('./qa/qaIntegrationTests');
+const { buildUiDiscoveryTestCases } = require('./qa/qaUiDiscovery');
+const { buildPermissionMatrixTestCases } = require('./qa/qaPermissionMatrix');
+const { buildWorkflowTestCases } = require('./qa/qaWorkflowTests');
+const { buildVisualRegressionTestCases } = require('./qa/qaVisualRegression');
+const { takeDbSnapshot, compareSnapshotAfterCleanup } = require('./qa/qaSnapshot');
+const { scanQaSideEffects } = require('./qa/qaSideEffects');
+const { buildFullReport } = require('./qa/qaReporting');
 const { QA_API_BASE } = require('./qa/qaApiClient');
 const {
   setQaActivityHook,
@@ -34,10 +41,52 @@ const PREDEPLOY_CATEGORIES = new Set([
 
 const LIGHTHOUSE_CATEGORY = 'lighthouse';
 
+const L1_FILTER_CATEGORIES = new Set([
+  ...PREDEPLOY_CATEGORIES,
+  LIGHTHOUSE_CATEGORY,
+  'backend', 'bottleneck', 'data', 'frontend', 'mobile', 'desktop',
+]);
+
+const CATEGORY_MATCHERS = {
+  'ui-discovery': (tc) =>
+    tc.category === 'ui-discovery'
+    || tc.qaMeta?.layer === 2
+    || String(tc.name || '').startsWith('[UI Discovery]'),
+  workflow: (tc) =>
+    tc.category === 'workflow'
+    || (tc.qaMeta?.layer === 4 && String(tc.name || '').startsWith('[Workflow]')),
+  'visual-regression': (tc) =>
+    tc.category === 'visual-regression'
+    || tc.qaMeta?.layer === 5
+    || String(tc.name || '').startsWith('[Visual Regression]'),
+  integration: (tc) => String(tc.name || '').startsWith('[Integration]'),
+};
+
+function categoriesNeedLayer1(categories) {
+  if (!categories?.length) return true;
+  return categories.some((c) => L1_FILTER_CATEGORIES.has(String(c).toLowerCase()));
+}
+
+function categoriesNeedPageScans(categories) {
+  if (!categories?.length) return true;
+  return categories.some((c) => String(c).toLowerCase() === 'backend');
+}
+
+function categoriesNeedLighthouse(categories) {
+  if (!categories?.length) return true;
+  return categories.map((c) => String(c).toLowerCase()).includes(LIGHTHOUSE_CATEGORY);
+}
+
 function filterTestCasesByCategories(testCases, categories) {
   if (!categories?.length) return testCases;
-  const allowed = new Set(categories.map((c) => String(c).toLowerCase()));
-  return testCases.filter((tc) => allowed.has(String(tc.category || '').toLowerCase()));
+  const allowed = categories.map((c) => String(c).toLowerCase());
+  return testCases.filter((tc) =>
+    allowed.some((key) => {
+      const matcher = CATEGORY_MATCHERS[key];
+      if (matcher) return matcher(tc);
+      return String(tc.category || '').toLowerCase() === key;
+    })
+  );
 }
 
 class QATestingService {
@@ -49,6 +98,9 @@ class QATestingService {
     this.testRun = null;
     this.totalTestCases = 0;
     this.completedTestCases = 0;
+    this.dbSnapshotBefore = null;
+    this.runStartedAt = null;
+    this.createdDuringRun = { tasks: 0, leads: 0, contacts: 0, users: 0, finance: 0, projects: 0, notifications: 0 };
   }
 
   async initTestRun() {
@@ -95,18 +147,21 @@ class QATestingService {
   async executeTests() {
     process.env.QA_SYNC_GAMIFICATION = 'true';
     try {
+      this.runStartedAt = new Date();
+      this.dbSnapshotBefore = await takeDbSnapshot();
       await QATestRun.findByIdAndUpdate(this.testRunId, {
         status: 'in-progress',
-        startedAt: new Date(),
+        startedAt: this.runStartedAt,
         testCases: [],
         activityLog: [],
+        dbSnapshotBefore: this.dbSnapshotBefore,
         progress: {
           current: 0,
           currentPage: 'Discovering test cases…',
           totalPages: 0,
           liveActivity: {
             phase: 'discovery',
-            action: 'Building checklist (pre-deploy, probes, integration, page scans)',
+            action: 'Building 5-layer checklist (L1 infra → L2 UI → L3 permissions → L4 workflows → L5 visual)',
             startedAt: new Date(),
             updatedAt: new Date(),
           },
@@ -169,15 +224,7 @@ class QATestingService {
         this.completedTestCases++;
       }
 
-      // Process results
       await this.processResults();
-
-      // Mark complete
-      await QATestRun.findByIdAndUpdate(this.testRunId, {
-        status: 'completed',
-        completedAt: new Date(),
-        progress: { current: 100, currentPage: 'Complete', totalPages: testCases.length }
-      });
 
       logger.info('QA', `Test run completed: ${this.testRunId}`);
     } catch (error) {
@@ -196,6 +243,7 @@ class QATestingService {
       delete process.env.QA_SYNC_GAMIFICATION;
       try {
         await this.cleanupTestData();
+        await this.finalizeReporting(this.totalTestCases);
       } catch (cleanupErr) {
         logger.error('QA', 'Cleanup failed in finally block', { error: cleanupErr.message });
       }
@@ -210,17 +258,53 @@ class QATestingService {
       updatedAt: new Date(),
     });
 
-    await reportDiscovery('Loading pre-deployment checklist…');
-    const preDeployCases = await buildPreDeploymentTestCases(reportDiscovery);
-    await reportDiscovery(`Loaded ${preDeployCases.length} pre-deploy cases`);
-    const extendedProbes = await buildExtendedProbeTestCases();
-    await reportDiscovery(`Loaded ${extendedProbes.length} HTTP probes`);
-    const integrationCases = await buildIntegrationTestCases();
-    await reportDiscovery(`Loaded ${integrationCases.length} integration tests`);
-    const targetDir = path.join(__dirname, '../../client/src/pages');
-    const testCases = [...preDeployCases, ...extendedProbes, ...integrationCases];
-    await reportDiscovery('Scanning client pages for dynamic probes…');
-    
+    const cats = this.config.categories;
+    const testCases = [];
+
+    if (categoriesNeedLayer1(cats)) {
+      await reportDiscovery('Layer 1: pre-deployment + security checklist…');
+      const preDeployCases = await buildPreDeploymentTestCases(reportDiscovery);
+      await reportDiscovery(`Layer 1: ${preDeployCases.length} pre-deploy cases`);
+      testCases.push(...preDeployCases);
+      const extendedProbes = await buildExtendedProbeTestCases();
+      await reportDiscovery(`Layer 1: ${extendedProbes.length} HTTP probes`);
+      testCases.push(...extendedProbes);
+    }
+
+    const wantsUi = !cats?.length || cats.some((c) => String(c).toLowerCase() === 'ui-discovery');
+    if (wantsUi) {
+      await reportDiscovery('Layer 2: UI discovery engine…');
+      testCases.push(...await buildUiDiscoveryTestCases(reportDiscovery));
+    }
+
+    const wantsPerm = !cats?.length || cats.some((c) => String(c).toLowerCase() === 'permission');
+    if (wantsPerm) {
+      await reportDiscovery('Layer 3: permission matrix…');
+      testCases.push(...await buildPermissionMatrixTestCases(reportDiscovery));
+    }
+
+    const wantsIntegration = !cats?.length || cats.some((c) => String(c).toLowerCase() === 'integration')
+      || cats.some((c) => PREDEPLOY_CATEGORIES.has(String(c).toLowerCase()) && String(c).toLowerCase() === 'business-logic');
+    const wantsWorkflow = !cats?.length || cats.some((c) => String(c).toLowerCase() === 'workflow');
+    if (wantsIntegration || wantsWorkflow || !cats?.length) {
+      await reportDiscovery('Layer 4: integration + workflow tests…');
+      if (wantsIntegration || !cats?.length) {
+        testCases.push(...await buildIntegrationTestCases());
+      }
+      if (wantsWorkflow || !cats?.length) {
+        testCases.push(...await buildWorkflowTestCases(reportDiscovery));
+      }
+    }
+
+    const wantsVisual = !cats?.length || cats.some((c) => String(c).toLowerCase() === 'visual-regression');
+    if (wantsVisual) {
+      await reportDiscovery('Layer 5: visual regression scaffold…');
+      testCases.push(...await buildVisualRegressionTestCases(reportDiscovery));
+    }
+
+    if (categoriesNeedPageScans(cats)) {
+      const targetDir = path.join(__dirname, '../../client/src/pages');
+      await reportDiscovery('Layer 1+: scanning client pages for dynamic probes…');
     // Recursive directory reader
     const walk = async (dir) => {
       const files = await fs.readdir(dir, { withFileTypes: true });
@@ -420,11 +504,9 @@ class QATestingService {
     } catch (err) {
       logger.error('QA', 'Failed to read directory', { error: err.message });
     }
+    }
 
-    const wantsLighthouse =
-      !this.config.categories?.length ||
-      this.config.categories.map((c) => String(c).toLowerCase()).includes(LIGHTHOUSE_CATEGORY);
-    if (wantsLighthouse) {
+    if (categoriesNeedLighthouse(cats)) {
       const { buildLighthouseBatchTestCase, getAllLighthouseRoutes } = require('./qa/qaLighthouseRunner');
       const lhPaths = this.config.lighthousePaths?.length
         ? this.config.lighthousePaths
@@ -593,6 +675,18 @@ class QATestingService {
           { _id: this.testRunId },
           { $push: { createdArtifacts: { $each: result.artifacts } } }
         );
+        for (const a of result.artifacts) {
+          if (a.type && this.createdDuringRun[a.type] !== undefined) {
+            this.createdDuringRun[a.type] += 1;
+          }
+        }
+      }
+
+      if (result.pageManifests?.length) {
+        await QATestRun.updateOne(
+          { _id: this.testRunId },
+          { $set: { pageManifests: result.pageManifests } }
+        );
       }
 
       // Log failed tests (not warn/skip)
@@ -733,6 +827,7 @@ class QATestingService {
           tasks: 0, projects: 0, logs: 0, dailyLogs: 0, finance: 0, leads: 0, contacts: 0, audits: 0,
           users: 0, notifications: 0, xpAudits: 0, tracked: 0,
         },
+        created: { ...this.createdDuringRun },
         errors: [],
       };
 
@@ -765,14 +860,73 @@ class QATestingService {
       );
       cleanupResults.xpRecalc = xpRecalc;
 
+      const sideEffectScan = await scanQaSideEffects({
+        since: this.runStartedAt || testRun?.startedAt,
+        testRunId: this.testRunId,
+      });
+
+      const cleanupVerification = await compareSnapshotAfterCleanup(
+        this.dbSnapshotBefore || testRun?.dbSnapshotBefore,
+        cleanupResults
+      );
+
       if (this.testRunId) {
-        await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });
+        await QATestRun.findByIdAndUpdate(this.testRunId, {
+          cleanupResults,
+          cleanupVerification,
+          sideEffectScan,
+        });
+
+        if (!cleanupVerification.passed) {
+          await QATestRun.updateOne(
+            { _id: this.testRunId },
+            {
+              $push: {
+                testCases: {
+                  name: '[Cleanup] Residual QA artifacts',
+                  status: 'failed',
+                  category: 'rollback',
+                  severity: 'high',
+                  checklistId: 'cleanup-residual-fail',
+                  error: cleanupVerification.failReason,
+                  description: `Residual counts: ${JSON.stringify(cleanupVerification.after)}`,
+                  checkStatus: 'fail',
+                },
+              },
+            }
+          );
+        }
       }
-      logger.info('QA', 'Cleanup completed', cleanupResults);
-      return cleanupResults;
+      logger.info('QA', 'Cleanup completed', { cleanupResults, cleanupVerification });
+      return { ...cleanupResults, cleanupVerification, sideEffectScan };
     } catch (error) {
       logger.error('QA', 'Error during cleanup', { error: error.message });
       throw error;
+    }
+  }
+
+  async finalizeReporting(totalQueued) {
+    try {
+      const testRun = await QATestRun.findById(this.testRunId);
+      if (!testRun) return;
+
+      const report = buildFullReport(testRun);
+      const status = report.executiveSummary.status === 'fail' ? 'completed' : 'completed';
+
+      await QATestRun.findByIdAndUpdate(this.testRunId, {
+        status,
+        completedAt: new Date(),
+        progress: { current: 100, currentPage: 'Complete', totalPages: totalQueued },
+        executiveSummary: report.executiveSummary,
+        riskReport: report.riskReport,
+        performanceReport: report.performance,
+      });
+    } catch (error) {
+      logger.error('QA', 'Error finalizing report', { error: error.message });
+      await QATestRun.findByIdAndUpdate(this.testRunId, {
+        status: 'completed',
+        completedAt: new Date(),
+      });
     }
   }
 

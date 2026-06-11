@@ -1,6 +1,7 @@
 import React, { useMemo, Suspense, useState, useEffect, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/ui/primitives';
+import QueryErrorBanner, { getQueryErrorMessage } from '../components/ui/QueryErrorBanner';
 import MobileCollapsibleSection from '../components/ui/MobileCollapsibleSection';
 import DashboardWidgetSkeleton from '../components/ui/DashboardWidgetSkeleton';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,11 +54,29 @@ const Dashboard = () => {
     return dept?.permissionPreset || dept?.slug || 'standard';
   }, [user]);
 
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary(queriesEnabled);
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErr, refetch: refetchSummary } = useDashboardSummary(queriesEnabled);
   const deferSecondaryQueries = queriesEnabled && !summaryLoading;
-  const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id, queriesEnabled);
-  const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(deferSecondaryQueries);
-  const { data: projects = [], isLoading: projectsLoading } = useProjects(deferSecondaryQueries);
+  const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    isError: tasksError,
+    error: tasksErr,
+    refetch: refetchTasks,
+  } = useDashboardTasks(user?._id, queriesEnabled);
+  const {
+    data: reviewTasks = [],
+    isLoading: reviewLoading,
+    isError: reviewError,
+    error: reviewErr,
+    refetch: refetchReview,
+  } = useReviewTasks(deferSecondaryQueries);
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsErr,
+    refetch: refetchProjects,
+  } = useProjects(deferSecondaryQueries);
   const { data: workspaces = [] } = useWorkspaces(deferSecondaryQueries);
   const { data: dashboardPreset } = useDashboardPreset(queriesEnabled);
   const { data: users = [] } = useUserDirectory(deferSecondaryQueries);
@@ -81,7 +100,12 @@ const Dashboard = () => {
     return value;
   }, []);
   const todayKey = formatDateKeyIST(today);
-  const { data: attendanceRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
+  const {
+    data: attendanceRows = [],
+    isError: attendanceError,
+    error: attendanceErr,
+    refetch: refetchAttendance,
+  } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const checkIn = useAttendanceCheck();
   const undoCheck = useUndoAttendanceCheck();
 
@@ -252,6 +276,36 @@ const Dashboard = () => {
 
   return (
     <PageContainer>
+      {summaryError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(summaryErr, 'Failed to load dashboard')}
+          onRetry={() => refetchSummary()}
+        />
+      )}
+      {tasksError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(tasksErr, 'Failed to load tasks')}
+          onRetry={() => refetchTasks()}
+        />
+      )}
+      {reviewError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(reviewErr, 'Failed to load review queue')}
+          onRetry={() => refetchReview()}
+        />
+      )}
+      {projectsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(projectsErr, 'Failed to load projects')}
+          onRetry={() => refetchProjects()}
+        />
+      )}
+      {attendanceError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(attendanceErr, 'Failed to load attendance')}
+          onRetry={() => refetchAttendance()}
+        />
+      )}
       <Suspense fallback={null}>
         <MobileAttendanceBar />
       </Suspense>

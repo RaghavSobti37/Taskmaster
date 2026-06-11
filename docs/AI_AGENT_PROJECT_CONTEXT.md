@@ -1664,7 +1664,9 @@ FinanceDocument ──> Project (self-referential folders)
 | Document | Path | Contents |
 |----------|------|----------|
 | README | `README.md` | Human overview, quick start |
-| Project Memory | `docs/PROJECT_MEMORY.md` | Synthesized architecture + mail engine notes |
+| Agent Memory Index | `.specify/memory/INDEX.md` | **Canonical** — component docs navigation |
+| Master Context | `.specify/memory/MASTER.md` | Complete project context (single file) |
+| Project Memory | `docs/PROJECT_MEMORY.md` | Superseded — redirects to agent memory |
 | Email Engine Locked | `docs/EMAIL_ENGINE_LOCKED.md` | Frozen email tracking spec |
 | Logo Locked | `docs/LOGO_LOCKED.md` | Harmonic Frequency mark + `frl-v-02` spinner |
 | Transaction Architecture | `docs/transaction_architecture.md` | MongoDB transaction patterns |
@@ -1674,9 +1676,9 @@ FinanceDocument ──> Project (self-referential folders)
 | Data Backup | `docs/DATA_BACKUP.md` | Backup procedures |
 | Version History | `docs/VERSION_HISTORY.md` | Release changelog |
 | Data Sanitation Spec | `docs/DATA_SANITATION_SPEC.md` | Person name/phone/email normalization, nameKey, backfill script |
-| Architecture Map | `.specify/memory/architecture_map.md` | Mermaid system diagrams |
-| Backend Memory | `.specify/memory/backend.md` | Backend-specific notes |
-| Features Page | `.specify/memory/features_page.md` | Feature completion checklist |
+| System Architecture | `.specify/memory/architecture/system.md` | System diagram + request lifecycle |
+| Backend (Express) | `.specify/memory/backend/express.md` | Domains, routes, services |
+| Feature Modules | `.specify/memory/features/modules.md` | All feature areas |
 | Cursor Email Rule | `.cursor/rules/email-engine-locked.mdc` | Agent constraint for email engine |
 | Cursor Logo Rule | `.cursor/rules/logo-mark-locked.mdc` | Agent constraint for brand mark + spinner |
 | Design Guidelines | `client/design_guidelines.md` | UI design rules |

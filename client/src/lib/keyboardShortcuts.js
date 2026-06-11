@@ -7,7 +7,10 @@ import {
   getDefaultBindingsMap,
   buildLegacyGChordRoutes,
   filterActionsForUser,
+  NAV_ACTIONS,
 } from './shortcutDefaultsShared';
+import { canAccessNavPath } from '../utils/navPageAccess';
+import { hasPageAccess, hasAnyPageAccess } from '../utils/pagePermissions';
 import {
   G_CHORD_TIMEOUT_MS,
   buildShortcutSections,
@@ -20,8 +23,23 @@ export { G_CHORD_TIMEOUT_MS };
 /** Default G-chord routes (tests / static display) */
 export const GLOBAL_G_CHORD_ROUTES = buildLegacyGChordRoutes(getDefaultBindingsMap());
 
-export function getGlobalGChordRoutes(bindingsMap, { isAdmin = false } = {}) {
-  return buildLegacyGChordRoutes(bindingsMap || getDefaultBindingsMap(), { isAdmin });
+export function getGlobalGChordRoutes(bindingsMap, { isAdmin = false, user = null } = {}) {
+  const map = bindingsMap || getDefaultBindingsMap();
+  const routes = buildLegacyGChordRoutes(map, { isAdmin });
+  if (!user) return routes;
+
+  const filtered = {};
+  for (const action of filterActionsForUser(NAV_ACTIONS, { isAdmin })) {
+    const binding = map[action.id];
+    if (!binding?.keys || binding.keys.length < 2 || binding.keys[0] !== 'g') continue;
+    const secondKey = binding.keys[binding.keys.length - 1];
+    if (secondKey.length !== 1) continue;
+    const basePath = (action.path || '').split('?')[0];
+    if (!basePath || !canAccessNavPath(user, basePath, hasPageAccess, hasAnyPageAccess)) continue;
+    const route = routes[secondKey];
+    if (route) filtered[secondKey] = route;
+  }
+  return filtered;
 }
 
 export const SHORTCUT_SECTIONS = buildShortcutSections(getDefaultBindingsMap());

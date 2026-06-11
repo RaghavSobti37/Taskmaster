@@ -14,6 +14,7 @@ const TaskService = require('../services/TaskService');
 const logger = require('../utils/logger');
 const { validateBody } = require('../validation/validateBody');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
+const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
@@ -36,7 +37,7 @@ router.get('/status-counts', protect, async (req, res) => {
       dueDate: { $gte: todayStart, $lte: todayEnd },
     });
 
-    const [followupAgg] = await Lead.aggregate([
+    const [followupAgg] = await aggregateWithTenant(Lead, [
       {
         $match: {
           assignedRepId: req.user._id,

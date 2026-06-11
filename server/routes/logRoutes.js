@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, admin, requirePageAccess } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const GamificationService = require('../services/gamificationService');
@@ -15,47 +15,7 @@ const refreshAttendanceAfterLog = (log) => {
   });
 };
 
-router.get('/', protect, async (req, res) => {
-  try {
-    const { userId, action, lastId, limit = 50, startDate, endDate, origin, status, targetId } = req.query;
-    const filter = {};
-    const isAdmin = isAdminUser(req.user);
-    const selfId = req.user._id.toString();
-
-    if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
-      if (!isAdmin && userId !== selfId) {
-        return res.status(403).json({ error: 'Not authorized to view other users\' logs' });
-      }
-      filter.$or = [{ userId }, { actorId: userId }];
-    } else if (!isAdmin) {
-      filter.$or = [{ userId: req.user._id }, { actorId: req.user._id }];
-    }
-    if (action) filter.action = action;
-    if (origin) filter.origin = origin;
-    if (status) filter.status = status;
-    if (targetId) filter.targetId = targetId;
-    
-    if (lastId) {
-      filter._id = { $lt: lastId };
-    }
-
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-    
-    const logs = await Log.find(filter)
-      .sort({ _id: -1 }) // Sort by ID for stable cursor pagination
-      .limit(parseInt(limit))
-      .populate({ path: 'userId', select: 'name avatar role' })
-      .lean();
-      
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+const logsPage = requirePageAccess('logs');
 
 router.get('/bug-report', protect, admin, async (req, res) => {
   try {
@@ -121,8 +81,52 @@ router.post('/run-qa', protect, admin, async (req, res) => {
   }
 });
 
+router.use(protect);
+router.use(logsPage);
 
-router.post('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
+  try {
+    const { userId, action, lastId, limit = 50, startDate, endDate, origin, status, targetId } = req.query;
+    const filter = {};
+    const isAdmin = isAdminUser(req.user);
+    const selfId = req.user._id.toString();
+
+    if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
+      if (!isAdmin && userId !== selfId) {
+        return res.status(403).json({ error: 'Not authorized to view other users\' logs' });
+      }
+      filter.$or = [{ userId }, { actorId: userId }];
+    } else if (!isAdmin) {
+      filter.$or = [{ userId: req.user._id }, { actorId: req.user._id }];
+    }
+    if (action) filter.action = action;
+    if (origin) filter.origin = origin;
+    if (status) filter.status = status;
+    if (targetId) filter.targetId = targetId;
+    
+    if (lastId) {
+      filter._id = { $lt: lastId };
+    }
+
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    
+    const logs = await Log.find(filter)
+      .sort({ _id: -1 }) // Sort by ID for stable cursor pagination
+      .limit(parseInt(limit))
+      .populate({ path: 'userId', select: 'name avatar role' })
+      .lean();
+      
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/', async (req, res) => {
   try {
     const { action, targetType, targetId, details } = req.body;
     const log = await Log.create({
@@ -161,7 +165,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-router.delete('/clear', protect, async (req, res) => {
+router.delete('/clear', async (req, res) => {
   try {
     if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
@@ -175,7 +179,7 @@ router.delete('/clear', protect, async (req, res) => {
 
 
 
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const log = await Log.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
@@ -204,7 +208,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const log = await Log.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
@@ -231,7 +235,7 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
-router.get('/activity-grid', protect, async (req, res) => {
+router.get('/activity-grid', async (req, res) => {
   try {
     const userId = req.user._id;
     const logs = await Log.find({ userId, action: 'DAILY_LOG' })

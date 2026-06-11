@@ -1,16 +1,55 @@
 const { Queue, Worker } = require('bullmq');
 const Redis = require('ioredis');
+const mongoose = require('mongoose');
 const path = require('path');
 const { getRedisUrl } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 
+const MONGO_READY_TIMEOUT_MS = 30000;
+
+async function waitForMongoReady(timeoutMs = MONGO_READY_TIMEOUT_MS) {
+  if (mongoose.connection.readyState === 1) return;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (mongoose.connection.readyState === 1) return;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error('MongoDB not ready');
+}
+
+async function pruneStaleFailedJobs() {
+  const targets = [
+    { label: 'gamificationQueue', queue: gamificationQueue },
+    { label: 'holySheetQueue', queue: holySheetQueue },
+    { label: 'csvBackupQueue', queue: csvBackupQueue },
+  ];
+  for (const { label, queue } of targets) {
+    if (!queue) continue;
+    try {
+      const count = await queue.getFailedCount();
+      if (count > 0) {
+        await queue.clean(0, count, 'failed');
+        logger.info('Queue', `Pruned ${count} stale failed jobs from ${label}`);
+      }
+    } catch (err) {
+      logger.warn('Queue', `Failed to prune ${label}`, { error: err.message });
+    }
+  }
+}
+
 const redisUrl = getRedisUrl();
+const isTestEnv = process.env.NODE_ENV === 'test';
 
 let redisConnection = null;
 let redisAvailable = false;
+let holySheetWorker = null;
+let csvWorker = null;
+let gamificationWorker = null;
 
-// Create Redis connection for BullMQ
-try {
+// Jest: skip Redis/BullMQ — workers leak and log after suite teardown
+if (isTestEnv) {
+  initializeMemoryQueues();
+} else try {
   redisConnection = new Redis(redisUrl, {
     maxRetriesPerRequest: null,
     connectTimeout: 2000,
@@ -20,7 +59,7 @@ try {
 
   redisConnection.connect()
     .then(() => {
-      logger.info('Queue', 'Redis connected. BullMQ active.');
+      logger.debug('Queue', 'Redis connected. BullMQ active.');
       redisAvailable = true;
       initializeQueues();
     })
@@ -67,7 +106,7 @@ function initializeQueues() {
   gamificationQueue = new Queue('gamificationQueue', { connection: redisConnection });
 
   // BullMQ Worker to process HolySheet queue in batches every 10s
-  const holySheetWorker = new Worker('holySheetQueue', async (job) => {
+  holySheetWorker = new Worker('holySheetQueue', async (job) => {
     const { leadIds } = job.data;
     if (!leadIds || leadIds.length === 0) return;
     logger.info('Queue Worker', `Processing batch sync to HolySheet for ${leadIds.length} leads.`);
@@ -85,13 +124,14 @@ function initializeQueues() {
   }, { connection: redisConnection, concurrency: 1 });
 
   // Worker for CSV backup
-  const csvWorker = new Worker('csvBackupQueue', async (job) => {
+  csvWorker = new Worker('csvBackupQueue', async (job) => {
     logger.info('Queue Worker', 'Executing CSV backup...');
     const csvBackupService = require('./csvBackupService');
     await csvBackupService.backupAllLeadsToCsv();
   }, { connection: redisConnection, concurrency: 1 });
-  // Worker for Gamification
-  const gamificationWorker = new Worker('gamificationQueue', async (job) => {
+  // Worker for Gamification — wait for Mongo so jobs don't fail with buffer timeouts on cold start
+  gamificationWorker = new Worker('gamificationQueue', async (job) => {
+    await waitForMongoReady();
     const { eventType, payload } = job.data;
     const GamificationService = require('./gamificationService');
     await GamificationService.handleGamificationEvent(eventType, payload);
@@ -108,6 +148,10 @@ function initializeQueues() {
 
   csvWorker.on('failed', (job, err) => {
     logger.error('Queue Worker', `CSV backup job failed: ${err.message}`);
+  });
+
+  pruneStaleFailedJobs().catch((err) => {
+    logger.warn('Queue', 'Startup failed-job prune skipped', { error: err.message });
   });
 }
 
@@ -277,7 +321,7 @@ const queueGamificationEvent = async (eventType, payload) => {
       await gamificationQueue.add(
         eventType,
         { eventType, payload },
-        { removeOnComplete: true, removeOnFail: false }
+        { removeOnComplete: true, removeOnFail: true }
       );
       return;
     } catch (e) {
@@ -298,12 +342,37 @@ const getManagedQueues = () => {
   ].filter((entry) => entry.queue);
 };
 
+async function shutdownBackgroundQueue() {
+  for (const timeout of [redisBatchTimeout, redisCsvTimeout, batchTimeout, memoryCsvTimeout]) {
+    if (timeout) clearTimeout(timeout);
+  }
+  redisBatchTimeout = null;
+  redisCsvTimeout = null;
+  batchTimeout = null;
+  memoryCsvTimeout = null;
+
+  const workers = [holySheetWorker, csvWorker, gamificationWorker].filter(Boolean);
+  await Promise.all(workers.map((worker) => worker.close().catch(() => {})));
+
+  const queues = [holySheetQueue, csvBackupQueue, gamificationQueue].filter(Boolean);
+  await Promise.all(queues.map((queue) => queue.close().catch(() => {})));
+
+  if (redisConnection) {
+    try {
+      redisConnection.disconnect();
+    } catch (e) {}
+    redisConnection = null;
+  }
+  redisAvailable = false;
+}
+
 module.exports = {
   queueHolySheetSync,
   queueCsvBackup,
   queueGamificationEvent,
   isRedisAvailable: () => redisAvailable,
   getManagedQueues,
+  shutdownBackgroundQueue,
 };
 
 // Daily cron job for Platform Analytics (Offload Read Path)
@@ -352,5 +421,7 @@ function startAnalyticsCron() {
   }, TWELVE_HOURS);
 }
 
-// Kickoff cron
-setTimeout(startAnalyticsCron, 5000);
+// Kickoff cron (skip in Jest)
+if (!isTestEnv) {
+  setTimeout(startAnalyticsCron, 5000);
+}

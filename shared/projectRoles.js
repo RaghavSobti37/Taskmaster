@@ -14,12 +14,12 @@ const normalizeId = (value) => {
   return String(value._id || value);
 };
 
-/** Canonical project role values: admin | manager | member */
+/** Canonical project role values: admin | manager | member | viewer */
 const normalizeStoredProjectRole = (role) => {
   const r = String(role || 'member').toLowerCase();
   if (r === 'owner') return 'admin';
   if (r === 'artist_management') return 'manager';
-  if (['admin', 'manager', 'member'].includes(r)) return r;
+  if (['admin', 'manager', 'member', 'viewer'].includes(r)) return r;
   return 'member';
 };
 
@@ -39,6 +39,10 @@ const getProjectRoleForUser = (project, userId) => {
   return normalizeStoredProjectRole(entry?.role);
 };
 
+/** Project viewers may read tasks but not mutate them. */
+const userIsProjectViewer = (project, userId) =>
+  getProjectRoleForUser(project, userId) === 'viewer';
+
 /**
  * User may review only if they assigned the task (strict assigner = reviewer).
  */
@@ -52,6 +56,7 @@ module.exports = {
   projectRoleRank,
   getProjectRoleForUser,
   normalizeStoredProjectRole,
+  userIsProjectViewer,
   canUserReviewTask,
   normalizeId,
 };

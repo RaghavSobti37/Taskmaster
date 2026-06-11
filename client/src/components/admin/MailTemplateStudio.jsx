@@ -5,6 +5,7 @@ import '../../utils/mailTemplateQuillSetup';
 import { MAIL_TEMPLATE_QUILL_KEYBOARD, attachMailTemplateClipboardSanitizer } from '../../utils/mailTemplateQuillSetup';
 import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../ui/QueryErrorBanner';
 import { format } from 'date-fns';
 import {
   useMailTemplates,
@@ -78,7 +79,12 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const isAdmin = isAdminUser(user);
   const canApprove = canApproveMailTemplates(user);
 
-  const { data: allTemplates = [], refetch: refetchAll } = useMailTemplates();
+  const {
+    data: allTemplates = [],
+    isError: templatesError,
+    error: templatesErr,
+    refetch: refetchAll,
+  } = useMailTemplates();
   const { data: pendingTemplates = [], refetch: refetchPending } = usePendingMailTemplates(canApprove);
   const saveMutation = useSaveMailTemplate();
   const submitMutation = useSubmitMailTemplate();
@@ -358,6 +364,12 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
 
   return (
     <div className="space-y-6">
+      {templatesError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(templatesErr, 'Failed to load templates')}
+          onRetry={() => refetchAll()}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant={studioTab === 'editor' ? 'primary' : 'secondary'} onClick={() => setStudioTab('editor')}>
           <FileCode size={14} /> Editor

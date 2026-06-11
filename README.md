@@ -84,6 +84,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Area | What changed |
 | --- | --- |
+| **Large campaign dispatch** | Campaigns with 10k+ recipients no longer block the API on create/dispatch — `queueService` sends in 100-recipient background chunks; stuck `Sending`/`Queued` campaigns auto-resume on server startup; campaign detail uses aggregation for stats (no full recipient load) |
 | **Security & ops** | Git history redaction completed (`main` + `testing`); `npm run audit:history` clean; production URL map locked in `.cursor/production-hosts.local.json` (gitignored) with committed example + Cursor rule |
 | **Data Master** | Person golden-record spine (`Person`, `PersonIdentifier`, `PersonHubView`); source facts stay in domain collections (`Lead`, `ArtistPathResponse`, `ExlyBooking`, etc.); bootstrap via `backfillPersonIds.js` ? see [`docs/DATA_MASTER_ARCHITECTURE.md`](docs/DATA_MASTER_ARCHITECTURE.md) |
 | **Artist Path** | Admin page at `/admin/artist-path` ? HolySheet sync, card grid, profile slider with lazy Q&A + Data Hub cross-link; shared column map in `shared/artistPathSchema.cjs` |

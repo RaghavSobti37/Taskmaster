@@ -57,6 +57,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - **Campaign wizard:** `CampaignWizardShell` seeds `subject` from `?subject=` via `URLSearchParams` only — no double `decodeURIComponent` (subjects with `%` safe)
 - **Campaign audience:** Source tiles CSV / HolySheet / **Data Hub** (admin) / CRM / Exly / Manual; Data Hub via `GET /api/mail/audience/data-hub` (`PersonHubView`, `includeInlets` / `excludeInlets` multi-select from `shared/dataInlets.js` taxonomy; legacy `folder` param); Exly via `GET /api/mail/audience/exly` (`ExlyBooking`); CRM filters (`leadStatus`, `contactCategory`, `artistProject`); **campaign engagement filter** (`active` / `inactive` / `none` from `MailEvent` + past campaign recipients via `campaignEngagementService`; batch `POST /api/mail/audience/engagement`); Select all + Deselect all; CRM-linked Data Hub rows → `leadIds`, others → `customRecipients`
 - Email hub at `/emails/*` — templates, campaigns, profiles, analytics
+- **Large campaign dispatch** — `dispatchCampaignJobs` returns immediately; `runCampaignDispatchLoop` queues 100 `Pending` recipients per chunk; `resumeStuckCampaigns` resets stuck `Queued` → `Pending` on startup; memory fallback uses 3 concurrent send workers
 - `MailTemplateStudio` — draft → submit → approve workflow
 - HolySheet contact sync, indexed merge tokens (`{{1}}`, `{{2}}`)
 - Campaign detail at `/campaign/:campaignId`

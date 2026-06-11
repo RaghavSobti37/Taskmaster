@@ -1,25 +1,19 @@
-/** Derive campaign delivery metrics from recipient status rows (source of truth). */
-const computeRecipientStats = (recipients = []) => {
-  const recipientStatusCounts = {
-    Pending: 0,
-    Queued: 0,
-    Sent: 0,
-    Opened: 0,
-    Clicked: 0,
-    Bounced: 0,
-    Failed: 0,
-    Invalid: 0,
-    Unsubscribed: 0,
-    Cancelled: 0,
-  };
+const mongoose = require('mongoose');
 
-  (recipients || []).forEach((r) => {
-    const st = r.status || 'Pending';
-    if (recipientStatusCounts[st] !== undefined) recipientStatusCounts[st]++;
-    else recipientStatusCounts.Pending++;
-  });
+const EMPTY_STATUS_COUNTS = () => ({
+  Pending: 0,
+  Queued: 0,
+  Sent: 0,
+  Opened: 0,
+  Clicked: 0,
+  Bounced: 0,
+  Failed: 0,
+  Invalid: 0,
+  Unsubscribed: 0,
+  Cancelled: 0,
+});
 
-  const total = recipients?.length || 0;
+const buildStatsFromCounts = (recipientStatusCounts, total) => {
   const delivered =
     recipientStatusCounts.Sent + recipientStatusCounts.Opened + recipientStatusCounts.Clicked;
   const opened = recipientStatusCounts.Opened + recipientStatusCounts.Clicked;
@@ -46,4 +40,43 @@ const computeRecipientStats = (recipients = []) => {
   };
 };
 
-module.exports = { computeRecipientStats };
+/** Derive campaign delivery metrics from recipient status rows (source of truth). */
+const computeRecipientStats = (recipients = []) => {
+  const recipientStatusCounts = EMPTY_STATUS_COUNTS();
+  (recipients || []).forEach((r) => {
+    const st = r.status || 'Pending';
+    if (recipientStatusCounts[st] !== undefined) recipientStatusCounts[st]++;
+    else recipientStatusCounts.Pending++;
+  });
+
+  const total = recipients?.length || 0;
+  return buildStatsFromCounts(recipientStatusCounts, total);
+};
+
+/** Aggregate recipient status counts without loading the full recipients array. */
+const aggregateRecipientStats = async (Model, campaignId) => {
+  const rows = await Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    {
+      $group: {
+        _id: { $ifNull: ['$recipients.status', 'Pending'] },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const recipientStatusCounts = EMPTY_STATUS_COUNTS();
+  let total = 0;
+  for (const row of rows) {
+    const status = row._id || 'Pending';
+    const count = row.count || 0;
+    total += count;
+    if (recipientStatusCounts[status] !== undefined) recipientStatusCounts[status] += count;
+    else recipientStatusCounts.Pending += count;
+  }
+
+  return buildStatsFromCounts(recipientStatusCounts, total);
+};
+
+module.exports = { computeRecipientStats, aggregateRecipientStats };

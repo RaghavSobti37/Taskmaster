@@ -13,7 +13,7 @@ const {
 const { migrateLegacyTemplates } = require('../../../utils/mailTemplateHelpers');
 const { normalizeOutboundEmailHtml } = require('../../../utils/normalizeOutboundEmailHtml');
 const { dispatchCampaignJobs, stopCampaign } = require('../../../services/queueService');
-const { computeRecipientStats } = require('../../../utils/campaignStats');
+const { computeRecipientStats, aggregateRecipientStats } = require('../../../utils/campaignStats');
 const { resolveCampaignByParam } = require('../campaignFacade');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
 
@@ -187,34 +187,46 @@ const aggregateTimeSeriesByHour = (points = []) => {
   return Object.values(map).sort((a, b) => new Date(a.time) - new Date(b.time));
 };
 
+const LARGE_CAMPAIGN_RECIPIENT_THRESHOLD = 1000;
+
 exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const resolved = await resolveCampaignByParam(id, { populate: true, lean: true });
+    const resolved = await resolveCampaignByParam(id, { populate: true, lean: true, excludeRecipients: true });
     if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
+    const { Model } = resolved;
     let campaign = resolved.campaign;
 
-    const computed = computeRecipientStats(campaign.recipients);
+    const computed = await aggregateRecipientStats(Model, campaign._id);
     campaign.recipientStatusCounts = computed.recipientStatusCounts;
     campaign.stats = computed.stats;
     campaign.metrics = computed.metrics;
 
     const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
+    const recipientCount = Math.max(campaign.recipientCount || 0, computed.total);
 
-    const registered = await buildRegisteredLocationBreakdown(
-      campaign._id,
-      campaign.recipients || [],
-    );
-    campaign.locationBreakdown = registered.locationBreakdown;
-    campaign.locationBreakdownRows = registered.locationBreakdownRows;
-    if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
-    else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
+    if (recipientCount > LARGE_CAMPAIGN_RECIPIENT_THRESHOLD) {
+      const { buildEngagementTimeSeries } = require('../../../utils/campaignRegisteredLocation');
+      const timeSeries = await buildEngagementTimeSeries(campaign._id);
+      if (timeSeries.length > 0) campaign.timeSeries = timeSeries;
+      else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
+      campaign.locationBreakdownRows = campaign.locationBreakdownRows || [];
+    } else {
+      const registered = await buildRegisteredLocationBreakdown(
+        campaign._id,
+        campaign.recipients || [],
+      );
+      campaign.locationBreakdown = registered.locationBreakdown;
+      campaign.locationBreakdownRows = registered.locationBreakdownRows;
+      if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
+      else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
+    }
 
-    campaign.recipientCount = computed.total;
-    campaign.invalidEmailCount = (campaign.recipients || []).filter((r) => !isValidEmail(r.email)).length;
+    campaign.recipientCount = recipientCount;
+    campaign.invalidEmailCount = computed.recipientStatusCounts.Invalid || 0;
     delete campaign.recipients;
 
     res.json(campaign);

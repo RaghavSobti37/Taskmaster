@@ -13,10 +13,13 @@ const resolveCampaignByParam = async (id, options = {}) => {
   if (!id || id === 'undefined' || id === 'null') return null;
 
   const key = String(id).trim();
-  const { populate = false, lean = false } = options;
+  const { populate = false, lean = false, excludeRecipients = false } = options;
 
   const applyQuery = (query, isLegacy = false) => {
     query = query.setOptions(BYPASS);
+    if (excludeRecipients) {
+      query = query.select('-recipients');
+    }
     if (populate && !isLegacy) {
       query = query.populate('recipients.leadId', 'name email location city phone status artistType')
         .populate('senderProfileId')

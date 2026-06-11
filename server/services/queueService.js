@@ -1,9 +1,6 @@
-const nodemailer = require('nodemailer');
+const mongoose = require('mongoose');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
-const EmailProfile = require('../models/EmailProfile');
-const Lead = require('../models/Lead');
-const MailEvent = require('../models/MailEvent');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
 const logger = require('../utils/logger');
 const { resolveCampaignByParam } = require('../utils/resolveCampaign');
@@ -16,8 +13,14 @@ const {
 } = require('./campaignQueueState');
 const { processEmailJob } = require('./emailProcessor');
 
+const DISPATCH_CHUNK_SIZE = 100;
+const TRIGGER_BATCH_SIZE = 25;
+const MEMORY_SEND_CONCURRENCY = 3;
+const MEMORY_SEND_DELAY_MS = 150;
+
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
+const activeDispatchLoops = new Set();
 
 const removeCampaignJobsFromMemoryQueue = (campaignId) => {
   const id = String(campaignId);
@@ -31,20 +34,180 @@ const removeCampaignJobsFromMemoryQueue = (campaignId) => {
   return removedFromQueue;
 };
 
+const usesMemoryQueue = () =>
+  !process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key';
+
 const processMemoryQueue = async () => {
   if (isProcessingMemoryQueue || memoryQueue.length === 0) return;
   isProcessingMemoryQueue = true;
 
-  while (memoryQueue.length > 0) {
-    const jobData = memoryQueue.shift();
-    try {
-      await processEmailJob(jobData);
-    } catch (err) {
-      logger.error('Memory Queue', 'Job failed', { error: err.message });
+  const worker = async () => {
+    while (memoryQueue.length > 0) {
+      const jobData = memoryQueue.shift();
+      if (!jobData) break;
+      try {
+        await processEmailJob(jobData);
+      } catch (err) {
+        logger.error('Memory Queue', 'Job failed', { error: err.message });
+      }
+      await new Promise((res) => setTimeout(res, MEMORY_SEND_DELAY_MS));
     }
-    await new Promise(res => setTimeout(res, 100));
+  };
+
+  try {
+    await Promise.all(
+      Array.from({ length: MEMORY_SEND_CONCURRENCY }, () => worker()),
+    );
+  } finally {
+    isProcessingMemoryQueue = false;
+    if (memoryQueue.length > 0) {
+      processMemoryQueue().catch((err) => {
+        logger.error('Memory Queue', 'Restart failed', { error: err.message });
+      });
+    }
   }
-  isProcessingMemoryQueue = false;
+};
+
+const countPendingRecipients = async (Model, campaignId) => {
+  const rows = await Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients.status': { $in: ['Pending', 'Queued'] } } },
+    { $count: 'n' },
+  ]);
+  return rows[0]?.n || 0;
+};
+
+const fetchPendingRecipientChunk = async (Model, campaignId, limit = DISPATCH_CHUNK_SIZE) =>
+  Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients.status': 'Pending' } },
+    { $limit: limit },
+    {
+      $project: {
+        recipientId: '$recipients._id',
+        email: '$recipients.email',
+        status: '$recipients.status',
+      },
+    },
+  ]);
+
+const resetStuckQueuedRecipients = async (Model, campaignId) => {
+  await Model.updateOne(
+    { _id: campaignId },
+    { $set: { 'recipients.$[elem].status': 'Pending' } },
+    { arrayFilters: [{ 'elem.status': 'Queued' }] },
+  );
+};
+
+const markRecipientsQueued = async (Model, campaignId, recipientIds) => {
+  if (!recipientIds.length) return;
+  await Model.updateOne(
+    { _id: campaignId },
+    { $set: { 'recipients.$[elem].status': 'Queued' } },
+    { arrayFilters: [{ 'elem._id': { $in: recipientIds }, 'elem.status': 'Pending' }] },
+  );
+};
+
+const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset = 0 }) => {
+  const { triggerEmailCampaign } = require('./triggerService');
+  const campaignId = campaign._id.toString();
+
+  const pendingIds = chunk
+    .filter((row) => row.status === 'Pending')
+    .map((row) => row.recipientId);
+  if (pendingIds.length) {
+    await markRecipientsQueued(Model, campaign._id, pendingIds);
+  }
+
+  const jobDataList = chunk.map((row, i) => ({
+    campaignId,
+    recipientId: row.recipientId.toString(),
+    email: row.email,
+    subject: campaign.subject || campaign.title,
+    content: campaign.content,
+    profileId: campaign.senderProfileId
+      ? (campaign.senderProfileId._id || campaign.senderProfileId).toString()
+      : null,
+    isLegacy,
+    jobIndex: jobOffset + i,
+  }));
+
+  for (let i = 0; i < jobDataList.length; i += TRIGGER_BATCH_SIZE) {
+    const batch = jobDataList.slice(i, i + TRIGGER_BATCH_SIZE);
+    await Promise.all(batch.map(async (jobData) => {
+      const triggered = await triggerEmailCampaign(jobData);
+      if (!triggered) memoryQueue.push(jobData);
+    }));
+  }
+
+  if (usesMemoryQueue()) {
+    processMemoryQueue().catch((err) => {
+      logger.error('Memory Queue', 'Dispatch chunk failed', { error: err.message });
+    });
+  }
+};
+
+const runCampaignDispatchLoop = async (campaignId) => {
+  const id = String(campaignId);
+  if (activeDispatchLoops.has(id)) return;
+  activeDispatchLoops.add(id);
+
+  try {
+    const resolved = await resolveCampaignByParam(campaignId);
+    if (!resolved) return;
+
+    const { campaign, isLegacy, Model } = resolved;
+    if (campaign.status === 'Stopped' || isCampaignStopped(id)) return;
+
+    const meta = await Model.findById(campaign._id)
+      .select('status subject title content senderProfileId senderProfileIds')
+      .populate('senderProfileId')
+      .populate('senderProfileIds')
+      .lean();
+
+    if (!meta || meta.status === 'Stopped' || isCampaignStopped(id)) return;
+
+    let jobOffset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      if (isCampaignStopped(id)) break;
+
+      const freshStatus = await Model.findById(campaign._id).select('status').lean();
+      if (!freshStatus || freshStatus.status === 'Stopped') break;
+
+      const chunk = await fetchPendingRecipientChunk(Model, campaign._id, DISPATCH_CHUNK_SIZE);
+      if (!chunk.length) {
+        hasMore = false;
+        break;
+      }
+
+      await queueRecipientJobs({
+        Model,
+        campaign: meta,
+        isLegacy,
+        chunk,
+        jobOffset,
+      });
+      jobOffset += chunk.length;
+
+      hasMore = chunk.length === DISPATCH_CHUNK_SIZE;
+      if (hasMore) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    }
+
+    const { syncProviderUsageFromEvents } = require('./profileSendStats');
+    syncProviderUsageFromEvents().catch((err) => {
+      logger.warn('Queue Service', 'Post-dispatch usage sync failed', { error: err.message });
+    });
+  } catch (err) {
+    logger.error('Queue Service', `Dispatch loop failed for campaign ${id}`, { error: err.message });
+  } finally {
+    activeDispatchLoops.delete(id);
+  }
 };
 
 const stopCampaign = async (campaignId) => {
@@ -95,71 +258,74 @@ const dispatchCampaignJobs = async (campaignId) => {
     return { success: false, queuedCount: 0, message: 'Campaign is a draft — dispatch explicitly to send' };
   }
 
-  campaign.status = 'Sending';
-  await campaign.save();
-  clearCampaignStopped(campaign._id.toString());
-
-  let recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
-  if (recipients.length === 0) {
-    return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
-  }
-
-  const invalidRecipients = recipients.filter((r) => !isValidEmail(r.email));
+  const invalidRecipients = (campaign.recipients || []).filter(
+    (r) => (r.status === 'Pending' || r.status === 'Queued') && !isValidEmail(r.email),
+  );
   if (invalidRecipients.length > 0) {
     for (const rec of invalidRecipients) {
       rec.status = 'Invalid';
       rec.error = 'Invalid email address';
     }
     await campaign.save();
-    recipients = recipients.filter((r) => isValidEmail(r.email));
-    if (recipients.length === 0) {
-      return { success: true, queuedCount: 0, message: 'No valid recipients to queue' };
-    }
   }
 
-  const { triggerEmailCampaign } = require('./triggerService');
-  
-  for (const rec of recipients) {
-    rec.status = 'Queued';
+  const pendingCount = await countPendingRecipients(Model, campaign._id);
+  if (pendingCount === 0) {
+    return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
   }
+
+  campaign.status = 'Sending';
   await campaign.save();
+  clearCampaignStopped(campaign._id.toString());
 
-  const jobDataList = recipients.map((rec, i) => ({
-    campaignId: campaign._id.toString(),
-    recipientId: rec._id.toString(),
-    email: rec.email,
-    subject: campaign.subject || campaign.title,
-    content: campaign.content,
-    profileId: campaign.senderProfileId ? campaign.senderProfileId.toString() : null,
-    isLegacy,
-    jobIndex: i,
-  }));
-
-  const BATCH_SIZE = 25;
-  for (let i = 0; i < jobDataList.length; i += BATCH_SIZE) {
-    const batch = jobDataList.slice(i, i + BATCH_SIZE);
-    await Promise.all(batch.map(async (jobData) => {
-      const triggered = await triggerEmailCampaign(jobData);
-      if (!triggered) memoryQueue.push(jobData);
-    }));
-  }
-
-  if (!process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key') {
-    processMemoryQueue();
-  }
-
-  const { syncProviderUsageFromEvents } = require('./profileSendStats');
-  syncProviderUsageFromEvents().catch((err) => {
-    logger.warn('Queue Service', 'Post-dispatch usage sync failed', { error: err.message });
+  setImmediate(() => {
+    runCampaignDispatchLoop(campaign._id).catch((err) => {
+      logger.error('Queue Service', 'Background dispatch failed', { error: err.message });
+    });
   });
 
-  return { success: true, queuedCount: recipients.length };
+  return {
+    success: true,
+    queuedCount: pendingCount,
+    message: 'Dispatch started — emails send in background batches',
+    async: true,
+  };
+};
+
+const resumeStuckCampaigns = async () => {
+  if (process.env.NODE_ENV === 'test') return { resumed: 0 };
+
+  const filter = { status: { $in: ['Sending', 'Queued'] } };
+  let resumed = 0;
+
+  const resumeForModel = async (Model) => {
+    const stuck = await Model.find(filter).select('_id title').lean();
+    for (const camp of stuck) {
+      const pending = await countPendingRecipients(Model, camp._id);
+      if (pending > 0) {
+        await resetStuckQueuedRecipients(Model, camp._id);
+        logger.info('Queue Service', `Resuming stuck campaign dispatch: ${camp.title || camp._id}`);
+        runCampaignDispatchLoop(camp._id).catch((err) => {
+          logger.error('Queue Service', 'Resume dispatch failed', { error: err.message });
+        });
+        resumed += 1;
+      }
+    }
+  };
+
+  await resumeForModel(Campaign);
+  await resumeForModel(MailCampaign);
+
+  return { resumed };
 };
 
 /** Wait for in-memory fallback queue to finish (tests / graceful shutdown). */
-const drainMemoryQueue = async (timeoutMs = 5000) => {
+const drainMemoryQueue = async (timeoutMs = 30000) => {
   const deadline = Date.now() + timeoutMs;
-  while ((memoryQueue.length > 0 || isProcessingMemoryQueue) && Date.now() < deadline) {
+  while (
+    (memoryQueue.length > 0 || isProcessingMemoryQueue || activeDispatchLoops.size > 0)
+    && Date.now() < deadline
+  ) {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   memoryQueue.length = 0;
@@ -172,4 +338,6 @@ module.exports = {
   processEmailJob,
   drainMemoryQueue,
   isCampaignStopped,
+  resumeStuckCampaigns,
+  runCampaignDispatchLoop,
 };

@@ -109,6 +109,13 @@ function onServerListening() {
   const { bootstrapBackgroundJobs } = require('../jobs/bootstrap');
   jobsBootstrapResult = bootstrapBackgroundJobs();
 
+  setTimeout(() => {
+    const { resumeStuckCampaigns } = require('../services/queueService');
+    resumeStuckCampaigns().catch((err) => {
+      console.warn('[WARN] Campaign dispatch resume failed:', err.message);
+    });
+  }, 5000);
+
   const { configureWebPush } = require('../services/pushNotificationService');
   configureWebPush();
 

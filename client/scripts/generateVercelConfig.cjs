@@ -133,8 +133,19 @@ const payload = {
 };
 
 const targets = [path.join(REPO_ROOT, 'vercel.json'), path.join(CLIENT_ROOT, 'vercel.json')];
+const payloadText = `${JSON.stringify(payload, null, 2)}\n`;
 for (const file of targets) {
-  fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  let existing = '';
+  try {
+    existing = fs.readFileSync(file, 'utf8');
+  } catch {
+    /* new file */
+  }
+  if (existing === payloadText) {
+    console.log(`[generateVercelConfig] unchanged ${path.relative(REPO_ROOT, file)}`);
+    continue;
+  }
+  fs.writeFileSync(file, payloadText, 'utf8');
   console.log(`[generateVercelConfig] wrote ${path.relative(REPO_ROOT, file)}`);
 }
 

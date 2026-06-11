@@ -12,6 +12,8 @@ const brandIconAssets = fs.existsSync(iconsDir)
   ? fs.readdirSync(iconsDir).filter((f) => /\.(png|json)$/i.test(f)).map((f) => `icons/${f}`)
   : []
 const agentationStub = path.resolve(__dirname, 'src/components/dev/agentationStub.js')
+// Repo lives under OneDrive on this machine — sync retouches mtimes on src/ and public/ after every save.
+const isOneDriveWorkspace = /OneDrive/i.test(__dirname)
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -54,12 +56,16 @@ export default defineConfig(({ mode }) => {
         type: 'module'
       }
     }),
-    visualizer({
-      filename: 'dist/bundle-analysis.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    }),
+    ...(mode === 'production'
+      ? [
+          visualizer({
+            filename: 'dist/bundle-analysis.html',
+            open: false,
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
@@ -69,18 +75,25 @@ export default defineConfig(({ mode }) => {
     },
   },
   server: {
-    // OneDrive on Windows rewrites mtimes on synced static/config files → spurious full reloads.
+    // OneDrive on Windows rewrites mtimes on synced files (public/ and src/) → spurious full reloads.
     watch: {
+      // Collapse OneDrive double-touch / sync churn into a single reload per real save.
+      awaitWriteFinish: {
+        stabilityThreshold: isOneDriveWorkspace ? 750 : 200,
+        pollInterval: 100,
+      },
       ignored: [
         '**/vercel.json',
         '**/vercel.json.example',
         '**/public/icons/**',
         '**/public/manifest.json',
+        '**/public/favicon.ico',
         '**/public/safari-pinned-tab.svg',
         '**/.cursor/**',
         '**/.specify/**',
         '**/docs/**',
         '**/dist/**',
+        '**/bundle-analysis.html',
       ],
     },
     proxy: {

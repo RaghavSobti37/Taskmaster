@@ -436,10 +436,16 @@ exports.getNavbarPreferences = async (req, res, next) => {
     let preferences = await NavbarPreference.findOne({ userId });
 
     if (!preferences) {
-      preferences = await NavbarPreference.create({
-        userId,
-        groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS
-      });
+      try {
+        preferences = await NavbarPreference.create({
+          userId,
+          groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS,
+        });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        preferences = await NavbarPreference.findOne({ userId });
+        if (!preferences) throw error;
+      }
     } else if (preferences.pageOrder && !preferences.groups?.length) {
       preferences = await NavbarPreference.findOneAndUpdate(
         { userId },
@@ -607,7 +613,13 @@ exports.getShortcutPreferences = async (req, res, next) => {
     let doc = await ShortcutPreference.findOne({ userId });
 
     if (!doc) {
-      doc = await ShortcutPreference.create({ userId, bindings: {} });
+      try {
+        doc = await ShortcutPreference.create({ userId, bindings: {} });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        doc = await ShortcutPreference.findOne({ userId });
+        if (!doc) throw error;
+      }
     }
 
     const overrides = doc.bindings || {};

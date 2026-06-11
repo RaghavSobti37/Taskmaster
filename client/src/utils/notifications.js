@@ -141,15 +141,14 @@ export const resolveNotificationDeliveryMode = async () => {
 
 export const registerServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) return null;
+  // VitePWA devOptions.enabled is false — /dev-sw.js would 404 to index.html (text/html MIME).
+  if (import.meta.env?.DEV) return null;
   try {
-    const isDev = import.meta.env?.DEV || false;
-    const swUrl = isDev ? '/dev-sw.js?dev-sw' : '/sw.js';
-    return await navigator.serviceWorker.register(swUrl, {
+    return await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
-      type: isDev ? 'module' : 'classic',
+      type: 'classic',
     });
   } catch (err) {
-    if (import.meta.env?.DEV) return null;
     console.error('SW registration failed', err);
     return null;
   }

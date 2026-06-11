@@ -77,10 +77,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [logWorkspaceFilter, setLogWorkspaceFilter] = useState('all');
   const [logProjectFilter, setLogProjectFilter] = useState('all');
 
-  const requestedUserId = adminViewUserId || searchParams.get('user');
-  const targetUserId = (requestedUserId && (adminViewUserId || isAdminUser(user)))
-    ? requestedUserId
-    : user?._id;
+  const targetUserId = adminViewUserId || user?._id;
 
   const logDateRange = useMemo(() => ({
     startDate: startOfDay(selectedDate).toISOString(),
@@ -94,7 +91,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     isError: logsError,
     error: logsErr,
     refetch: refetchLogs,
-  } = useLogs(targetUserId, { limit: 500, ...logDateRange });
+  } = useLogs(targetUserId, { limit: 500, ...logDateRange }, Boolean(targetUserId));
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });

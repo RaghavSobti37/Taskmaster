@@ -91,12 +91,16 @@ router.get('/', async (req, res) => {
     const isAdmin = isAdminUser(req.user);
     const selfId = req.user._id.toString();
 
-    if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
+    if (userId === 'all') {
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Not authorized to view all logs' });
+      }
+    } else if (userId && userId !== 'undefined' && userId !== 'null') {
       if (!isAdmin && userId !== selfId) {
         return res.status(403).json({ error: 'Not authorized to view other users\' logs' });
       }
       filter.$or = [{ userId }, { actorId: userId }];
-    } else if (!isAdmin) {
+    } else {
       filter.$or = [{ userId: req.user._id }, { actorId: req.user._id }];
     }
     if (action) filter.action = action;

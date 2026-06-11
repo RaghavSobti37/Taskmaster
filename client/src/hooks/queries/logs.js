@@ -23,10 +23,12 @@ export const useLogs = (userId, options = {}, enabled = true) => {
     });
   }, [queryClient]);
 
+  const canFetch = userId === 'all' || Boolean(userId);
+
   return useQuery({
     queryKey: ['logs', userId, limit, startDate, endDate],
     queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, { limit, startDate, endDate }),
-    enabled,
+    enabled: enabled && canFetch,
     placeholderData: keepPreviousData,
   });
 };

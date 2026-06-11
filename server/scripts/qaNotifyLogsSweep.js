@@ -176,10 +176,15 @@ async function main() {
     if (salesOther.status === 403) pass('3-log-scope-user', 'Non-admin blocked from other user logs');
     else fail('3-log-scope-user', 'Non-admin can query other user logs', `status=${salesOther.status}`);
 
-    const adminLogs = await authReq(adminUser).get('/api/logs?limit=50');
-    const adminSeesSales = (adminLogs.body || []).some((l) => l.details?.title === logTitle);
-    if (adminSeesSales) pass('3-log-admin-all', 'Admin sees all daily logs including sales entry');
-    else fail('3-log-admin-all', 'Admin cannot see sales daily log in unfiltered list');
+    const adminSelfLogs = await authReq(adminUser).get('/api/logs?limit=50');
+    const adminSeesSalesInSelf = (adminSelfLogs.body || []).some((l) => l.details?.title === logTitle);
+    if (!adminSeesSalesInSelf) pass('3-log-admin-self', 'Admin default logs list is scoped to self only');
+    else fail('3-log-admin-self', 'Admin default logs list includes other users');
+
+    const adminAllLogs = await authReq(adminUser).get('/api/logs?userId=all&limit=50');
+    const adminSeesSalesInAll = (adminAllLogs.body || []).some((l) => l.details?.title === logTitle);
+    if (adminSeesSalesInAll) pass('3-log-admin-all', 'Admin sees all daily logs with userId=all');
+    else fail('3-log-admin-all', 'Admin cannot see sales daily log with userId=all');
   } else {
     fail('3-log-create', 'Daily log create failed', JSON.stringify(createLog.body));
   }

@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-06-11 - Artist Workspace phases 4-7 + overview
+
+- **Overview:** Shared `ArtistOverviewPanel` on Artist OS command center and workspace home (KPI strip, alerts, quick links).
+- **Phase 4:** Content hub assets + release tracker CRUD (`ArtistContentTab`, `ArtistReleasesTab`, `ArtistReleaseCampaign` / `ArtistAsset` APIs).
+- **Phase 5:** Booking pipeline widgets (`ArtistBookingsTab`, inquiries) + finance tab summaries (`ArtistFinanceEntry`).
+- **Phase 6:** Portfolio dashboard KPIs, rankings, alerts (`PortfolioDashboard` + `artistOsService` portfolio endpoints).
+- **Phase 7:** Public profile polish (`ArtistPublicProfile`) + slug editor in workspace settings.
+- **Tests:** `server/tests/artistWorkspace.test.js`; updates to `artistPortfolioPublic`, `artistRouteAccess`, `artistOs` suites.
+- **Verify:** `npm test --prefix server -- artistWorkspace artistPortfolioPublic artistRouteAccess artistOs`; `npm run audit:exposure`; `npm run audit:deadcode`
+
+---
 ## 2026-06-11 — Connection hub socials RBAC alignment
 
 - **Gap:** `tracked-video` + `setPrimaryConnection` used `artistOrAdmin`; hub/sync used `artistMembershipAccess('socials')`

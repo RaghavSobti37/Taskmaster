@@ -16,7 +16,7 @@
 
 ## Server tests (39 files)
 
-Key suites: `auth.test.js`, `authMobileLogin.test.js`, `api.integration.test.js`, `emailFlow.integration.test.js`, `trackingUrls.test.js`, `campaignRegisteredLocation.test.js`, `taskReview.test.js`, `attendanceMetrics.test.js`, `gamificationService.test.js`, `supabaseSecondary.test.js`
+Key suites: `auth.test.js`, `artistWorkspace.test.js`, `artistPortfolioPublic.test.js`, `artistRouteAccess.test.js`, `artistOs.test.js`, `authMobileLogin.test.js`, `api.integration.test.js`, `emailFlow.integration.test.js`, `trackingUrls.test.js`, `campaignRegisteredLocation.test.js`, `taskReview.test.js`, `attendanceMetrics.test.js`, `gamificationService.test.js`, `supabaseSecondary.test.js`
 
 CI uses **MongoDB Memory Server** — no local `mongod` required.
 

@@ -109,9 +109,15 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 ## Artist Workspace (membership layer)
 
 - Dedicated shell at `/artist-workspace/:id/*` — home, team, bookings, releases, settings tabs
+- Shared `ArtistOverviewPanel` (OS command center + workspace home): KPIs, alerts, deep links into tabs
+- **Phase 4:** Content hub + release tracker CRUD (`ArtistContentTab`, `ArtistReleasesTab`, `ArtistAsset`, `ArtistReleaseCampaign`)
+- **Phase 5:** Booking pipeline (`ArtistBookingsTab`, inquiries) + finance widgets (`ArtistFinanceTab`, `ArtistFinanceEntry`)
+- **Phase 6:** Portfolio dashboard KPIs/rankings/alerts (`PortfolioDashboard`, portfolio API on `artistOsService`)
+- **Phase 7:** Public profile polish (`ArtistPublicProfile`) + slug editor (`ArtistWorkspaceSettings`)
 - `ArtistMembership` roles + invite flow; `ArtistMembershipRoute` + `artistMemberPermissions.js`
 - Accept invite: `/artist-workspace/:id/accept`; claim banner routes claimed artists into workspace
-- Server: artistMembershipService, artistWorkspaceService, connectionHubService
+- Server: `artistMembershipService`, `artistWorkspaceService`, `artistWorkspaceController`, `connectionHubService`
+- Tests: `server/tests/artistWorkspace.test.js` (+ portfolio public, route access, artist OS)
 
 
 ---

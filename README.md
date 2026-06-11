@@ -105,10 +105,11 @@ avPageAccess, pagePermissions) |
 | **Error UX** | QueryErrorBanner on data-heavy screens for consistent TanStack Query failure + retry messaging |
 | **CRM** | Lock parity and scoped delete for sales workflows; legacy leads without crmType visible to reps |
 | **Tenant hardening** | Partial tenant isolation improvements on sensitive paths (ongoing ? see .specify/memory/auth/security.md) |
-| **Artist Workspace Layer** | Membership roles + invite/accept; `/artist-workspace/:id` shell (team, bookings, releases); ConnectionProvider hub + ConnectionsCenter; portfolio + public profile stubs; Vite OneDrive watch ignore |
-| **Artist OS** | Artist workspace tabs (command center, documents, finance, gigs, etc.), React Query loaders, team access helpers |
+| **Artist Workspace (phases 4-7)** | Shared ArtistOverviewPanel on OS command center + workspace home; **Phase 4** content hub + release tracker CRUD; **Phase 5** booking pipeline + finance widgets; **Phase 6** portfolio KPIs/rankings/alerts; **Phase 7** public profile polish + slug editor in settings; membership RBAC unchanged |
+| **Artist OS** | Tabs (command center, content, finance, inquiries, etc.), React Query in rtistOs.js, shared overview panel, team access helpers |
 | **Assets & nav** | Assets hub React Query patterns; bottom nav / outlet sidebar respect department page permissions |
-| **Tests** | Client Vitest for auth gate, query defaults, artist OS shell, session merge; server coverage for permission gates || **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings ? Profile |
+| **Tests** | Client Vitest for auth gate, query defaults, artist OS shell, session merge; server rtistWorkspace.test.js, portfolio public, and route access suites |
+| **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings ? Profile |
 | **Finance** | Document tables migrated to shared `DataTable`; OCR upload state badges; unsaved-changes bar on edits |
 | **Tasks & gamification** | `TaskReviewActions` component; in-review approve CTA; leaderboard shows XP gap to next rank |
 | **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard; spotlight onboarding tour |

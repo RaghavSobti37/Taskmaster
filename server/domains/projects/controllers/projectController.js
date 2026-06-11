@@ -20,6 +20,7 @@ const { normalizeStoredProjectRole } = require('../../../../shared/projectRoles'
 const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const taskProjectQueryService = require('../../tasks/services/taskProjectQueryService');
 const auditService = require('../../crm/services/auditService');
+const { getTenantId } = require('../../../utils/tenantContext');
 
 function buildTaskCountMap(taskCounts) {
   return taskCounts.reduce((acc, curr) => {
@@ -107,6 +108,57 @@ const sortWorkspacesForUser = (workspaces, userOrder) => {
   return [...result, ...remainder].map((w, idx) => ({ ...w, order: idx }));
 };
 
+async function findWorkspacePreferenceForUser(userId) {
+  const pref = await WorkspacePreference.findOne({ userId }).lean();
+  if (pref) return pref;
+
+  const tenantId = getTenantId();
+  if (!tenantId) return null;
+
+  return WorkspacePreference.findOne({
+    userId,
+    $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
+  })
+    .setOptions({ bypassTenant: true })
+    .lean();
+}
+
+async function upsertWorkspacePreferenceOrder(userId, order) {
+  const tenantId = getTenantId();
+  const update = { order, updatedAt: new Date() };
+
+  const existing = await WorkspacePreference.findOneAndUpdate(
+    { userId },
+    { $set: update },
+    { new: true }
+  );
+  if (existing) return existing;
+
+  if (tenantId) {
+    const legacy = await WorkspacePreference.findOneAndUpdate(
+      { userId, $or: [{ tenantId: { $exists: false } }, { tenantId: null }] },
+      { $set: { ...update, tenantId } },
+      { new: true }
+    ).setOptions({ bypassTenant: true });
+    if (legacy) return legacy;
+
+    return WorkspacePreference.findOneAndUpdate(
+      { userId },
+      {
+        $set: update,
+        $setOnInsert: { userId, tenantId },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  return WorkspacePreference.findOneAndUpdate(
+    { userId },
+    { $set: update, $setOnInsert: { userId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+}
+
 async function getSortedWorkspacesForUser(userId) {
   let workspaces = await Workspace.find().lean();
   if (workspaces.length === 0) {
@@ -121,7 +173,7 @@ async function getSortedWorkspacesForUser(userId) {
     workspaces = await Workspace.find().lean();
   }
 
-  const pref = await WorkspacePreference.findOne({ userId }).lean();
+  const pref = await findWorkspacePreferenceForUser(userId);
   return sortWorkspacesForUser(workspaces, pref?.order);
 }
 
@@ -613,11 +665,7 @@ exports.reorderWorkspaces = async (req, res) => {
       if (!savedOrder.includes(name)) savedOrder.push(name);
     }
 
-    await WorkspacePreference.findOneAndUpdate(
-      { userId: req.user._id },
-      { order: savedOrder, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
+    await upsertWorkspacePreferenceOrder(req.user._id, savedOrder);
 
     let workspaces = await getSortedWorkspacesForUser(req.user._id);
     workspaces = await filterWorkspacesForUser(req.user, workspaces);

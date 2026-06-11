@@ -20,9 +20,9 @@ describe('emails page access', () => {
     expect(hasPageAccess({ departmentId: { slug: 'sales', pagePermissions: [] } }, 'emails')).toBe(true);
   });
 
-  test('custom pagePermissions without emails denies access', () => {
+  test('any authenticated user can access emails (template studio)', () => {
     expect(
       hasPageAccess({ departmentId: { slug: 'sales', pagePermissions: ['dashboard'] } }, 'emails')
-    ).toBe(false);
+    ).toBe(true);
   });
 });

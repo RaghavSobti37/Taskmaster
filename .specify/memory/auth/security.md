@@ -54,13 +54,22 @@
 ### Page permission gates (Jun 2026)
 
 - Department pagePermissions enforced on server for mail, admin console, workspace, CRM, API proxy paths, and related modules
-- Client: pagePermissions.js, departmentPermissions.js, 
-avPageAccess.js, ProtectedRoute
+- Client: `pagePermissions.js`, `navPageAccess.js`, `ProtectedRoute`, `PageRoute`
 - Admin UI: PagePermissionsEditor on department records
+- **`emails` page key:** any authenticated user may use mail template studio + `/emails` hub (Jun 2026 regression fix — client + server `hasPageAccess`)
+
+### Artist workspace membership (Jun 2026)
+
+- FE: `/artist-workspace/:id` gated by `ArtistMembershipRoute` (accepted membership or artist manager)
+- API: `artistMembershipAccess(permission)` — admins bypass; members checked via `ArtistMembership` roles
+- Connection hub, sync, primary connection, tracked-video: `artistMembershipAccess('socials')`
+- Finance OS tabs: `artistMembershipAccess('finance')`
+- Team invite/manage: `artistMembershipAccess('team')`
+- Public routes (no auth): `/artist/:slug`, `/preview/artist/:id/*`, share claim via token
 
 ### Tenant hardening (partial)
 
-- Continued 	enantPlugin + explicit 	enantId checks on sensitive mutations; not all collections fully audited yet
+- Continued tenantPlugin + explicit tenantId checks on sensitive mutations; not all collections fully audited yet
 
 ### Platform roles
 

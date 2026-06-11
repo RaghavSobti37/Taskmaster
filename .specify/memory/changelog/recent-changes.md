@@ -230,3 +230,12 @@
 - Login gated on `/api/auth/me`
 - `/socket.io` Vercel rewrite
 - Local dev always uses Vite proxy
+
+---
+
+## 2026-06-11 — Repo hygiene
+
+- Removed \server/node_modules\ from git tracking (keep local \
+pm install\ in \server/\)
+- Data Hub campaign audience include/exclude filters already on \main\ (49d26fb4)
+

@@ -71,3 +71,4 @@ docs/workspaces_projects.txt
 .fallow/
 .vercel
 nestjs-server/generated/
+nestjs-server/dist/

@@ -5,6 +5,7 @@
 - Repo path under OneDrive: expect mtime churn — use committed `client/vite.config.js` watch tuning; do not register service workers in Vite dev
 - Production API/frontend hosts: placeholders in docs; real URLs only in gitignored `.cursor/production-hosts.local.json`
 - Root brand files (TSC_BrandBook.pdf, tscacademy_logo.png) are gitignored local references - not part of the CoreKnot client build
+- Server `cookie` dep pinned to `^0.7.2` (CJS `index.js`) — avoids broken `cookie@1.x` `dist/` installs on OneDrive-synced clones
 
 ## Pre-push audits (required)
 

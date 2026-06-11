@@ -250,3 +250,18 @@ export const useDeleteMailTemplate = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] }),
   });
 };
+
+export const useCampaignExlyOfferings = (options = {}) => useQuery({
+  queryKey: ['mail', 'audience', 'exly', 'offerings'],
+  queryFn: async () => (await axios.get('/api/mail/audience/exly/offerings')).data,
+  enabled: options.enabled !== false,
+  staleTime: 1000 * 60 * 10,
+});
+
+export const useCampaignExlyAudience = (params = {}, options = {}) => useQuery({
+  queryKey: ['mail', 'audience', 'exly', params],
+  queryFn: async () => (await axios.get('/api/mail/audience/exly', { params })).data,
+  enabled: options.enabled ?? false,
+  staleTime: 1000 * 60 * 2,
+  placeholderData: keepPreviousData,
+});

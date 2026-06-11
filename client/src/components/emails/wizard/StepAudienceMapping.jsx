@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import {
-  Upload, RefreshCw, Users, Sheet, UserPlus, AlertCircle, Check, CheckCircle2,
+  Upload, RefreshCw, Users, Sheet, UserPlus, AlertCircle, Check, CheckCircle2, ShoppingBag,
 } from 'lucide-react';
-import { Button, Input, Badge, DataTable, TabSwitcher } from '../../ui';
+import { Button, Input, Badge, DataTable, TabSwitcher, NexusDropdown } from '../../ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isAdminUser } from '../../../utils/departmentPermissions';
+import { useCRMConfig } from '../../../hooks/queries/crm';
+import { useCampaignExlyOfferings } from '../../../hooks/queries/mail';
 
 const ALL_SOURCE_TILES = [
   { id: 'csv', label: 'CSV Upload', icon: Upload },
   { id: 'holysheet', label: 'HolySheet', icon: Sheet, adminOnly: true },
   { id: 'crm', label: 'CRM', icon: Users },
+  { id: 'exly', label: 'Exly', icon: ShoppingBag },
   { id: 'manual', label: 'Manual', icon: UserPlus },
 ];
 
@@ -29,6 +32,10 @@ export default function StepAudienceMapping({
     [showHolySheet],
   );
 
+  const exlyOfferingsQuery = useCampaignExlyOfferings({
+    enabled: audience.audienceSource === 'exly',
+  });
+
   useEffect(() => {
     if (!showHolySheet && audience.audienceSource === 'holysheet') {
       audience.setAudienceSource('csv');
@@ -37,11 +44,48 @@ export default function StepAudienceMapping({
 
   const selectedTemplate = useMemo(
     () => approvedTemplates.find((t) => String(t._id) === String(mailTemplateId)),
-    [approvedTemplates, mailTemplateId]
+    [approvedTemplates, mailTemplateId],
   );
 
   const previewRows = (audience.previewRecipients || []).slice(0, 5);
   const dummyValues = selectedTemplate?.dummyValues || {};
+
+  const { data: crmConfig } = useCRMConfig();
+  const leadStatusesList = crmConfig?.leadStatuses || [
+    'New', 'Fresh', 'Cold', 'Warm', 'Hot', 'Interested', 'Not Interested',
+    'Followup', 'Contacted', 'Converted', 'Lost',
+  ];
+  const leadStatusOptions = useMemo(
+    () => [{ value: 'all', label: 'All statuses' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))],
+    [leadStatusesList],
+  );
+  const exlyOfferingOptions = useMemo(
+    () => (exlyOfferingsQuery.data?.offerings || []).map((o) => ({
+      value: o.offeringId,
+      label: o.title || o.offeringId,
+    })).filter((o) => o.value),
+    [exlyOfferingsQuery.data?.offerings],
+  );
+  const artistProjectOptions = [
+    { value: 'all', label: 'All artists' },
+    { value: 'YUGM', label: 'YUGM' },
+    { value: 'Harshad Duhita', label: 'Harshad Duhita' },
+    { value: 'shared', label: 'Shared event DB' },
+  ];
+  const contactCategoryOptions = [
+    { value: 'all', label: 'All categories' },
+    { value: 'press_media', label: 'Press / media' },
+    { value: 'event_organizer', label: 'Event organizer' },
+    { value: 'event_database', label: 'Event database' },
+  ];
+
+  const isExlySource = audience.audienceSource === 'exly';
+  const loadedCount = isExlySource
+    ? (audience.allExlyContacts?.length ?? 0)
+    : (audience.allContacts?.length ?? 0);
+  const filteredCount = audience.displayContacts?.length ?? 0;
+  const selectedIds = isExlySource ? audience.selectedExlyIds : audience.selectedLeadIds;
+  const setSelectedIds = isExlySource ? audience.setSelectedExlyIds : audience.setSelectedLeadIds;
 
   const setMapping = (idx, col) => {
     setValue('variableMapping', { ...variableMapping, [idx]: col }, { shouldValidate: true });
@@ -49,7 +93,7 @@ export default function StepAudienceMapping({
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className={`grid gap-3 ${sourceTiles.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'}`}>
+      <div className={`grid gap-3 ${sourceTiles.length >= 5 ? 'grid-cols-2 md:grid-cols-5' : sourceTiles.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'}`}>
         {sourceTiles.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -119,6 +163,7 @@ export default function StepAudienceMapping({
               activeTab={audience.crmSegment || 'sales'}
               onChange={(seg) => {
                 audience.setCrmSegment?.(seg);
+                audience.setLeadStatusFilter?.('all');
                 audience.loadCrmContactsData?.(seg);
               }}
               tabs={[
@@ -126,102 +171,99 @@ export default function StepAudienceMapping({
                 { id: 'artist', label: 'Artist CRM' },
               ]}
             />
-            <Button size="sm" variant="secondary" onClick={() => audience.loadCrmContactsData(audience.crmSegment)} disabled={audience.contactsLoading}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => audience.loadCrmContactsData(audience.crmSegment)}
+              disabled={audience.contactsLoading}
+            >
               <RefreshCw size={12} className={audience.contactsLoading ? 'animate-spin' : ''} /> Load CRM
             </Button>
-            {audience.crmSegment !== 'artist' && (
-              <Button size="sm" variant="secondary" onClick={audience.loadExlyContactsData} disabled={audience.exlyContactsLoading}>
-                <RefreshCw size={12} className={audience.exlyContactsLoading ? 'animate-spin' : ''} /> Load Exly
-              </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <NexusDropdown
+              label="Interest / status"
+              placeholder="All statuses"
+              options={leadStatusOptions}
+              value={audience.leadStatusFilter || 'all'}
+              onChange={(v) => audience.setLeadStatusFilter?.(v)}
+            />
+            {audience.crmSegment === 'artist' && (
+              <>
+                <NexusDropdown
+                  label="Project"
+                  placeholder="All artists"
+                  options={artistProjectOptions}
+                  value={audience.artistProjectFilter || 'all'}
+                  onChange={(v) => audience.setArtistProjectFilter?.(v)}
+                />
+                <NexusDropdown
+                  label="Category"
+                  placeholder="All categories"
+                  options={contactCategoryOptions}
+                  value={audience.contactCategoryFilter || 'all'}
+                  onChange={(v) => audience.setContactCategoryFilter?.(v)}
+                />
+              </>
             )}
           </div>
-          {audience.crmSegment === 'artist' && (
-            <div className="flex flex-wrap gap-2">
-              <select
-                className="text-xs rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-2 py-1"
-                value={audience.artistProjectFilter || 'all'}
-                onChange={(e) => audience.setArtistProjectFilter?.(e.target.value)}
-              >
-                <option value="all">All artists</option>
-                <option value="YUGM">YUGM</option>
-                <option value="Harshad Duhita">Harshad Duhita</option>
-                <option value="shared">Shared event DB</option>
-              </select>
-              <select
-                className="text-xs rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-2 py-1"
-                value={audience.contactCategoryFilter || 'all'}
-                onChange={(e) => audience.setContactCategoryFilter?.(e.target.value)}
-              >
-                <option value="all">All categories</option>
-                <option value="press_media">Press / media</option>
-                <option value="event_organizer">Event organizer</option>
-                <option value="event_database">Event database</option>
-              </select>
-            </div>
+
+          {loadedCount > 0 && (
+            <AudienceContactTable
+              audience={audience}
+              isExlySource={false}
+              filteredCount={filteredCount}
+              loadedCount={loadedCount}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+            />
           )}
-          {((audience.allContacts?.length ?? 0) > 0 || (audience.allExlyContacts?.length ?? 0) > 0) && (
-            <>
-              <div className="flex flex-wrap gap-3 items-center">
-                <TabSwitcher
-                  activeTab={audience.activeTab}
-                  onChange={audience.setActiveTab}
-                  tabs={[{ id: 'all', label: 'All' }, { id: 'fresh', label: 'Fresh' }, { id: 'contacted', label: 'In Progress' }]}
-                />
-                <Input
-                  placeholder="Search..."
-                  value={audience.searchTerm}
-                  onChange={(e) => audience.setSearchTerm(e.target.value)}
-                  className="flex-1 min-w-[180px]"
-                />
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={() => {
-                    const ids = [...audience.filteredContacts, ...audience.filteredExlyContacts].map((l) => l._id);
-                    audience.setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...ids])));
-                  }}
-                >
-                  Select filtered
-                </Button>
-              </div>
-              <DataTable
-                columns={[
-                  {
-                    header: '',
-                    render: (row) => {
-                      const isSel = audience.selectedLeadIds.includes(row._id);
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isSel) audience.setSelectedLeadIds((prev) => prev.filter((id) => id !== row._id));
-                            else audience.setSelectedLeadIds((prev) => [...prev, row._id]);
-                          }}
-                          className={`w-4 h-4 rounded border flex items-center justify-center ${isSel ? 'bg-[var(--color-action-primary)] border-[var(--color-action-primary)] text-white' : 'border-[var(--color-bg-border)]'}`}
-                        >
-                          {isSel && <Check size={10} />}
-                        </button>
-                      );
-                    },
-                  },
-                  { header: 'Name', render: (row) => <span className="text-xs font-medium">{row.name || '—'}</span> },
-                  { header: 'Email', render: (row) => <span className="text-xs font-mono text-[var(--color-text-muted)]">{row.email}</span> },
-                  {
-                    header: 'Email status',
-                    render: (row) => (
-                      <Badge
-                        variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Invalid' ? 'rose' : 'slate'}
-                        className="text-[9px]"
-                      >
-                        {row.emailStatus || 'Pending'}
-                      </Badge>
-                    ),
-                  },
-                  { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> },
-                ]}
-                data={[...audience.filteredContacts, ...audience.filteredExlyContacts].slice(0, 50)}
-              />
-            </>
+        </div>
+      )}
+
+      {audience.audienceSource === 'exly' && (
+        <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={audience.loadExlyContactsData}
+              disabled={audience.exlyContactsLoading}
+            >
+              <RefreshCw size={12} className={audience.exlyContactsLoading ? 'animate-spin' : ''} /> Load Exly
+            </Button>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              Bookings from Exly Data Hub inlet
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <NexusDropdown
+              label="Exly offerings"
+              placeholder="All offerings"
+              options={exlyOfferingOptions}
+              value={audience.exlyOfferingIdsFilter || []}
+              onChange={(v) => audience.setExlyOfferingIdsFilter?.(v)}
+              multi
+              searchable
+            />
+            <NexusDropdown
+              label="Interest / status"
+              placeholder="All statuses"
+              options={leadStatusOptions}
+              value={audience.exlyLeadStatusFilter || 'all'}
+              onChange={(v) => audience.setExlyLeadStatusFilter?.(v)}
+            />
+          </div>
+
+          {loadedCount > 0 && (
+            <AudienceContactTable
+              audience={audience}
+              isExlySource
+              filteredCount={filteredCount}
+              loadedCount={loadedCount}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+            />
           )}
         </div>
       )}
@@ -314,6 +356,103 @@ export default function StepAudienceMapping({
         </div>
       )}
     </div>
+  );
+}
+
+function AudienceContactTable({
+  audience,
+  isExlySource,
+  filteredCount,
+  loadedCount,
+  selectedIds,
+  setSelectedIds,
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          placeholder="Search..."
+          value={audience.searchTerm}
+          onChange={(e) => audience.setSearchTerm(e.target.value)}
+          className="flex-1 min-w-[180px]"
+        />
+        <span className="text-[10px] font-bold text-[var(--color-text-muted)]">
+          {filteredCount} of {loadedCount} loaded
+        </span>
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={() => {
+            const ids = (audience.displayContacts || []).map((l) => l._id);
+            setSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+          }}
+        >
+          Select all
+        </Button>
+        <Button
+          size="xs"
+          variant="ghost"
+          onClick={() => setSelectedIds([])}
+        >
+          Deselect all
+        </Button>
+      </div>
+      <DataTable
+        columns={[
+          {
+            header: '',
+            render: (row) => {
+              const isSel = selectedIds.includes(row._id);
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSel) setSelectedIds((prev) => prev.filter((id) => id !== row._id));
+                    else setSelectedIds((prev) => [...prev, row._id]);
+                  }}
+                  className={`w-4 h-4 rounded border flex items-center justify-center ${isSel ? 'bg-[var(--color-action-primary)] border-[var(--color-action-primary)] text-white' : 'border-[var(--color-bg-border)]'}`}
+                >
+                  {isSel && <Check size={10} />}
+                </button>
+              );
+            },
+          },
+          { header: 'Name', render: (row) => <span className="text-xs font-medium">{row.name || '—'}</span> },
+          { header: 'Email', render: (row) => <span className="text-xs font-mono text-[var(--color-text-muted)]">{row.email}</span> },
+          {
+            header: 'Email status',
+            render: (row) => (
+              <Badge
+                variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Invalid' ? 'rose' : 'slate'}
+                className="text-[9px]"
+              >
+                {row.emailStatus || 'Pending'}
+              </Badge>
+            ),
+          },
+          ...(isExlySource ? [{
+            header: 'Offering',
+            render: (row) => (
+              <span className="text-[9px] text-[var(--color-text-muted)]">
+                {row.exlyOfferingTitle
+                  || row.exlyOfferings?.map((o) => o.title).filter(Boolean).join(', ')
+                  || '—'}
+              </span>
+            ),
+          }] : []),
+          ...(audience.crmSegment === 'artist' && !isExlySource ? [{
+            header: 'Category',
+            render: (row) => (
+              <Badge variant="slate" className="text-[9px] capitalize">
+                {row.contactCategory?.replace(/_/g, ' ') || '—'}
+              </Badge>
+            ),
+          }] : []),
+          { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> },
+        ]}
+        data={(audience.displayContacts || []).slice(0, 50)}
+      />
+    </>
   );
 }
 

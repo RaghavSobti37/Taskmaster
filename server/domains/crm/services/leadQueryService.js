@@ -106,6 +106,33 @@ function buildLeadListQuery(user, queryParams) {
   if (queryParams.hasFollowup === 'true') query.nextFollowupDate = { $exists: true, $ne: '' };
   if (queryParams.hasEmail === 'true') query.email = { $type: 'string', $ne: '' };
 
+  if (queryParams.hasExly === 'true') {
+    query.$and = query.$and || [];
+    query.$and.push({
+      $or: [
+        { 'exlyOfferings.0': { $exists: true } },
+        { exlyOfferingId: { $type: 'string', $ne: '' } },
+        { exlyOfferingTitle: { $type: 'string', $ne: '' } },
+      ],
+    });
+  }
+
+  if (queryParams.exlyOfferingIds) {
+    const ids = String(queryParams.exlyOfferingIds)
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    if (ids.length) {
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { exlyOfferingId: { $in: ids } },
+          { 'exlyOfferings.offeringId': { $in: ids } },
+        ],
+      });
+    }
+  }
+
   return query;
 }
 

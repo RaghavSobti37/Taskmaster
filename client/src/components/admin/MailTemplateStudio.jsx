@@ -3,7 +3,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../utils/mailTemplateQuillSetup';
 import { MAIL_TEMPLATE_QUILL_KEYBOARD, attachMailTemplateClipboardSanitizer } from '../../utils/mailTemplateQuillSetup';
-import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle } from 'lucide-react';
+import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle, Image as ImageIcon, Copy } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../ui/QueryErrorBanner';
 import { format } from 'date-fns';
@@ -37,6 +37,12 @@ import {
   repairIndentDrift,
   wrapVisualPreviewBody,
 } from '../../utils/visualEmailHtml';
+import {
+  buildInlineImageTag,
+  insertHtmlAtTextareaCursor,
+  insertImageInQuill,
+  uploadMailTemplateImage,
+} from '../../utils/mailTemplateImageUpload';
 
 const PREVIEW_DEBOUNCE_MS = 450;
 const STATUS_LABELS = {
@@ -53,23 +59,26 @@ const emptyDraft = () => ({
   content: '',
   format: 'visual',
   dummyValues: {},
+  assets: [],
 });
 
+const MAIL_TEMPLATE_QUILL_TOOLBAR = [
+  [{ header: [1, 2, 3, false] }],
+  ['bold', 'italic', 'underline'],
+  ['link', 'image'],
+  [{ list: 'ordered' }, { list: 'bullet' }],
+  [{ indent: '-1' }, { indent: '+1' }],
+  ['clean'],
+];
+
 const MAIL_TEMPLATE_QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline'],
-    ['link'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ indent: '-1' }, { indent: '+1' }],
-    ['clean'],
-  ],
+  toolbar: MAIL_TEMPLATE_QUILL_TOOLBAR,
   clipboard: { matchVisual: false },
   keyboard: MAIL_TEMPLATE_QUILL_KEYBOARD,
 };
 
 const MAIL_TEMPLATE_QUILL_FORMATS = [
-  'header', 'bold', 'italic', 'underline', 'link', 'list', 'bullet', 'indent', 'break',
+  'header', 'bold', 'italic', 'underline', 'link', 'image', 'list', 'bullet', 'indent', 'break',
 ];
 
 export default function MailTemplateStudio({ onUseInCampaign }) {
@@ -98,12 +107,82 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const [rawHtmlBaseline, setRawHtmlBaseline] = useState(false);
   const [studioTab, setStudioTab] = useState('editor');
   const [reviewingId, setReviewingId] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const quillRef = useRef(null);
+  const rawHtmlRef = useRef(null);
+  const imageInputRef = useRef(null);
 
   const bindQuillPasteSanitizer = useCallback((editor) => {
     if (!editor?.getEditor) return;
     attachMailTemplateClipboardSanitizer(editor.getEditor());
   }, []);
+
+  const trackUploadedAsset = useCallback((asset) => {
+    if (!asset?.url) return;
+    setDraft((prev) => {
+      const existing = prev.assets || [];
+      if (existing.some((a) => a.url === asset.url)) return prev;
+      return { ...prev, assets: [...existing, asset] };
+    });
+  }, []);
+
+  const insertImageUrl = useCallback((url) => {
+    if (!url) return;
+    if (useRawHtml && rawHtmlRef.current) {
+      const tag = buildInlineImageTag(url);
+      const next = insertHtmlAtTextareaCursor(rawHtmlRef.current, tag);
+      setDraft((prev) => ({ ...prev, content: next }));
+      return;
+    }
+    const quill = quillRef.current?.getEditor?.();
+    if (quill) insertImageInQuill(quill, url);
+  }, [useRawHtml]);
+
+  const handleImageUpload = useCallback(async (file) => {
+    if (!file) return null;
+    setImageUploading(true);
+    try {
+      const asset = await uploadMailTemplateImage(file);
+      trackUploadedAsset(asset);
+      return asset.url;
+    } catch (err) {
+      toast.error(err.message || 'Image upload failed');
+      return null;
+    } finally {
+      setImageUploading(false);
+    }
+  }, [toast, trackUploadedAsset]);
+
+  const handleImageInputChange = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const url = await handleImageUpload(file);
+    if (url) insertImageUrl(url);
+  }, [handleImageUpload, insertImageUrl]);
+
+  const openImagePicker = useCallback(() => {
+    imageInputRef.current?.click();
+  }, []);
+
+  const copyAssetUrl = useCallback(async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Image URL copied');
+    } catch {
+      toast.warn('Could not copy URL');
+    }
+  }, [toast]);
+
+  const quillModules = useMemo(() => ({
+    ...MAIL_TEMPLATE_QUILL_MODULES,
+    toolbar: {
+      container: MAIL_TEMPLATE_QUILL_TOOLBAR,
+      handlers: {
+        image: () => openImagePicker(),
+      },
+    },
+  }), [openImagePicker]);
 
 
   const detectedIndices = useMemo(
@@ -219,6 +298,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       format: t.format || 'visual',
       dummyValues: dummies,
       status: t.status,
+      assets: Array.isArray(t.assets) ? t.assets : [],
     };
     setDraft(loaded);
     setUseRawHtml(t.format === 'rawHtml');
@@ -270,6 +350,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         content,
         format: useRawHtml ? 'rawHtml' : 'visual',
         dummyValues: draft.dummyValues,
+        assets: draft.assets || [],
       });
       const saved = {
         ...draft,
@@ -277,6 +358,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         id: data._id,
         format: useRawHtml ? 'rawHtml' : 'visual',
         status: data.status || draft.status,
+        assets: data.assets || draft.assets || [],
       };
       setDraft(saved);
       syncBaseline(saved, useRawHtml);
@@ -302,9 +384,10 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
           content,
           format: useRawHtml ? 'rawHtml' : 'visual',
           dummyValues: draft.dummyValues,
+          assets: draft.assets || [],
         });
         id = data._id;
-        setDraft((prev) => ({ ...prev, id: data._id }));
+        setDraft((prev) => ({ ...prev, id: data._id, assets: data.assets || prev.assets || [] }));
       } catch (e) {
         toast.error(e.response?.data?.error || e.message);
         return;
@@ -412,6 +495,22 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               <Button size="xs" variant="secondary" onClick={handleInsertVariable} title="Insert next indexed variable into content">
                 <Plus size={12} /> Insert Variable {nextVariableIndex(draft.content)}
               </Button>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => openImagePicker()}
+                disabled={imageUploading}
+                title="Upload image and insert inline"
+              >
+                <ImageIcon size={12} /> {imageUploading ? 'Uploading…' : 'Insert Image'}
+              </Button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageInputChange}
+              />
               {detectedIndices.map((idx) => (
                 <span key={idx} className="text-[10px] font-mono px-2 py-1 rounded bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
                   {`{${idx}}`}
@@ -436,10 +535,11 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
 
             {useRawHtml ? (
               <textarea
+                ref={rawHtmlRef}
                 className="w-full h-[280px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
                 value={draft.content}
                 onChange={(e) => setDraft((p) => ({ ...p, content: e.target.value }))}
-                placeholder="HTML with {1} {2} variables"
+                placeholder="HTML with {1} {2} variables and <img src=&quot;https://...&quot; /> tags"
               />
             ) : (
               <div className="space-y-1">
@@ -455,7 +555,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                       const html = editor?.root?.innerHTML ?? content;
                       setDraft((p) => ({ ...p, content: repairIndentDrift(html) }));
                     }}
-                    modules={MAIL_TEMPLATE_QUILL_MODULES}
+                    modules={quillModules}
                     formats={MAIL_TEMPLATE_QUILL_FORMATS}
                     className="h-[280px] mb-12"
                   />
@@ -464,8 +564,46 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                   <span className="font-semibold text-[var(--color-text-secondary)]">Enter</span>
                   {' = new line · '}
                   <span className="font-semibold text-[var(--color-text-secondary)]">Shift+Enter</span>
-                  {' = new paragraph (email spacing)'}
+                  {' = new paragraph (email spacing) · '}
+                  <span className="font-semibold text-[var(--color-text-secondary)]">Image</span>
+                  {' = upload hosted inline image'}
                 </p>
+              </div>
+            )}
+
+            {(draft.assets || []).length > 0 && (
+              <div className="p-3 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/60 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+                  Template images
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(draft.assets || []).map((asset) => (
+                    <div
+                      key={asset.url}
+                      className="group relative w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]"
+                    >
+                      <img src={asset.url} alt={asset.name || ''} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center gap-1 transition-opacity">
+                        <button
+                          type="button"
+                          className="p-1 rounded bg-white/90 text-[var(--color-text-primary)]"
+                          title="Insert at cursor"
+                          onClick={() => insertImageUrl(asset.url)}
+                        >
+                          <Plus size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-1 rounded bg-white/90 text-[var(--color-text-primary)]"
+                          title="Copy URL"
+                          onClick={() => copyAssetUrl(asset.url)}
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

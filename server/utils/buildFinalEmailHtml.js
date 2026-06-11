@@ -19,6 +19,30 @@ const JUICE_RESET_CSS = `
   ul, ol { margin: 0 !important; padding-left: 1.5em !important; }
 `;
 
+const resolvePublicBaseUrl = () => {
+  const raw = process.env.CLIENT_URL || process.env.FRONTEND_URL || process.env.SERVER_URL || '';
+  return String(raw).replace(/\/$/, '');
+};
+
+/** Keep inline email images on absolute HTTPS URLs (hosted assets, not cid attachments). */
+const ensureAbsoluteImageUrls = (html, { baseUrl } = {}) => {
+  if (!html || typeof html !== 'string') return html || '';
+  const base = (baseUrl || resolvePublicBaseUrl()).replace(/\/$/, '');
+
+  return html.replace(/<img\b([^>]*?)\bsrc=(["'])([^"']+)\2([^>]*)>/gi, (match, before, quote, src, after) => {
+    const trimmed = String(src || '').trim();
+    if (!trimmed || /^https?:\/\//i.test(trimmed) || /^cid:/i.test(trimmed) || /^data:/i.test(trimmed)) {
+      return match;
+    }
+    if (trimmed.startsWith('//')) {
+      return `<img${before}src=${quote}https:${trimmed}${quote}${after}>`;
+    }
+    if (!base) return match;
+    const absolute = trimmed.startsWith('/') ? `${base}${trimmed}` : `${base}/${trimmed}`;
+    return `<img${before}src=${quote}${absolute}${quote}${after}>`;
+  });
+};
+
 const inlineCss = (html) => {
   const hasNonQuillStyles = /<style[\s>]/i.test(html) && !/\.ql-|quill/i.test(html);
   if (!hasNonQuillStyles) return html;
@@ -89,7 +113,7 @@ const buildFinalEmailHtml = async ({
       });
       out = processedHtml || out;
     }
-    return out;
+    return ensureAbsoluteImageUrls(out);
   }
 
   const isRawFragment = format === 'rawHtml';
@@ -126,7 +150,7 @@ const buildFinalEmailHtml = async ({
     out = normalizeOutboundEmailHtml(out);
   }
 
-  return wrapEmailShell(out);
+  return ensureAbsoluteImageUrls(wrapEmailShell(out));
 };
 
 const buildUnsubscribeFooter = () => {
@@ -177,4 +201,5 @@ module.exports = {
   inlineCss,
   buildUnsubscribeFooter,
   applyFullDocumentEmailExtras,
+  ensureAbsoluteImageUrls,
 };

@@ -48,9 +48,21 @@ exports.getById = async (req, res) => {
   }
 };
 
+const mergeTemplateAssets = (existing = [], incoming) => {
+  if (!Array.isArray(incoming)) return existing;
+  const byUrl = new Map();
+  (existing || []).forEach((asset) => {
+    if (asset?.url) byUrl.set(asset.url, asset);
+  });
+  incoming.forEach((asset) => {
+    if (asset?.url) byUrl.set(asset.url, asset);
+  });
+  return [...byUrl.values()];
+};
+
 exports.saveDraft = async (req, res) => {
   try {
-    const { id, name, content, format, subject, dummyValues } = req.body;
+    const { id, name, content, format, subject, dummyValues, assets } = req.body;
     if (!name || !content) {
       return res.status(400).json({ error: 'name and content are required' });
     }
@@ -69,6 +81,7 @@ exports.saveDraft = async (req, res) => {
       rejectionNote: undefined,
       approvedContent: undefined,
     };
+    if (Array.isArray(assets)) payload.assets = assets;
 
     let template;
     if (id) {
@@ -86,6 +99,7 @@ exports.saveDraft = async (req, res) => {
         if (subject !== undefined) template.subject = subject;
         if (format !== undefined) template.format = approvedRaw ? 'rawHtml' : 'visual';
         if (dummyValues && typeof dummyValues === 'object') template.dummyValues = dummyValues;
+        if (Array.isArray(assets)) template.assets = mergeTemplateAssets(template.assets, assets);
         await template.save();
         return res.json(template);
       }
@@ -124,7 +138,7 @@ exports.update = async (req, res) => {
     const editCheck = assertCanEditTemplate(template, req.user);
     if (!editCheck.ok) return res.status(403).json({ error: editCheck.error });
 
-    const { name, content, format, subject, dummyValues } = req.body;
+    const { name, content, format, subject, dummyValues, assets } = req.body;
     if (name) template.name = String(name).trim();
     if (format !== undefined) template.format = format === 'rawHtml' ? 'rawHtml' : 'visual';
     if (content !== undefined) {
@@ -135,6 +149,7 @@ exports.update = async (req, res) => {
     }
     if (subject !== undefined) template.subject = subject;
     if (dummyValues && typeof dummyValues === 'object') template.dummyValues = dummyValues;
+    if (Array.isArray(assets)) template.assets = mergeTemplateAssets(template.assets, assets);
     await template.save();
     res.json(template);
   } catch (err) {

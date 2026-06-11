@@ -17,6 +17,11 @@ const mailTemplateSchema = new mongoose.Schema({
     default: () => new Map(),
   },
   approvedContent: { type: String },
+  assets: [{
+    url: { type: String, required: true },
+    name: { type: String, default: '' },
+    uploadedAt: { type: Date, default: Date.now },
+  }],
   submittedAt: { type: Date },
   approvedAt: { type: Date },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

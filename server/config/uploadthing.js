@@ -27,6 +27,13 @@ const uploadRouter = {
 
   // Finance document uploader — supports PDFs, images, spreadsheets, and text files
   // minFileCount: 0 required so mixed batches (e.g. only PDFs) don't fail other types
+  mailTemplateImageUploader: f({ image: { maxFileSize: '8MB', maxFileCount: 10 } })
+    .middleware(async ({ req }) => requireAuthenticatedUpload(req))
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log('Mail template image uploaded:', file.url);
+      return { url: file.url, key: file.key, name: file.name, size: file.size };
+    }),
+
   financeDocUploader: f({
     pdf: { maxFileSize: "32MB", maxFileCount: 50, minFileCount: 0 },
     image: { maxFileSize: "16MB", maxFileCount: 50, minFileCount: 0 },

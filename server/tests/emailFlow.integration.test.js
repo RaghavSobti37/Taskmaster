@@ -139,6 +139,24 @@ describe('Email flow integration', () => {
       expect(html).toContain('Raghav');
       expect(html).not.toContain('{1}');
     });
+
+    it('preserves inline https img tags in rawHtml send pipeline', async () => {
+      const imageUrl = 'https://utfs.io/f/test-banner.png';
+      const out = await buildFinalEmailHtml({
+        html: `<p>Hello</p><img src="${imageUrl}" alt="Banner" style="max-width:100%;" />`,
+        format: 'rawHtml',
+        mode: 'preview',
+        removeUnsubscribe: true,
+      });
+      expect(out).toContain(`src="${imageUrl}"`);
+      expect(out).toMatch(/<img\b/i);
+    });
+
+    it('normalizes protocol-relative img src to https', async () => {
+      const { ensureAbsoluteImageUrls } = require('../utils/buildFinalEmailHtml');
+      const out = ensureAbsoluteImageUrls('<img src="//cdn.example.com/logo.png" alt="" />');
+      expect(out).toContain('src="https://cdn.example.com/logo.png"');
+    });
   });
 
   describe('HTTP mail + campaign API (full workflow)', () => {

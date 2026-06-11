@@ -70,13 +70,28 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
       if (!proceed) return false;
     }
 
-    await createCampaignMutation.mutateAsync(payload);
+    let response;
+    try {
+      response = await createCampaignMutation.mutateAsync(payload);
+    } catch (err) {
+      if (!silent) {
+        toast.error(err.response?.data?.error || err.message || 'Campaign save failed.');
+      }
+      return false;
+    }
+    const campaign = response?.data ?? response;
+    const campaignId = campaign?.campaignId || campaign?._id;
+
     if (!silent) {
-      toast.success(action === 'dispatch' ? 'Campaign created and dispatch started.' : 'Campaign saved as draft.');
+      toast.success(action === 'dispatch' ? 'Campaign dispatch started.' : 'Campaign saved as draft.');
     }
     if (!stayOnPage) {
       audience.resetAudience();
-      navigate('/emails/campaigns');
+      if (action === 'dispatch' && campaignId) {
+        navigate(`/campaign/${campaignId}`, { state: { from: '/emails/create' } });
+      } else {
+        navigate('/emails/campaigns');
+      }
     }
     return true;
   }, [approvedTemplates, audience, buildCampaignPayload, createCampaignMutation, navigate, toast]);

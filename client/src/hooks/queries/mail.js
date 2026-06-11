@@ -24,7 +24,7 @@ export const useCampaignDetails = (id) => useQuery({
   staleTime: 1000 * 30,
 });
 
-export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false } = {}) => useQuery({
+export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false, enabled = true } = {}) => useQuery({
   queryKey: ['campaign', id, 'recipients', page, limit, status, hideInvalid],
   queryFn: async () => {
     const params = new URLSearchParams({
@@ -36,7 +36,7 @@ export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all'
     const { data } = await axios.get(`/api/campaigns/${id}/recipients?${params}`);
     return data;
   },
-  enabled: !!id,
+  enabled: !!id && enabled,
   staleTime: 1000 * 15,
   placeholderData: keepPreviousData,
 });
@@ -92,9 +92,14 @@ export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data) => axios.post('/api/campaigns', data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const campaign = response?.data ?? response;
+      const id = campaign?.campaignId || campaign?._id;
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      }
     },
   });
 };
@@ -114,10 +119,11 @@ export const useSendCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => axios.post(`/api/campaigns/${id}/dispatch`),
-    onSuccess: (_data, id) => {
+    onSuccess: (_response, id) => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id, 'recipients'] });
     },
   });
 };

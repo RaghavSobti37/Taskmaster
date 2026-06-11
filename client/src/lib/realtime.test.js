@@ -16,6 +16,8 @@ vi.mock('socket.io-client', () => ({
 
 vi.mock('../utils/apiBase', () => ({
   getRealtimeOrigin: () => 'http://localhost:5173',
+  isCrossOriginRealtime: () => false,
+  apiPath: (path) => path,
 }));
 
 describe('realtime connect', () => {
@@ -30,6 +32,9 @@ describe('realtime connect', () => {
   it('reuses the same socket while still connecting', async () => {
     const { connect } = await import('./realtime');
 
+    connect();
+    await vi.waitFor(() => expect(mockIo).toHaveBeenCalledTimes(1));
+
     const first = connect();
     const second = connect();
 
@@ -42,10 +47,11 @@ describe('realtime connect', () => {
     const { connect, disconnectRealtime } = await import('./realtime');
 
     connect();
+    await vi.waitFor(() => expect(mockIo).toHaveBeenCalledTimes(1));
     disconnectRealtime();
     connect();
+    await vi.waitFor(() => expect(mockIo).toHaveBeenCalledTimes(2));
 
-    expect(mockIo).toHaveBeenCalledTimes(2);
     expect(mockDisconnect).toHaveBeenCalledTimes(1);
   });
 });

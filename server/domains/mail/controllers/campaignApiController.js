@@ -23,6 +23,14 @@ const assertCampaignAccess = (campaign, user) => {
   const ownerId = campaign.createdBy?._id || campaign.createdBy;
   return ownerId && String(ownerId) === String(user._id);
 };
+
+/** Avoid multi-MB JSON responses that timeout Vercel → Render proxy on large campaigns. */
+const slimCampaignForResponse = (campaign) => {
+  const obj = campaign?.toObject ? campaign.toObject() : { ...campaign };
+  delete obj.recipients;
+  delete obj.content;
+  return obj;
+};
 const {
   normalizeEmail,
   isValidEmail,
@@ -379,9 +387,8 @@ exports.create = async (req, res) => {
       dispatchResult = await dispatchCampaignJobs(campaign._id);
     }
 
-    const campaignObj = campaign.toObject ? campaign.toObject() : campaign;
     res.status(201).json({
-      ...campaignObj,
+      ...slimCampaignForResponse(campaign),
       skippedInvalidCount,
       dispatch: dispatchResult,
     });
@@ -393,14 +400,17 @@ exports.create = async (req, res) => {
 
 exports.dispatch = async (req, res) => {
   try {
-    const resolved = await resolveCampaignByParam(req.params.id);
+    const resolved = await resolveCampaignByParam(req.params.id, { excludeRecipients: true });
     if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
-    const { campaign } = resolved;
+    const { campaign, Model } = resolved;
     if (!resolved.isLegacy && campaign.status === 'Draft') {
-      campaign.status = 'Queued';
-      await campaign.save();
+      const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
+      await Model.updateOne(
+        { _id: campaign._id },
+        { $set: { status: 'Queued' } },
+      ).setOptions(bypassOptions('CAMPAIGN_DISPATCH'));
     }
     const result = await dispatchCampaignJobs(campaign._id);
     res.json(result);
@@ -624,11 +634,9 @@ exports.resendFiltered = async (req, res) => {
     const campaign = await Campaign.create(campaignPayload);
     const result = await dispatchCampaignJobs(campaign._id);
 
-    const campaignObj = campaign.toObject ? campaign.toObject() : campaign;
-
     res.status(201).json({
       ...result,
-      campaign: campaignObj,
+      campaign: slimCampaignForResponse(campaign),
       campaignId: campaign.campaignId,
       campaignMongoId: String(campaign._id),
       title: campaign.title,

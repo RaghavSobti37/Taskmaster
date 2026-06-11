@@ -27,6 +27,7 @@ export default function MailCampaignList({ limit }) {
   const { isLoading: profilesLoading } = useMailProfiles();
   const sendCampaignMutation = useSendCampaign();
   const deleteCampaignMutation = useDeleteCampaign();
+  const [dispatchingId, setDispatchingId] = React.useState(null);
 
   const displayCampaigns = limit ? campaigns.slice(0, limit) : campaigns;
 
@@ -81,13 +82,23 @@ export default function MailCampaignList({ limit }) {
                 <Button
                   size="xs"
                   variant="primary"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    sendCampaignMutation.mutate(row.campaignId || row._id);
+                    const id = row.campaignId || row._id;
+                    setDispatchingId(id);
+                    try {
+                      await sendCampaignMutation.mutateAsync(id);
+                      toast.success('Campaign dispatch started.');
+                      navigate(`/campaign/${id}`, { state: { from: location.pathname } });
+                    } catch (err) {
+                      toast.error(err.response?.data?.error || err.message || 'Dispatch failed.');
+                    } finally {
+                      setDispatchingId(null);
+                    }
                   }}
-                  disabled={sendCampaignMutation.isPending}
+                  disabled={dispatchingId === (row.campaignId || row._id)}
                 >
-                  <Play size={12} /> Dispatch
+                  <Play size={12} /> {dispatchingId === (row.campaignId || row._id) ? 'Dispatching…' : 'Dispatch'}
                 </Button>
               )}
               <Button

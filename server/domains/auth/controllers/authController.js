@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { google } = require('googleapis');
 const logger = require('../../../utils/logger');
-const { clearAuthCookie, hadAuthCookie } = require('../../../utils/authCookie');
+const { clearAuthCookie, hadAuthCookie, getTokenFromRequest } = require('../../../utils/authCookie');
 const {
   verifySessionToken,
   generateSessionToken,
@@ -289,6 +289,15 @@ exports.getMe = async (req, res) => {
     logger.error('authController', 'getMe failed', { error: error.message || error });
     return apiError(res, 'Failed to load user profile', 500);
   }
+};
+
+/** Session JWT for cross-origin Socket.io (httpOnly cookie not sent to Render API host). */
+exports.getRealtimeToken = (req, res) => {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    return apiError(res, 'Not authorized', 401);
+  }
+  return res.json({ token });
 };
 
 exports.changeRequiredPassword = async (req, res) => {

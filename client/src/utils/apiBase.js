@@ -24,11 +24,25 @@ export function getAxiosBaseURL() {
   return getDirectApiBaseUrl();
 }
 
-/** Socket.io origin — same host as REST in production so cookies match. */
+/** Socket.io origin — direct Render API in production (Vercel rewrites cannot proxy WebSocket). */
 export function getRealtimeOrigin() {
   if (typeof window === 'undefined') return '';
-  if (routeViaSameOriginApi()) return window.location.origin;
-  return getDirectApiBaseUrl() || window.location.origin;
+  if (isViteProxyDev()) return window.location.origin;
+  const apiBase = getApiBaseUrl();
+  if (import.meta.env.PROD && apiBase) return apiBase;
+  return window.location.origin;
+}
+
+/** True when Socket.io must use handshake auth (cross-origin vs page). */
+export function isCrossOriginRealtime() {
+  if (typeof window === 'undefined') return false;
+  const realtimeOrigin = getRealtimeOrigin();
+  if (!realtimeOrigin) return false;
+  try {
+    return new URL(realtimeOrigin).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 /** Build API path — always same-origin /api in production. */

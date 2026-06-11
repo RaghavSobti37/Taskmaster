@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { ArrowLeft } from 'lucide-react';
-import { Card, Button } from '../../ui';
+import { Card, Button, Spinner } from '../../ui';
 import WizardProgressBar from './WizardProgressBar';
 import StepSetup from './StepSetup';
 import StepTemplateSelect from './StepTemplateSelect';
@@ -27,6 +27,7 @@ export default function CampaignWizardShell() {
   const { confirm } = useConfirm();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
+  const [submittingAction, setSubmittingAction] = useState(null);
 
   const { data: profiles = [] } = useMailProfiles();
   const { data: approvedTemplates = [] } = useMailTemplates('approved');
@@ -140,7 +141,12 @@ export default function CampaignWizardShell() {
     const { stayOnPage = false, silent = false } = options;
     const ok = await validateStep(4);
     if (!ok) return false;
-    return submitCampaign(getValues(), 'save_draft', { stayOnPage, silent });
+    setSubmittingAction('save_draft');
+    try {
+      return await submitCampaign(getValues(), 'save_draft', { stayOnPage, silent });
+    } finally {
+      setSubmittingAction(null);
+    }
   };
 
   const handleDispatch = async () => {
@@ -162,11 +168,31 @@ export default function CampaignWizardShell() {
       type: 'primary',
     });
     if (!confirmed) return;
-    await submitCampaign(getValues(), 'dispatch');
+    setSubmittingAction('dispatch');
+    try {
+      await submitCampaign(getValues(), 'dispatch');
+    } finally {
+      setSubmittingAction(null);
+    }
   };
+
+  const isSubmitting = createCampaignMutation.isPending;
 
   return (
     <FormProvider {...methods}>
+      <div className="relative">
+        {isSubmitting && (
+          <div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-[var(--color-bg-primary)]/85 backdrop-blur-sm"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <Spinner size="lg" />
+            <p className="text-sm font-medium text-[var(--color-text-muted)]">
+              {submittingAction === 'dispatch' ? 'Dispatching campaign…' : 'Saving draft…'}
+            </p>
+          </div>
+        )}
       <Card className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleBack}>
@@ -207,21 +233,22 @@ export default function CampaignWizardShell() {
               <Button
                 variant="secondary"
                 onClick={handleSaveDraft}
-                disabled={createCampaignMutation.isPending}
+                disabled={isSubmitting}
               >
-                Save as Draft
+                {submittingAction === 'save_draft' ? 'Saving…' : 'Save as Draft'}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleDispatch}
-                disabled={createCampaignMutation.isPending || !audience.audienceHealth.ok}
+                disabled={isSubmitting || !audience.audienceHealth.ok}
               >
-                Dispatch Campaign
+                {submittingAction === 'dispatch' ? 'Dispatching…' : 'Dispatch Campaign'}
               </Button>
             </div>
           )}
         </div>
       </Card>
+      </div>
     </FormProvider>
   );
 }

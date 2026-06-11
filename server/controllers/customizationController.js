@@ -433,20 +433,18 @@ exports.getNavbarPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
 
-    let preferences = await NavbarPreference.findOne({ userId });
-
-    if (!preferences) {
-      try {
-        preferences = await NavbarPreference.create({
+    let preferences = await NavbarPreference.findOneAndUpdate(
+      { userId },
+      {
+        $setOnInsert: {
           userId,
           groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS,
-        });
-      } catch (error) {
-        if (error.code !== 11000) throw error;
-        preferences = await NavbarPreference.findOne({ userId });
-        if (!preferences) throw error;
-      }
-    } else if (preferences.pageOrder && !preferences.groups?.length) {
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    if (preferences.pageOrder && !preferences.groups?.length) {
       preferences = await NavbarPreference.findOneAndUpdate(
         { userId },
         {
@@ -610,16 +608,18 @@ function sanitizeShortcutBindings(raw = {}) {
 exports.getShortcutPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    let doc = await ShortcutPreference.findOne({ userId });
+    let doc;
 
-    if (!doc) {
-      try {
-        doc = await ShortcutPreference.create({ userId, bindings: {} });
-      } catch (error) {
-        if (error.code !== 11000) throw error;
-        doc = await ShortcutPreference.findOne({ userId });
-        if (!doc) throw error;
-      }
+    try {
+      doc = await ShortcutPreference.findOneAndUpdate(
+        { userId },
+        { $setOnInsert: { bindings: {}, updatedAt: new Date() } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+      doc = await ShortcutPreference.findOne({ userId }).setOptions({ bypassTenant: true });
+      if (!doc) throw error;
     }
 
     const overrides = doc.bindings || {};

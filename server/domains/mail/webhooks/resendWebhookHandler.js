@@ -18,6 +18,12 @@ const { bypassOptions } = require('../../../infrastructure/database/bypassTenant
 
 const WEBHOOK_BYPASS = bypassOptions('RESEND_WEBHOOK');
 
+async function resolveDefaultTenantId() {
+  const Tenant = require('../../../models/Tenant');
+  const tenant = await Tenant.findOne({}).select('_id').setOptions(WEBHOOK_BYPASS).lean();
+  return tenant?._id ?? null;
+}
+
 async function resolveMailEventTenantId(camp, cleanEmail) {
   const fromCampaign = await resolveCampaignTenantId(camp);
   if (fromCampaign) return fromCampaign;
@@ -25,7 +31,8 @@ async function resolveMailEventTenantId(camp, cleanEmail) {
     .select('tenantId')
     .setOptions(WEBHOOK_BYPASS)
     .lean();
-  return lead?.tenantId ?? null;
+  if (lead?.tenantId) return lead.tenantId;
+  return resolveDefaultTenantId();
 }
 
 async function saveCampaignDoc(camp, cleanEmail) {
@@ -34,7 +41,29 @@ async function saveCampaignDoc(camp, cleanEmail) {
     const tenantId = await resolveMailEventTenantId(camp, cleanEmail);
     if (tenantId) camp.tenantId = tenantId;
   }
+  if (!camp.tenantId) {
+    console.warn(`[Resend Webhook] Skipping campaign save — no tenantId for ${camp._id}`);
+    return;
+  }
   await camp.save();
+}
+
+/** updateEmailTags uses doc.save(); webhook has no ALS tenant — Lead tags via bypass, PersonHub best-effort */
+async function safeUpdateEmailTags(cleanEmail, tag, status) {
+  const update = {
+    $set: {
+      'metadata.lastEmailAction': tag,
+      'metadata.lastEmailActionDate': new Date(),
+    },
+  };
+  if (tag) update.$addToSet = { tags: tag };
+  await Lead.updateMany({ email: cleanEmail }, update).setOptions(WEBHOOK_BYPASS);
+
+  try {
+    await updateEmailTags(cleanEmail, tag, status);
+  } catch (err) {
+    console.warn(`[Resend Webhook] PersonHub tag sync skipped for ${cleanEmail}:`, err.message);
+  }
 }
 
 async function lookupCampaignByTag(campaignTag, recipientTag) {
@@ -252,7 +281,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced', status: 'inactive' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid');
 
       await createResendMailEvent({
         eventType: 'Bounce',
@@ -286,7 +315,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'active', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
 
       await createResendMailEvent({
         eventType: 'Open',
@@ -331,7 +360,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'engaged', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
 
       await createResendMailEvent({
         eventType: 'Click',
@@ -545,7 +574,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced', status: 'inactive' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid');
 
       await createResendMailEvent({
         eventType: 'Bounce',
@@ -587,7 +616,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'active', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
 
       await createResendMailEvent({
         eventType: 'Open',
@@ -633,7 +662,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'engaged', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await updateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
 
       await createResendMailEvent({
         eventType: 'Click',

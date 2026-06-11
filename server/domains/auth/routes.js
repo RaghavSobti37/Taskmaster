@@ -8,7 +8,7 @@ const router = express.Router();
 const {
   register, login, logout, getMe, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword,
-  listSessions, revokeSession, revokeOtherSessions,
+  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken,
 } = require('./controllers/authController');
 const { protect } = require('../../middleware/authMiddleware');
 const { validateBody } = require('../../validation/validateBody');
@@ -60,6 +60,7 @@ router.get('/google/redirect-uri', (req, res) => {
 router.get('/google', googleAuthRedirect);
 router.get('/google/callback', googleAuthCallback);
 router.get('/me', protect, getMe);
+router.get('/realtime-token', protect, getRealtimeToken);
 router.get('/sessions', protect, listSessions);
 router.delete('/sessions/:jti', protect, revokeSession);
 router.post('/sessions/revoke-others', protect, revokeOtherSessions);

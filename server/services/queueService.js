@@ -266,8 +266,33 @@ const stopCampaign = async (campaignId) => {
   };
 };
 
+const markInvalidPendingRecipients = async (Model, campaignId) => {
+  const rows = await Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients.status': { $in: ['Pending', 'Queued'] } } },
+    { $project: { _id: '$recipients._id', email: '$recipients.email' } },
+  ]);
+  const invalidIds = rows.filter((row) => !isValidEmail(row.email)).map((row) => row._id);
+  if (!invalidIds.length) return;
+
+  await Model.updateOne(
+    { _id: campaignId },
+    {
+      $set: {
+        'recipients.$[elem].status': 'Invalid',
+        'recipients.$[elem].error': 'Invalid email address',
+      },
+    },
+    {
+      arrayFilters: [{ 'elem._id': { $in: invalidIds } }],
+      ...BYPASS,
+    },
+  );
+};
+
 const dispatchCampaignJobs = async (campaignId) => {
-  const resolved = await resolveCampaignByParam(campaignId);
+  const resolved = await resolveCampaignByParam(campaignId, { excludeRecipients: true });
   if (!resolved) throw new Error('Campaign not found');
 
   const { campaign, isLegacy, Model } = resolved;
@@ -280,24 +305,14 @@ const dispatchCampaignJobs = async (campaignId) => {
     return { success: false, queuedCount: 0, message: 'Campaign is a draft — dispatch explicitly to send' };
   }
 
-  const invalidRecipients = (campaign.recipients || []).filter(
-    (r) => (r.status === 'Pending' || r.status === 'Queued') && !isValidEmail(r.email),
-  );
-  if (invalidRecipients.length > 0) {
-    for (const rec of invalidRecipients) {
-      rec.status = 'Invalid';
-      rec.error = 'Invalid email address';
-    }
-    await campaign.save();
-  }
+  await markInvalidPendingRecipients(Model, campaign._id);
 
   const pendingCount = await countPendingRecipients(Model, campaign._id);
   if (pendingCount === 0) {
     return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
   }
 
-  campaign.status = 'Sending';
-  await campaign.save();
+  await Model.updateOne({ _id: campaign._id }, { $set: { status: 'Sending' } }).setOptions(BYPASS);
   clearCampaignStopped(campaign._id.toString());
 
   setImmediate(() => {

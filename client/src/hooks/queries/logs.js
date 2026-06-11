@@ -3,18 +3,19 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import axios from 'axios';
 import { subscribeToChannel } from '../../lib/realtime';
 
-const fetchLogs = async (userId, { limit = 200, startDate, endDate } = {}) => {
+const fetchLogs = async (userId, { limit = 200, startDate, endDate, action } = {}) => {
   const params = { limit };
   if (userId && userId !== 'all') params.userId = userId;
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
+  if (action) params.action = action;
   const { data } = await axios.get('/api/logs', { params });
   return data;
 };
 
 export const useLogs = (userId, options = {}, enabled = true) => {
   const opts = typeof options === 'number' ? { limit: options } : options;
-  const { limit = 200, startDate, endDate } = opts;
+  const { limit = 200, startDate, endDate, action } = opts;
 
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -26,8 +27,8 @@ export const useLogs = (userId, options = {}, enabled = true) => {
   const canFetch = userId === 'all' || Boolean(userId);
 
   return useQuery({
-    queryKey: ['logs', userId, limit, startDate, endDate],
-    queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, { limit, startDate, endDate }),
+    queryKey: ['logs', userId, limit, startDate, endDate, action],
+    queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, { limit, startDate, endDate, action }),
     enabled: enabled && canFetch,
     placeholderData: keepPreviousData,
   });

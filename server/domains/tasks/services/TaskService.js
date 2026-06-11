@@ -293,6 +293,8 @@ const createTaskDailyLog = async ({
   const projectId = task.projectId?._id || task.projectId || null;
   await Log.create([{
     userId,
+    actorId: String(userId),
+    origin: 'HUMAN_USER',
     action: 'DAILY_LOG',
     details: {
       type,
@@ -451,6 +453,8 @@ const finalizeTaskCompletion = async (task, user, session) => {
 
   await Log.create([{
     userId: user._id,
+    actorId: user._id.toString(),
+    origin: 'HUMAN_USER',
     action: 'DAILY_LOG',
     details: {
       type: 'TASK_COMPLETION',

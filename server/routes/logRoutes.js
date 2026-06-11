@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Log = require('../models/Log');
 const { protect, admin, requirePageAccess } = require('../middleware/authMiddleware');
@@ -16,6 +17,39 @@ const refreshAttendanceAfterLog = (log) => {
 };
 
 const logsPage = requirePageAccess('logs');
+
+const toObjectId = (id) => {
+  if (!id) return null;
+  try {
+    return new mongoose.Types.ObjectId(String(id));
+  } catch {
+    return null;
+  }
+};
+
+/** Resolve which user's logs may be listed — non-admins always get self only. */
+const resolveLogsOwnerFilter = (req, queryUserId) => {
+  const selfId = req.user._id.toString();
+  const isAdmin = isAdminUser(req.user);
+
+  if (queryUserId === 'all') {
+    if (!isAdmin) return { error: 'Not authorized to view all logs', status: 403 };
+    return { filter: {} };
+  }
+
+  let ownerId = req.user._id;
+  if (queryUserId && queryUserId !== 'undefined' && queryUserId !== 'null') {
+    const requested = String(queryUserId);
+    if (!isAdmin && requested !== selfId) {
+      return { error: 'Not authorized to view other users\' logs', status: 403 };
+    }
+    const oid = toObjectId(requested);
+    if (!oid) return { error: 'Invalid userId', status: 400 };
+    ownerId = oid;
+  }
+
+  return { filter: { userId: ownerId } };
+};
 
 router.get('/bug-report', protect, admin, async (req, res) => {
   try {
@@ -87,22 +121,12 @@ router.use(logsPage);
 router.get('/', async (req, res) => {
   try {
     const { userId, action, lastId, limit = 50, startDate, endDate, origin, status, targetId } = req.query;
-    const filter = {};
-    const isAdmin = isAdminUser(req.user);
-    const selfId = req.user._id.toString();
-
-    if (userId === 'all') {
-      if (!isAdmin) {
-        return res.status(403).json({ error: 'Not authorized to view all logs' });
-      }
-    } else if (userId && userId !== 'undefined' && userId !== 'null') {
-      if (!isAdmin && userId !== selfId) {
-        return res.status(403).json({ error: 'Not authorized to view other users\' logs' });
-      }
-      filter.$or = [{ userId }, { actorId: userId }];
-    } else {
-      filter.$or = [{ userId: req.user._id }, { actorId: req.user._id }];
+    const owner = resolveLogsOwnerFilter(req, userId);
+    if (owner.error) {
+      return res.status(owner.status).json({ error: owner.error });
     }
+
+    const filter = { ...owner.filter };
     if (action) filter.action = action;
     if (origin) filter.origin = origin;
     if (status) filter.status = status;
@@ -135,10 +159,12 @@ router.post('/', async (req, res) => {
     const { action, targetType, targetId, details } = req.body;
     const log = await Log.create({
       userId: req.user._id,
+      actorId: req.user._id.toString(),
+      origin: 'HUMAN_USER',
       action,
       targetType,
       targetId,
-      details
+      details,
     });
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });

@@ -18,7 +18,7 @@ async function fetchDailyLogMinutesForDay(userId, dateInput) {
 
   const uid = String(userId);
   const logs = await Log.find({
-    $or: [{ userId }, { actorId: uid }],
+    userId,
     action: 'DAILY_LOG',
   })
     .select('createdAt details payload action')

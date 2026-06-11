@@ -91,7 +91,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     isError: logsError,
     error: logsErr,
     refetch: refetchLogs,
-  } = useLogs(targetUserId, { limit: 500, ...logDateRange }, Boolean(targetUserId));
+  } = useLogs(targetUserId, { limit: 500, action: 'DAILY_LOG', ...logDateRange }, Boolean(targetUserId));
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
@@ -175,10 +175,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     setSelectedDate(nextDate);
   };
 
-  const dailyLogs = useMemo(() => logs.filter(l =>
-    l.action === 'DAILY_LOG'
-    && isSameDay(new Date(l.createdAt), selectedDate)
-  ), [logs, selectedDate]);
+  const dailyLogs = useMemo(() => {
+    const ownerId = String(targetUserId || '');
+    return logs.filter((l) => {
+      const logOwnerId = String(l.userId?._id || l.userId || '');
+      return l.action === 'DAILY_LOG'
+        && logOwnerId === ownerId
+        && isSameDay(new Date(l.createdAt), selectedDate);
+    });
+  }, [logs, selectedDate, targetUserId]);
 
   const logWorkspaceOptions = useMemo(() => [
     { value: 'all', label: 'All workspaces' },

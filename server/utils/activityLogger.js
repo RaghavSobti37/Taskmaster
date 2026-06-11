@@ -6,10 +6,12 @@ const logActivity = async (userId, action, targetId, targetType, details = {}, s
   try {
     const logPayload = {
       userId,
+      actorId: userId ? String(userId) : 'SYSTEM',
+      origin: 'HUMAN_USER',
       action,
       targetId,
       targetType,
-      details
+      details,
     };
     
     if (session) {

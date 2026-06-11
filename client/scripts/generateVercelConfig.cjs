@@ -51,10 +51,37 @@ const pickProxyUrl = () => {
   return '';
 };
 
+const readExistingClientVercelJson = () => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(CLIENT_ROOT, 'vercel.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+};
+
+const existingRewritesLookValid = (existing) => {
+  const apiRule = existing?.rewrites?.find((rule) => rule.source === '/api/(.*)');
+  const dest = String(apiRule?.destination || '');
+  if (!dest.includes('.onrender.com') || dest.includes('YOUR-RENDER-SERVICE')) return false;
+  try {
+    const host = new URL(dest.replace('/$1', '/')).hostname.toLowerCase();
+    return !BANNED_PROXY_HOSTS.has(host);
+  } catch {
+    return false;
+  }
+};
+
 const proxyUrl = pickProxyUrl();
 const onVercel = process.env.VERCEL === '1';
 
 if (onVercel && !proxyUrl) {
+  const existing = readExistingClientVercelJson();
+  if (existingRewritesLookValid(existing)) {
+    console.warn(
+      '[generateVercelConfig] RENDER_API_PROXY_URL unset on Vercel — keeping committed client/vercel.json rewrites',
+    );
+    process.exit(0);
+  }
   console.error(
     '[generateVercelConfig] RENDER_API_PROXY_URL required on Vercel — mobile login /api proxy will 404.'
   );

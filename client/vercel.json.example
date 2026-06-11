@@ -14,5 +14,5 @@
     }
   ],
   "buildCommand": "npm run vercel-build",
-  "installCommand": "node scripts/generateVercelConfig.cjs && npm install"
+  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && npm install"
 }

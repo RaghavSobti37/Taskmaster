@@ -338,7 +338,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 * **Same-origin API on mobile:** `displayMode.js` routes phone/tablet/PWA auth through the Vercel `/api` proxy ? iOS Safari blocks cross-site cookies when the client talks directly to Render.
 * **Proxy health:** `npm run verify:mobile-proxy` checks `GET /api/health` on your frontend domain. `client/vercel.json` must rewrite `/api/*` to the live Render host ? git deploys use the committed file, not build-time placeholders.
-* **Vercel install (Root Directory `client/`):** `installCommand` runs `node scripts/generateVercelConfig.cjs` before `npm install`. Canonical script at `client/scripts/generateVercelConfig.cjs` (not `../scripts/` ? exit 127 on Vercel). Set `RENDER_API_PROXY_URL` in Vercel env.
+* **Vercel install (Root Directory `client/`):** `installCommand` runs `HUSKY=0 node scripts/generateVercelConfig.cjs && npm install`. Canonical script at `client/scripts/generateVercelConfig.cjs` (not `../scripts/` ? exit 127 on Vercel). `HUSKY=0` skips monorepo root prepare hook.
 * **Login:** `loginRequest.js` tries same-origin `/api` first, then direct Render API if proxy is down; stale cookies purged on mount/submit; `formatLoginError` separates outages from wrong credentials.
 * **Cookies:** Server emits `SameSite=Lax` (not `Partitioned`) when the request is first-party proxied; `replaceAuthCookie` clears legacy `coreknot_token` variants before issuing `coreknot_token_v3`.
 * **Session sync:** `AuthContext` re-applies mobile API base URL on tab resume and uses extra `/me` retries (6) on mobile/PWA.
@@ -865,7 +865,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 
 **Production browser routing (v1.0.7):** The React client always calls relative `/api/...` on the page origin. Vercel rewrites proxy `/api/*` and `/socket.io/*` to the live Render API (`RENDER_API_PROXY_URL` / `client/scripts/generateVercelConfig.cjs`). This keeps HttpOnly auth cookies first-party on every device. **`npm run dev` always routes through the Vite proxy to `localhost:5000`** ? even if `client/.env` still lists a production `VITE_API_URL` (set `VITE_API_URL=http://localhost:5000` anyway so OAuth/upload helpers stay local).
 
-**Vercel deploy notes:** Root Directory = `client/`. `installCommand`: `node scripts/generateVercelConfig.cjs && npm install`. Required env: `RENDER_API_PROXY_URL` (live Render API origin, no trailing slash).
+**Vercel deploy notes:** Root Directory = `client/`. `installCommand`: `HUSKY=0 node scripts/generateVercelConfig.cjs && npm install`. Optional env: `RENDER_API_PROXY_URL` (regenerates rewrites; committed `client/vercel.json` used as fallback).
 
 ```
 /api

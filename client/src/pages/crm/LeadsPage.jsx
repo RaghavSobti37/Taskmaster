@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useLiveLeads, useSalesReps, useArtistReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useArtistReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig, useLeadDetail } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatExlyTag, MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
@@ -23,6 +23,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { applyFlashHighlight } from '../../utils/navigationHighlight';
 import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmContext } from '../../utils/crmScope';
+import LeadArtistJourneySection from '../../components/crm/LeadArtistJourneySection';
 import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
 import { isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
@@ -81,6 +82,9 @@ export default function LeadsPage() {
     name: '', phoneCountryCode: '+91', phoneNational: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: ''
   });
   const [newLeadErrors, setNewLeadErrors] = useState({});
+
+  const { data: leadDetail } = useLeadDetail(selectedLead?._id, !!selectedLead);
+  const detailLead = leadDetail || selectedLead;
 
   const updateMutation = useUpdateLead();
   const createMutation = useCreateLead();
@@ -855,9 +859,9 @@ export default function LeadsPage() {
               </h4>
               <div className="space-y-3">
                 {(() => {
-                  const offerings = selectedLead?.exlyOfferings?.length > 0
-                    ? selectedLead.exlyOfferings
-                    : selectedLead?.exlyOfferingTitle ? [{ title: selectedLead.exlyOfferingTitle, purchasedAt: selectedLead.createdAt }] : [];
+                  const offerings = detailLead?.exlyOfferings?.length > 0
+                    ? detailLead.exlyOfferings
+                    : detailLead?.exlyOfferingTitle ? [{ title: detailLead.exlyOfferingTitle, purchasedAt: detailLead.createdAt }] : [];
 
                   if (offerings.length === 0) {
                     return <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No offerings found</p>;
@@ -885,7 +889,8 @@ export default function LeadsPage() {
               Fix highlighted fields before saving.
             </div>
           )}
-          <ArtistBookingEnquiryPanel lead={selectedLead} />
+          <ArtistBookingEnquiryPanel lead={detailLead} />
+          <LeadArtistJourneySection lead={detailLead} />
           {/* Lead Stages & Interaction Updates */}
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">

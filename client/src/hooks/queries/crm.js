@@ -40,8 +40,11 @@ export const useUpdateLead = () => {
         queryClient.setQueryData(key, data);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['leads', 'detail', variables.id] });
+      }
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'repSummary'] });
       invalidateStatusCounts(queryClient);
@@ -94,6 +97,13 @@ const useRepSummary = (enabled = true, options = {}) => useQuery({
   staleTime: options.staleTime ?? 1000 * 60 * 5,
   refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
   refetchOnMount: options.refetchOnMount,
+});
+
+export const useLeadDetail = (leadId, enabled = true) => useQuery({
+  queryKey: ['leads', 'detail', leadId],
+  queryFn: async () => (await axios.get(`/api/crm/leads/${leadId}`)).data,
+  enabled: enabled && !!leadId,
+  staleTime: 1000 * 30,
 });
 
 export const useLiveLeads = (params, enabled = true) => {

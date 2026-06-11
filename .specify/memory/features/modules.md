@@ -37,6 +37,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - Strict phone validation — E.164 normalization, HTTP 409 on duplicate
 - Booked calls via website webhook (2:1:1 rep split)
 - Artist CRM (`crmType: artist`) — 6-sheet CSV import
+- **Lead detail enrichment:** `leadEnrichmentService` + `shared/leadWebinarQna.cjs` (webinar Q&A from `qnaAnswered`/metadata); Artist Path responses via `personId`; `LeadArtistJourneySection` on Leads modal; `useLeadDetail`
 - **Pages:** `/crm` (Leads, Followups, Bookings tabs)
 
 ---

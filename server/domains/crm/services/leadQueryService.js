@@ -14,12 +14,16 @@ const {
   buildFollowupStatsGroupStage,
 } = require('../../../utils/followupDateQuery');
 const logger = require('../../../utils/logger');
+const { enrichLeadDetail } = require('./leadEnrichmentService');
 
 const LEAD_LIST_PROJECTION = {
   assignedRepId: 1,
+  personId: 1,
   name: 1, email: 1, phone: 1, city: 1, source: 1,
   webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
-  artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
+  artistType: 1, fullTimeWillingness: 1, primaryRole: 1,
+  learningGoal: 1, learnedMusic: 1, currentJourney: 1,
+  metadata: 1, tags: 1, emailStatus: 1,
   crmType: 1, artistProject: 1, contactCategory: 1,
   meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
   remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
@@ -268,6 +272,7 @@ async function fetchLeadById(user, leadId, queryParams = {}) {
 
   const [lead] = await Lead.aggregate(pipeline);
   if (!lead) return { error: 'Lead not found', status: 404 };
+  await enrichLeadDetail(lead);
   return { lead };
 }
 

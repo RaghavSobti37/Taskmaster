@@ -25,6 +25,24 @@ exports.createAsset = async (req, res) => {
   }
 };
 
+exports.updateAsset = async (req, res) => {
+  try {
+    const data = await workspace.updateAsset(artistIdParam(req), req.params.assetId, req.body);
+    res.json(data);
+  } catch (err) {
+    sendError(res, err, 400);
+  }
+};
+
+exports.deleteAsset = async (req, res) => {
+  try {
+    await workspace.deleteAsset(artistIdParam(req), req.params.assetId);
+    res.status(204).end();
+  } catch (err) {
+    sendError(res, err);
+  }
+};
+
 exports.getReleaseCampaigns = async (req, res) => {
   try {
     const data = await workspace.listReleaseCampaigns(artistIdParam(req));
@@ -40,5 +58,23 @@ exports.createReleaseCampaign = async (req, res) => {
     res.status(201).json(data);
   } catch (err) {
     sendError(res, err, 400);
+  }
+};
+
+exports.updateReleaseCampaign = async (req, res) => {
+  try {
+    const data = await workspace.updateReleaseCampaign(artistIdParam(req), req.params.releaseId, req.body);
+    res.json(data);
+  } catch (err) {
+    sendError(res, err, 400);
+  }
+};
+
+exports.deleteReleaseCampaign = async (req, res) => {
+  try {
+    await workspace.deleteReleaseCampaign(artistIdParam(req), req.params.releaseId);
+    res.status(204).end();
+  } catch (err) {
+    sendError(res, err);
   }
 };

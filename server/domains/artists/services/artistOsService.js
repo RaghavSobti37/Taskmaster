@@ -226,17 +226,20 @@ async function listFinance(artistId, month) {
   let expenses = 0;
   const byCategory = {};
   entries.forEach((e) => {
+    byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
     if (e.type === 'revenue') revenue += e.amount;
-    else {
-      expenses += e.amount;
-      byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
-    }
+    else expenses += e.amount;
   });
+  const profit = revenue - expenses;
+  const expenseRatio = revenue > 0 ? Math.round((expenses / revenue) * 100) : 0;
+
   return {
     month: ref.toLocaleString('en-IN', { month: 'long', year: 'numeric' }),
     revenue,
     expenses,
-    net: revenue - expenses,
+    net: profit,
+    profit,
+    expenseRatio,
     byCategory,
     entries,
   };

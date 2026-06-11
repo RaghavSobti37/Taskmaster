@@ -69,7 +69,17 @@ export default function ArtistWorkspaceLayout({
   const renderPanel = () => {
     switch (resolvedTab) {
       case 'home':
-        return <ArtistWorkspaceHome artistId={artistId} normalized={normalized} isPreview={false} />;
+        return (
+          <ArtistWorkspaceHome
+            artistId={artistId}
+            artist={artist}
+            normalized={normalized}
+            connections={connections}
+            membership={membership}
+            isPreview={false}
+            onSync={onSync}
+          />
+        );
       case 'analytics':
         return <ArtistAnalyticsTab {...panelProps} />;
       case 'calendar':
@@ -97,7 +107,7 @@ export default function ArtistWorkspaceLayout({
       case 'contracts':
         return <ArtistContractsTab artistId={artistId} isPreview={false} />;
       case 'settings':
-        return <ArtistWorkspaceSettings />;
+        return <ArtistWorkspaceSettings artistId={artistId} artist={artist} />;
       default:
         return null;
     }

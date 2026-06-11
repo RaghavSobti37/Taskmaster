@@ -52,8 +52,8 @@ describe('artist OS routes registered', () => {
 
   it('allows team members to read and write OS routes', () => {
     expect(routesSource).toMatch(/router\.get\('\/:id\/analytics\/:platform', artistTeamOrAdmin/);
-    expect(routesSource).toMatch(/router\.post\('\/:id\/os\/inquiries', artistTeamOrAdmin/);
-    expect(routesSource).toMatch(/router\.patch\('\/:id\/os\/gigs\/:gigId', artistTeamOrAdmin/);
+    expect(routesSource).toMatch(/router\.post\('\/:id\/os\/inquiries', artistMembershipAccess\('booking'\)/);
+    expect(routesSource).toMatch(/router\.patch\('\/:id\/os\/gigs\/:gigId', artistMembershipAccess\('booking'\)/);
     expect(routesSource).toMatch(/router\.post\('\/:id\/os\/calendar', artistTeamOrAdmin/);
   });
 
@@ -65,7 +65,7 @@ describe('artist OS routes registered', () => {
   it('registers documents and structured 501 stubs', () => {
     expect(routesSource).toMatch(/router\.get\('\/:id\/os\/documents', artistTeamOrAdmin/);
     expect(routesSource).toMatch(/router\.post\('\/:id\/os\/documents', artistTeamOrAdmin/);
-    expect(routesSource).toMatch(/router\.post\('\/:id\/os\/finance\/ocr', artistTeamOrAdmin/);
+    expect(routesSource).toMatch(/router\.post\('\/:id\/os\/finance\/ocr', artistMembershipAccess\('finance'\)/);
     expect(routesSource).toMatch(/router\.get\('\/:id\/os\/analytics\/demographics', artistTeamOrAdmin/);
   });
 });

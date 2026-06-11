@@ -12,6 +12,8 @@ const ArtistReleaseCampaignSchema = new mongoose.Schema({
   releaseDate: { type: Date, required: true, index: true },
   dspLinks: { type: [DspLinkSchema], default: [] },
   distributor: { type: String },
+  upc: { type: String },
+  isrc: { type: String },
   campaignNotes: { type: String },
   contentReleaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'ArtistContentRelease' },
 }, { timestamps: true });

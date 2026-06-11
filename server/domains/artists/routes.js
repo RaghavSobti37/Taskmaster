@@ -76,16 +76,16 @@ router.delete('/:id', artistOrAdmin, artistController.deleteArtist);
 router.post('/:id/inject-event', artistOrAdmin, validateBody(injectEventBody), artistController.injectEvent);
 router.post('/:id/sync-stats', artistMembershipAccess('socials'), artistAnalyticsController.syncArtistStats);
 router.post('/:id/tracked-video', artistMembershipAccess('socials'), validateBody(trackedVideoBody), artistAnalyticsController.addTrackedVideo);
-router.post('/:id/webhooks/subscribe', artistOrAdmin, artistAnalyticsController.enableInstagramWebhooks);
+router.post('/:id/webhooks/subscribe', artistMembershipAccess('socials'), artistAnalyticsController.enableInstagramWebhooks);
 router.get('/:id/analytics/:platform', artistTeamOrAdmin, artistAnalyticsController.getPlatformAnalytics);
 
 router.get('/:id/os/overview', artistTeamOrAdmin, artistOsController.getOverview);
-router.get('/:id/os/inquiries', artistTeamOrAdmin, artistOsController.getInquiries);
-router.post('/:id/os/inquiries', artistTeamOrAdmin, artistOsController.createInquiry);
-router.patch('/:id/os/inquiries/:inquiryId', artistTeamOrAdmin, artistOsController.updateInquiry);
-router.get('/:id/os/gigs', artistTeamOrAdmin, artistOsController.getGigs);
-router.post('/:id/os/gigs', artistTeamOrAdmin, artistOsController.createGig);
-router.patch('/:id/os/gigs/:gigId', artistTeamOrAdmin, artistOsController.updateGig);
+router.get('/:id/os/inquiries', artistMembershipAccess('booking'), artistOsController.getInquiries);
+router.post('/:id/os/inquiries', artistMembershipAccess('booking'), artistOsController.createInquiry);
+router.patch('/:id/os/inquiries/:inquiryId', artistMembershipAccess('booking'), artistOsController.updateInquiry);
+router.get('/:id/os/gigs', artistMembershipAccess('booking'), artistOsController.getGigs);
+router.post('/:id/os/gigs', artistMembershipAccess('booking'), artistOsController.createGig);
+router.patch('/:id/os/gigs/:gigId', artistMembershipAccess('booking'), artistOsController.updateGig);
 router.get('/:id/os/finance', artistMembershipAccess('finance'), artistOsController.getFinance);
 router.post('/:id/os/finance', artistMembershipAccess('finance'), artistOsController.createFinanceEntry);
 router.post('/:id/os/finance/ocr', artistMembershipAccess('finance'), artistOsController.financeOcr);
@@ -103,10 +103,14 @@ router.post('/:id/os/notes', artistTeamOrAdmin, artistOsController.createNote);
 router.get('/:id/os/content', artistTeamOrAdmin, artistOsController.getContent);
 router.post('/:id/os/content', artistTeamOrAdmin, artistOsController.createContent);
 
-router.get('/:id/os/assets', artistTeamOrAdmin, artistWorkspaceController.getAssets);
-router.post('/:id/os/assets', artistTeamOrAdmin, artistWorkspaceController.createAsset);
-router.get('/:id/os/releases', artistTeamOrAdmin, artistWorkspaceController.getReleaseCampaigns);
-router.post('/:id/os/releases', artistTeamOrAdmin, artistWorkspaceController.createReleaseCampaign);
+router.get('/:id/os/assets', artistMembershipAccess('content'), artistWorkspaceController.getAssets);
+router.post('/:id/os/assets', artistMembershipAccess('content'), artistWorkspaceController.createAsset);
+router.patch('/:id/os/assets/:assetId', artistMembershipAccess('content'), artistWorkspaceController.updateAsset);
+router.delete('/:id/os/assets/:assetId', artistMembershipAccess('content'), artistWorkspaceController.deleteAsset);
+router.get('/:id/os/releases', artistMembershipAccess('content'), artistWorkspaceController.getReleaseCampaigns);
+router.post('/:id/os/releases', artistMembershipAccess('content'), artistWorkspaceController.createReleaseCampaign);
+router.patch('/:id/os/releases/:releaseId', artistMembershipAccess('content'), artistWorkspaceController.updateReleaseCampaign);
+router.delete('/:id/os/releases/:releaseId', artistMembershipAccess('content'), artistWorkspaceController.deleteReleaseCampaign);
 
 router.get('/:id', artistTeamOrAdmin, artistController.getArtistById);
 

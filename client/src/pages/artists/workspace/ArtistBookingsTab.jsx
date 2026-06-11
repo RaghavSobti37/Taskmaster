@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Card, Badge } from '../../../components/ui';
 import ArtistInquiriesTab from '../os/ArtistInquiriesTab';
 import ArtistGigsTab from '../os/ArtistGigsTab';
+import { BOOKING_PIPELINE_STAGES } from '../os/artistOsConstants';
+import { useArtistOsInquiries } from '../../../hooks/queries/artistOs';
 
 export default function ArtistBookingsTab({ artistId, isPreview }) {
-  const [section, setSection] = useState('inquiries');
+  const [section, setSection] = useState('pipeline');
+  const { data: inquiries = [] } = useArtistOsInquiries(artistId, !!artistId && !isPreview);
+
+  const stageCounts = useMemo(() => {
+    const counts = Object.fromEntries(BOOKING_PIPELINE_STAGES.map((s) => [s.id, 0]));
+    inquiries.forEach((inq) => {
+      if (counts[inq.status] != null) counts[inq.status] += 1;
+    });
+    return counts;
+  }, [inquiries]);
 
   return (
     <div className="space-y-4">
+      <Card className="p-4 rounded-xl border border-[var(--color-bg-border)]">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Booking Pipeline</p>
+        <div className="flex flex-wrap gap-2">
+          {BOOKING_PIPELINE_STAGES.map((stage) => (
+            <div key={stage.id} className="flex items-center gap-1.5">
+              <Badge variant={stage.variant}>{stage.label}</Badge>
+              <span className="text-xs font-bold tabular-nums text-[var(--color-text-muted)]">{stageCounts[stage.id]}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="flex flex-wrap gap-1 border-b border-[var(--color-bg-border)] pb-2">
         {[
-          { id: 'inquiries', label: 'Inquiries' },
+          { id: 'pipeline', label: 'Inquiries' },
           { id: 'gigs', label: 'Gigs' },
         ].map((tab) => {
           const active = section === tab.id;
@@ -29,7 +53,7 @@ export default function ArtistBookingsTab({ artistId, isPreview }) {
           );
         })}
       </div>
-      {section === 'inquiries' ? (
+      {section === 'pipeline' ? (
         <ArtistInquiriesTab artistId={artistId} isPreview={isPreview} />
       ) : (
         <ArtistGigsTab artistId={artistId} isPreview={isPreview} />

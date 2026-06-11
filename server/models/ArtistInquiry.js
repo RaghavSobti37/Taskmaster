@@ -1,7 +1,18 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const STATUSES = ['new', 'contacted', 'negotiating', 'blocked', 'confirmed', 'dead'];
+const STATUSES = [
+  'new',
+  'contacted',
+  'negotiating',
+  'verbal_confirmation',
+  'contract_sent',
+  'confirmed',
+  'completed',
+  'paid',
+  'blocked',
+  'dead',
+];
 
 const ArtistInquirySchema = new mongoose.Schema({
   artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true },

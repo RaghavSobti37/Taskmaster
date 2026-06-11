@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const ASSET_TYPES = ['artwork', 'poster', 'reel', 'press', 'logo', 'epk'];
+const ASSET_TYPES = ['artwork', 'poster', 'epk', 'logo', 'press', 'video', 'brand', 'reel'];
 
 const ArtistAssetSchema = new mongoose.Schema({
   artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true },
   type: { type: String, enum: ASSET_TYPES, required: true, index: true },
   title: { type: String, required: true },
   url: { type: String, required: true },
+  isPublic: { type: Boolean, default: false, index: true },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   tags: [{ type: String }],
 }, { timestamps: true });

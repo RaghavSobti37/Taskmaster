@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, Plus, Search, Zap, TrendingUp,
-  ChevronLeft, ChevronRight, RefreshCw, Globe, Database, Trash2, Edit2, Link as LinkIcon, Mic2
+  Users, Plus, TrendingUp, RefreshCw, Globe, BarChart3,
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { Badge, DataTable, Button, TabSwitcher, PageSkeleton, Input, ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
@@ -217,9 +216,14 @@ export default function ArtistsCollection() {
         </>
       )}
       toolbarActions={(
-        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-          <Plus size={14} /> Add Artist
-        </Button>
+        <>
+          <Button size="sm" variant="secondary" onClick={() => navigate('/artists/portfolio')}>
+            <BarChart3 size={14} /> Portfolio
+          </Button>
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+            <Plus size={14} /> Add Artist
+          </Button>
+        </>
       )}
     >
       <div className="space-y-4">

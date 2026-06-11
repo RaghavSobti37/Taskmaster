@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const CATEGORIES = ['Travel', 'Hotel', 'Food', 'Production', 'Marketing', 'Management', 'Misc', 'Revenue'];
+const EXPENSE_CATEGORIES = ['Travel', 'Hotel', 'Food', 'Production', 'Marketing', 'Management', 'Misc'];
+const REVENUE_CATEGORIES = ['Gig', 'Royalty', 'Brand Deal', 'Workshop', 'Sponsorship', 'Revenue'];
+const CATEGORIES = [...EXPENSE_CATEGORIES, ...REVENUE_CATEGORIES];
 
 const ArtistFinanceEntrySchema = new mongoose.Schema({
   artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true },
@@ -19,4 +21,6 @@ ArtistFinanceEntrySchema.index({ artistId: 1, entryDate: -1 });
 ArtistFinanceEntrySchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ArtistFinanceEntry', ArtistFinanceEntrySchema);
-module.exports.EXPENSE_CATEGORIES = CATEGORIES;
+module.exports.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
+module.exports.REVENUE_CATEGORIES = REVENUE_CATEGORIES;
+module.exports.CATEGORIES = CATEGORIES;

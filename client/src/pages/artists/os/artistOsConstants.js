@@ -6,6 +6,7 @@ export const ARTIST_OS_TABS = [
   { id: 'finance', label: 'Finance' },
   { id: 'analytics', label: 'Analytics' },
   { id: 'content', label: 'Content' },
+  { id: 'releases', label: 'Releases' },
   { id: 'notes', label: 'Team Notes' },
   { id: 'documents', label: 'Documents' },
   { id: 'contracts', label: 'Contracts' },
@@ -20,17 +21,40 @@ export const CALENDAR_EVENT_COLORS = {
   release: { bg: 'bg-purple-500', label: 'Release', hex: '#a855f7' },
 };
 
-export const INQUIRY_STATUSES = [
-  { id: 'new', label: 'New', variant: 'info' },
-  { id: 'contacted', label: 'Contacted', variant: 'slate' },
-  { id: 'negotiating', label: 'Negotiating', variant: 'warning' },
-  { id: 'blocked', label: 'Blocked', variant: 'apricot' },
+/** Unified booking pipeline — maps to ArtistInquiry.status */
+export const BOOKING_PIPELINE_STAGES = [
+  { id: 'new', label: 'Lead', variant: 'info' },
+  { id: 'contacted', label: 'Discussion', variant: 'slate' },
+  { id: 'negotiating', label: 'Negotiation', variant: 'warning' },
+  { id: 'verbal_confirmation', label: 'Verbal Confirmation', variant: 'apricot' },
+  { id: 'contract_sent', label: 'Contract Sent', variant: 'info' },
   { id: 'confirmed', label: 'Confirmed', variant: 'success' },
+  { id: 'completed', label: 'Completed', variant: 'success' },
+  { id: 'paid', label: 'Paid', variant: 'success' },
+];
+
+export const INQUIRY_STATUSES = [
+  ...BOOKING_PIPELINE_STAGES,
+  { id: 'blocked', label: 'Blocked', variant: 'apricot' },
   { id: 'dead', label: 'Dead', variant: 'rose' },
+];
+
+export const ASSET_TYPES = [
+  { id: 'artwork', label: 'Artwork' },
+  { id: 'poster', label: 'Poster' },
+  { id: 'epk', label: 'EPK' },
+  { id: 'logo', label: 'Logo' },
+  { id: 'press', label: 'Press' },
+  { id: 'video', label: 'Video' },
+  { id: 'brand', label: 'Brand' },
 ];
 
 export const EXPENSE_CATEGORIES = [
   'Travel', 'Hotel', 'Food', 'Production', 'Marketing', 'Management', 'Misc',
+];
+
+export const REVENUE_CATEGORIES = [
+  'Gig', 'Royalty', 'Brand Deal', 'Workshop', 'Sponsorship',
 ];
 
 export const formatInr = (amount) => {

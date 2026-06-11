@@ -67,7 +67,13 @@ describe('Artist portfolio summary and public profile', () => {
     expect(res.body.totalReach).toBeGreaterThanOrEqual(3500);
     expect(res.body.totalFollowers).toBeGreaterThanOrEqual(3500);
     expect(res.body).toHaveProperty('monthlyGrowth');
+    expect(res.body).toHaveProperty('totalStreams');
+    expect(res.body).toHaveProperty('totalRevenueMtd');
+    expect(res.body).toHaveProperty('totalBookings');
     expect(res.body).toHaveProperty('topPerformer');
+    expect(res.body.rankings).toBeDefined();
+    expect(Array.isArray(res.body.rankings.topGrowth)).toBe(true);
+    expect(Array.isArray(res.body.alerts)).toBe(true);
   });
 
   it('GET /api/artists/public/:slug returns sanitized public fields without auth', async () => {
@@ -88,6 +94,11 @@ describe('Artist portfolio summary and public profile', () => {
     expect(res.body.bio).toBe('Public bio only');
     expect(res.body.socialLinks).toBeDefined();
     expect(res.body.upcomingGigs).toHaveLength(1);
+    expect(res.body.upcomingGigs[0]).toEqual(
+      expect.objectContaining({ venue: 'Mumbai', date: '2026-07-01' }),
+    );
+    expect(res.body.upcomingGigs[0].title).toBeUndefined();
+    expect(res.body).toHaveProperty('musicLinks');
     expect(res.body.oauthCredentials).toBeUndefined();
     expect(res.body.team).toBeUndefined();
   });
@@ -106,6 +117,12 @@ describe('Artist portfolio summary and public profile', () => {
     expect(res.statusCode).toBe(201);
     expect(res.body.inquiryId).toBeDefined();
     expect(res.body.message).toMatch(/inquiry/i);
+
+    const missingContact = await request(app).post(`/api/artists/public/${slug}/inquiry`).send({
+      clientName: 'No Contact',
+    });
+    expect(missingContact.statusCode).toBe(400);
+    expect(missingContact.body.message).toMatch(/email or phone/i);
   });
 
   it('GET /api/artists/:id/os/assets returns list for team member', async () => {

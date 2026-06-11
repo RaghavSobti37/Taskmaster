@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Badge, DataTable, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
-import { INQUIRY_STATUSES, formatInr } from './artistOsConstants';
+import { INQUIRY_STATUSES, BOOKING_PIPELINE_STAGES, formatInr } from './artistOsConstants';
 import { Plus } from 'lucide-react';
 import ArtistOsQueryShell from './ArtistOsQueryShell';
 import {
@@ -79,7 +79,7 @@ export default function ArtistInquiriesTab({ artistId, isPreview }) {
   return (
     <ArtistOsQueryShell isLoading={isLoading} isError={isError} error={error} refetch={refetch} isPreview={isPreview}>
       <div className="flex flex-wrap gap-1">
-        {INQUIRY_STATUSES.map((s) => (
+        {BOOKING_PIPELINE_STAGES.map((s) => (
           <Badge key={s.id} variant={s.variant}>{s.label}</Badge>
         ))}
       </div>

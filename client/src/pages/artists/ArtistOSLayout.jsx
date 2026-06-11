@@ -8,6 +8,7 @@ import ArtistGigsTab from './os/ArtistGigsTab';
 import ArtistFinanceTab from './os/ArtistFinanceTab';
 import ArtistAnalyticsTab from './os/ArtistAnalyticsTab';
 import ArtistContentTab from './os/ArtistContentTab';
+import ArtistReleasesTab from './workspace/ArtistReleasesTab';
 import ArtistNotesTab from './os/ArtistNotesTab';
 import ArtistDocumentsTab from './os/ArtistDocumentsTab';
 import ArtistContractsTab from './os/ArtistContractsTab';
@@ -66,6 +67,8 @@ export default function ArtistOSLayout({
         return <ArtistAnalyticsTab {...panelProps} />;
       case 'content':
         return <ArtistContentTab artistId={artistId} isPreview={isPreview} />;
+      case 'releases':
+        return <ArtistReleasesTab artistId={artistId} isPreview={isPreview} />;
       case 'notes':
         return <ArtistNotesTab artistId={artistId} isPreview={isPreview} />;
       case 'documents':

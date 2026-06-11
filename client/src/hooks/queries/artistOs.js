@@ -144,3 +144,63 @@ export const useCreateArtistCalendarEvent = () => {
     onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
   });
 };
+
+export const useArtistOsAssets = (artistId, enabled = true) => useQuery({
+  queryKey: osKey(artistId, 'assets'),
+  queryFn: async () => (await axios.get(`/api/artists/${artistId}/os/assets`)).data,
+  enabled: !!artistId && enabled,
+});
+
+export const useArtistOsReleases = (artistId, enabled = true) => useQuery({
+  queryKey: osKey(artistId, 'releases'),
+  queryFn: async () => (await axios.get(`/api/artists/${artistId}/os/releases`)).data,
+  enabled: !!artistId && enabled,
+});
+
+export const useCreateArtistAsset = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, data }) => axios.post(`/api/artists/${artistId}/os/assets`, data).then((r) => r.data),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};
+
+export const useUpdateArtistAsset = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, assetId, data }) => axios.patch(`/api/artists/${artistId}/os/assets/${assetId}`, data).then((r) => r.data),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};
+
+export const useDeleteArtistAsset = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, assetId }) => axios.delete(`/api/artists/${artistId}/os/assets/${assetId}`),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};
+
+export const useCreateArtistRelease = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, data }) => axios.post(`/api/artists/${artistId}/os/releases`, data).then((r) => r.data),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};
+
+export const useUpdateArtistRelease = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, releaseId, data }) => axios.patch(`/api/artists/${artistId}/os/releases/${releaseId}`, data).then((r) => r.data),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};
+
+export const useDeleteArtistRelease = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, releaseId }) => axios.delete(`/api/artists/${artistId}/os/releases/${releaseId}`),
+    onSuccess: (_d, { artistId }) => invalidateOs(queryClient, artistId),
+  });
+};

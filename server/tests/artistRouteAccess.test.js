@@ -18,7 +18,15 @@ describe('artist route access', () => {
 
   it('requires auth for integrations config', () => {
     expect(routesSource).not.toMatch(/router\.get\('\/config\/integrations'[\s\S]*?\nrouter\.use\(protect\)/);
-    expect(protectedBlock).toMatch(/router\.get\('\/config\/integrations',\s*artistController\.getIntegrationsConfig/);
+    expect(protectedBlock).toMatch(/router\.get\('\/config\/integrations',\s*artistOrAdmin,\s*artistController\.getIntegrationsConfig/);
+  });
+
+  it('gates portfolio summary with artistOrAdmin', () => {
+    expect(protectedBlock).toMatch(/router\.get\('\/portfolio\/summary',\s*artistOrAdmin,\s*artistController\.getPortfolioSummary/);
+  });
+
+  it('gates instagram webhooks with socials membership', () => {
+    expect(protectedBlock).toMatch(/router\.post\('\/:id\/webhooks\/subscribe',\s*artistMembershipAccess\('socials'\),\s*artistAnalyticsController\.enableInstagramWebhooks/);
   });
 });
 

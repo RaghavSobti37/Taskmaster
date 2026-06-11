@@ -25,6 +25,8 @@ const SERVICE_ALLOWLIST = new Set([
   'campaignFacade.js',
   'folderCache.js',
   'resendWebhookHandler.js',
+  'queueService.js',
+  'emailProcessor.js',
 ]);
 
 /** Controllers/middleware that bypass before tenant context exists or for break-glass ops. */
@@ -46,6 +48,7 @@ const UTIL_ALLOWLIST = new Set([
   'platformOwner.js',
   'campaignRegisteredLocation.js',
   'artistEnquiryProjectResolver.js',
+  'resolveCampaignTenantId.js',
 ]);
 
 const USE_CASES = {

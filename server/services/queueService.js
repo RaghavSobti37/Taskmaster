@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
-const { prepareCampaignHTML } = require('../utils/emailTracker');
 const logger = require('../utils/logger');
 const { resolveCampaignByParam } = require('../utils/resolveCampaign');
 const { isValidEmail } = require('../utils/emailValidation');
+const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
+const { resolveCampaignTenantId } = require('../utils/resolveCampaignTenantId');
+const { runWithWorkerTenant } = require('../utils/workerTenantContext');
+
+const BYPASS = bypassOptions('CAMPAIGN_DISPATCH');
 
 const {
   isCampaignStopped,
@@ -34,8 +38,13 @@ const removeCampaignJobsFromMemoryQueue = (campaignId) => {
   return removedFromQueue;
 };
 
-const usesMemoryQueue = () =>
-  !process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key';
+/** Render API server processes sends unless Trigger.dev worker is explicitly enabled. */
+const usesMemoryQueue = () => {
+  if (process.env.CAMPAIGN_USE_TRIGGER === 'true') {
+    return !process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key';
+  }
+  return true;
+};
 
 const processMemoryQueue = async () => {
   if (isProcessingMemoryQueue || memoryQueue.length === 0) return;
@@ -97,7 +106,7 @@ const resetStuckQueuedRecipients = async (Model, campaignId) => {
   await Model.updateOne(
     { _id: campaignId },
     { $set: { 'recipients.$[elem].status': 'Pending' } },
-    { arrayFilters: [{ 'elem.status': 'Queued' }] },
+    { arrayFilters: [{ 'elem.status': 'Queued' }], ...BYPASS },
   );
 };
 
@@ -106,11 +115,11 @@ const markRecipientsQueued = async (Model, campaignId, recipientIds) => {
   await Model.updateOne(
     { _id: campaignId },
     { $set: { 'recipients.$[elem].status': 'Queued' } },
-    { arrayFilters: [{ 'elem._id': { $in: recipientIds }, 'elem.status': 'Pending' }] },
+    { arrayFilters: [{ 'elem._id': { $in: recipientIds }, 'elem.status': 'Pending' }], ...BYPASS },
   );
 };
 
-const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset = 0 }) => {
+const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset = 0, tenantId }) => {
   const { triggerEmailCampaign } = require('./triggerService');
   const campaignId = campaign._id.toString();
 
@@ -132,6 +141,7 @@ const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset 
       : null,
     isLegacy,
     jobIndex: jobOffset + i,
+    tenantId: tenantId ? String(tenantId) : undefined,
   }));
 
   for (let i = 0; i < jobDataList.length; i += TRIGGER_BATCH_SIZE) {
@@ -142,11 +152,9 @@ const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset 
     }));
   }
 
-  if (usesMemoryQueue()) {
-    processMemoryQueue().catch((err) => {
-      logger.error('Memory Queue', 'Dispatch chunk failed', { error: err.message });
-    });
-  }
+  processMemoryQueue().catch((err) => {
+    logger.error('Memory Queue', 'Dispatch chunk failed', { error: err.message });
+  });
 };
 
 const runCampaignDispatchLoop = async (campaignId) => {
@@ -162,46 +170,60 @@ const runCampaignDispatchLoop = async (campaignId) => {
     if (campaign.status === 'Stopped' || isCampaignStopped(id)) return;
 
     const meta = await Model.findById(campaign._id)
-      .select('status subject title content senderProfileId senderProfileIds')
+      .select('status subject title content senderProfileId senderProfileIds tenantId createdBy')
       .populate('senderProfileId')
       .populate('senderProfileIds')
+      .setOptions(BYPASS)
       .lean();
 
     if (!meta || meta.status === 'Stopped' || isCampaignStopped(id)) return;
 
-    let jobOffset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      if (isCampaignStopped(id)) break;
-
-      const freshStatus = await Model.findById(campaign._id).select('status').lean();
-      if (!freshStatus || freshStatus.status === 'Stopped') break;
-
-      const chunk = await fetchPendingRecipientChunk(Model, campaign._id, DISPATCH_CHUNK_SIZE);
-      if (!chunk.length) {
-        hasMore = false;
-        break;
-      }
-
-      await queueRecipientJobs({
-        Model,
-        campaign: meta,
-        isLegacy,
-        chunk,
-        jobOffset,
-      });
-      jobOffset += chunk.length;
-
-      hasMore = chunk.length === DISPATCH_CHUNK_SIZE;
-      if (hasMore) {
-        await new Promise((resolve) => setImmediate(resolve));
-      }
+    const tenantId = await resolveCampaignTenantId(meta);
+    if (!tenantId) {
+      logger.error('Queue Service', `Cannot dispatch campaign ${id} — no tenantId`);
+      return;
     }
 
-    const { syncProviderUsageFromEvents } = require('./profileSendStats');
-    syncProviderUsageFromEvents().catch((err) => {
-      logger.warn('Queue Service', 'Post-dispatch usage sync failed', { error: err.message });
+    if (!meta.tenantId) {
+      await Model.updateOne({ _id: campaign._id }, { $set: { tenantId } }).setOptions(BYPASS);
+    }
+
+    await runWithWorkerTenant(tenantId, async () => {
+      let jobOffset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        if (isCampaignStopped(id)) break;
+
+        const freshStatus = await Model.findById(campaign._id).select('status').setOptions(BYPASS).lean();
+        if (!freshStatus || freshStatus.status === 'Stopped') break;
+
+        const chunk = await fetchPendingRecipientChunk(Model, campaign._id, DISPATCH_CHUNK_SIZE);
+        if (!chunk.length) {
+          hasMore = false;
+          break;
+        }
+
+        await queueRecipientJobs({
+          Model,
+          campaign: meta,
+          isLegacy,
+          chunk,
+          jobOffset,
+          tenantId,
+        });
+        jobOffset += chunk.length;
+
+        hasMore = chunk.length === DISPATCH_CHUNK_SIZE;
+        if (hasMore) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+      }
+
+      const { syncProviderUsageFromEvents } = require('./profileSendStats');
+      syncProviderUsageFromEvents().catch((err) => {
+        logger.warn('Queue Service', 'Post-dispatch usage sync failed', { error: err.message });
+      });
     });
   } catch (err) {
     logger.error('Queue Service', `Dispatch loop failed for campaign ${id}`, { error: err.message });

@@ -1,4 +1,9 @@
 const logger = require('../../../utils/logger');
+const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
+const { resolveCampaignTenantId } = require('../../../utils/resolveCampaignTenantId');
+const { getTenantId, runWithWorkerTenant } = require('../../../utils/workerTenantContext');
+
+const BYPASS = bypassOptions('EMAIL_PROCESSOR');
 const { buildFinalEmailHtml, personalizeEmailContent } = require('../../../utils/buildFinalEmailHtml');
 const { stripUnsubscribe } = require('../../../utils/emailContentUtils');
 const { incrementProfileSendCount, incrementProviderSendCount, resolvePoolProfile, resolveRotationProvider, usesSmtpRotation, getProfileRotationProviders } = require('../../../services/profileSendStats');
@@ -19,15 +24,15 @@ const updateRecipientFields = async (Model, campaignId, recipientId, fields, inc
   await Model.findByIdAndUpdate(
     campaignId,
     update,
-    { arrayFilters: [{ 'elem._id': recipientId }] }
+    { arrayFilters: [{ 'elem._id': recipientId }], ...BYPASS },
   );
 };
 
 const incrementCampaignCounter = async (Model, campaignId, isLegacy, legacyField, coreField) => {
   if (isLegacy) {
-    await Model.findByIdAndUpdate(campaignId, { $inc: { [`stats.${legacyField}`]: 1 } });
+    await Model.findByIdAndUpdate(campaignId, { $inc: { [`stats.${legacyField}`]: 1 } }, BYPASS);
   } else {
-    await Model.findByIdAndUpdate(campaignId, { $inc: { [`metrics.${coreField}`]: 1 } });
+    await Model.findByIdAndUpdate(campaignId, { $inc: { [`metrics.${coreField}`]: 1 } }, BYPASS);
   }
 };
 
@@ -35,13 +40,15 @@ const buildTransporter = (profile, providerKey = null) => buildProfileTransporte
 
 const buildEnvSmtpTransporter = () => buildEnvTransporter();
 
-const logCampaignEvent = async (MailEvent, { eventType, email, campaignId, metadata, senderProfileId, rotationProvider }) => {
+const logCampaignEvent = async (MailEvent, { eventType, email, campaignId, metadata, senderProfileId, rotationProvider, tenantId }) => {
   try {
+    if (!tenantId) return;
     await MailEvent.create({
       eventType,
       email,
       timestamp: new Date(),
       campaignId,
+      tenantId,
       metadata: metadata || undefined,
       senderProfileId: senderProfileId || undefined,
       rotationProvider: rotationProvider || undefined,
@@ -158,20 +165,25 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
   };
 };
 
-const processEmailJob = async ({ campaignId, recipientId, email, subject, content, profileId, isLegacy, jobIndex }) => {
+const processEmailJobInner = async ({
+  campaignId, recipientId, email, subject, content, profileId, isLegacy, jobIndex, tenantId,
+}) => {
   const Campaign = require('../models/Campaign');
   const MailCampaign = require('../models/MailCampaign');
   const MailEvent = require('../models/MailEvent');
   const { isCampaignStopped } = require('./campaignQueueState');
 
   let Model = Campaign;
-  let campaign = await Campaign.findById(campaignId).populate('senderProfileId').populate('senderProfileIds');
+  let campaign = await Campaign.findById(campaignId).populate('senderProfileId').populate('senderProfileIds').setOptions(BYPASS);
   if (!campaign) {
-    campaign = await MailCampaign.findById(campaignId).populate('senderProfileId');
+    campaign = await MailCampaign.findById(campaignId).populate('senderProfileId').setOptions(BYPASS);
     Model = MailCampaign;
     isLegacy = true;
   }
   if (!campaign) return;
+
+  const resolvedTenantId = tenantId || getTenantId() || await resolveCampaignTenantId(campaign);
+  const logEvent = (payload) => logCampaignEvent(MailEvent, { ...payload, tenantId: resolvedTenantId });
 
   const getRecipient = () => (
     campaign.recipients?.id
@@ -220,7 +232,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
         error: 'Invalid email address',
       });
     }
-    await logCampaignEvent(MailEvent, {
+    await logEvent({
       eventType: 'Skipped',
       email: cleanEmail || String(email || ''),
       campaignId: campaign._id,
@@ -248,7 +260,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     } else if (leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid') {
       await incrementCampaignCounter(Model, campaign._id, false, 'bounced', 'bounced');
     }
-    await logCampaignEvent(MailEvent, {
+    await logEvent({
       eventType: skipStatus === 'Unsubscribed' ? 'Skipped' : 'Failed',
       email: cleanEmail,
       campaignId: campaign._id,
@@ -269,7 +281,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
         error: err.message,
       });
     }
-    await logCampaignEvent(MailEvent, {
+    await logEvent({
       eventType: 'Failed',
       email: cleanEmail,
       campaignId: campaign._id,
@@ -458,7 +470,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       else await incrementProfileSendCount(profileIdForStats);
     }
 
-    await logCampaignEvent(MailEvent, {
+    await logEvent({
       eventType: 'Send',
       email,
       campaignId: campaign._id,
@@ -476,7 +488,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
         error: err.message,
       });
     }
-    await logCampaignEvent(MailEvent, {
+    await logEvent({
       eventType: 'Failed',
       email: cleanEmail,
       campaignId: campaign._id,
@@ -489,6 +501,14 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   } finally {
     if (transporter) transporter.close();
   }
+};
+
+const processEmailJob = async (jobData) => {
+  const tenantId = jobData.tenantId || getTenantId();
+  if (tenantId && !getTenantId()) {
+    return runWithWorkerTenant(tenantId, () => processEmailJobInner({ ...jobData, tenantId }));
+  }
+  return processEmailJobInner({ ...jobData, tenantId });
 };
 
 module.exports = { processEmailJob, resolveTrackingBaseUrl };

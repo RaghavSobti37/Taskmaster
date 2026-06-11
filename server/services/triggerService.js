@@ -83,13 +83,19 @@ triggerClient.defineJob({
 });
 
 const triggerEmailCampaign = async (jobData) => {
+  if (process.env.CAMPAIGN_USE_TRIGGER !== 'true') return false;
   if (triggerApiKey && triggerApiKey !== 'tr_mock_api_key' && TriggerClientRef) {
-    await triggerClient.sendEvent({
-      name: 'mail.dispatch',
-      payload: jobData,
-    });
-    logger.info('Trigger.dev', `Queued event mail.dispatch for ${jobData.email}`);
-    return true;
+    try {
+      await triggerClient.sendEvent({
+        name: 'mail.dispatch',
+        payload: jobData,
+      });
+      logger.info('Trigger.dev', `Queued event mail.dispatch for ${jobData.email}`);
+      return true;
+    } catch (err) {
+      logger.warn('Trigger.dev', 'sendEvent failed — memory queue fallback', { error: err.message });
+      return false;
+    }
   }
   return false;
 };

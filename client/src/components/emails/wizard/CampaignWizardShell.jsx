@@ -63,7 +63,8 @@ export default function CampaignWizardShell() {
     const templateId = searchParams.get('templateId');
     const seedSubject = searchParams.get('subject');
     if (templateId) setValue('mailTemplateId', templateId);
-    if (seedSubject) setValue('subject', decodeURIComponent(seedSubject));
+    // URLSearchParams.get already decodes; second decodeURIComponent throws on literals like "50% off"
+    if (seedSubject) setValue('subject', seedSubject);
   }, [searchParams, setValue]);
 
   const validateStep = async (stepNum) => {

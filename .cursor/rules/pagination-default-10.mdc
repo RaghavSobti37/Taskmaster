@@ -1,0 +1,28 @@
+---
+description: Default pagination page size is 10 across all list pages
+globs: client/src/**/*.{jsx,js}
+alwaysApply: false
+---
+
+# Pagination Default: 10
+
+## Rule
+
+- Default `pageSize` / `limit` = **10** on every paginated list
+- User preference may override via saved filters — initial default still 10
+- Server and client params must stay in sync (`page`, `limit` or `pageSize`)
+
+## Pattern
+
+```js
+const DEFAULT_PAGE_SIZE = 10;
+const [pageSize, setPageSize] = useState(saved?.pageSize || DEFAULT_PAGE_SIZE);
+```
+
+## When adding pagination
+
+- [ ] Default 10 in state and API params
+- [ ] Page size selector includes 10 as first/default option
+- [ ] `navPrefetch` keys use same limit if prefetching page 1
+
+Existing refs: `TodoPage.jsx`, `LeadsPage.jsx`, `FinancePage.jsx`.

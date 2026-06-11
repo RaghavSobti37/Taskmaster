@@ -1,0 +1,28 @@
+---
+description: CoreKnot UI density, 4px grid, dark mode, subtractive shell
+globs: client/src/**/*.{jsx,css}
+alwaysApply: false
+---
+
+# Frontend Design
+
+Promoted from `.agents/rules/frontend.md` (condensed). Pairs with `component-standards.mdc`.
+
+## Layout
+
+- 4px grid only — no arbitrary spacing
+- High density: table cells max `py-2 px-4`
+- List pages: `mb-8` between overview → toolbar → table
+
+## Visual
+
+- Semantic pastels for state encoding only
+- Dark: `#0B0F19` base, `#111827` surface — no pure black
+- Shadows only on floating elements (modals, dropdowns)
+- Financial numbers: `.tabular-nums`
+
+## Interaction
+
+- Table rows clickable → `FullScreenWorkspace`
+- `Esc` closes FSW
+- No static Actions column when row click opens detail

@@ -1,0 +1,25 @@
+---
+description: Multi-tenant guardrails — tenantPlugin, bypassTenant allowlist, aggregates
+globs: server/**/*.{js,mjs}
+alwaysApply: false
+---
+
+# Tenant Security Guard
+
+Spec: `docs/TENANT_SECURITY_PHASE.md`, `docs/TENANT_BYPASS_ALLOWLIST.md`
+
+## Rules
+
+1. New models with tenant data → `tenantPlugin`
+2. `bypassTenant` only via `bypassTenantPolicy.js` allowlist — document new entries
+3. Raw `.aggregate(` → wrap with `aggregateWithTenant` unless allowlisted
+4. Production: missing `tenantId` must **fail fast** — no silent Default Tenant
+5. Workers/cron → `runWithWorkerTenant` / `runForEachTenant`
+
+## Do not change without unlock
+
+`server/routes/track.js` and email tracking bypass paths — see `EMAIL_ENGINE_LOCKED.md`.
+
+## QA
+
+`server/services/qa/qaSuite3Static.js` flags new bypass usage — keep passing after changes.

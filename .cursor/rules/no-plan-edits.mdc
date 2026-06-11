@@ -1,0 +1,17 @@
+---
+description: Implement attached plans without editing the plan file
+alwaysApply: true
+---
+
+# No Plan File Edits
+
+When user attaches a plan (`.plan.md`, roadmap, "Implement the plan"):
+
+1. **Read plan** — do not modify it
+2. Use existing todos if already created
+3. Implement in plan order
+4. Summarize shipped work vs plan at end
+
+If plan is stale vs codebase, report mismatch — ask user to update plan; don't edit it yourself.
+
+Skill: `plan-implement-only` (personal: `~/.cursor/skills/plan-implement-only`)

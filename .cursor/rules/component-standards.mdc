@@ -1,0 +1,24 @@
+---
+description: CoreKnot client UI component standards (lists, modals, tables, loading)
+globs: client/src/**/*.{jsx,tsx,js}
+alwaysApply: false
+---
+
+# Component Standards
+
+Full spec: `docs/COMPONENT_STANDARDS.md`
+
+## Quick rules
+
+- **Lists:** `ListPageLayout` → optional `DataOverviewSection` → `PageToolbar` → `DataTable` (no Card wrapper)
+- **Modals:** `NexusModal` for confirms; `ModalShell` for custom; never nest both
+- **Row detail:** `FullScreenWorkspace` (not NexusModal for edit flows)
+- **Loading:** `PageLoadGuard` + `PageSkeleton` / `DashboardSkeleton`
+- **Buttons:** `Button` from `primitives.jsx` only
+- **Confirms:** `globalConfirm` — no `window.alert` / `confirm`
+- **User display:** `UserAvatar` / `UserLabel` with `name` + `avatar`
+- **Imports:** prefer `components/ui` barrel
+
+## Exceptions (document if adding new)
+
+Schedule grid, attendance calendars, TodoPage workspace rows, AdminMailContent preview — see COMPONENT_STANDARDS § DataTable exceptions.

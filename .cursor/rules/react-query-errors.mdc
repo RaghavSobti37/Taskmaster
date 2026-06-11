@@ -1,0 +1,35 @@
+---
+description: React Query pages must surface fetch errors via QueryErrorBanner
+globs: client/src/pages/**/*.{jsx,tsx}
+alwaysApply: false
+---
+
+# React Query Error Handling
+
+Every page that fetches data with `@tanstack/react-query` must handle failure visibly.
+
+## Required pattern
+
+```jsx
+const { data, isLoading, isError, error, refetch } = useSomeQuery();
+
+if (isError) {
+  return <QueryErrorBanner error={error} onRetry={refetch} />;
+}
+```
+
+Or inline above content when using `PageLoadGuard` for loading only.
+
+## Checklist for new/edited pages
+
+- [ ] `isError` destructured from query hook
+- [ ] `QueryErrorBanner` from `components/ui` (not silent empty state)
+- [ ] `refetch` passed to `onRetry`
+- [ ] Multiple queries: show banner if **any** critical query errors
+
+## Do not
+
+- Render empty table on failed fetch without error UI
+- Swallow errors in `try/catch` without toast or banner
+
+Reference: `client/src/components/ui/QueryErrorBanner.jsx`

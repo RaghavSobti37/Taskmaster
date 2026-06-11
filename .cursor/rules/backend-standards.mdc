@@ -1,0 +1,29 @@
+---
+description: CoreKnot API — sanitization, lean reads, aggregation, audit trails
+globs: server/**/*.{js,mjs}
+alwaysApply: false
+---
+
+# Backend Standards
+
+Promoted from `.agents/rules/backend.md` (condensed).
+
+## Mutations
+
+- Sanitize on save: trim, lowercase email, strip HTML from text
+- CRM changes → `CRMAudit` with old/new deltas
+- Concurrent edit → `lockedBy` / `HTTP 423` where applicable
+
+## Reads
+
+- `.lean()` on read-only GETs
+- `.populate()` human fields — no raw ObjectIds to UI
+- Metrics via `$facet` / `$group` — not N× `countDocuments()`
+
+## Imports
+
+- Check-then-write / upsert — no duplicate leads
+
+## Tenancy
+
+See `tenant-security-guard.mdc` — `tenantPlugin` on models; `bypassTenant` only on allowlist.

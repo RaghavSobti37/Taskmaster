@@ -1,0 +1,27 @@
+---
+description: Defense-in-depth RBAC — page, nav, and API gates must align
+globs: "{client/src/**/*.{jsx,js},server/routes/**/*.js,server/middleware/**/*.js}"
+alwaysApply: false
+---
+
+# RBAC Defense in Depth
+
+Changing access for a feature requires **all three**:
+
+1. **API** — middleware on route (`requireAdmin`, workspace gate, tenant scope)
+2. **Route** — `ProtectedRoute` or page-level guard
+3. **Discovery** — sidebar, `CommandPalette`, keyboard shortcuts via `hasPageAccess` / `canAccessNavPath`
+
+## Source files
+
+- `client/src/utils/pagePermissions.js`
+- `client/src/utils/navPageAccess.js`
+- `server/middleware/authMiddleware.js`
+
+## Rules
+
+- Hiding nav alone is insufficient — API must reject unauthorized roles
+- Opening API without nav gate causes confusion — hide discovery paths too
+- Destructive ops (lead delete, admin routes): document intentional role restriction in PR/commit
+
+Skill: `.cursor/skills/rbac-audit` for full matrix audits.

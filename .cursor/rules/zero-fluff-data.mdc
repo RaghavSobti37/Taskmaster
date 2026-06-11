@@ -1,0 +1,22 @@
+---
+description: No mock/hardcoded UI data; React Query hydration; plain English labels
+alwaysApply: true
+---
+
+# Zero Fluff & Real Data
+
+Promoted from `.agents/rules/zero-fluff.md` + `no-false-data.md`.
+
+## Data
+
+- **No** `MOCK_DATA`, hardcoded dashboard counts, or fake API responses in production UI
+- If a number isn't from API → fix backend or show empty/loading — never invent
+- Mutations: optimistic `setQueryData` + invalidate related query keys
+
+## Language
+
+Use plain English in user-facing copy (not "Execute Batch CSV Mutation" → "Upload Lead List").
+
+## Loading
+
+No stale-data flicker — validate cache/loading before rendering metrics.

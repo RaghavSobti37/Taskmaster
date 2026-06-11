@@ -1,0 +1,27 @@
+---
+description: Production fixes — smallest correct diff, test before push, no drive-by refactors
+alwaysApply: true
+---
+
+# Minimal Production Fix
+
+## Default behavior
+
+1. **Root cause first** — one sentence before coding
+2. **Minimal diff** — fix only broken path; no unrelated cleanup
+3. **Test** — reproduce fix locally or verify code path before push
+4. **Push** — only when user explicitly asks
+
+## Avoid
+
+- Refactoring adjacent files "while here"
+- New abstractions for one-off bugs
+- Changing locked zones (email, logo, hosts) without unlock
+
+## User phrases
+
+- "fix and push after testing"
+- "find root cause"
+- "nope, not working" → diagnose again; consider rollback before next fix
+
+Skill: `production-bug-triage` for full workflow.

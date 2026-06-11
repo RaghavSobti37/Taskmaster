@@ -4,11 +4,12 @@ const {
   listDataHubAudienceContacts,
   listDataHubAudienceFolders,
 } = require('../services/campaignAudienceService');
+const { resolveCampaignEngagementByEmails } = require('../services/campaignEngagementService');
 
 exports.listExlyContacts = async (req, res) => {
   try {
-    const { search = '', offeringId = 'all', limit } = req.query;
-    const result = await listExlyAudienceContacts({ search, offeringId, limit });
+    const { search = '', offeringId = 'all', limit, engagement = 'all' } = req.query;
+    const result = await listExlyAudienceContacts({ search, offeringId, limit, engagement });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -26,9 +27,19 @@ exports.listExlyOfferings = async (req, res) => {
 
 exports.listDataHubContacts = async (req, res) => {
   try {
-    const { search = '', folder = 'all', limit } = req.query;
-    const result = await listDataHubAudienceContacts({ search, folder, limit });
+    const { search = '', folder = 'all', limit, engagement = 'all' } = req.query;
+    const result = await listDataHubAudienceContacts({ search, folder, limit, engagement });
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.resolveAudienceEngagement = async (req, res) => {
+  try {
+    const emails = Array.isArray(req.body?.emails) ? req.body.emails : [];
+    const engagement = await resolveCampaignEngagementByEmails(emails);
+    res.json({ engagement });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

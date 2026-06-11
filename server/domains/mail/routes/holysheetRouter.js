@@ -11,5 +11,6 @@ router.get('/audience/exly', protect, emailsAccess, audienceController.listExlyC
 router.get('/audience/exly/offerings', protect, emailsAccess, audienceController.listExlyOfferings);
 router.get('/audience/data-hub', protect, emailsAccess, admin, audienceController.listDataHubContacts);
 router.get('/audience/data-hub/folders', protect, emailsAccess, admin, audienceController.listDataHubFolders);
+router.post('/audience/engagement', protect, emailsAccess, audienceController.resolveAudienceEngagement);
 
 module.exports = router;

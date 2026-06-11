@@ -6,6 +6,7 @@ const { escapeRegExp, buildFolderQuery, mapHubRow } = require('../../data-hub/qu
 const { resolveHubModel } = require('../../data-hub/folderCache');
 const { getFolderCounts } = require('../../data-hub/listService');
 const { DATA_INLETS, INLET_KEYS } = require('../../../../shared/dataInlets');
+const { filterContactsByEngagement } = require('./campaignEngagementService');
 
 const CONTACT_BYPASS = bypassOptions('campaign_audience_exly');
 const DATA_HUB_BYPASS = bypassOptions('campaign_audience_data_hub');
@@ -38,7 +39,7 @@ function buildExlyBookingQuery({ offeringId } = {}) {
   return query;
 }
 
-async function listExlyAudienceContacts({ search = '', offeringId = 'all', limit = 100000 } = {}) {
+async function listExlyAudienceContacts({ search = '', offeringId = 'all', limit = 100000, engagement = 'all' } = {}) {
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 100000, 1), 100000);
   const bookings = await ExlyBooking.find(buildExlyBookingQuery({ offeringId }))
     .select('name email emailStatus offeringTitle offeringId bookedOn')
@@ -82,10 +83,12 @@ async function listExlyAudienceContacts({ search = '', offeringId = 'all', limit
     if (!existing.name && booking.name) existing.name = booking.name.trim();
   }
 
-  const contacts = Array.from(byEmail.values()).map((contact) => ({
+  let contacts = Array.from(byEmail.values()).map((contact) => ({
     ...contact,
     rowData: exlyContactToRowData(contact),
   }));
+
+  contacts = await filterContactsByEngagement(contacts, engagement);
 
   return { contacts, total: contacts.length };
 }
@@ -141,7 +144,7 @@ async function loadLeadMapByEmail(emails) {
   return map;
 }
 
-async function listDataHubAudienceContacts({ folder = 'all', search = '', limit = 100000 } = {}) {
+async function listDataHubAudienceContacts({ folder = 'all', search = '', limit = 100000, engagement = 'all' } = {}) {
   const safeFolder = folder && folder !== 'all' && CAMPAIGN_DATA_HUB_FOLDER_KEYS.includes(folder)
     ? folder
     : (folder === 'all' ? 'all' : 'all');
@@ -177,7 +180,7 @@ async function listDataHubAudienceContacts({ folder = 'all', search = '', limit 
 
   const leadByEmail = await loadLeadMapByEmail(mapped.map((c) => normalizeEmail(c.email)).filter(Boolean));
 
-  const contacts = mapped.map((person) => {
+  let contacts = mapped.map((person) => {
     const email = normalizeEmail(person.email);
     const lead = leadByEmail.get(email);
     const contact = {
@@ -203,6 +206,8 @@ async function listDataHubAudienceContacts({ folder = 'all', search = '', limit 
       : dataHubContactToRowData(contact, safeFolder);
     return contact;
   });
+
+  contacts = await filterContactsByEngagement(contacts, engagement);
 
   return { contacts, total: contacts.length, folder: safeFolder };
 }

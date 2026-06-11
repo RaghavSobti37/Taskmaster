@@ -8,6 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { isAdminUser } from '../../../utils/departmentPermissions';
 import { useCRMConfig } from '../../../hooks/queries/crm';
 import { useCampaignExlyOfferings, useCampaignDataHubFolders } from '../../../hooks/queries/mail';
+import { CAMPAIGN_ENGAGEMENT_FILTER_OPTIONS } from './useCampaignAudience';
 
 const ALL_SOURCE_TILES = [
   { id: 'csv', label: 'CSV Upload', icon: Upload },
@@ -141,6 +142,9 @@ export default function StepAudienceMapping({
             <span className="text-sm font-medium">{audience.csvFileName || 'Upload CSV file'}</span>
             <input type="file" accept=".csv" className="hidden" onChange={audience.handleCsvUpload} />
           </label>
+          {audience.csvRecipients.length > 0 && (
+            <CampaignEngagementFilter audience={audience} />
+          )}
         </div>
       )}
 
@@ -151,7 +155,9 @@ export default function StepAudienceMapping({
             {audience.loadingHolySheet ? 'Loading…' : 'Fetch HolySheet Data'}
           </Button>
           {audience.csvRecipients.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 space-y-3">
+              <CampaignEngagementFilter audience={audience} />
+              <div className="flex flex-wrap gap-2">
               {Array.from(new Set(audience.csvRecipients.map((r) => r.source))).map((src) => {
                 const count = audience.csvRecipients.filter((r) => r.source === src).length;
                 const isActive = !audience.excludedSources.includes(src);
@@ -174,6 +180,7 @@ export default function StepAudienceMapping({
                   </button>
                 );
               })}
+              </div>
             </div>
           )}
         </div>
@@ -211,6 +218,7 @@ export default function StepAudienceMapping({
               value={audience.leadStatusFilter || 'all'}
               onChange={(v) => audience.setLeadStatusFilter?.(v)}
             />
+            <CampaignEngagementFilter audience={audience} inline />
             {audience.crmSegment === 'artist' && (
               <>
                 <NexusDropdown
@@ -268,6 +276,7 @@ export default function StepAudienceMapping({
               onChange={(v) => audience.setDataHubFolderFilter?.(v)}
               searchable
             />
+            <CampaignEngagementFilter audience={audience} inline />
           </div>
 
           {loadedCount > 0 && (
@@ -299,7 +308,7 @@ export default function StepAudienceMapping({
               Bookings from Exly Data Hub inlet
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <NexusDropdown
               label="Exly offerings"
               placeholder="All offerings"
@@ -316,6 +325,7 @@ export default function StepAudienceMapping({
               value={audience.exlyLeadStatusFilter || 'all'}
               onChange={(v) => audience.setExlyLeadStatusFilter?.(v)}
             />
+            <CampaignEngagementFilter audience={audience} inline />
           </div>
 
           {loadedCount > 0 && (
@@ -336,14 +346,17 @@ export default function StepAudienceMapping({
           <p className="text-xs text-[var(--color-text-muted)]">Add recipients one at a time (email required).</p>
           <ManualRecipientForm onAdd={(r) => audience.setManualRecipients((prev) => [...prev, r])} />
           {audience.manualRecipients.length > 0 && (
-            <ul className="text-xs space-y-1">
-              {audience.manualRecipients.map((r, i) => (
+            <>
+              <CampaignEngagementFilter audience={audience} />
+              <ul className="text-xs space-y-1">
+              {audience.displayManualRecipients.map((r, i) => (
                 <li key={i} className="flex justify-between items-center py-1 border-b border-[var(--color-bg-border)]">
                   <span>{r.name || r.email}</span>
-                  <button type="button" className="text-rose-500 text-[10px]" onClick={() => audience.setManualRecipients((prev) => prev.filter((_, j) => j !== i))}>Remove</button>
+                  <button type="button" className="text-rose-500 text-[10px]" onClick={() => audience.setManualRecipients((prev) => prev.filter((row) => row.email !== r.email || row.name !== r.name))}>Remove</button>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </>
           )}
         </div>
       )}
@@ -419,6 +432,19 @@ export default function StepAudienceMapping({
         </div>
       )}
     </div>
+  );
+}
+
+function CampaignEngagementFilter({ audience, inline = false }) {
+  return (
+    <NexusDropdown
+      label="Campaign engagement"
+      placeholder="All engagement"
+      options={CAMPAIGN_ENGAGEMENT_FILTER_OPTIONS}
+      value={audience.campaignEngagementFilter || 'all'}
+      onChange={(v) => audience.setCampaignEngagementFilter?.(v)}
+      className={inline ? undefined : 'max-w-sm'}
+    />
   );
 }
 

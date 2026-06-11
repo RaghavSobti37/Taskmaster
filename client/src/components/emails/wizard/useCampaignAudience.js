@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { leadToRowData, collectAvailableColumns } from '../../../utils/indexedTemplateVariables';
 import { computeAudienceHealthCheck } from '../../../utils/audienceHealthCheck';
@@ -7,6 +7,13 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useCampaignExlyAudience, useCampaignDataHubAudience } from '../../../hooks/queries/mail';
 
 const UNSENDABLE_EMAIL_STATUSES = new Set(['Invalid', 'Unsubscribed', 'Bounced']);
+
+export const CAMPAIGN_ENGAGEMENT_FILTER_OPTIONS = [
+  { value: 'all', label: 'All engagement' },
+  { value: 'active', label: 'Active (opened/clicked)' },
+  { value: 'inactive', label: 'Inactive (sent, no engagement)' },
+  { value: 'none', label: 'No campaign history' },
+];
 
 function isSendableCrmLead(lead) {
   if (!lead?.email) return false;
@@ -79,6 +86,13 @@ function matchesExlyOfferingFilter(contact, offeringIds) {
   return offeringIds.some((id) => contactIds.includes(id));
 }
 
+function matchesCampaignEngagementFilter(email, engagementByEmail, filter, contactEngagement) {
+  if (!filter || filter === 'all') return true;
+  const engagement = contactEngagement || engagementByEmail[normalizeEmail(email)] || 'none';
+  if (filter === 'none') return engagement === 'none';
+  return engagement === filter;
+}
+
 export function useCampaignAudience({ templateIndices = [], variableMapping = {} }) {
   const toast = useToast();
 
@@ -106,6 +120,9 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const [exlyLoadRequested, setExlyLoadRequested] = useState(false);
   const [dataHubFolderFilter, setDataHubFolderFilter] = useState('all');
   const [dataHubLoadRequested, setDataHubLoadRequested] = useState(false);
+  const [campaignEngagementFilter, setCampaignEngagementFilter] = useState('all');
+  const [engagementByEmail, setEngagementByEmail] = useState({});
+  const [engagementLoading, setEngagementLoading] = useState(false);
 
   const exlyOfferingQueryId = exlyOfferingIdsFilter.length === 1
     ? exlyOfferingIdsFilter[0]
@@ -115,6 +132,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     {
       search: searchTerm || undefined,
       offeringId: exlyOfferingQueryId,
+      engagement: campaignEngagementFilter || 'all',
       limit: 100000,
     },
     { enabled: exlyLoadRequested },
@@ -124,6 +142,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     {
       search: searchTerm || undefined,
       folder: dataHubFolderFilter || 'all',
+      engagement: campaignEngagementFilter || 'all',
       limit: 100000,
     },
     { enabled: dataHubLoadRequested },
@@ -133,6 +152,45 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const exlyContactsLoading = exlyAudienceQuery.isFetching;
   const allDataHubContacts = dataHubAudienceQuery.data?.contacts ?? [];
   const dataHubContactsLoading = dataHubAudienceQuery.isFetching;
+
+  const clientEngagementEmails = useMemo(() => {
+    if (audienceSource === 'crm') {
+      return allContacts.map((c) => c.email).filter(Boolean);
+    }
+    if (audienceSource === 'csv' || audienceSource === 'holysheet') {
+      return csvRecipients.map((r) => r.email).filter(Boolean);
+    }
+    if (audienceSource === 'manual') {
+      return manualRecipients.map((r) => r.email).filter(Boolean);
+    }
+    return [];
+  }, [audienceSource, allContacts, csvRecipients, manualRecipients]);
+
+  useEffect(() => {
+    if (audienceSource === 'exly' || audienceSource === 'datahub') return undefined;
+    if (!clientEngagementEmails.length) {
+      setEngagementByEmail({});
+      return undefined;
+    }
+
+    let cancelled = false;
+    const fetchEngagement = async () => {
+      setEngagementLoading(true);
+      try {
+        const res = await axios.post('/api/mail/audience/engagement', {
+          emails: clientEngagementEmails,
+        });
+        if (!cancelled) setEngagementByEmail(res.data?.engagement || {});
+      } catch {
+        if (!cancelled) setEngagementByEmail({});
+      } finally {
+        if (!cancelled) setEngagementLoading(false);
+      }
+    };
+
+    fetchEngagement();
+    return () => { cancelled = true; };
+  }, [audienceSource, clientEngagementEmails.join('|')]);
 
   const loadCrmContactsData = useCallback(async (segment = crmSegment) => {
     setContactsLoading(true);
@@ -260,16 +318,20 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   }, [toast]);
 
   const activeCsvRecipients = useMemo(
-    () => csvRecipients.filter((r) => !excludedSources.includes(r.source) && !excludedEmails.includes(r.email)),
-    [csvRecipients, excludedSources, excludedEmails],
+    () => csvRecipients.filter((r) => {
+      if (excludedSources.includes(r.source) || excludedEmails.includes(r.email)) return false;
+      return matchesCampaignEngagementFilter(r.email, engagementByEmail, campaignEngagementFilter);
+    }),
+    [csvRecipients, excludedSources, excludedEmails, engagementByEmail, campaignEngagementFilter],
   );
 
   const filteredContacts = useMemo(() => allContacts.filter((c) => {
     if (!c.email) return false;
     if (searchTerm && !c.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !c.email?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (!matchesLeadStatusFilter(c, leadStatusFilter)) return false;
+    if (!matchesCampaignEngagementFilter(c.email, engagementByEmail, campaignEngagementFilter, c.campaignEngagement)) return false;
     return true;
-  }), [allContacts, searchTerm, leadStatusFilter]);
+  }), [allContacts, searchTerm, leadStatusFilter, engagementByEmail, campaignEngagementFilter]);
 
   const filteredExlyContacts = useMemo(() => allExlyContacts.filter((c) => {
     if (!c.email) return false;
@@ -291,13 +353,23 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     return filteredContacts;
   }, [audienceSource, filteredExlyContacts, filteredDataHubContacts, filteredContacts]);
 
+  const displayManualRecipients = useMemo(
+    () => manualRecipients.filter((r) => matchesCampaignEngagementFilter(
+      r.email,
+      engagementByEmail,
+      campaignEngagementFilter,
+    )),
+    [manualRecipients, engagementByEmail, campaignEngagementFilter],
+  );
+
   const previewRecipients = useMemo(() => {
     const selectedCrm = allContacts.filter((c) => selectedLeadIds.includes(c._id));
     const selectedExly = allExlyContacts.filter((c) => selectedExlyIds.includes(c._id));
     const selectedDataHub = allDataHubContacts.filter((c) => selectedDataHubIds.includes(c._id));
+    const manualRows = displayManualRecipients;
     return [
       ...activeCsvRecipients,
-      ...manualRecipients,
+      ...manualRows,
       ...selectedCrm.map((c) => ({ name: c.name, email: c.email, leadId: c._id, rowData: leadToRowData(c) })),
       ...selectedExly.map((c) => ({
         name: c.name,
@@ -306,7 +378,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
       })),
       ...selectedDataHub.map(dataHubContactToPreviewRow),
     ];
-  }, [activeCsvRecipients, manualRecipients, selectedLeadIds, selectedExlyIds, selectedDataHubIds, allContacts, allExlyContacts, allDataHubContacts]);
+  }, [activeCsvRecipients, displayManualRecipients, selectedLeadIds, selectedExlyIds, selectedDataHubIds, allContacts, allExlyContacts, allDataHubContacts]);
 
   const selectedCrmLeadIds = useMemo(
     () => previewRecipients.filter((r) => r.leadId).map((r) => r.leadId),
@@ -344,6 +416,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     setExlyOfferingFilter('all');
     setExlyOfferingIdsFilter([]);
     setExlyLeadStatusFilter('all');
+    setCampaignEngagementFilter('all');
+    setEngagementByEmail({});
   }, []);
 
   return {
@@ -358,7 +432,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     handleCsvUpload, fetchHolySheetData,
     searchTerm, setSearchTerm,
     audienceSource, setAudienceSource,
-    manualRecipients, setManualRecipients,
+    manualRecipients, setManualRecipients, displayManualRecipients,
     allContacts, allExlyContacts, allDataHubContacts,
     filteredContacts, filteredExlyContacts, filteredDataHubContacts, displayContacts,
     previewRecipients, availableColumns, audienceHealth,
@@ -372,6 +446,8 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     exlyLeadStatusFilter, setExlyLeadStatusFilter,
     exlyOfferingFilter, setExlyOfferingFilter,
     dataHubFolderFilter, setDataHubFolderFilter,
+    campaignEngagementFilter, setCampaignEngagementFilter,
+    engagementByEmail, engagementLoading,
     activeCsvRecipients,
   };
 }

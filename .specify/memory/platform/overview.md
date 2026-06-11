@@ -19,7 +19,7 @@
 | **CRM & sales** | Leads, follow-ups, booked calls, artist CRM, phone validation, Exly integration |
 | **Data Hub** | Unified person/contact graph across multiple data inlets |
 | **Data Master** | Person golden-record spine (`Person`, `PersonIdentifier`, `PersonHubView`) |
-| **Email** | Campaigns (CRM/Exly audience filters, Exly source tile), templates, HolySheet, raw HTML inline images + pre-upload crop, open/click tracking, newsletter, Resend dispatch |
+| **Email** | Campaigns (CRM/Exly audience filters, Exly + Data Hub source tiles, **campaign engagement filter** from MailEvent history), templates, HolySheet, raw HTML inline images + pre-upload crop, open/click tracking, newsletter, Resend dispatch |
 | **Finance** | Document OCR, invoices, reimbursements, USD/INR, folder hierarchy |
 | **HR / attendance** | Manual Office/WFH check-in, worked vs daily-log metrics, leave requests |
 | **Artists** | Spotify/YouTube/Meta analytics, Artist Path questionnaire, booking enquiries |

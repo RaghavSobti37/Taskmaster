@@ -1,8 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Disc, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Disc, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui';
+
+const META_OAUTH_STORAGE_PREFIX = 'meta_oauth_exchange:';
+
+function isRecoverableMetaOAuthError(err) {
+  if (err?.response?.data?.alreadyConnected) return true;
+  const msg = String(err?.response?.data?.message || err?.message || '').toLowerCase();
+  return msg.includes('already connected')
+    || msg.includes('authorization link has already been used')
+    || msg.includes('authorization code has been used');
+}
 
 export default function MetaOAuthCallback() {
   const location = useLocation();
@@ -10,46 +20,78 @@ export default function MetaOAuthCallback() {
   const [status, setStatus] = useState('Verifying Meta authorization credentials...');
   const [error, setError] = useState('');
   const [artistId, setArtistId] = useState(null);
+  const exchangeStartedRef = useRef(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const oauthError = params.get('error');
+
+    if (oauthError) {
+      setError(`Meta authorization was denied: ${oauthError}`);
+      return;
+    }
+
+    if (!code) {
+      setError('Authorization code missing from redirect URL.');
+      return;
+    }
+    if (!state) {
+      setError('Artist ID (state) missing from redirect URL.');
+      return;
+    }
+
+    setArtistId(state);
+
+    const storageKey = `${META_OAUTH_STORAGE_PREFIX}${code}`;
+    const priorStatus = sessionStorage.getItem(storageKey);
+
+    if (priorStatus === 'success') {
+      navigate(`/artists/${state}?connected=meta`, { replace: true });
+      return;
+    }
+
+    if (exchangeStartedRef.current || priorStatus === 'pending') {
+      setStatus('Finishing Instagram connection...');
+      return;
+    }
+
+    exchangeStartedRef.current = true;
+    sessionStorage.setItem(storageKey, 'pending');
+
+    // Strip OAuth params so refresh/back cannot re-submit the single-use code.
+    window.history.replaceState({}, '', '/oauth/meta/callback');
+
     const processCallback = async () => {
-      const params = new URLSearchParams(location.search);
-      const code = params.get('code');
-      const state = params.get('state');
-
-      if (!code) {
-        setError('Authorization code missing from redirect URL.');
-        return;
-      }
-      if (!state) {
-        setError('Artist ID (state) missing from redirect URL.');
-        return;
-      }
-
-      setArtistId(state);
-
       try {
         const redirectUri = `${window.location.origin}/oauth/meta/callback`;
         setStatus('Securely exchanging authorization code for 60-day permanent user token & discovering linked accounts...');
-        
+
         await axios.post(`/api/artists/${state}/auth/meta/callback`, {
           code,
-          redirectUri
+          redirectUri,
         });
 
+        sessionStorage.setItem(storageKey, 'success');
         setStatus('Successfully connected! Redirecting back to artist workspace...');
         setTimeout(() => {
-          navigate(`/artists/${state}?connected=meta`);
+          navigate(`/artists/${state}?connected=meta`, { replace: true });
         }, 1500);
-
       } catch (err) {
         console.error('Meta OAuth callback error:', err);
+        if (isRecoverableMetaOAuthError(err)) {
+          sessionStorage.setItem(storageKey, 'success');
+          navigate(`/artists/${state}?connected=meta`, { replace: true });
+          return;
+        }
+        sessionStorage.removeItem(storageKey);
         setError(err.response?.data?.message || err.message || 'Failed to authenticate with Meta.');
       }
     };
 
     processCallback();
-  }, [location, navigate]);
+  }, [location.search, navigate]);
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white flex items-center justify-center p-6">

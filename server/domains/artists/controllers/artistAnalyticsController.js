@@ -7,6 +7,7 @@ const { validateMetric } = require('../../../utils/nullishValidator');
 const { enrichArtistById } = require('../services/artistEnrichmentService');
 const { upsertConnection, getCredentialsForSync } = require('../services/connectionService');
 const { normalizeAll } = require('../../../services/metricsNormalizer');
+const { isMetaOAuthCodeUsedError, hasActiveMetaConnection } = require('../../../utils/metaOAuthErrors');
 const logger = require('../../../utils/logger');
 
 exports.syncArtistStats = async (req, res) => {
@@ -541,20 +542,44 @@ exports.metaOAuthCallback = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Meta credentials not configured in environment variables' });
     }
 
-    logger.info('OAuth', '⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...');
+    logger.info('OAuth', `⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...`);
 
-    // 1. Exchange auth code for short-lived token
-    const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
-      params: {
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code
+    // 1. Exchange auth code for short-lived token (single-use — guard duplicate callbacks)
+    let shortToken;
+    try {
+      const tokenRes = await axios.get('https://graph.facebook.com/v20.0/oauth/access_token', {
+        params: {
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          code,
+        },
+      });
+      shortToken = tokenRes.data.access_token;
+      if (!shortToken) throw new Error('Failed to retrieve short-lived access token from Meta');
+    } catch (exchangeErr) {
+      if (isMetaOAuthCodeUsedError(exchangeErr)) {
+        const existing = await getCredentialsForSync(id);
+        if (hasActiveMetaConnection(existing?.meta)) {
+          logger.info('OAuth', 'Meta code already exchanged — returning existing Instagram connection', { artistId: id });
+          return res.status(200).json({
+            success: true,
+            alreadyConnected: true,
+            message: 'Instagram account is already connected.',
+            credentials: {
+              igAccountId: existing.meta.igAccountId,
+              fbPageId: existing.meta.fbPageId,
+              availableAccounts: existing.meta.availableAccounts || [],
+            },
+          });
+        }
+        return res.status(409).json({
+          success: false,
+          message: 'This authorization link has already been used. Please start a new Instagram connection from the artist page.',
+        });
       }
-    });
-
-    const shortToken = tokenRes.data.access_token;
-    if (!shortToken) throw new Error("Failed to retrieve short-lived access token from Meta");
+      throw exchangeErr;
+    }
 
     logger.info('OAuth', '⚡ [OAuth] Exchanging short-lived token for 60-day permanent token...');
 
@@ -710,10 +735,16 @@ exports.metaOAuthCallback = async (req, res) => {
     });
   } catch (err) {
     logger.error('OAuth', 'Error in metaOAuthCallback', { error: err?.response?.data || err.message });
+    if (isMetaOAuthCodeUsedError(err)) {
+      return res.status(409).json({
+        success: false,
+        message: 'This authorization link has already been used. Please start a new Instagram connection from the artist page.',
+      });
+    }
     res.status(500).json({
       success: false,
       message: err?.response?.data?.error?.message || err.message,
-      details: err?.response?.data || null
+      details: err?.response?.data || null,
     });
   }
 };

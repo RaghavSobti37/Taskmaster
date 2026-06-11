@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Link2 } from 'lucide-react';
 import { Button, TabSwitcher, Input, FullScreenWorkspace } from '../../../components/ui';
 import { useArtistAnalytics } from '../../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../../utils/analyticsDataUtils';
 import { analyticsIntegrations } from '../../../config/integrations.config';
 import UnifiedReachCard from '../../../components/artists/UnifiedReachCard';
 import PlatformSummaryCards from '../../../components/artists/PlatformSummaryCards';
+import ConnectSocialModal from '../../../components/artists/ConnectSocialModal';
 import MetricChart from '../../../components/artists/MetricChart';
 import AssetTable from '../../../components/artists/AssetTable';
 import { Card } from '../../../components/ui';
@@ -62,6 +63,7 @@ function ArtistAnalyticsTabInner({
   const [accountId] = useState(null);
   const [videoFilter, setVideoFilter] = useState('all');
   const [showAddVideo, setShowAddVideo] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const [newVideo, setNewVideo] = useState({ url: '', title: '', channelName: '' });
 
   const { data: scoresData, isError: scoresError, error: scoresQueryError, refetch: refetchScores } = useArtistOsScores(artistId, !!artistId && !isPreview);
@@ -132,12 +134,32 @@ function ArtistAnalyticsTabInner({
         onReconnect={onSync}
       />
 
-      <PlatformSummaryCards
-        artist={artist}
-        normalized={normalized || analyticsData?.normalized}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+            Connected Platforms
+          </h3>
+          {!isPreview && artistId && (
+            <Button size="sm" onClick={() => setShowConnectModal(true)}>
+              <Link2 size={14} /> Connect Social Media
+            </Button>
+          )}
+        </div>
+        <PlatformSummaryCards
+          artist={artist}
+          normalized={normalized || analyticsData?.normalized}
+          connections={connections}
+          onSetPrimary={onSetPrimary}
+          providers={summaryProviders}
+          onAddPlatform={!isPreview && artistId ? () => setShowConnectModal(true) : undefined}
+        />
+      </div>
+
+      <ConnectSocialModal
+        isOpen={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+        artistId={artistId}
         connections={connections}
-        onSetPrimary={onSetPrimary}
-        providers={summaryProviders}
       />
 
       {scores && (

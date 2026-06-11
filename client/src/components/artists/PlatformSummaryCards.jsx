@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw, Plus } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { Card, Badge, Button } from '../ui';
 import { formatNumber, byId, getProfileUrl } from '../../config/integrations.config';
@@ -104,7 +104,7 @@ function PlatformCard({ provider, artist, normalized, connections, onSetPrimary,
   );
 }
 
-export default function PlatformSummaryCards({ artist, normalized, connections, onSetPrimary, providers = ['spotify', 'youtube', 'instagram'] }) {
+export default function PlatformSummaryCards({ artist, normalized, connections, onSetPrimary, providers = ['spotify', 'youtube', 'instagram'], onAddPlatform }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {providers.map((p) => (
@@ -117,6 +117,19 @@ export default function PlatformSummaryCards({ artist, normalized, connections, 
           onSetPrimary={onSetPrimary}
         />
       ))}
+      {onAddPlatform && (
+        <button
+          type="button"
+          onClick={onAddPlatform}
+          className="p-4 rounded-2xl border-2 border-dashed border-[var(--color-action-primary)]/30 bg-[var(--color-bg-surface)] hover:border-[var(--color-action-primary)]/60 hover:bg-[color-mix(in_srgb,var(--color-action-primary)_6%,transparent)] transition flex flex-col items-center justify-center gap-2 min-h-[180px] text-[var(--color-action-primary)]"
+        >
+          <div className="w-10 h-10 rounded-full bg-[color-mix(in_srgb,var(--color-action-primary)_12%,transparent)] flex items-center justify-center">
+            <Plus size={20} />
+          </div>
+          <span className="text-xs font-black uppercase tracking-wider">Add Platform</span>
+          <span className="text-[11px] text-[var(--color-text-muted)] text-center px-4">Connect Instagram, Facebook, Spotify, YouTube & more</span>
+        </button>
+      )}
     </div>
   );
 }

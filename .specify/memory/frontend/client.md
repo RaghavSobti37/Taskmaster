@@ -81,7 +81,7 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 | `brand/` | **LOCKED** logo + spinner |
 | `dashboard/` | Widgets: todos, calendar, pinboard, leaderboard |
 | `dataHub/` | Person detail panel, folder sidebar |
-| `emails/` | Email hub, campaign wizard steps |
+| `emails/` | Email hub, `CampaignWizardShell` (Zod steps; `?subject=` seed without double URI decode) |
 | `finance/` | Upload modal, needs-attention |
 | `forms/` | Project/member/workspace selects |
 | `tasks/` | Task list, detail modal, activity, completion |

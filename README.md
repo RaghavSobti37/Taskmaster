@@ -118,6 +118,7 @@ avPageAccess, pagePermissions) |
 | **Assets hub** | `/assets` hub layout ? **File Links** (all with `assets` permission) + **Managed Accounts** (`/assets/accounts`) for org emails, social IDs, and platform logins; Google Sheet import replaces tenant data; roles: admin, artist-management, operations |
 | **Pagination** | `DataTable` / `TablePagination` default **10 entries** via `DEFAULT_TABLE_PAGE_SIZE`; server-side pages clamp when filters shrink; Followups + Booking Enquiries wired to full pagination API |
 | **Campaign location & mail studio** | Option C WYSIWYG block spacing (`shared/emailBlockSpacing.cjs`); campaign + aggregate analytics show **registered CRM city** breakdown (opens/clicks attributed via `Lead.location` / `Lead.city`, not IP geo); shared `RegisteredLocationBarChart`; rebuild: `node server/scripts/rebuildCampaignLocationBreakdown.js <id> [--prod]`; Resend backfill: `node server/scripts/backfillCampaignFromResend.js <id> [--prod]` |
+| **Mail studio & campaign UX (Jun 2026)** | Raw HTML inline image upload + pre-upload crop; campaign recipient CSV export; Create Campaign `?subject=` seed safe for `%` in template subjects |
 | **Supabase secondary store** | Offloads logs, audits, mail rollups, CRM snapshots, and **production backups** from Atlas M0; Mongo stays primary for live CRM/email; `Last Backup` widget + Data Hub **DB Backup** ? Supabase Storage (`taskmaster-backups`); auto-purges Mongo GridFS after successful Supabase dump ? see [Backup & Supabase](#backup--supabase-secondary-store) |
 | **Local dev stability (Jun 2026)** | OneDrive-friendly Vite `awaitWriteFinish` + ignored paths; `generateVercelConfig` skips noop writes; dev builds skip service worker registration |
 | **Daily logs RBAC** | Non-admins always see self logs; `userId=all` requires admin; client ignores `?user=` tampering |
@@ -224,8 +225,9 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Mail Template Studio & Outbound HTML Pipeline
 
-* **Image crop (raw HTML):** Optional aspect presets and crop modal before inline image upload in Mail Template Studio.
+* **Image crop (raw HTML):** Optional aspect presets and crop modal (`react-easy-crop`, `MailTemplateImageCropModal`) before inline image upload in Mail Template Studio.
 * **Inline images (raw HTML):** Mail Template Studio uploads assets via Uploadthing, stores `MailTemplate.assets`, inserts `<img>` in raw HTML mode, and `buildFinalEmailHtml` normalizes absolute image URLs before send (locked tracking layer unchanged).
+* **Campaign wizard seed:** Opening **New Campaign** from a template passes `?templateId=` and `?subject=` — `URLSearchParams.get` decoding only (no second `decodeURIComponent`), so subjects with literal `%` (e.g. `50% off`) do not crash the page.
 * **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` ? visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft ? submit ? approve/reject workflow.
 * **Named approvers:** `shared/mailTemplateApprovers.js` lists emails who can approve/reject pending templates in addition to admin-department users (`canApproveMailTemplates` on client + server). Submit notifications go to both admin department and named approvers.
 * **Emails page access:** `/emails` is available to every authenticated user (`hasPageAccess` bypass for `emails`); `emails` is included in `BASE_PAGE_KEYS` for department defaults.

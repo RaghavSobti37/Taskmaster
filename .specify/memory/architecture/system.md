@@ -33,7 +33,7 @@
 6. `tenantPlugin` scopes queries to user's tenant
 7. Controller â†’ Service â†’ Model
 8. `notificationDispatcher` / `systemLogService` / Supabase mirrors on write
-9. Socket.IO broadcasts realtime updates to subscribed channels
+9. Socket.IO broadcasts realtime updates to subscribed channels (websocket may log a failed upgrade on Vercel; client falls back to polling)
 
 ---
 

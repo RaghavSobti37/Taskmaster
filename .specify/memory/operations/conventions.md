@@ -95,6 +95,7 @@ Full catalog: `docs/SCRIPTS_RUNBOOK.md`
 | **CRM phones** | Strict per-country validation; HTTP 409 on duplicate |
 | **Gamification** | 12h XP cap per event; weekly reset Monday IST |
 | **Pagination** | `DEFAULT_TABLE_PAGE_SIZE = 10` across DataTable |
+| **URL query params** | `URLSearchParams.get()` is already decoded — do not `decodeURIComponent` again (throws on literal `%`) |
 
 ---
 

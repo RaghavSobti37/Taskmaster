@@ -53,6 +53,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 ## Email & Campaigns
 
 - **Mail Template Studio:** Raw HTML inline images (Uploadthing) with optional pre-upload crop (`react-easy-crop`, `MailTemplateImageCropModal`)
+- **Campaign wizard:** `CampaignWizardShell` seeds `subject` from `?subject=` via `URLSearchParams` only — no double `decodeURIComponent` (subjects with `%` safe)
 - Email hub at `/emails/*` — templates, campaigns, profiles, analytics
 - `MailTemplateStudio` — draft → submit → approve workflow
 - HolySheet contact sync, indexed merge tokens (`{{1}}`, `{{2}}`)

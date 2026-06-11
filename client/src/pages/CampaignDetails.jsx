@@ -353,15 +353,6 @@ export default function CampaignDetails() {
         ]}
       />
 
-      <RegisteredLocationBarChart
-        title="Registered location"
-        variant="histogram"
-        data={locationData}
-        height={256}
-        limit={8}
-        className="p-3 bg-[var(--color-bg-surface)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]"
-      />
-
       <PageToolbar
         actions={(
           <>

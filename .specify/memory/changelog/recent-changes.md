@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-06-11 — Remove duplicate registered location chart on campaign details
+
+- **Request:** Campaign analytics showed two registered-location charts; remove top standalone duplicate
+- **Root cause:** `CampaignDetails.jsx` rendered `RegisteredLocationBarChart` twice — once full-width above toolbar, again in bottom grid as breakdown
+- **Fix:** Removed top `RegisteredLocationBarChart` (`title="Registered location"`); kept Engagement Over Time + Registered location breakdown pair
+- **Verify:** `npm run build --prefix client`; `npm run audit:exposure`; `npm run audit:deadcode`
+
+---
+
 ## 2026-06-11 — Open task assignment (any user ? any tenant user)
 
 - **Request:** Anyone can assign tasks to anyone; assigner becomes `createdBy`; drop project-role gate for assignment

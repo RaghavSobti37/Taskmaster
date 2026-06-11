@@ -24,6 +24,7 @@ const SERVICE_ALLOWLIST = new Set([
   'leadDuplicateService.js',
   'campaignFacade.js',
   'folderCache.js',
+  'resendWebhookHandler.js',
 ]);
 
 /** Controllers/middleware that bypass before tenant context exists or for break-glass ops. */

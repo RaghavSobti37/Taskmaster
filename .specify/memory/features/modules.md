@@ -60,6 +60,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - Campaign detail at `/campaign/:campaignId`
 - **Recipient CSV export** — `GET /api/campaigns/:id/recipients/export?status=&hideInvalid=` returns name/number/email from rowData or linked Lead
 - **Registered location breakdown** — CRM city (not IP geo)
+- **Resend webhooks** — `resendWebhookHandler.js` sets `MailEvent.tenantId` from campaign (Lead fallback); skips event row if unresolved (no 500)
 - **Email engine LOCKED** — `docs/EMAIL_ENGINE_LOCKED.md`
 
 ---

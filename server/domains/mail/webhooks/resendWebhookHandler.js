@@ -12,6 +12,26 @@ const {
   lookupGeoForClick,
   normalizeIp,
 } = require('../../../utils/geoLookup');
+const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
+
+async function resolveMailEventTenantId(camp, cleanEmail) {
+  if (camp?.tenantId) return camp.tenantId;
+  const lead = await Lead.findOne({ email: cleanEmail })
+    .select('tenantId')
+    .setOptions(bypassOptions('RESEND_WEBHOOK'))
+    .lean();
+  return lead?.tenantId ?? null;
+}
+
+async function createResendMailEvent(payload, tenantId) {
+  if (!tenantId) {
+    console.warn(
+      `[Resend Webhook] Skipping MailEvent (${payload.eventType}) — no tenantId for ${payload.email}`,
+    );
+    return;
+  }
+  await MailEvent.create({ ...payload, tenantId });
+}
 
 /** Track host: /webhooks/resend — locked geo + tag-based campaign lookup */
 async function handleTrackResendWebhook(req, res) {
@@ -151,6 +171,7 @@ async function handleTrackResendWebhook(req, res) {
     }
 
     const isWebhookBot = isEmailLinkScanner(userAgent);
+    const mailEventTenantId = await resolveMailEventTenantId(camp, cleanEmail);
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       if (recipient) {
@@ -201,7 +222,7 @@ async function handleTrackResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Bounce',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -211,7 +232,7 @@ async function handleTrackResendWebhook(req, res) {
           source: 'RESEND_WEBHOOK',
           error: payload.data.error?.message || payload.data.error || 'Bounced',
         },
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.opened') {
       if (isWebhookBot) return res.status(200).send('Ignored bot open');
 
@@ -235,7 +256,7 @@ async function handleTrackResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Active', 'Active');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Open',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -244,7 +265,7 @@ async function handleTrackResendWebhook(req, res) {
         ipAddress: ip || undefined,
         userAgent,
         ...(locationObj ? { location: locationObj } : {}),
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.clicked') {
       if (isWebhookBot) return res.status(200).send('Ignored bot click');
 
@@ -280,7 +301,7 @@ async function handleTrackResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Active', 'Active');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Click',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -290,7 +311,7 @@ async function handleTrackResendWebhook(req, res) {
         ipAddress: ip || undefined,
         userAgent,
         ...(locationObj ? { location: locationObj } : {}),
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.delivered') {
       if (recipient) {
         if (recipient.status === 'Pending') {
@@ -299,13 +320,13 @@ async function handleTrackResendWebhook(req, res) {
         }
       }
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Delivery',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-      });
+      }, mailEventTenantId);
     }
 
     res.status(200).send('Webhook processed');
@@ -430,6 +451,8 @@ async function handleApiResendWebhook(req, res) {
       locationString = `${locationObj.city}, ${locationObj.region}, ${locationObj.country}`;
     }
 
+    const mailEventTenantId = await resolveMailEventTenantId(camp, cleanEmail);
+
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       if (recipient) {
         recipient.status = 'Bounced';
@@ -479,7 +502,7 @@ async function handleApiResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Bounce',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -489,7 +512,7 @@ async function handleApiResendWebhook(req, res) {
           source: 'RESEND_WEBHOOK',
           error: payload.data.error?.message || payload.data.error || 'Bounced',
         },
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.opened') {
       if (recipient) {
         if (!['Clicked', 'Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
@@ -521,7 +544,7 @@ async function handleApiResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Active', 'Active');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Open',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -535,7 +558,7 @@ async function handleApiResendWebhook(req, res) {
           country: locationObj.country,
           userAgent: locationObj.userAgent,
         },
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.clicked') {
       if (recipient) {
         if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
@@ -567,7 +590,7 @@ async function handleApiResendWebhook(req, res) {
       );
       await updateEmailTags(cleanEmail, 'Active', 'Active');
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Click',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
@@ -582,7 +605,7 @@ async function handleApiResendWebhook(req, res) {
           country: locationObj.country,
           userAgent: locationObj.userAgent,
         },
-      });
+      }, mailEventTenantId);
     } else if (eventType === 'email.delivered') {
       if (recipient) {
         if (recipient.status === 'Pending') {
@@ -591,13 +614,13 @@ async function handleApiResendWebhook(req, res) {
         }
       }
 
-      await MailEvent.create({
+      await createResendMailEvent({
         eventType: 'Delivery',
         email: cleanEmail,
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-      });
+      }, mailEventTenantId);
     }
 
     res.status(200).send('SUCCESS');

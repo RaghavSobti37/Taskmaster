@@ -1,14 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, BarChart3 } from 'lucide-react';
-import { Button, TabSwitcher, Input, FullScreenWorkspace, SectionCard, MetricCard } from '../../../components/ui';
+import { Button, Input, FullScreenWorkspace, SectionCard, MetricCard } from '../../../components/ui';
 import { useArtistAnalytics } from '../../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../../utils/analyticsDataUtils';
-import { analyticsIntegrations } from '../../../config/integrations.config';
+import { formatNumber } from '../../../config/integrations.config';
 import UnifiedReachCard from '../../../components/artists/UnifiedReachCard';
 import PlatformSummaryCards from '../../../components/artists/PlatformSummaryCards';
-import MetricChart from '../../../components/artists/MetricChart';
-import AssetTable from '../../../components/artists/AssetTable';
+import PlatformAnalyticsSection from '../../../components/artists/PlatformAnalyticsSection';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../../components/ui/QueryErrorBanner';
 import {
   TimeRangeProvider,
@@ -28,6 +27,14 @@ const TIMEFRAME_FROM_PRESET = {
   [TIME_RANGE_PRESETS.custom]: '28D',
 };
 
+const ANALYTICS_PLATFORMS = ['spotify', 'youtube', 'instagram'];
+
+const HISTORY_KEY = {
+  spotify: 'spotify',
+  youtube: 'youtube',
+  instagram: 'meta',
+};
+
 const SCORE_VARIANTS = {
   audienceScore: 'mint',
   growthScore: 'info',
@@ -42,11 +49,20 @@ const SCORE_LABELS = {
   monetizationScore: 'Monetization',
 };
 
+function sliceHistory(rawHistory, timeframe) {
+  if (!rawHistory?.length || timeframe === 'ALL') return rawHistory || [];
+  const now = new Date();
+  let from = new Date(now);
+  if (timeframe === 'YTD') from = new Date(now.getFullYear(), 0, 1);
+  else from.setDate(from.getDate() - ({ '7D': 7, '28D': 28, '90D': 90 }[timeframe] || 28));
+  return rawHistory.filter((h) => new Date(h.timestamp || h.date) >= from);
+}
+
 function AnalyticsInsightsPanel({ scores, correlations = [] }) {
   if (!scores && !correlations.length) return null;
 
   return (
-    <div className="space-y-4 h-full">
+    <div className="space-y-4">
       {scores && (
         <div className="space-y-2">
           <p className="tm-widget-label">OS Scores</p>
@@ -104,31 +120,22 @@ function ArtistAnalyticsTabInner({
   const [searchParams, setSearchParams] = useSearchParams();
   const { preset, range } = useTimeRange();
   const timeframe = TIMEFRAME_FROM_PRESET[preset] || '28D';
-  const platformParam = searchParams.get('platform');
-  const initialTab = platformParam === 'meta' ? 'instagram' : platformParam;
-  const [activeTab, setActiveTab] = useState(initialTab || 'spotify');
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', 'analytics');
-    next.set('platform', tab);
-    setSearchParams(next, { replace: true });
-  };
-  const [accountId] = useState(null);
+  const [focusedPlatform, setFocusedPlatform] = useState(null);
   const [videoFilter, setVideoFilter] = useState('all');
   const [showAddVideo, setShowAddVideo] = useState(false);
   const [newVideo, setNewVideo] = useState({ url: '', title: '', channelName: '' });
 
-  const { data: scoresData, isError: scoresError, error: scoresQueryError, refetch: refetchScores } = useArtistOsScores(artistId, !!artistId && !isPreview);
+  const { data: scoresData, isError: scoresError, error: scoresQueryError, refetch: refetchScores } = useArtistOsScores(
+    artistId,
+    !!artistId && !isPreview
+  );
   const scores = scoresData?.scores;
 
-  const analyticsPlatform = activeTab === 'meta' ? 'instagram' : activeTab;
   const { data: analyticsData, isLoading: isAnalyticsLoading, isError: analyticsError, error: analyticsQueryError, refetch: refetchAnalytics } = useArtistAnalytics(
     artistId,
-    analyticsPlatform,
+    'spotify',
     timeframe,
-    accountId,
+    null,
     !!artistId
   );
 
@@ -138,45 +145,65 @@ function ArtistAnalyticsTabInner({
     return base;
   }, [connections]);
 
-  const tabs = useMemo(() => {
-    const integrations = analyticsIntegrations();
-    const connected = connectedProviders.length
-      ? integrations.filter((p) => connectedProviders.includes(p.id) || (p.id === 'instagram' && connectedProviders.includes('meta')))
-      : integrations.filter((p) => ['spotify', 'youtube', 'instagram'].includes(p.id));
-    return connected.map((p) => ({ id: p.id === 'instagram' ? 'instagram' : p.id, label: p.tabLabel }));
+  const visiblePlatforms = useMemo(() => {
+    if (!connectedProviders.length) return ANALYTICS_PLATFORMS;
+    return ANALYTICS_PLATFORMS.filter(
+      (p) => connectedProviders.includes(p) || (p === 'instagram' && connectedProviders.includes('meta'))
+    );
   }, [connectedProviders]);
-
-  useEffect(() => {
-    if (platformParam) {
-      const resolved = platformParam === 'meta' ? 'instagram' : platformParam;
-      if (tabs.some((t) => t.id === resolved)) setActiveTab(resolved);
-    }
-  }, [platformParam, tabs]);
-
-  useEffect(() => {
-    if (tabs.length && !tabs.some((t) => t.id === activeTab)) {
-      setActiveTab(tabs[0].id);
-    }
-  }, [tabs, activeTab]);
-
-  const historyKey = activeTab === 'instagram' ? 'meta' : activeTab;
-  const rawHistory = analyticsData?.history?.[historyKey] || analyticsData?.history?.[activeTab] || [];
-  const slicedHistory = useMemo(() => {
-    if (!rawHistory.length || timeframe === 'ALL') return rawHistory;
-    const now = new Date();
-    let from = new Date(now);
-    if (timeframe === 'YTD') from = new Date(now.getFullYear(), 0, 1);
-    else from.setDate(from.getDate() - ({ '7D': 7, '28D': 28, '90D': 90 }[timeframe] || 28));
-    return rawHistory.filter((h) => new Date(h.timestamp || h.date) >= from);
-  }, [rawHistory, timeframe]);
-  const chartData = formatChartData(slicedHistory, activeTab);
 
   const tracks = analyticsData?.tracks || [];
   const videos = analyticsData?.videos || [];
   const posts = analyticsData?.posts || [];
+  const history = analyticsData?.history || {};
 
-  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || activeTab;
-  const assetSectionTitle = activeTab === 'spotify' ? 'Top Tracks' : activeTab === 'youtube' ? 'Videos' : 'Recent Posts';
+  const platformChartData = useMemo(() => {
+    const out = {};
+    ANALYTICS_PLATFORMS.forEach((platform) => {
+      const key = HISTORY_KEY[platform];
+      out[platform] = formatChartData(sliceHistory(history[key] || [], timeframe), platform);
+    });
+    return out;
+  }, [history, timeframe]);
+
+  const platformStatHints = useMemo(() => {
+    const analytics = artist?.analytics || {};
+    return {
+      spotify: analytics.spotify?.followers != null
+        ? `${formatNumber(analytics.spotify.followers)} followers · Popularity ${analytics.spotify.popularity ?? '—'}/100`
+        : null,
+      youtube: analytics.youtube?.subscribers != null
+        ? `${formatNumber(analytics.youtube.subscribers)} subs · ${formatNumber(analytics.youtube.views)} views`
+        : null,
+      instagram: analytics.instagram?.followers != null
+        ? `${formatNumber(analytics.instagram.followers)} followers · ${analytics.instagram.engagementRate ?? '—'}% engagement`
+        : null,
+    };
+  }, [artist?.analytics]);
+
+  const scrollToPlatform = useCallback((platform) => {
+    setFocusedPlatform(platform);
+    document.getElementById(`analytics-${platform}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  useEffect(() => {
+    const platform = searchParams.get('platform');
+    if (!platform) return;
+    const resolved = platform === 'meta' ? 'instagram' : platform;
+    const timer = window.setTimeout(() => scrollToPlatform(resolved), 150);
+    const next = new URLSearchParams(searchParams);
+    next.delete('platform');
+    setSearchParams(next, { replace: true });
+    return () => window.clearTimeout(timer);
+  }, [searchParams, setSearchParams, scrollToPlatform]);
+
+  useEffect(() => {
+    const hash = window.location.hash?.replace('#', '');
+    if (!hash.startsWith('analytics-')) return;
+    const platform = hash.replace('analytics-', '');
+    const timer = window.setTimeout(() => scrollToPlatform(platform), 150);
+    return () => window.clearTimeout(timer);
+  }, [scrollToPlatform]);
 
   return (
     <div className="space-y-0">
@@ -186,7 +213,7 @@ function ArtistAnalyticsTabInner({
           <div>
             <h2 className="tm-widget-label text-[var(--color-text-primary)] !text-[11px]">Audience Analytics</h2>
             <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-              Cross-platform reach, growth, and content performance
+              All platforms on one page — scroll for charts and content tables
             </p>
           </div>
         </div>
@@ -217,7 +244,7 @@ function ArtistAnalyticsTabInner({
 
       <SectionCard
         title="Platforms"
-        subtitle="Click a platform to view its chart and content"
+        subtitle="Click a card to jump to that platform's chart and content"
         bodyClassName="!py-4"
       >
         <PlatformSummaryCards
@@ -226,53 +253,45 @@ function ArtistAnalyticsTabInner({
           connections={connections}
           onSetPrimary={onSetPrimary}
           providers={summaryProviders}
-          activeProvider={activeTab}
-          onSelect={handleTabChange}
+          activeProvider={focusedPlatform}
+          onSelect={scrollToPlatform}
           compact
         />
       </SectionCard>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 border-t border-[var(--color-bg-border)]">
-        <div className="xl:col-span-2 py-4 xl:pr-6 xl:border-r border-[var(--color-bg-border)] min-h-[260px]">
-          <MetricChart chartData={chartData} activeTab={activeTab} rangeLabel={range.label} />
-        </div>
-        <div className="py-4 xl:pl-6">
+      {(scores || scoresData?.correlations?.length > 0) && (
+        <SectionCard title="Insights" bodyClassName="!py-4">
           <AnalyticsInsightsPanel scores={scores} correlations={scoresData?.correlations} />
-        </div>
-      </div>
+        </SectionCard>
+      )}
 
       <SectionCard
-        title={assetSectionTitle}
-        subtitle={activeTabLabel}
-        bodyClassName="!py-0 !pt-2"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <TabSwitcher
-              activeTab={activeTab}
-              onChange={handleTabChange}
-              tabs={tabs.length ? tabs : [
-                { id: 'spotify', label: 'Spotify' },
-                { id: 'youtube', label: 'YouTube' },
-                { id: 'instagram', label: 'Instagram' },
-              ]}
-            />
-            {activeTab === 'youtube' && !isPreview && addVideoMutation && (
-              <Button size="sm" onClick={() => setShowAddVideo(true)}>
-                <Plus size={14} /> Add Featured Video
-              </Button>
-            )}
-          </div>
-        }
+        title="Platform Breakdown"
+        subtitle="Charts and content for each connected platform"
+        bodyClassName="!py-4 space-y-5"
       >
-        <AssetTable
-          activeTab={activeTab}
-          tracks={tracks}
-          videos={videos}
-          posts={posts}
-          loading={isAnalyticsLoading}
-          videoFilter={videoFilter}
-          onVideoFilterChange={setVideoFilter}
-        />
+        {visiblePlatforms.map((platform) => (
+          <PlatformAnalyticsSection
+            key={platform}
+            platform={platform}
+            chartData={platformChartData[platform]}
+            timeframe={range.label}
+            tracks={tracks}
+            videos={videos}
+            posts={posts}
+            loading={isAnalyticsLoading}
+            videoFilter={platform === 'youtube' ? videoFilter : undefined}
+            onVideoFilterChange={platform === 'youtube' ? setVideoFilter : undefined}
+            statHint={platformStatHints[platform]}
+            headerAction={
+              platform === 'youtube' && !isPreview && addVideoMutation ? (
+                <Button size="sm" onClick={() => setShowAddVideo(true)}>
+                  <Plus size={14} /> Add Featured Video
+                </Button>
+              ) : null
+            }
+          />
+        ))}
       </SectionCard>
 
       {addVideoMutation && (

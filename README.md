@@ -93,6 +93,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Artist CRM** | Separate pipeline for TSC Artists: 6-sheet CSV import (~700 contacts), `crmType: artist`, booking enquiries from TSC `/query` webhook, `ArtistBookingEnquiryPanel` in lead modal, Bookings tab + Akash default assignee |
 | **Project goals** | `ProjectGoal` / KRA models, metrics strip on project detail, snapshot history |
 | **Agent memory** | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) ? component docs + [`MASTER.md`](.specify/memory/MASTER.md) complete reference |
+| **Cursor agents** | Committed `.cursor/rules/*` (RBAC, tenant security, React Query, pagination, zero-fluff data) + `.cursor/skills/*` (session boot, RBAC audit, Resend debug, prod data sync, failure modes) |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel ? set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
 | **Vercel install fix** | `client/scripts/generateVercelConfig.cjs` ? self-contained config generator when Vercel Root Directory is `client/`; fixes installCommand exit 127 |
 | **Unified login (v1.0.7)** | Same-origin `/api` on every device (Vercel + Vite proxy); login gated on `/api/auth/me`; simplified JWT `protect`; `/socket.io` Vercel rewrite; local dev always uses Vite proxy |

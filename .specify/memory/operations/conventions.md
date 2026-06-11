@@ -20,6 +20,20 @@ npm run audit:history     # After history rewrite or fork import
 | **Logo & spinner** | `.cursor/rules/logo-mark-locked.mdc` | `docs/LOGO_LOCKED.md` |
 | **Legacy APIs** | — | `docs/LEGACY_FREEZE.md` |
 
+## Cursor agent rules (committed)
+
+| Path | Purpose |
+| --- | --- |
+| `.cursor/rules/backend-standards.mdc` | Express route patterns, validation, errors |
+| `.cursor/rules/component-standards.mdc` | React component structure |
+| `.cursor/rules/rbac-defense.mdc` | Page + API permission alignment |
+| `.cursor/rules/tenant-security-guard.mdc` | Multi-tenant query guards |
+| `.cursor/rules/react-query-errors.mdc` | TanStack Query error UX |
+| `.cursor/skills/coreknot-session-boot/SKILL.md` | Session bootstrap before code changes |
+
+Repo skills: `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`.
+
+---
 ### Email engine summary (LOCKED)
 
 - Opens: Gmail proxy IPs blocked; city from recipient's click

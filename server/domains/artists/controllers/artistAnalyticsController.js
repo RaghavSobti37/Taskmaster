@@ -5,7 +5,8 @@ const ArtistAuth = require('../../../models/ArtistAuth');
 const { fetchLiveAnalytics } = require('../../../services/analyticsService');
 const { validateMetric } = require('../../../utils/nullishValidator');
 const { enrichArtistById } = require('../services/artistEnrichmentService');
-const { upsertConnection, getCredentialsForSync } = require('../services/connectionService');
+const { upsertConnection, getCredentialsForSync, getConnectionsForArtist } = require('../services/connectionService');
+const { refreshProfilesFromAnalytics } = require('../services/connectionHubService');
 const { normalizeAll } = require('../../../services/metricsNormalizer');
 const { isMetaOAuthCodeUsedError, hasActiveMetaConnection } = require('../../../utils/metaOAuthErrors');
 const logger = require('../../../utils/logger');
@@ -285,6 +286,13 @@ exports.syncArtistStats = async (req, res) => {
     // Mark connections as synced
     const ArtistConnection = require('../../../models/ArtistConnection');
     await ArtistConnection.updateMany({ artistId: id, status: 'active' }, { $set: { lastSyncedAt: new Date() } });
+
+    try {
+      const connections = await getConnectionsForArtist(id);
+      await refreshProfilesFromAnalytics(id, newStats, connections);
+    } catch (profileErr) {
+      logger.warn('artistAnalytics', 'Social profile refresh skipped', { error: profileErr.message });
+    }
 
     const payload = await enrichArtistById(id);
     res.json(payload);

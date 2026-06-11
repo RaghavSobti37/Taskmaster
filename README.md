@@ -105,6 +105,7 @@ avPageAccess, pagePermissions) |
 | **Error UX** | QueryErrorBanner on data-heavy screens for consistent TanStack Query failure + retry messaging |
 | **CRM** | Lock parity and scoped delete for sales workflows; legacy leads without crmType visible to reps |
 | **Tenant hardening** | Partial tenant isolation improvements on sensitive paths (ongoing ? see .specify/memory/auth/security.md) |
+| **Artist Workspace Layer** | Membership roles + invite/accept; `/artist-workspace/:id` shell (team, bookings, releases); ConnectionProvider hub + ConnectionsCenter; portfolio + public profile stubs; Vite OneDrive watch ignore |
 | **Artist OS** | Artist workspace tabs (command center, documents, finance, gigs, etc.), React Query loaders, team access helpers |
 | **Assets & nav** | Assets hub React Query patterns; bottom nav / outlet sidebar respect department page permissions |
 | **Tests** | Client Vitest for auth gate, query defaults, artist OS shell, session merge; server coverage for permission gates || **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings ? Profile |

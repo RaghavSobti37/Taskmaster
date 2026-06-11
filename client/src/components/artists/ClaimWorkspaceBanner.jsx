@@ -1,5 +1,6 @@
 import React from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,6 +9,7 @@ import { isUserOnArtistTeam } from '../../utils/artistTeamAccess';
 
 export default function ClaimWorkspaceBanner({ artistId, shareToken, team, onClaimed }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
   const [claimed, setClaimed] = React.useState(false);
 
@@ -24,9 +26,11 @@ export default function ClaimWorkspaceBanner({ artistId, shareToken, team, onCla
     }
     setLoading(true);
     try {
-      await axios.post(`/api/artists/${artistId}/claim`, { token: shareToken });
+      const { data } = await axios.post(`/api/artists/${artistId}/claim`, { token: shareToken });
       setClaimed(true);
       onClaimed?.();
+      const redirectUrl = data?.redirectUrl || `/artist-workspace/${artistId}`;
+      navigate(redirectUrl, { replace: true });
     } catch (err) {
       alert(err.response?.data?.message || err.message);
     } finally {

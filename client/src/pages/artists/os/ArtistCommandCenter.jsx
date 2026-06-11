@@ -47,6 +47,7 @@ export default function ArtistCommandCenter({
   normalized,
   connections = [],
   isPreview,
+  isWorkspace = false,
   shareToken,
   artistId,
 }) {
@@ -69,6 +70,7 @@ export default function ArtistCommandCenter({
         team={artist?.team}
         connections={connections}
         isPreview={isPreview}
+        isWorkspace={isWorkspace}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">

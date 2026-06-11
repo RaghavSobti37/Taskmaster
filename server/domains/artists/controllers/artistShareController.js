@@ -2,6 +2,11 @@ const jwt = require('jsonwebtoken');
 const Artist = require('../../../models/Artist');
 const User = require('../../../models/User');
 const { enrichArtistById } = require('../services/artistEnrichmentService');
+const {
+  createArtistMembership,
+  ensureUserOnArtistTeam,
+  serializeMembership,
+} = require('../services/artistMembershipService');
 const logger = require('../../../utils/logger');
 
 const SHARE_EXPIRY = process.env.ARTIST_SHARE_TOKEN_EXPIRES || '7d';
@@ -56,7 +61,7 @@ exports.getArtistPreview = async (req, res) => {
   }
 };
 
-/** POST /api/artists/:id/claim — link logged-in user to artist.team */
+/** POST /api/artists/:id/claim — create artist-owner ArtistMembership + legacy team[] */
 exports.claimArtistWorkspace = async (req, res) => {
   try {
     const { token } = req.body;
@@ -67,15 +72,24 @@ exports.claimArtistWorkspace = async (req, res) => {
       return res.status(403).json({ message: 'Token does not match artist' });
     }
 
-    const artist = await Artist.findById(artistId);
+    // Claim links may arrive before tenant context matches artist record (share preview flow).
+    let artist = await Artist.findById(artistId);
+    if (!artist) {
+      artist = await Artist.findById(artistId).setOptions({ bypassTenant: true });
+    }
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
 
     const userId = req.user._id;
-    if (!artist.team) artist.team = [];
-    if (!artist.team.some((id) => String(id) === String(userId))) {
-      artist.team.push(userId);
-      await artist.save();
-    }
+    await ensureUserOnArtistTeam(artistId, userId);
+
+    const membership = await createArtistMembership({
+      artistId,
+      userId,
+      role: 'artist-owner',
+      invitedBy: userId,
+      acceptedAt: new Date(),
+      status: 'accepted',
+    });
 
     try {
       const Lead = require('../../../models/Lead');
@@ -88,7 +102,14 @@ exports.claimArtistWorkspace = async (req, res) => {
     }
 
     const enriched = await enrichArtistById(artistId);
-    res.json({ success: true, artist: enriched, message: 'Workspace claimed successfully' });
+    const redirectUrl = `/artist-workspace/${artistId}`;
+    res.json({
+      success: true,
+      artist: enriched,
+      redirectUrl,
+      membership: serializeMembership(membership.toObject?.() || membership),
+      message: 'Workspace claimed successfully',
+    });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

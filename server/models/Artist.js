@@ -3,6 +3,7 @@ const tenantPlugin = require('../plugins/tenantPlugin');
 
 const ArtistSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  slug: { type: String, trim: true, lowercase: true, sparse: true, unique: true },
   bio: { type: String },
   profileImage: { type: String },
   website: { type: String },
@@ -60,8 +61,11 @@ ArtistSchema.set('toJSON', { virtuals: true });
 // Input sanitization hook
 ArtistSchema.pre('save', function(next) {
   if (this.name) this.name = this.name.trim().replace(/\s+/g, ' ');
+  if (this.slug) this.slug = this.slug.trim().toLowerCase().replace(/\s+/g, '-');
   next();
 });
+
+ArtistSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 ArtistSchema.plugin(tenantPlugin);
 

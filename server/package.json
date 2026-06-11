@@ -53,8 +53,8 @@
     "backup:verify-supabase": "node scripts/verifySupabaseBackup.js"
   },
   "dependencies": {
-    "@coreknot/contracts": "1.0.0",
     "@clerk/clerk-sdk-node": "^5.1.6",
+    "@coreknot/contracts": "1.0.0",
     "@sendgrid/mail": "^8.1.6",
     "@sentry/node": "^9.47.1",
     "@supabase/supabase-js": "^2.108.1",
@@ -64,7 +64,7 @@
     "bullmq": "^5.77.6",
     "cheerio": "^1.2.0",
     "compression": "^1.7.4",
-    "cookie": "^1.0.2",
+    "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.1",

@@ -69,6 +69,12 @@ const FeaturesPage = lazyWithRetry(() => import('./pages/marketing/FeaturesPage'
 const GoogleSuccessPage = lazyWithRetry(() => import('./pages/auth/GoogleSuccessPage'));
 const ArtistsCollection = lazyWithRetry(() => import('./pages/artists/ArtistsCollection'));
 const ArtistDetail = lazyWithRetry(() => import('./pages/artists/ArtistDetail'));
+const ArtistWorkspaceDetail = lazyWithRetry(() => import('./pages/artists/workspace/ArtistWorkspaceDetail'));
+const ArtistWorkspaceShell = lazyWithRetry(() => import('./pages/artists/workspace/ArtistWorkspaceShell'));
+const PortfolioDashboard = lazyWithRetry(() => import('./pages/artists/PortfolioDashboard'));
+const ArtistPublicProfile = lazyWithRetry(() => import('./pages/artists/ArtistPublicProfile'));
+const ArtistMembershipRoute = lazyWithRetry(() => import('./components/ArtistMembershipRoute'));
+const ArtistMembershipAccept = lazyWithRetry(() => import('./pages/artists/workspace/ArtistMembershipAccept'));
 const UnsubscribePage = lazyWithRetry(() => import('./pages/Unsubscribe'));
 const CampaignDetails = lazyWithRetry(() => import('./pages/CampaignDetails'));
 const WorkflowCanvas = lazyWithRetry(() => import('./pages/productivity/WorkflowCanvas'));
@@ -154,8 +160,20 @@ function App() {
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
+          <Route path="/artist/:slug" element={<ArtistPublicProfile />} />
 
           <Route element={<ProtectedRoute />}>
+            <Route path="/artist-workspace/:id/accept" element={<ArtistMembershipAccept />} />
+            <Route
+              path="/artist-workspace/:id/*"
+              element={(
+                <ArtistMembershipRoute>
+                  <ArtistWorkspaceShell>
+                    <ArtistWorkspaceDetail />
+                  </ArtistWorkspaceShell>
+                </ArtistMembershipRoute>
+              )}
+            />
             <Route element={<MainLayout />}>
               <Route element={<PageRoute page="dashboard" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -298,6 +316,7 @@ function App() {
               <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
+                <Route path="/artists/portfolio" element={<PortfolioDashboard />} />
                 <Route path="/artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
                 <Route path="/artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />

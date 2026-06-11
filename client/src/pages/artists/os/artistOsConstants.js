@@ -9,6 +9,7 @@ export const ARTIST_OS_TABS = [
   { id: 'notes', label: 'Team Notes' },
   { id: 'documents', label: 'Documents' },
   { id: 'contracts', label: 'Contracts' },
+  { id: 'team', label: 'Team' },
 ];
 
 export const CALENDAR_EVENT_COLORS = {

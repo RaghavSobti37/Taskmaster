@@ -69,6 +69,20 @@ export default defineConfig(({ mode }) => {
     },
   },
   server: {
+    // OneDrive on Windows rewrites mtimes on synced static/config files → spurious full reloads.
+    watch: {
+      ignored: [
+        '**/vercel.json',
+        '**/vercel.json.example',
+        '**/public/icons/**',
+        '**/public/manifest.json',
+        '**/public/safari-pinned-tab.svg',
+        '**/.cursor/**',
+        '**/.specify/**',
+        '**/docs/**',
+        '**/dist/**',
+      ],
+    },
     proxy: {
       // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
       '/api/attendance': {

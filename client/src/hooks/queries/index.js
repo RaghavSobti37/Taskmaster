@@ -8,6 +8,7 @@ export * from './dataHub';
 export * from './artistPath';
 export * from './attendance';
 export * from './artists';
+export * from './artistMembers';
 export * from './artistOs';
 export * from './admin';
 export * from './logs';

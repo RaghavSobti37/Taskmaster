@@ -11,6 +11,7 @@ import ArtistContentTab from './os/ArtistContentTab';
 import ArtistNotesTab from './os/ArtistNotesTab';
 import ArtistDocumentsTab from './os/ArtistDocumentsTab';
 import ArtistContractsTab from './os/ArtistContractsTab';
+import ArtistTeamTab from './workspace/ArtistTeamTab';
 
 export default function ArtistOSLayout({
   artist,
@@ -71,6 +72,8 @@ export default function ArtistOSLayout({
         return <ArtistDocumentsTab artistId={artistId} artistName={artist?.name} isPreview={isPreview} />;
       case 'contracts':
         return <ArtistContractsTab artistId={artistId} isPreview={isPreview} />;
+      case 'team':
+        return <ArtistTeamTab artistId={artistId} canManageTeam={!isPreview} />;
       default:
         return null;
     }

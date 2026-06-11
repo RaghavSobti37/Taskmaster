@@ -43,6 +43,7 @@ const authSignupLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many signup attempts. Try again later.' },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 router.post('/register', authSignupLimiter, validateBody(registerBody), register);

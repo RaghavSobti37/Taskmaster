@@ -7,6 +7,12 @@ export const useArtists = () => useQuery({
   staleTime: 1000 * 60 * 5,
 });
 
+export const usePortfolioSummary = () => useQuery({
+  queryKey: ['artists-portfolio-summary'],
+  queryFn: async () => (await axios.get('/api/artists/portfolio/summary')).data,
+  staleTime: 1000 * 60 * 2,
+});
+
 export const useArtist = (id, enabled = true) => useQuery({
   queryKey: ['artist', id],
   queryFn: async () => (await axios.get(`/api/artists/${id}`)).data,
@@ -92,6 +98,43 @@ export const useAddTrackedVideo = () => {
 export const useCreateShareLink = () => useMutation({
   mutationFn: (id) => axios.post(`/api/artists/${id}/share-link`).then((r) => r.data),
 });
+
+export const useConnectionHub = (artistId, enabled = true) => useQuery({
+  queryKey: ['artist-connection-hub', artistId],
+  queryFn: async () => (await axios.get(`/api/artists/${artistId}/connections/hub`)).data,
+  enabled: !!artistId && enabled,
+  staleTime: 1000 * 60 * 2,
+});
+
+export const useConnectionHealth = (artistId, enabled = true) => useQuery({
+  queryKey: ['artist-connection-health', artistId],
+  queryFn: async () => (await axios.get(`/api/artists/${artistId}/connections/health`)).data,
+  enabled: !!artistId && enabled,
+  staleTime: 1000 * 60,
+});
+
+export const useSyncPlatformConnection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, platform }) => axios.post(`/api/artists/${artistId}/connections/${platform}/sync`),
+    onSuccess: (_res, { artistId }) => {
+      queryClient.invalidateQueries({ queryKey: ['artist-connection-hub', artistId] });
+      queryClient.invalidateQueries({ queryKey: ['artist-connection-health', artistId] });
+      queryClient.invalidateQueries({ queryKey: ['artist', artistId] });
+    },
+  });
+};
+
+export const useSaveManualConnection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, platform, accountName }) => axios.put(`/api/artists/${artistId}/connections/${platform}/manual`, { accountName }),
+    onSuccess: (_res, { artistId }) => {
+      queryClient.invalidateQueries({ queryKey: ['artist-connection-hub', artistId] });
+      queryClient.invalidateQueries({ queryKey: ['artist-connection-health', artistId] });
+    },
+  });
+};
 
 export const useSetPrimaryConnection = () => {
   const queryClient = useQueryClient();

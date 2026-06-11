@@ -14,26 +14,31 @@ export default function ArtistConnectOnboarding({
   team = [],
   connections = [],
   isPreview,
+  isWorkspace = false,
 }) {
   const { user } = useAuth();
 
-  if (!isPreview) return null;
+  if (!isPreview && !isWorkspace) return null;
 
   const signedIn = !!user;
-  const claimed = isUserOnArtistTeam(user, team);
+  const claimed = isWorkspace || isUserOnArtistTeam(user, team);
   const connectedCount = connections.filter((c) => c.accountHandle || c.status === 'active').length;
   const allConnected = connectedCount >= PLATFORMS.length;
 
-  const steps = [
-    { id: 'signin', label: 'Sign in to your account', done: signedIn },
-    { id: 'claim', label: 'Claim this workspace', done: claimed },
-    { id: 'connect', label: 'Connect Spotify, YouTube & Instagram', done: allConnected },
-  ];
+  const steps = isWorkspace
+    ? [{ id: 'connect', label: 'Connect Spotify, YouTube & Instagram', done: allConnected }]
+    : [
+        { id: 'signin', label: 'Sign in to your account', done: signedIn },
+        { id: 'claim', label: 'Claim this workspace', done: claimed },
+        { id: 'connect', label: 'Connect Spotify, YouTube & Instagram', done: allConnected },
+      ];
 
   return (
     <Card className="p-5 rounded-2xl border-indigo-500/30 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 space-y-4">
       <div>
-        <h3 className="text-sm font-black text-[var(--color-text-primary)]">Get started in 3 steps</h3>
+        <h3 className="text-sm font-black text-[var(--color-text-primary)]">
+          {isWorkspace ? 'Connect your platforms' : 'Get started in 3 steps'}
+        </h3>
         <p className="text-xs text-[var(--color-text-muted)] mt-1">
           Connect your accounts so your team can track growth, gigs, and bookings.
         </p>
@@ -54,7 +59,7 @@ export default function ArtistConnectOnboarding({
         ))}
       </ol>
 
-      {!signedIn && shareToken && (
+      {!isWorkspace && !signedIn && shareToken && (
         <Button
           size="sm"
           onClick={() => {
@@ -67,7 +72,7 @@ export default function ArtistConnectOnboarding({
         </Button>
       )}
 
-      {signedIn && claimed && !allConnected && (
+      {(isWorkspace || (signedIn && claimed)) && !allConnected && (
         <div className="flex flex-wrap gap-2 pt-1">
           {PLATFORMS.map((provider) => {
             const conn = connections.find((c) => c.provider === provider);

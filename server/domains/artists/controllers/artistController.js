@@ -4,7 +4,8 @@ const ArtistAuth = require('../../../models/ArtistAuth');
 const ArtistConnection = require('../../../models/ArtistConnection');
 const { enrichArtistById, enrichAllArtists } = require('../services/artistEnrichmentService');
 const { upsertConnection } = require('../services/connectionService');
-const { INTEGRATIONS } = require('../../../config/integrations.config');
+const { createInquiry } = require('../services/artistOsService');
+const { INTEGRATIONS, INTEGRATION_CATEGORIES } = require('../../../config/integrations.config');
 
 exports.getArtists = async (req, res) => {
   try {
@@ -26,7 +27,7 @@ exports.getArtistById = async (req, res) => {
 };
 
 exports.getIntegrationsConfig = async (_req, res) => {
-  res.json({ integrations: INTEGRATIONS });
+  res.json({ integrations: INTEGRATIONS, categories: INTEGRATION_CATEGORIES });
 };
 
 exports.getArtistConnections = async (req, res) => {
@@ -100,6 +101,7 @@ exports.updateArtist = async (req, res) => {
     if (req.body.bio !== undefined) artist.bio = req.body.bio;
     if (req.body.profileImage !== undefined) artist.profileImage = req.body.profileImage;
     if (req.body.website !== undefined) artist.website = req.body.website;
+    if (req.body.slug !== undefined) artist.slug = req.body.slug || undefined;
     if (req.body.socials !== undefined) {
       artist.socials = { ...artist.socials, ...req.body.socials };
     }
@@ -213,5 +215,153 @@ exports.setPrimaryConnection = async (req, res) => {
     res.json(enriched);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+};
+
+function buildPublicSocialLinks(artist, connections = []) {
+  const links = {};
+  const socials = artist.socials || {};
+  if (socials.spotify) links.spotify = socials.spotify;
+  if (socials.youtube) links.youtube = socials.youtube;
+  if (socials.instagram) links.instagram = socials.instagram;
+  if (socials.facebook) links.facebook = socials.facebook;
+  if (socials.soundcloud) links.soundcloud = socials.soundcloud;
+  if (artist.website) links.website = artist.website;
+
+  connections.forEach((conn) => {
+    if (!conn?.provider || conn.status === 'revoked') return;
+    const handle = conn.accountHandle;
+    if (!handle) return;
+    if (conn.provider === 'spotify') links.spotify = `https://open.spotify.com/artist/${handle}`;
+    if (conn.provider === 'youtube') links.youtube = `https://www.youtube.com/channel/${handle}`;
+    if (conn.provider === 'instagram' && conn.metadata?.igUsername) {
+      links.instagram = `https://www.instagram.com/${conn.metadata.igUsername.replace(/^@/, '')}`;
+    }
+  });
+
+  return links;
+}
+
+function sanitizePublicEvents(events = []) {
+  return events
+    .filter((e) => e && e.status !== 'cancelled' && e.status !== 'private')
+    .map(({ date, venue, title, description, status }) => ({
+      date,
+      venue,
+      title,
+      description,
+      status,
+    }));
+}
+
+exports.getPortfolioSummary = async (_req, res) => {
+  try {
+    const artists = await enrichAllArtists();
+    let totalReach = 0;
+    let totalFollowers = 0;
+    let monthlyGrowthSum = 0;
+    let growthCount = 0;
+    let topPerformer = null;
+
+    artists.forEach((artist) => {
+      const unified = artist.normalized?.unified || {};
+      const reach = Number(unified.reach) || 0;
+      const growth = Number(unified.growth) || 0;
+      totalReach += reach;
+      totalFollowers += reach;
+      if (Number.isFinite(growth)) {
+        monthlyGrowthSum += growth;
+        growthCount += 1;
+      }
+      if (!topPerformer || growth > (topPerformer.growth || 0)) {
+        topPerformer = {
+          artistId: artist._id,
+          name: artist.name,
+          growth,
+          reach,
+        };
+      }
+    });
+
+    res.json({
+      totalArtists: artists.length,
+      totalReach,
+      totalFollowers,
+      monthlyGrowth: growthCount ? Number((monthlyGrowthSum / growthCount).toFixed(2)) : 0,
+      topPerformer,
+      connectedPlatforms: artists.reduce(
+        (sum, a) => sum + (a.normalized?.unified?.connectedCount || 0),
+        0
+      ),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getPublicArtistBySlug = async (req, res) => {
+  try {
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    if (!slug) return res.status(400).json({ message: 'Slug required' });
+
+    const artist = await Artist.findOne({ slug }).lean();
+    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+
+    const enriched = await enrichArtistById(artist._id);
+    const connections = (enriched?.connections || []).map(({ provider, accountLabel, accountHandle, status }) => ({
+      provider,
+      accountLabel,
+      accountHandle,
+      status,
+    }));
+
+    res.json({
+      slug: artist.slug,
+      name: artist.name,
+      bio: artist.bio,
+      profileImage: artist.profileImage,
+      website: artist.website,
+      socialLinks: buildPublicSocialLinks(artist, enriched?.connections || []),
+      upcomingGigs: sanitizePublicEvents(artist.events || []),
+      connections,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.createPublicInquiry = async (req, res) => {
+  try {
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    if (!slug) return res.status(400).json({ message: 'Slug required' });
+
+    const artist = await Artist.findOne({ slug }).select('_id name').lean();
+    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+
+    const { clientName, email, phone, eventName, eventDate, expectedBudget, metadata } = req.body || {};
+    if (!clientName) return res.status(400).json({ message: 'clientName is required' });
+
+    const inquiry = await createInquiry(
+      artist._id,
+      {
+        clientName,
+        email,
+        phone,
+        eventName,
+        eventDate,
+        expectedBudget,
+        metadata,
+        source: 'public_profile',
+      },
+      null
+    );
+
+    res.status(201).json({
+      message: 'Booking inquiry submitted',
+      inquiryId: inquiry._id,
+      artistName: artist.name,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ message: err.message });
   }
 };

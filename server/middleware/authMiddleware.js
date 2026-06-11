@@ -148,7 +148,12 @@ const isUserOnArtistTeam = (user, team = []) => {
   return team.some((member) => String(member?._id || member) === uid);
 };
 
-const artistTeamOrAdmin = async (req, res, next) => {
+const {
+  hasArtistMembership,
+  hasArtistOwnerRole,
+} = require('../domains/artists/services/artistMembershipService');
+
+const artistMembershipAccess = (permission) => async (req, res, next) => {
   if (req.user && isArtistManagerUser(req.user)) {
     return next();
   }
@@ -157,11 +162,56 @@ const artistTeamOrAdmin = async (req, res, next) => {
     return res.status(403).json({ error: 'Not authorized — artist management or team membership required' });
   }
   try {
-    const artist = await Artist.findById(artistId).select('team').lean();
-    if (artist && isUserOnArtistTeam(req.user, artist.team)) {
-      return next();
-    }
+    const ok = await hasArtistMembership(req.user, artistId, permission);
+    if (ok) return next();
     return res.status(403).json({ error: 'Not authorized — artist management or team membership required' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/** OAuth connect sends artistId in body — mirror :id for membership checks. */
+const artistBodyMembershipAccess = (permission) => async (req, res, next) => {
+  if (req.body?.artistId && !req.params.id) {
+    req.params = { ...req.params, id: String(req.body.artistId) };
+  }
+  return artistMembershipAccess(permission)(req, res, next);
+};
+
+/** Back-compat alias — delegates to ArtistMembership + legacy team[] check. */
+const artistTeamOrAdmin = artistMembershipAccess();
+
+const canManageArtistTeam = artistMembershipAccess('team');
+
+const artistWorkspaceAccess = async (req, res, next) => {
+  if (req.user && isArtistManagerUser(req.user)) {
+    return next();
+  }
+  const artistId = req.params.id;
+  if (!artistId || !req.user) {
+    return res.status(403).json({ error: 'Not authorized — artist workspace access required' });
+  }
+  try {
+    const ok = await hasArtistMembership(req.user, artistId);
+    if (ok) return next();
+    return res.status(403).json({ error: 'Not authorized — artist workspace access required' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+const artistOwnerOrAdmin = async (req, res, next) => {
+  if (req.user && isArtistManagerUser(req.user)) {
+    return next();
+  }
+  const artistId = req.params.id;
+  if (!artistId || !req.user) {
+    return res.status(403).json({ error: 'Not authorized — artist owner or admin required' });
+  }
+  try {
+    const ok = await hasArtistOwnerRole(req.user, artistId);
+    if (ok) return next();
+    return res.status(403).json({ error: 'Not authorized — artist owner or admin required' });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -184,6 +234,14 @@ module.exports = {
   requireAnyPageAccess,
   artistOrAdmin,
   artistTeamOrAdmin,
+  artistMembershipAccess,
+  artistBodyMembershipAccess,
+  /** Spec alias for artistMembershipAccess */
+  artistMemberOrAdmin: artistMembershipAccess,
+  canManageArtistTeam,
+  artistWorkspaceAccess,
+  artistOwnerOrAdmin,
+  hasArtistMembership,
   isUserOnArtistTeam,
   orgAccountsAccess,
   isOps: isOpsUser,

@@ -14,5 +14,5 @@
     }
   ],
   "buildCommand": "npm run vercel-build",
-  "installCommand": "node ../scripts/generateVercelConfig.js && npm install"
+  "installCommand": "node scripts/generateVercelConfig.cjs && npm install"
 }

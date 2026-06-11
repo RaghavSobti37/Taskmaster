@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-06-11 — Vercel installCommand fix
+
+- **Root cause:** Vercel Root Directory `client/` — old `installCommand` called `node ../scripts/generateVercelConfig.js` ? file not found ? exit 127
+- **Fix:** Canonical generator at `client/scripts/generateVercelConfig.cjs`; `vercel.json` / `client/vercel.json` / `client/package.json` scripts updated; root `scripts/generateVercelConfig.js` delegates to `.cjs`
+- **Deploy:** Set `RENDER_API_PROXY_URL` on Vercel; script writes `/api` + `/socket.io` rewrites at install time
+- **NestJS:** `server-nest/dist/` gitignored (prior commit)
+
 ---
 
 ## 2026-06-11 — Access control, error UX, Artist OS

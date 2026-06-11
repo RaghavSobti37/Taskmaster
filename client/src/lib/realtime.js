@@ -6,13 +6,11 @@ let socket = null;
 const getSocketUrl = () => getRealtimeOrigin();
 
 export const connect = () => {
-  if (socket?.connected) {
-    return socket;
-  }
-
+  // Reuse one client for all channel subscribers. Do not disconnect a socket that
+  // is still connecting — parallel subscribeToChannel calls would otherwise loop
+  // connect → disconnect on the server.
   if (socket) {
-    socket.disconnect();
-    socket = null;
+    return socket;
   }
 
   socket = io(getSocketUrl(), {

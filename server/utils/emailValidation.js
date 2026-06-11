@@ -46,6 +46,7 @@ const RECIPIENT_STATUS_GROUPS = {
   opened: ['Opened'],
   clicked: ['Clicked'],
   bounced: ['Bounced', 'Failed', 'Invalid'],
+  unsubscribed: ['Unsubscribed'],
   cancelled: ['Cancelled'],
 };
 

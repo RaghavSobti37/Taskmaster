@@ -30,6 +30,12 @@ const {
   annotateRecipient,
 } = require('../../../utils/emailValidation');
 const { buildRegisteredLocationBreakdown } = require('../../../utils/campaignRegisteredLocation');
+const {
+  filterCampaignRecipients,
+  resolveRecipientExportFields,
+  recipientsToCsv,
+  buildRecipientExportFilename,
+} = require('../../../utils/campaignRecipientExport');
 
 exports.list = async (req, res) => {
   try {
@@ -104,17 +110,10 @@ exports.getRecipients = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    let recipients = (resolved.campaign.recipients || []).map((r) => annotateRecipient(
-      typeof r.toObject === 'function' ? r.toObject() : r
-    ));
-
-    const invalidCount = recipients.filter((r) => r.invalidEmail).length;
-
-    if (hideInvalid) {
-      recipients = recipients.filter((r) => !r.invalidEmail);
-    }
-
-    recipients = filterRecipientsByStatus(recipients, statusFilter);
+    const { recipients, invalidCount } = filterCampaignRecipients(resolved.campaign.recipients, {
+      statusFilter,
+      hideInvalid,
+    });
 
     const total = recipients.length;
     const pages = Math.max(1, Math.ceil(total / limit));
@@ -132,6 +131,43 @@ exports.getRecipients = async (req, res) => {
       },
       invalidCount,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.exportRecipients = async (req, res) => {
+  try {
+    const statusFilter = String(req.query.status || 'all').toLowerCase();
+    const hideInvalid = req.query.hideInvalid === 'true';
+
+    const resolved = await resolveCampaignByParam(req.params.id, { lean: true });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const { recipients } = filterCampaignRecipients(resolved.campaign.recipients, {
+      statusFilter,
+      hideInvalid,
+    });
+
+    const leadIds = [...new Set(recipients.map((r) => r.leadId).filter(Boolean))];
+    const leads = leadIds.length
+      ? await Lead.find({ _id: { $in: leadIds } }).select('name email phone').lean()
+      : [];
+    const leadMap = new Map(leads.map((l) => [String(l._id), l]));
+
+    const rows = recipients.map((recipient) => {
+      const leadDoc = recipient.leadId ? leadMap.get(String(recipient.leadId)) : null;
+      return resolveRecipientExportFields(recipient, leadDoc);
+    });
+
+    const filename = buildRecipientExportFilename(resolved.campaign.title, statusFilter);
+    const csv = recipientsToCsv(rows);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

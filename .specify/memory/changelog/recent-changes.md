@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-06-11 — Campaign recipient delivery log CSV export
+
+- **Request:** Download CSV of filtered campaign recipients (name, phone, email) from delivery log tabs
+- **Root cause:** No export path existed; paginated table only showed current page; `unsubscribed` filter missing from server status groups
+- **Fix:** `GET /api/campaigns/:id/recipients/export` with shared `campaignRecipientExport.js` helper; Download CSV button on `CampaignDetails.jsx`; added `unsubscribed` to `RECIPIENT_STATUS_GROUPS`
+- **Verify:** `npx jest tests/campaignRecipientExport.test.js`; `npm run build --prefix client`; `npm run audit:exposure`; `npm run audit:deadcode`
+
+---
+
 ## 2026-06-11 — Remove duplicate registered location chart on campaign details
 
 - **Request:** Campaign analytics showed two registered-location charts; remove top standalone duplicate

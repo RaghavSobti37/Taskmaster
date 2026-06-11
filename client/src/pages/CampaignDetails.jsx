@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import RegisteredLocationBarChart from '../components/emails/RegisteredLocationBarChart';
-import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
+import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon, Download } from 'lucide-react';
 import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
 import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
 import { formatTimestampWithTz } from '../utils/displayLabels';
 import { format } from 'date-fns';
+import axios from 'axios';
 import ResendFromEmailPicker from '../components/emails/ResendFromEmailPicker';
 import { displayNameForResendEmail, DEFAULT_RESEND_FROM_EMAILS } from '../constants/resendFromEmails';
 
@@ -54,6 +55,7 @@ export default function CampaignDetails() {
   const [resendSenderProfileIds, setResendSenderProfileIds] = useState([]);
   const [resendFromEmail, setResendFromEmail] = useState(DEFAULT_RESEND_FROM_EMAILS[0]);
   const [resendTargetStatuses, setResendTargetStatuses] = useState(['Failed', 'Bounced', 'Pending', 'Invalid']);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   const campaignApiId = campaign?.campaignId || campaign?._id || routeCampaignId;
 
@@ -178,6 +180,41 @@ export default function CampaignDetails() {
   };
 
   const isCampaignActive = campaign?.status === 'Sending' || campaign?.status === 'Queued';
+
+  const handleDownloadCsv = async () => {
+    if (filteredRecipientTotal === 0) {
+      toast.warn('No recipients in the current filter.');
+      return;
+    }
+    try {
+      setExportingCsv(true);
+      const params = new URLSearchParams({
+        status: statusFilter,
+        hideInvalid: hideInvalidEmails ? 'true' : 'false',
+      });
+      const response = await axios.get(`/api/campaigns/${campaignApiId}/recipients/export?${params}`, {
+        responseType: 'blob',
+      });
+      const disposition = response.headers['content-disposition'] || '';
+      const match = disposition.match(/filename="([^"]+)"/i);
+      const fallbackName = `${(campaign?.title || 'campaign').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'campaign'}-${statusFilter}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      const filename = match?.[1] || fallbackName;
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${filteredRecipientTotal} recipient(s) as CSV.`);
+    } catch (e) {
+      toast.error(e.response?.data?.error || e.message || 'CSV download failed');
+    } finally {
+      setExportingCsv(false);
+    }
+  };
 
   const handleFilteredResend = async () => {
     if (filteredRecipientTotal === 0) {
@@ -425,6 +462,17 @@ export default function CampaignDetails() {
             {invalidEmailCount > 0 && (
               <Badge variant="rose">{invalidEmailCount} invalid email{invalidEmailCount === 1 ? '' : 's'}</Badge>
             )}
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={handleDownloadCsv}
+              disabled={exportingCsv || filteredRecipientTotal === 0}
+              className="flex items-center gap-1"
+              title={`Download ${filteredRecipientTotal} recipient(s) matching ${activeFilterLabel} as CSV`}
+            >
+              <Download size={12} className={exportingCsv ? 'animate-pulse' : ''} />
+              {exportingCsv ? 'Exporting…' : 'Download CSV'}
+            </Button>
             <Button
               size="xs"
               variant="primary"

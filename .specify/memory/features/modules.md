@@ -49,6 +49,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - `MailTemplateStudio` — draft → submit → approve workflow
 - HolySheet contact sync, indexed merge tokens (`{{1}}`, `{{2}}`)
 - Campaign detail at `/campaign/:campaignId`
+- **Recipient CSV export** — `GET /api/campaigns/:id/recipients/export?status=&hideInvalid=` returns name/number/email from rowData or linked Lead
 - **Registered location breakdown** — CRM city (not IP geo)
 - **Email engine LOCKED** — `docs/EMAIL_ENGINE_LOCKED.md`
 

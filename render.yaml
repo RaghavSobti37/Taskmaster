@@ -28,6 +28,8 @@ services:
     autoDeploy: false
     branch: main
     envVars:
+      - key: HUSKY
+        value: "0"
       - key: NODE_ENV
         value: production
       - key: DD_SERVICE
@@ -90,6 +92,8 @@ services:
     autoDeploy: false
     branch: main
     envVars:
+      - key: HUSKY
+        value: "0"
       - key: NODE_ENV
         value: production
       - key: DD_SERVICE

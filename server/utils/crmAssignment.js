@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
 const { resolvePrimaryCallAssigneeId } = require('./primaryCallAssignee');
+const { resolveSatyamSalesRepId } = require('./bookedCallRepAssignment');
 
 const SALES_SLUG = 'sales';
 const ARTIST_SLUG = 'artist-management';
@@ -21,6 +22,9 @@ const getArtistRepUsers = async (session = null) => {
 };
 
 const assignLeadToRep = async (session = null) => {
+  const satyamId = await resolveSatyamSalesRepId();
+  if (satyamId) return satyamId;
+
   const reps = await getSalesRepUsers(session);
   if (reps.length === 0) return null;
 

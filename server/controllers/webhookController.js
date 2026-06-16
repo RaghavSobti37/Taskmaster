@@ -37,7 +37,12 @@ connection.on('error', () => { });
 const webhookQueue = new Queue('WebhookQueue', { connection });
 webhookQueue.on('error', () => { });
 
-exports.processBookedCallLogic = async (data) => {
+exports.processBookedCallLogic = async (data, options = {}) => {
+  const {
+    skipSlotValidation = false,
+    skipNotifications = false,
+    forceRepId = null,
+  } = options;
   try {
     const { name, email, phone, whatsapp, course, referral, date, time, timezone = 'Asia/Kolkata' } = data;
 
@@ -71,7 +76,7 @@ exports.processBookedCallLogic = async (data) => {
     }
 
     if (!rep) {
-      const repId = (await assignNextBookedCallRep()) || (await assignLeadToRep());
+      const repId = forceRepId || (await assignNextBookedCallRep()) || (await assignLeadToRep());
       if (repId) rep = await User.findById(repId);
       if (!rep) throw new Error("No sales rep available");
     }
@@ -117,7 +122,7 @@ exports.processBookedCallLogic = async (data) => {
 
     const now = new Date();
     const bufferTime = 90 * 60 * 1000; // 1.5 hours
-    if (istSlotDate.getTime() < now.getTime() + bufferTime) {
+    if (!skipSlotValidation && istSlotDate.getTime() < now.getTime() + bufferTime) {
       throw new Error('This slot is no longer available in your timezone.');
     }
 
@@ -168,7 +173,7 @@ exports.processBookedCallLogic = async (data) => {
 
     // mergeContact handled by LeadService.syncToContactHub
 
-    if (rep?._id) {
+    if (!skipNotifications && rep?._id) {
       await createNotification({
         recipientId: rep._id,
         title: 'New Call Booked',
@@ -181,6 +186,7 @@ exports.processBookedCallLogic = async (data) => {
       });
     }
 
+    if (!skipNotifications) {
     await sendAiSensyMessage(
       whatsapp || phone,
       'final_book_call_confirmation',
@@ -212,6 +218,7 @@ exports.processBookedCallLogic = async (data) => {
       );
     } else {
       console.warn(`[Warning] No phone number for rep ${rep.name}, skipping AiSensy notification.`);
+    }
     }
 
     return { success: true, message: 'Call booked in CRM', leadId: lead._id };

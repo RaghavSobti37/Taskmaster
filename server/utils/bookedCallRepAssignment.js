@@ -1,95 +1,53 @@
 const Department = require('../models/Department');
 const User = require('../models/User');
-const Lead = require('../models/Lead');
 const { SALES_SLUG } = require('./departmentPermissions');
-const { BOOKED_CALL_SOURCE_RE } = require('../../shared/dataInlets');
-const { resolvePrimaryCallAssigneeId } = require('./primaryCallAssignee');
 const logger = require('./logger');
 
-/** Satyam : Aryaman : Akash = 2 : 1 : 1 */
-const BOOKED_CALL_REP_WEIGHTS = [2, 1, 1];
-
-const BOOKED_CALL_REP_SPECS = [
-  { repId: 'sr06', patterns: [/satyam/i] },
-  { repId: 'sr09', patterns: [/aryaman/i] },
-  { patterns: [/akash/i] },
-];
-
-function pickByWeightedQuota(repIds, counts) {
-  let bestIdx = 0;
-  let bestScore = Infinity;
-  for (let i = 0; i < repIds.length; i += 1) {
-    const score = (counts[i] || 0) / BOOKED_CALL_REP_WEIGHTS[i];
-    if (score < bestScore) {
-      bestScore = score;
-      bestIdx = i;
-    }
-  }
-  return repIds[bestIdx];
-}
+/** Website book-a-call → Satyam only (sales). */
+const SATYAM_REP_SPEC = { repId: 'sr06', patterns: [/satyam/i] };
 
 /**
- * Resolve [Satyam, Aryaman, Akash] User _ids from sales department.
+ * Resolve Satyam User _id from sales department.
  */
-async function resolveBookedCallRepIds() {
+async function resolveSatyamSalesRepId() {
   const salesDept = await Department.findOne({ slug: SALES_SLUG });
   const query = salesDept ? { departmentId: salesDept._id } : {};
   const salesUsers = await User.find(query).select('_id name email repId').lean();
 
-  const repIds = [];
-  for (const spec of BOOKED_CALL_REP_SPECS) {
-    let user = spec.repId ? salesUsers.find((u) => u.repId === spec.repId) : null;
-    if (!user) {
-      user = salesUsers.find((u) =>
-        spec.patterns.some((p) => p.test(u.name || '') || p.test(u.email || ''))
-      );
-    }
-    if (user) repIds.push(user._id);
+  let user = salesUsers.find((u) => u.repId === SATYAM_REP_SPEC.repId);
+  if (!user) {
+    user = salesUsers.find((u) =>
+      SATYAM_REP_SPEC.patterns.some((p) => p.test(u.name || '') || p.test(u.email || ''))
+    );
   }
-  return repIds;
+  return user?._id || null;
 }
 
 /**
- * In-memory assigner for a single sync batch (2 Satyam : 1 Aryaman : 1 Akash per 4 leads).
- */
-function createBookedCallRepAssigner(repIds) {
-  const counts = repIds.map(() => 0);
-  return () => {
-    const id = pickByWeightedQuota(repIds, counts);
-    const idx = repIds.findIndex((rid) => String(rid) === String(id));
-    if (idx >= 0) counts[idx] += 1;
-    return id;
-  };
-}
-
-/**
- * Pick next rep using live CRM counts for booked-call sources (webhooks / single inserts).
+ * Pick rep for website book-a-call — always Satyam in sales.
  */
 async function assignNextBookedCallRep() {
-  const primaryId = await resolvePrimaryCallAssigneeId();
-  if (primaryId) return primaryId;
-
-  const repIds = await resolveBookedCallRepIds();
-  if (repIds.length < 3) {
-    logger.warn('bookedCallRepAssignment', `Expected 3 reps, found ${repIds.length}`);
-    return repIds[0] || null;
+  const satyamId = await resolveSatyamSalesRepId();
+  if (!satyamId) {
+    logger.warn('bookedCallRepAssignment', 'Satyam not found in sales department');
   }
+  return satyamId;
+}
 
-  const counts = await Promise.all(
-    repIds.map((repId) =>
-      Lead.countDocuments({
-        assignedRepId: repId,
-        leadStatus: { $ne: 'Converted' },
-        source: { $regex: BOOKED_CALL_SOURCE_RE.source, $options: 'i' },
-      })
-    )
-  );
+/** @deprecated Use resolveSatyamSalesRepId — kept for importers that referenced rep list */
+async function resolveBookedCallRepIds() {
+  const id = await resolveSatyamSalesRepId();
+  return id ? [id] : [];
+}
 
-  return pickByWeightedQuota(repIds, counts);
+function createBookedCallRepAssigner(repIds) {
+  const id = repIds?.[0] || null;
+  return () => id;
 }
 
 module.exports = {
-  BOOKED_CALL_REP_WEIGHTS,
+  SATYAM_REP_SPEC,
+  resolveSatyamSalesRepId,
   resolveBookedCallRepIds,
   createBookedCallRepAssigner,
   assignNextBookedCallRep,

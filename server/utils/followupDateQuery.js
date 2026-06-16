@@ -4,7 +4,14 @@ const FOLLOWUP_DATE_FIELD = {
   followupDate: {
     $dateFromString: {
       dateString: '$nextFollowupDate',
-      onError: null,
+      format: '%d-%m-%Y',
+      onError: {
+        $dateFromString: {
+          dateString: '$nextFollowupDate',
+          onError: null,
+          onNull: null,
+        },
+      },
       onNull: null,
     },
   },

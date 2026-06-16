@@ -13,6 +13,7 @@ const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
 const TaskService = require('../services/TaskService');
 const logger = require('../utils/logger');
 const { validateBody } = require('../validation/validateBody');
+const { FOLLOWUP_DATE_FIELD } = require('../utils/followupDateQuery');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
 
@@ -45,17 +46,7 @@ router.get('/status-counts', protect, async (req, res) => {
           nextFollowupDate: { $exists: true, $ne: '' },
         },
       },
-      {
-        $addFields: {
-          followupDate: {
-            $dateFromString: {
-              dateString: '$nextFollowupDate',
-              onError: null,
-              onNull: null,
-            },
-          },
-        },
-      },
+      { $addFields: FOLLOWUP_DATE_FIELD },
       { $match: { followupDate: { $ne: null } } },
       {
         $group: {

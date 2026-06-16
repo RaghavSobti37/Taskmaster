@@ -18,6 +18,7 @@ const { processMasterclassReviewWebhook } = require('../services/masterclassRevi
 const { sendAiSensyMessage } = require('../utils/aisensyClient');
 /** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
+const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
 
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
@@ -239,12 +240,12 @@ exports.handleArtistPath = async (req, res) => {
       return res.status(202).json({ success: true, message: 'Artist Path submission received and queued' });
     }
     console.warn('Redis is not ready, falling back to synchronous artist-path processing');
-    const result = await processArtistPathWebhook(req.body);
+    const result = await runWithDefaultWebhookTenant(() => processArtistPathWebhook(req.body));
     return res.status(200).json(result);
   } catch (error) {
     console.error('Artist Path queue error:', error);
     try {
-      const result = await processArtistPathWebhook(req.body);
+      const result = await runWithDefaultWebhookTenant(() => processArtistPathWebhook(req.body));
       return res.status(200).json(result);
     } catch (syncError) {
       console.error('Artist Path sync fallback error:', syncError);
@@ -271,13 +272,13 @@ exports.handleArtistEnquiry = async (req, res) => {
       return res.status(202).json({ success: true, message: 'Artist enquiry received and queued for processing' });
     }
     console.warn('Redis is not ready, falling back to synchronous artist-enquiry processing');
-    const result = await processArtistEnquiryLogic(req.body);
+    const result = await runWithDefaultWebhookTenant(() => processArtistEnquiryLogic(req.body));
     return res.status(200).json(result);
   } catch (error) {
     console.error('Artist enquiry queue error:', error);
     try {
       console.warn('Falling back to synchronous artist-enquiry processing after enqueue error');
-      const result = await processArtistEnquiryLogic(req.body);
+      const result = await runWithDefaultWebhookTenant(() => processArtistEnquiryLogic(req.body));
       return res.status(200).json(result);
     } catch (syncError) {
       console.error('Artist enquiry sync fallback error:', syncError);
@@ -300,12 +301,12 @@ async function enqueueOrProcess(req, res, jobName, processor) {
       return res.status(202).json({ success: true, message: `${jobName} received and queued` });
     }
     console.warn(`Redis is not ready, falling back to synchronous ${jobName} processing`);
-    const result = await processor(req.body);
+    const result = await runWithDefaultWebhookTenant(() => processor(req.body));
     return res.status(200).json(result);
   } catch (error) {
     console.error(`${jobName} queue error:`, error);
     try {
-      const result = await processor(req.body);
+      const result = await runWithDefaultWebhookTenant(() => processor(req.body));
       return res.status(200).json(result);
     } catch (syncError) {
       console.error(`${jobName} sync fallback error:`, syncError);
@@ -330,26 +331,18 @@ exports.handleMasterclassReview = async (req, res) => {
 
 exports.handleBookedCall = async (req, res) => {
   try {
-    if (connection.status === 'ready') {
-      await webhookQueue.add('book-call', req.body, {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 1000 }
-      });
-      return res.status(202).json({ success: true, message: 'Webhook received and queued for processing' });
-    } else {
-      console.warn('Redis is not ready, falling back to synchronous processing');
-      await exports.processBookedCallLogic(req.body);
-      return res.status(200).json({ success: true, message: 'Call booked and synced synchronously' });
-    }
+    const result = await runWithDefaultWebhookTenant(() => exports.processBookedCallLogic(req.body));
+    return res.status(200).json({
+      success: true,
+      message: 'Call booked in CRM',
+      leadId: result?.leadId,
+    });
   } catch (error) {
-    console.error('Queue Enqueue Error:', error);
-    try {
-      console.warn('Falling back to synchronous processing after enqueue error');
-      await exports.processBookedCallLogic(req.body);
-      return res.status(200).json({ success: true, message: 'Call booked and synced synchronously' });
-    } catch (syncError) {
-      console.error('Sync Fallback Error:', syncError);
-      return res.status(500).json({ error: 'Failed to queue webhook and sync processing failed', details: syncError.message });
-    }
+    console.error('Book-call webhook error:', error);
+    const isValidation = /Invalid date|slot is no longer|Missing required|No sales rep/i.test(error.message || '');
+    return res.status(isValidation ? 400 : 500).json({
+      success: false,
+      error: error.message || 'Failed to book call in CRM',
+    });
   }
 };

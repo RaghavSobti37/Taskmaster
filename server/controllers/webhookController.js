@@ -19,6 +19,57 @@ const { sendAiSensyMessage } = require('../utils/aisensyClient');
 /** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
+const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
+
+const REP_BYPASS = bypassOptions('book-call-rep-fetch');
+
+async function sendBookedCallNotifications(data, rep, lead, istDateStr, istTimeDisplay) {
+  const { name, phone, whatsapp, course } = data;
+  if (rep?._id) {
+    await createNotification({
+      recipientId: rep._id,
+      title: 'New Call Booked',
+      message: `${name} booked a ${course} call on ${istDateStr} at ${istTimeDisplay}.`,
+      category: 'crm',
+      type: 'alert',
+      relatedLeadId: lead._id,
+      actionUrl: buildLeadActionUrl(lead._id),
+      sendEmail: false,
+    });
+  }
+
+  await sendAiSensyMessage(
+    whatsapp || phone,
+    'final_book_call_confirmation',
+    [name.split(' ')[0], course, istDateStr, istTimeDisplay, whatsapp || phone],
+    {
+      FirstName: name.split(' ')[0],
+      CourseName: course,
+      ScheduledDate: istDateStr,
+      ScheduledTime: istTimeDisplay,
+      WhatsAppNumber: whatsapp || phone,
+    },
+    name,
+  );
+
+  if (rep?.phone) {
+    await sendAiSensyMessage(
+      rep.phone,
+      'sales_rep_new_booking_alert',
+      [rep.name.split(' ')[0], name, course, istDateStr, istTimeDisplay],
+      {
+        RepName: rep.name.split(' ')[0],
+        LeadName: name,
+        CourseName: course,
+        ScheduledDate: istDateStr,
+        ScheduledTime: istTimeDisplay,
+      },
+      rep.name,
+    );
+  } else if (rep) {
+    console.warn(`[Warning] No phone number for rep ${rep.name}, skipping AiSensy notification.`);
+  }
+}
 
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
@@ -72,13 +123,13 @@ exports.processBookedCallLogic = async (data, options = {}) => {
     let rep = null;
 
     if (lead && lead.assignedRepId) {
-      rep = await User.findById(lead.assignedRepId);
+      rep = await User.findById(lead.assignedRepId).setOptions(REP_BYPASS);
     }
 
     if (!rep) {
       const repId = forceRepId || (await assignNextBookedCallRep()) || (await assignLeadToRep());
-      if (repId) rep = await User.findById(repId);
-      if (!rep) throw new Error("No sales rep available");
+      if (repId) rep = await User.findById(repId).setOptions(REP_BYPASS);
+      if (!rep) throw new Error('No sales rep available');
     }
 
     // Helper to convert any local time to IST
@@ -173,52 +224,16 @@ exports.processBookedCallLogic = async (data, options = {}) => {
 
     // mergeContact handled by LeadService.syncToContactHub
 
-    if (!skipNotifications && rep?._id) {
-      await createNotification({
-        recipientId: rep._id,
-        title: 'New Call Booked',
-        message: `${name} booked a ${course} call on ${istDateStr} at ${istTimeDisplay}.`,
-        category: 'crm',
-        type: 'alert',
-        relatedLeadId: lead._id,
-        actionUrl: buildLeadActionUrl(lead._id),
-        sendEmail: false
-      });
-    }
-
     if (!skipNotifications) {
-    await sendAiSensyMessage(
-      whatsapp || phone,
-      'final_book_call_confirmation',
-      [name.split(' ')[0], course, istDateStr, istTimeDisplay, whatsapp || phone],
-      {
-        "FirstName": name.split(' ')[0],
-        "CourseName": course,
-        "ScheduledDate": istDateStr,
-        "ScheduledTime": istTimeDisplay,
-        "WhatsAppNumber": whatsapp || phone
-      },
-      name
-    );
-
-    // 5. Send AiSensy to Assigned Rep
-    if (rep.phone) {
-      await sendAiSensyMessage(
-        rep.phone,
-        'sales_rep_new_booking_alert',
-        [rep.name.split(' ')[0], name, course, istDateStr, istTimeDisplay],
-        {
-          "RepName": rep.name.split(' ')[0],
-          "LeadName": name,
-          "CourseName": course,
-          "ScheduledDate": istDateStr,
-          "ScheduledTime": istTimeDisplay
-        },
-        rep.name
-      );
-    } else {
-      console.warn(`[Warning] No phone number for rep ${rep.name}, skipping AiSensy notification.`);
-    }
+      void sendBookedCallNotifications(
+        { name, email, phone, whatsapp, course },
+        rep,
+        lead,
+        istDateStr,
+        istTimeDisplay,
+      ).catch((err) => {
+        console.error('Book-call notifications failed:', err.message);
+      });
     }
 
     return { success: true, message: 'Call booked in CRM', leadId: lead._id };
@@ -346,10 +361,11 @@ exports.handleBookedCall = async (req, res) => {
     });
   } catch (error) {
     console.error('Book-call webhook error:', error);
-    const isValidation = /Invalid date|slot is no longer|Missing required|No sales rep/i.test(error.message || '');
+    const msg = error.message || '';
+    const isValidation = /Invalid date|slot is no longer|Missing required|No sales rep|Invalid name|Invalid email|Invalid phone|Phone is required|Name is required|Invalid phone format|tenant configured/i.test(msg);
     return res.status(isValidation ? 400 : 500).json({
       success: false,
-      error: error.message || 'Failed to book call in CRM',
+      error: msg || 'Failed to book call in CRM',
     });
   }
 };

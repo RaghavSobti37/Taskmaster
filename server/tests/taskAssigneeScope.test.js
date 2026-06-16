@@ -133,4 +133,41 @@ describe('task assignee scope (open assignment)', () => {
     const row = await TaskAssignment.findOne({ taskId: taskDto._id }).lean();
     expect(row.userId.toString()).toBe(offProjectUser._id.toString());
   });
+
+  test('reassign succeeds when legacy assignment row lacks tenantId', async () => {
+    const { taskDto } = await TaskService.createTask(
+      {
+        title: 'Legacy assignment row',
+        projectId: sandbox._id,
+        assignees: [projectMember._id.toString()],
+      },
+      adminActor(projectLead),
+      null
+    );
+
+    await TaskAssignment.collection.insertOne({
+      taskId: taskDto._id,
+      userId: offProjectUser._id,
+      assignedBy: projectLead._id,
+      assignedAt: new Date(),
+    });
+
+    await expect(
+      TaskService.updateTask(
+        taskDto._id,
+        { assignees: [projectMember._id.toString(), offProjectUser._id.toString()] },
+        adminActor(projectLead),
+        null
+      )
+    ).resolves.toBeTruthy();
+
+    const rows = await TaskAssignment.find({ taskId: taskDto._id })
+      .setOptions({ bypassTenant: true })
+      .lean();
+    expect(rows).toHaveLength(2);
+    const userIds = rows.map((r) => r.userId.toString()).sort();
+    expect(userIds).toEqual(
+      [projectMember._id.toString(), offProjectUser._id.toString()].sort()
+    );
+  });
 });

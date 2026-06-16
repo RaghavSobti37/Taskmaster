@@ -55,8 +55,25 @@ const {
   getTaskListCountsCache,
   setTaskListCountsCache,
 } = require('../../../services/hybridCache');
+const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
+
+/** taskId is authoritative — clear all rows before replace (legacy rows may lack tenantId). */
+const TASK_ASSIGNMENT_BYPASS = bypassOptions('task-assignment-sync-by-taskId');
+
+const findTaskAssignments = (taskId, session) => {
+  let q = TaskAssignment.find({ taskId }).setOptions(TASK_ASSIGNMENT_BYPASS);
+  if (session) q = q.session(session);
+  return q.lean();
+};
+
+const replaceTaskAssignments = async (taskId, assignmentDocs, session) => {
+  await TaskAssignment.deleteMany({ taskId }, { session }).setOptions(TASK_ASSIGNMENT_BYPASS);
+  if (assignmentDocs?.length) {
+    await TaskAssignment.insertMany(assignmentDocs, { session });
+  }
+};
 
 const TASK_ASSIGNEE_POPULATE = {
   path: 'assignees',
@@ -218,7 +235,7 @@ exports.addMentionedUsersAsAssignees = async ({
   session,
 }) => {
   const pendingNotifications = [];
-  const task = await Task.findById(taskId).session(session).populate('assignees');
+  const task = await Task.findById(taskId).session(session);
   if (!task) return { pendingNotifications };
 
   const scopedToAdd = await filterUserIdsByTaskScope(task, mentionedUserIds, session);
@@ -227,7 +244,7 @@ exports.addMentionedUsersAsAssignees = async ({
     return { pendingNotifications };
   }
 
-  const assignments = task.assignees || [];
+  const assignments = await findTaskAssignments(task._id, session);
   const currentIds = assignments.map((a) => assignmentUserId(a.userId)).filter(Boolean);
   const creatorId = (task.createdBy?._id || task.createdBy)?.toString();
   const newIds = toAdd.filter((id) => !currentIds.includes(id) && id !== creatorId);
@@ -236,9 +253,8 @@ exports.addMentionedUsersAsAssignees = async ({
   const merged = normalizeTaskAssigneeIds([...currentIds, ...newIds], creatorId);
   const oldAssignmentsSnapshot = [...assignments];
 
-  await TaskAssignment.deleteMany({ taskId: task._id }, { session });
   const insertedAssignments = buildAssignmentsForUser(task._id, merged, user._id, creatorId);
-  await TaskAssignment.insertMany(insertedAssignments, { session });
+  await replaceTaskAssignments(task._id, insertedAssignments, session);
 
   const TaskActivityService = require('./TaskActivityService');
   await TaskActivityService.recordAssignmentChanges(
@@ -1046,7 +1062,6 @@ exports.updateTask = async (taskId, updates, user, session) => {
       await Task.findByIdAndUpdate(task._id, { createdBy: user._id }, { session });
       task.createdBy = user._id;
       const oldAssignmentsSnapshot = [...assignments];
-      await TaskAssignment.deleteMany({ taskId: task._id }, { session });
       let insertedAssignments = [];
       if (newAssignees.length > 0) {
         insertedAssignments = buildAssignmentsForUser(
@@ -1056,8 +1071,8 @@ exports.updateTask = async (taskId, updates, user, session) => {
           assignerCreatorId,
           assignments
         );
-        await TaskAssignment.insertMany(insertedAssignments, { session });
       }
+      await replaceTaskAssignments(task._id, insertedAssignments, session);
       const TaskActivityService = require('./TaskActivityService');
       await TaskActivityService.recordAssignmentChanges(
         task._id,
@@ -1276,7 +1291,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
       && String(task.title || '') !== String(existing.title || '')) {
       let currentAssignments = assignments;
       if (assigneesChanged) {
-        currentAssignments = await TaskAssignment.find({ taskId: task._id }).session(session).lean();
+        currentAssignments = await findTaskAssignments(task._id, session);
       }
       const currentAssigneeIds = currentAssignments
         .map((a) => assignmentUserId(a.userId))
@@ -1347,7 +1362,7 @@ exports.deleteTask = async (taskId, user, session) => {
 
   const task = await Task.findByIdAndDelete(taskId, { session });
   if (task) {
-    await TaskAssignment.deleteMany({ taskId: task._id }, { session });
+    await TaskAssignment.deleteMany({ taskId: task._id }, { session }).setOptions(TASK_ASSIGNMENT_BYPASS);
     if (task.projectId) {
       const dec = { totalTasksCount: -1 };
       if (task.status === 'done') dec.completedTasksCount = -1;

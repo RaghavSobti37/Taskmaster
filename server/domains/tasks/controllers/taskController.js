@@ -12,6 +12,7 @@ const { createNotification } = require('../../../services/notificationDispatcher
 const logger = require('../../../utils/logger');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
 const { withTransactionRetry } = require('../../../utils/mongoTransaction');
+const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 const { scheduleRollup } = require('../../../utils/rollup');
 const { broadcastRealtimeEvent } = require('../../../config/realtime');
 const { getDateKey, APP_TIMEZONE } = require('../../../utils/attendanceDate');
@@ -620,7 +621,9 @@ exports.reportBug = async (req, res, next) => {
       pendingNotifications = result.pendingNotifications;
 
       // Platform owner fixes bugs directly — self-assigned so completion does not route to reporter.
-      await TaskAssignment.deleteMany({ taskId: taskDto._id }).session(session);
+      await TaskAssignment.deleteMany({ taskId: taskDto._id })
+        .session(session)
+        .setOptions(bypassOptions('bug-report-assignment-reset'));
       await TaskAssignment.create([{
         taskId: taskDto._id,
         userId: platformOwner._id,

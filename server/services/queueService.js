@@ -16,6 +16,12 @@ const {
   clearCampaignStopped,
 } = require('./campaignQueueState');
 const { processEmailJob } = require('./emailProcessor');
+const {
+  isCampaignEmailQueueAvailable,
+  enqueueCampaignEmailJobs,
+  removeCampaignJobsFromQueue,
+} = require('./campaignEmailQueue');
+const { countPendingRecipients } = require('../utils/campaignStats');
 
 const DISPATCH_CHUNK_SIZE = 100;
 const TRIGGER_BATCH_SIZE = 25;
@@ -38,12 +44,12 @@ const removeCampaignJobsFromMemoryQueue = (campaignId) => {
   return removedFromQueue;
 };
 
-/** Render API server processes sends unless Trigger.dev worker is explicitly enabled. */
+/** Use in-process memory queue only when neither Trigger.dev nor BullMQ is available. */
 const usesMemoryQueue = () => {
   if (process.env.CAMPAIGN_USE_TRIGGER === 'true') {
     return !process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key';
   }
-  return true;
+  return !isCampaignEmailQueueAvailable();
 };
 
 const processMemoryQueue = async () => {
@@ -77,15 +83,7 @@ const processMemoryQueue = async () => {
   }
 };
 
-const countPendingRecipients = async (Model, campaignId) => {
-  const rows = await Model.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
-    { $unwind: '$recipients' },
-    { $match: { 'recipients.status': { $in: ['Pending', 'Queued'] } } },
-    { $count: 'n' },
-  ]);
-  return rows[0]?.n || 0;
-};
+const countPendingRecipientsForModel = countPendingRecipients;
 
 const fetchPendingRecipientChunk = async (Model, campaignId, limit = DISPATCH_CHUNK_SIZE) =>
   Model.aggregate([
@@ -146,15 +144,29 @@ const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset 
 
   for (let i = 0; i < jobDataList.length; i += TRIGGER_BATCH_SIZE) {
     const batch = jobDataList.slice(i, i + TRIGGER_BATCH_SIZE);
+
+    if (isCampaignEmailQueueAvailable()) {
+      try {
+        await enqueueCampaignEmailJobs(batch);
+        continue;
+      } catch (err) {
+        logger.warn('Queue Service', 'BullMQ enqueue failed — falling back to memory queue', {
+          error: err.message,
+        });
+      }
+    }
+
     await Promise.all(batch.map(async (jobData) => {
       const triggered = await triggerEmailCampaign(jobData);
       if (!triggered) memoryQueue.push(jobData);
     }));
   }
 
-  processMemoryQueue().catch((err) => {
-    logger.error('Memory Queue', 'Dispatch chunk failed', { error: err.message });
-  });
+  if (usesMemoryQueue()) {
+    processMemoryQueue().catch((err) => {
+      logger.error('Memory Queue', 'Dispatch chunk failed', { error: err.message });
+    });
+  }
 };
 
 const runCampaignDispatchLoop = async (campaignId) => {
@@ -257,11 +269,13 @@ const stopCampaign = async (campaignId) => {
   await campaign.save();
 
   const removedFromQueue = removeCampaignJobsFromMemoryQueue(id);
+  const removedFromBull = await removeCampaignJobsFromQueue(id);
 
   return {
     success: true,
     cancelledCount,
     removedFromQueue,
+    removedFromBull,
     stoppedAt: campaign.stoppedAt,
   };
 };
@@ -307,7 +321,7 @@ const dispatchCampaignJobs = async (campaignId) => {
 
   await markInvalidPendingRecipients(Model, campaign._id);
 
-  const pendingCount = await countPendingRecipients(Model, campaign._id);
+  const pendingCount = await countPendingRecipientsForModel(Model, campaign._id);
   if (pendingCount === 0) {
     return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
   }

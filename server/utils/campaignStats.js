@@ -79,4 +79,18 @@ const aggregateRecipientStats = async (Model, campaignId) => {
   return buildStatsFromCounts(recipientStatusCounts, total);
 };
 
-module.exports = { computeRecipientStats, aggregateRecipientStats };
+const countPendingRecipients = async (Model, campaignId) => {
+  const rows = await Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients.status': { $in: ['Pending', 'Queued'] } } },
+    { $count: 'n' },
+  ]);
+  return rows[0]?.n || 0;
+};
+
+module.exports = {
+  computeRecipientStats,
+  aggregateRecipientStats,
+  countPendingRecipients,
+};

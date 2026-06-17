@@ -33,6 +33,13 @@ const CRON_JOBS = [
     description: 'Daily digest notifications',
   },
   {
+    id: 'crm-reach-out-digest',
+    module: '../services/crmReachOutDigestService',
+    init: 'init',
+    schedule: '0 19 * * *',
+    description: 'Daily CRM reach-out digest email to manager (Akash + Satyam)',
+  },
+  {
     id: 'supabase-sync',
     module: '../workers/supabaseSyncWorker',
     init: 'initSupabaseSyncWorker',
@@ -76,6 +83,13 @@ const QUEUE_WORKERS = [
     init: 'initWorker',
     queue: 'domain-sync',
     description: 'Event-driven hybrid domain sync (ownership-routed writers)',
+  },
+  {
+    id: 'campaign-email',
+    module: '../workers/campaignEmailWorker',
+    init: 'initCampaignEmailWorker',
+    queue: 'campaign-email',
+    description: 'Background campaign email dispatch (BullMQ)',
   },
 ];
 

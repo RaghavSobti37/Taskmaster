@@ -140,6 +140,7 @@ function registerRoutes(app) {
   // --- Admin ---
   app.use('/api/admin/roles', require('../routes/adminRolesRoutes'));
   app.use('/api/admin/scripts', require('../routes/adminScriptsRoutes'));
+  app.use('/api/admin/crm-reach-out-digest', require('../routes/crmReachOutDigestRoutes'));
   app.use('/api/admin/supabase', require('../routes/supabaseAdminRoutes'));
   app.use('/api/admin/queues', require('../routes/queueAdminRoutes'));
   app.use('/api/admin/system-health', require('../routes/systemHealthAdminRoutes'));

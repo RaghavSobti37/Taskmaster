@@ -1,4 +1,5 @@
 const logger = require('../../../utils/logger');
+const mongoose = require('mongoose');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 const { resolveCampaignTenantId } = require('../../../utils/resolveCampaignTenantId');
 const { getTenantId, runWithWorkerTenant } = require('../../../utils/workerTenantContext');
@@ -13,6 +14,24 @@ const { ENV_CONFIG } = require('../../../config/environment');
 const { buildProfileTransporter, buildEnvTransporter, resolveMailTransport, sendViaTransport } = require('../../../utils/smtpTransport');
 const { resolveTrackingApiBaseUrl } = require('../../../utils/trackingUrls');
 const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
+
+const CAMPAIGN_PROCESS_FIELDS = [
+  'status', 'subject', 'title', 'content', 'senderMode', 'senderProfileId',
+  'senderProfileIds', 'systemProvider', 'resendFromEmail', 'includeSignature',
+  'signature', 'removeUnsubscribe', 'variableMapping', 'variableFallbacks',
+  'mailTemplateId', 'attachments', 'campaignId', 'tenantId', 'createdBy',
+].join(' ');
+
+const fetchSingleRecipient = async (Model, campaignId, recipientId) => {
+  const rows = await Model.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients._id': new mongoose.Types.ObjectId(String(recipientId)) } },
+    { $replaceRoot: { newRoot: '$recipients' } },
+    { $limit: 1 },
+  ]);
+  return rows[0] || null;
+};
 
 const updateRecipientFields = async (Model, campaignId, recipientId, fields, inc = null) => {
   const $set = {};
@@ -174,22 +193,41 @@ const processEmailJobInner = async ({
   const { isCampaignStopped } = require('./campaignQueueState');
 
   let Model = Campaign;
-  let campaign = await Campaign.findById(campaignId).populate('senderProfileId').populate('senderProfileIds').setOptions(BYPASS);
+  let campaign = await Campaign.findById(campaignId)
+    .select(CAMPAIGN_PROCESS_FIELDS)
+    .populate('senderProfileId')
+    .populate('senderProfileIds')
+    .setOptions(BYPASS)
+    .lean();
   if (!campaign) {
-    campaign = await MailCampaign.findById(campaignId).populate('senderProfileId').setOptions(BYPASS);
+    campaign = await MailCampaign.findById(campaignId)
+      .select(CAMPAIGN_PROCESS_FIELDS)
+      .populate('senderProfileId')
+      .setOptions(BYPASS)
+      .lean();
     Model = MailCampaign;
     isLegacy = true;
   }
   if (!campaign) return;
 
+  let recipientDoc = recipientId
+    ? await fetchSingleRecipient(Model, campaignId, recipientId)
+    : null;
+  if (!recipientDoc && email) {
+    const rows = await Model.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(String(campaignId)) } },
+      { $unwind: '$recipients' },
+      { $match: { 'recipients.email': String(email).toLowerCase() } },
+      { $replaceRoot: { newRoot: '$recipients' } },
+      { $limit: 1 },
+    ]);
+    recipientDoc = rows[0] || null;
+  }
+
   const resolvedTenantId = tenantId || getTenantId() || await resolveCampaignTenantId(campaign);
   const logEvent = (payload) => logCampaignEvent(MailEvent, { ...payload, tenantId: resolvedTenantId });
 
-  const getRecipient = () => (
-    campaign.recipients?.id
-      ? campaign.recipients.id(recipientId)
-      : campaign.recipients?.find((r) => r._id?.toString() === recipientId?.toString() || r.email === email)
-  );
+  const getRecipient = () => recipientDoc;
 
   const skipRecipientAsCancelled = async (reason) => {
     const recipient = getRecipient();
@@ -202,13 +240,14 @@ const processEmailJobInner = async ({
     await checkCompletion();
   };
 
+  const { countPendingRecipients } = require('../../../utils/campaignStats');
+
   const checkCompletion = async () => {
-    const freshCamp = await Model.findById(campaignId).select('recipients status').lean();
-    if (freshCamp?.recipients) {
-      const isDone = freshCamp.recipients.every((r) => r.status !== 'Pending' && r.status !== 'Queued');
-      if (isDone && freshCamp.status !== 'Stopped') {
-        await Model.findByIdAndUpdate(campaignId, { $set: { status: 'Completed' } });
-      }
+    const freshStatus = await Model.findById(campaignId).select('status').setOptions(BYPASS).lean();
+    if (!freshStatus || freshStatus.status === 'Stopped') return;
+    const pending = await countPendingRecipients(Model, campaignId);
+    if (pending === 0) {
+      await Model.findByIdAndUpdate(campaignId, { $set: { status: 'Completed' } }, BYPASS);
     }
   };
 

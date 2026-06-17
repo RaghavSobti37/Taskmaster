@@ -3,7 +3,7 @@ const MailEvent = require('../models/MailEvent');
 const EmailProfile = require('../models/EmailProfile');
 const Lead = require('../../../models/Lead');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
-const { sendCampaign } = require('../services/mailService');
+const { dispatchCampaignJobs } = require('../../../services/queueService');
 
 exports.list = async (req, res) => {
   try {
@@ -78,8 +78,8 @@ exports.send = async (req, res) => {
     if (!isAdminUser(req.user) && campaign.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to send this campaign' });
     }
-    sendCampaign(req.params.id);
-    res.json({ message: 'Campaign dispatch started' });
+    const result = await dispatchCampaignJobs(req.params.id);
+    res.json({ message: 'Campaign dispatch started', ...result });
   } catch (err) {
     console.error('Send campaign error:', err);
     res.status(500).json({ error: err.message });

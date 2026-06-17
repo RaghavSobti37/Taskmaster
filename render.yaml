@@ -180,6 +180,23 @@ services:
       - key: SUBSCRIPTION_REMINDERS_ENABLED
         value: "true"
   - type: cron
+    name: CoreKnot-crm-reach-out-digest
+    schedule: "0 19 * * *"
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node scripts/runCrmReachOutDigest.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CRM_REACH_OUT_DIGEST_ENABLED
+        value: "true"
+      - key: CRM_REACH_OUT_DIGEST_EMAIL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MONGODB_URI_PROD
+        sync: false
+  - type: cron
     name: CoreKnot-keep-warm
     schedule: "*/14 * * * *"
     rootDir: server

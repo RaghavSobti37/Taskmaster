@@ -63,8 +63,18 @@
     "ws": "^8.18.2",
     "@trigger.dev/core": {
       "ws": "^8.18.2",
-      "socket.io-client": "^4.8.1"
+      "socket.io-client": "^4.8.3",
+      "socket.io": "^4.8.3",
+      "systeminformation": "^5.27.14"
     },
+    "lighthouse": {
+      "ws": "^8.18.2"
+    },
+    "engine.io-client": "^6.6.6",
+    "socket.io-client": "^4.8.3",
+    "socket.io-client@4.7.5": "4.8.3",
+    "ws@8.17.1": "8.21.0",
+    "ws@7.5.11": "8.21.0",
     "esbuild": "^0.25.0",
     "js-yaml": "^4.1.0",
     "protobufjs": "^7.4.0",

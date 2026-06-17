@@ -11,6 +11,7 @@ const {
   getStats,
   uploadDocumentsBulk,
   updateDocument,
+  getNextReference,
   submitInvoice,
   listPendingInvoices,
   listMyInvoices,
@@ -62,6 +63,8 @@ router.patch('/:id/reject', opsOnly, rejectInvoice);
 
 // Remaining finance routes require finance page access or ops role
 router.use(financeAccess);
+
+router.get('/next-reference', getNextReference);
 
 router.post('/upload', uploadRateLimit, upload.single('file'), uploadFile);
 router.post('/upload-many', uploadRateLimit, (req, res, next) => {

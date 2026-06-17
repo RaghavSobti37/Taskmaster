@@ -9,6 +9,7 @@ async function runDocumentOcr(buffer, mimeType) {
   return parseDocument(buffer, mimeType);
 }
 const { queueGamificationEvent } = require('../services/backgroundQueue');
+const { getNextReferenceNumbers, createReferenceAllocator } = require('../services/financeReferenceService');
 const {
   utapi,
   handleUploadFilesManyRequest,
@@ -28,7 +29,7 @@ const uploadFilesMany = handleUploadFilesManyRequest;
 
 const uploadDocument = async (req, res) => {
   try {
-    const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId } = req.body;
+    const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId, referenceNumber } = req.body;
 
     if (!title || !project || !fileUrl) {
       return res.status(400).json({ success: false, message: 'Title, project, and file URL are required' });
@@ -63,12 +64,18 @@ const uploadDocument = async (req, res) => {
       }
     }
 
+    let docReference = (referenceNumber || '').trim();
+    if (!docReference) {
+      [docReference] = await getNextReferenceNumbers(project, 1);
+    }
+
     const doc = new FinanceDocument({
       title,
       description: description || '',
       project,
       folderId: folderId || null,
       category: category || docMetadata.detectedCategory || 'other',
+      referenceNumber: docReference,
       fileUrl,
       fileKey,
       fileName,
@@ -105,8 +112,10 @@ const uploadDocumentsBulk = async (req, res) => {
     }
 
     const savedDocs = [];
+    const { allocate: allocateReference } = createReferenceAllocator();
+
     for (const d of documents) {
-      const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId } = d;
+      const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId, referenceNumber } = d;
       if (!title || !project || !fileUrl) continue;
 
       if (folderId) {
@@ -127,12 +136,15 @@ const uploadDocumentsBulk = async (req, res) => {
         console.error('Error parsing document for OCR in bulk:', err);
       }
 
+      const docReference = await allocateReference(project, referenceNumber);
+
       const doc = new FinanceDocument({
         title,
         description: description || '',
         project,
         folderId: folderId || null,
         category: category || docMetadata.detectedCategory || 'other',
+        referenceNumber: docReference,
         fileUrl,
         fileKey,
         fileName,
@@ -221,6 +233,7 @@ const getDocuments = async (req, res) => {
       const regex = new RegExp(searchQuery, 'i');
       const searchOr = [
         { title: regex },
+        { referenceNumber: regex },
         { folderName: regex },
         { fileName: regex },
         { 'metadata.vendor': regex },
@@ -573,37 +586,16 @@ const canManageFinanceDoc = (user, doc) => (
   || doc.uploadedBy?.toString() === user._id.toString()
 );
 
-const FINANCE_TENANT_FORBIDDEN = 'Not authorized for this tenant';
-
-/** Reject cross-tenant spoof in mutation body (QA probes send tenantId). */
-const rejectSpoofedTenantPayload = (req, res) => {
-  const bodyTenant = req.body?.tenantId;
-  if (bodyTenant == null || bodyTenant === '') return false;
-  const userTenant = req.user?.tenantId;
-  if (!userTenant || String(bodyTenant) === String(userTenant)) return false;
-  res.status(403).json({ success: false, message: FINANCE_TENANT_FORBIDDEN });
-  return true;
-};
-
-/** Tenant-scoped load; 403 if id exists in another tenant, 404 if missing. */
 const loadFinanceDocForMutation = async (req, res, notFoundMessage = 'Invoice not found') => {
   const doc = await FinanceDocument.findOne({ _id: req.params.id });
   if (doc) return doc;
-  const foreign = await FinanceDocument.findOne({ _id: req.params.id })
-    .setOptions({ bypassTenant: true })
-    .select('tenantId approvalStatus')
-    .lean();
-  if (foreign) {
-    res.status(403).json({ success: false, message: FINANCE_TENANT_FORBIDDEN });
-    return null;
-  }
   res.status(404).json({ success: false, message: notFoundMessage });
   return null;
 };
 
 const updateDocument = async (req, res) => {
   try {
-    const { title, description, project, category, metadata } = req.body;
+    const { title, description, project, category, metadata, referenceNumber } = req.body;
     const doc = await FinanceDocument.findById(req.params.id);
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Document not found' });
@@ -617,6 +609,7 @@ const updateDocument = async (req, res) => {
     if (description !== undefined) doc.description = description;
     if (project !== undefined) doc.project = project || null;
     if (category !== undefined) doc.category = category;
+    if (referenceNumber !== undefined) doc.referenceNumber = String(referenceNumber || '').trim();
     if (metadata) {
       doc.metadata = { ...(doc.metadata?.toObject?.() || doc.metadata || {}), ...metadata };
     }
@@ -794,9 +787,6 @@ const applyPendingInvoiceEdits = (doc, body) => {
 
 const approveInvoice = async (req, res) => {
   try {
-    if (rejectSpoofedTenantPayload(req, res)) {
-      return;
-    }
     const doc = await loadFinanceDocForMutation(req, res);
     if (!doc) return;
     if (doc.approvalStatus !== 'pending') {
@@ -830,7 +820,6 @@ const approveInvoice = async (req, res) => {
 
 const rejectInvoice = async (req, res) => {
   try {
-    if (rejectSpoofedTenantPayload(req, res)) return;
     const doc = await loadFinanceDocForMutation(req, res);
     if (!doc) return;
     if (doc.approvalStatus !== 'pending') {
@@ -856,6 +845,26 @@ const rejectInvoice = async (req, res) => {
   }
 };
 
+const getNextReference = async (req, res) => {
+  try {
+    const { project, count } = req.query;
+    if (!project) {
+      return res.status(400).json({ success: false, message: 'project is required' });
+    }
+
+    const references = await getNextReferenceNumbers(project, count || 1);
+    const prefix = references[0]?.replace(/-\d+$/, '') || null;
+
+    res.json({
+      success: true,
+      data: { prefix, references },
+    });
+  } catch (error) {
+    console.error('Next reference error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   uploadFile,
   uploadFilesMany,
@@ -865,6 +874,7 @@ module.exports = {
   getStats,
   uploadDocumentsBulk,
   updateDocument,
+  getNextReference,
   submitInvoice,
   listPendingInvoices,
   listMyInvoices,

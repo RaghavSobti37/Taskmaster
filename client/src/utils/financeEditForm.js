@@ -8,6 +8,7 @@ export function buildFinanceEditForm(selectedDoc, projects = []) {
   return {
     title: selectedDoc.title || '',
     description: selectedDoc.description || '',
+    referenceNumber: selectedDoc.referenceNumber || '',
     workspace: projectRecord?.workspace || 'General',
     project: projectId,
     category: selectedDoc.category || 'other',
@@ -27,6 +28,7 @@ export function financeEditPayload(editForm, selectedDoc) {
   return {
     title: editForm.title,
     description: editForm.description,
+    referenceNumber: editForm.referenceNumber || '',
     project: editForm.project || null,
     category: editForm.category,
     metadata: {

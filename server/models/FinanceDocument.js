@@ -23,6 +23,7 @@ const financeDocumentSchema = new mongoose.Schema({
     enum: ['invoice', 'receipt', 'contract', 'proposal', 'budget', 'report', 'tax', 'other'],
     default: 'other'
   },
+  referenceNumber: { type: String, trim: true, default: '' },
   fileUrl: { type: String, default: '' },
   fileKey: { type: String }, // UploadThing file key for deletion
   fileName: { type: String },
@@ -56,6 +57,7 @@ financeDocumentSchema.index({ category: 1 });
 financeDocumentSchema.index({ uploadedBy: 1 });
 financeDocumentSchema.index({ approvalStatus: 1 });
 financeDocumentSchema.index({ submittedBy: 1 });
+financeDocumentSchema.index({ project: 1, referenceNumber: 1 });
 
 // Sanitize title / folderName; validate folder vs document
 financeDocumentSchema.pre('save', function (next) {

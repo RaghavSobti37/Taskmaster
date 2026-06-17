@@ -11,7 +11,7 @@ import {
   Calendar, ChevronLeft, ChevronRight, Info, Check, Eye, ArrowLeft,
   FolderPlus, Clock, XCircle,
 } from 'lucide-react';
-import { uploadFinanceFiles } from '../../utils/financeUpload';
+import { uploadFinanceFiles, fetchNextFinanceReferences } from '../../utils/financeUpload';
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
 import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAccordion';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
@@ -526,53 +526,60 @@ const FinancePage = () => {
     if (files.length === 0) return;
     setIsUploading(true);
     setUploadProgress(0);
+
+    const buildStaged = (uploadedItems, sourceFiles) => {
+      const baseId = Date.now();
+      const projectId = selectedProject || (projects[0]?._id || '');
+      return uploadedItems.map((item, index) => ({
+        id: `${baseId}-${index}`,
+        title: item.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim(),
+        description: '',
+        project: projectId,
+        folderId: currentFolderId || null,
+        folderLabel: activeFolder?.folderName || '',
+        newFolderName: '',
+        category: 'invoice',
+        referenceNumber: '',
+        fileUrl: item.url,
+        fileKey: item.key,
+        fileName: item.name,
+        fileSize: item.size,
+        fileType: sourceFiles[index]?.type || item.type || item.name?.split('.').pop(),
+      }));
+    };
+
+    const attachReferences = async (staged) => {
+      const projectId = staged[0]?.project;
+      if (!projectId) return staged;
+      try {
+        const refs = await fetchNextFinanceReferences(projectId, staged.length);
+        return staged.map((entry, index) => ({
+          ...entry,
+          referenceNumber: refs[index] || entry.referenceNumber || '',
+        }));
+      } catch (refErr) {
+        console.error('Reference number lookup failed:', refErr);
+        return staged;
+      }
+    };
+
     try {
       const uploaded = await uploadFinanceFiles(files, {
         onProgress: (pct) => setUploadProgress(pct),
       });
 
       if (uploaded.length > 0) {
-        const baseId = Date.now();
-        const newStaged = uploaded.map((item, index) => ({
-          id: `${baseId}-${index}`,
-          title: item.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim(),
-          description: '',
-          project: selectedProject || (projects[0]?._id || ''),
-          folderId: currentFolderId || null,
-          folderLabel: activeFolder?.folderName || '',
-          newFolderName: '',
-          category: 'invoice',
-          fileUrl: item.url,
-          fileKey: item.key,
-          fileName: item.name,
-          fileSize: item.size,
-          fileType: files[index]?.type || item.type || item.name?.split('.').pop(),
-        }));
-        setStagedFiles((prev) => [...prev, ...newStaged]);
+        const withRefs = await attachReferences(buildStaged(uploaded, files));
+        setStagedFiles((prev) => [...prev, ...withRefs]);
       }
     } catch (err) {
       console.error('File upload failed:', err);
       if (err.partial && err.uploaded?.length) {
-        const baseId = Date.now();
-        const newStaged = err.uploaded.map((item, index) => ({
-          id: `${baseId}-${index}`,
-          title: item.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim(),
-          description: '',
-          project: selectedProject || (projects[0]?._id || ''),
-          folderId: currentFolderId || null,
-          folderLabel: activeFolder?.folderName || '',
-          newFolderName: '',
-          category: 'invoice',
-          fileUrl: item.url,
-          fileKey: item.key,
-          fileName: item.name,
-          fileSize: item.size,
-          fileType: item.type,
-        }));
-        setStagedFiles((prev) => [...prev, ...newStaged]);
+        const withRefs = await attachReferences(buildStaged(err.uploaded, files));
+        setStagedFiles((prev) => [...prev, ...withRefs]);
         alert(err.message);
       } else {
-        alert('Upload failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
+        alert(err.message || 'Upload failed');
       }
     } finally {
       setIsUploading(false);
@@ -996,6 +1003,21 @@ const FinancePage = () => {
                         placeholder="Add brief details..."
                         rows={2}
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-action-primary)]/50 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Reference #</label>
+                      <input
+                        type="text"
+                        value={editForm.referenceNumber || ''}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, referenceNumber: e.target.value }))}
+                        onBlur={() => updateMutation.mutate({
+                          id: selectedDoc._id,
+                          payload: { referenceNumber: editForm.referenceNumber || '' },
+                        })}
+                        placeholder="e.g. TSCCO-HM-001"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                       />
                     </div>
 

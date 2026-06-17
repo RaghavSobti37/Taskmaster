@@ -8,11 +8,19 @@ try {
   utApiKey = process.env.UPLOADTHING_SECRET;
 }
 
+if (!utApiKey) {
+  console.error('[uploadthing] Missing UPLOADTHING_TOKEN or UPLOADTHING_SECRET — file uploads will fail.');
+}
+
 const utapi = new UTApi({ apiKey: utApiKey });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const uploadOneFileToUT = async (file, maxAttempts = 3) => {
+  if (!utApiKey) {
+    throw new Error('Upload storage is not configured (missing UPLOADTHING_TOKEN on server)');
+  }
+
   let lastError = 'Upload failed';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -30,8 +38,10 @@ const uploadOneFileToUT = async (file, maxAttempts = 3) => {
         };
       }
       lastError = uploadResult[0]?.error?.message || lastError;
+      console.error('[uploadthing] upload rejected:', file.originalname, lastError);
     } catch (err) {
       lastError = err.message || lastError;
+      console.error('[uploadthing] upload error:', file.originalname, lastError);
     }
     if (attempt < maxAttempts) await sleep(1500 * attempt);
   }
@@ -68,8 +78,11 @@ const handleUploadFilesManyRequest = async (req, res) => {
     }
 
     const { data, failed } = await uploadManyMulterFiles(files);
+    const detail = failed[0]?.error;
     const message = failed.length
-      ? `${data.length} uploaded, ${failed.length} failed`
+      ? (data.length === 0 && detail
+        ? detail
+        : `${data.length} uploaded, ${failed.length} failed${detail ? `: ${detail}` : ''}`)
       : `${data.length} file(s) uploaded`;
 
     res.status(failed.length && data.length === 0 ? 500 : 200).json({

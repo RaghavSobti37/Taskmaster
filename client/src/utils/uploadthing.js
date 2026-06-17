@@ -1,6 +1,9 @@
 import { generateUploadButton, generateUploadDropzone, generateReactHelpers } from '@uploadthing/react';
 
-const uploadthingUrl = import.meta.env.VITE_UPLOADTHING_URL || 'http://localhost:5000/api/uploadthing';
+const apiBase = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+const uploadthingUrl =
+  (import.meta.env.VITE_UPLOADTHING_URL || '').trim()
+  || (apiBase ? `${apiBase}/api/uploadthing` : '/api/uploadthing');
 
 const resolveRequestUrl = (input) => {
   if (typeof input === 'string') return input;

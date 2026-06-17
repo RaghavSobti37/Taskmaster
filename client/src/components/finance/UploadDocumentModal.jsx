@@ -5,6 +5,7 @@ import { Upload, X, FileText, Loader2, FolderOpen, FolderPlus, ChevronDown } fro
 import { FinanceUploadProgressBar, FinanceUploadStateBadge, FINANCE_UPLOAD_STATES } from './FinanceDocumentRow';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalShell';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
+import { fetchNextFinanceReferences } from '../../utils/financeUpload';
 
 const CATEGORIES = [
   { value: 'invoice', label: 'Invoice' },
@@ -227,13 +228,53 @@ const UploadDocumentModal = ({
     );
   };
 
-  const handleProjectChange = ({ workspace, projectId }) => {
+  const refreshReferenceForFile = async (fileId, projectId) => {
+    if (!projectId) return;
+    try {
+      const [referenceNumber] = await fetchNextFinanceReferences(projectId, 1);
+      if (!referenceNumber) return;
+      setStagedFiles((prev) =>
+        prev.map((f) => (f.id === fileId ? { ...f, referenceNumber } : f))
+      );
+    } catch (err) {
+      console.error('Failed to fetch reference number:', err);
+    }
+  };
+
+  const refreshReferencesForProject = async (projectId, fileIds = null) => {
+    if (!projectId) return;
+    const targets = stagedFiles.filter((f) => {
+      if (fileIds && !fileIds.includes(f.id)) return false;
+      return (f.project || uploadProject) === projectId;
+    });
+    if (!targets.length) return;
+    try {
+      const refs = await fetchNextFinanceReferences(projectId, targets.length);
+      setStagedFiles((prev) => {
+        let refIndex = 0;
+        return prev.map((f) => {
+          const target = targets.find((t) => t.id === f.id);
+          if (!target) return f;
+          const referenceNumber = refs[refIndex] || f.referenceNumber || '';
+          refIndex += 1;
+          return { ...f, referenceNumber };
+        });
+      });
+    } catch (err) {
+      console.error('Failed to fetch reference numbers:', err);
+    }
+  };
+
+  const handleProjectChange = async ({ workspace, projectId }) => {
     setUploadWorkspace(workspace);
     setUploadProject(projectId);
     setUploadFolderId(null);
     setUploadFolderLabel('');
     setUploadNewFolderName('');
     applyDefaultsToStaged(projectId, null, '', '');
+    if (projectId && stagedFiles.length > 0) {
+      await refreshReferencesForProject(projectId);
+    }
   };
 
   const handleFolderChange = ({ folderId, folderLabel, newFolderName }) => {
@@ -309,6 +350,7 @@ const UploadDocumentModal = ({
           project,
           folderId,
           category: file.category,
+          referenceNumber: file.referenceNumber || '',
           fileUrl: file.fileUrl,
           fileKey: file.fileKey,
           fileName: file.fileName,
@@ -453,6 +495,18 @@ const UploadDocumentModal = ({
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
                       />
                     </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
+                        Reference #
+                      </label>
+                      <input
+                        type="text"
+                        value={file.referenceNumber || ''}
+                        onChange={(e) => updateStagedFile(file.id, 'referenceNumber', e.target.value)}
+                        placeholder="Auto-generated from project"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
                     <div>
                       <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
                         Project
@@ -464,6 +518,7 @@ const UploadDocumentModal = ({
                           updateStagedFile(file.id, 'project', pid);
                           const project = projects.find((p) => p._id === pid);
                           if (project?.workspace) setUploadWorkspace(project.workspace);
+                          refreshReferenceForFile(file.id, pid);
                         }}
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm cursor-pointer"
                       >

@@ -1,47 +1,65 @@
 import axios from 'axios';
+import { uploadFiles } from './uploadthing';
 
+export const FINANCE_DOC_UPLOADER = 'financeDocUploader';
 const BATCH_SIZE = 8;
 
+const mapUploadedFile = (uploaded, file) => ({
+  url: uploaded.url || uploaded.ufsUrl,
+  key: uploaded.key,
+  name: uploaded.name || file.name,
+  size: uploaded.size || file.size,
+  type: file.type || uploaded.type,
+});
+
+function formatUploadFailure(payload) {
+  const failed = payload?.failed || [];
+  const detail = failed[0]?.error;
+  const fileName = failed[0]?.fileName;
+  if (detail && fileName) return `${fileName}: ${detail}`;
+  if (detail) return detail;
+  if (fileName) return `Upload failed for ${fileName}`;
+  return payload?.message || 'All uploads failed';
+}
+
 /**
- * Upload finance files in small batches (avoids multer/UT timeouts on huge drops).
+ * Upload finance files via UploadThing client route (/api/uploadthing).
+ * Server-side UTApi uploads fail signature verification in uploadthing v7.
  * @param {File[]} files
  * @param {{ onProgress?: (pct: number) => void }} options
  * @returns {Promise<Array<{ url, key, name, size, type }>>}
  */
 export async function uploadFinanceFiles(files, { onProgress } = {}) {
-  if (!files?.length) return [];
-
-  const headers = {
-    'Content-Type': 'multipart/form-data',
-    'x-skip-toast': 'true',
-  };
+  const list = Array.from(files || []);
+  if (!list.length) return [];
 
   const uploaded = [];
   const failed = [];
-  const total = files.length;
+  const total = list.length;
 
-  for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    const batch = files.slice(i, i + BATCH_SIZE);
-    const formData = new FormData();
-    batch.forEach((file) => formData.append('files', file));
+  for (let i = 0; i < list.length; i += BATCH_SIZE) {
+    const batch = list.slice(i, i + BATCH_SIZE);
+    onProgress?.(Math.min(99, Math.round((i / total) * 100)));
 
-    const res = await axios.post('/api/finance/upload-many', formData, {
-      headers,
-      withCredentials: true,
-      timeout: 0,
-      onUploadProgress: (event) => {
-        if (!event.total || !onProgress) return;
-        const batchPct = event.loaded / event.total;
-        const overall = ((i + batchPct * batch.length) / total) * 100;
-        onProgress(Math.min(99, Math.round(overall)));
-      },
-    });
+    try {
+      const uploadRes = await uploadFiles(FINANCE_DOC_UPLOADER, { files: batch });
+      const results = Array.isArray(uploadRes) ? uploadRes : [uploadRes];
 
-    const batchUploaded = res.data?.data || [];
-    uploaded.push(...batchUploaded);
-
-    if (res.data?.failed?.length) {
-      failed.push(...res.data.failed);
+      batch.forEach((file, idx) => {
+        const item = results[idx];
+        const url = item?.url || item?.ufsUrl;
+        if (url) {
+          uploaded.push(mapUploadedFile(item, file));
+        } else {
+          failed.push({
+            fileName: file.name,
+            error: item?.message || item?.code || 'Upload returned no URL',
+          });
+        }
+      });
+    } catch (err) {
+      const message = err?.message || 'Upload failed';
+      batch.forEach((file) => failed.push({ fileName: file.name, error: message }));
     }
 
     onProgress?.(Math.min(99, Math.round(((i + batch.length) / total) * 100)));
@@ -50,13 +68,12 @@ export async function uploadFinanceFiles(files, { onProgress } = {}) {
   onProgress?.(100);
 
   if (uploaded.length === 0) {
-    const msg = failed[0]?.error || failed[0]?.fileName || 'All uploads failed';
-    throw new Error(msg);
+    throw new Error(formatUploadFailure({ failed, message: 'All uploads failed' }));
   }
 
   if (failed.length > 0) {
     const err = new Error(
-      `${uploaded.length} of ${total} uploaded. ${failed.length} failed (e.g. ${failed[0].fileName}).`
+      `${uploaded.length} of ${total} uploaded. ${failed.length} failed (e.g. ${failed[0].fileName}: ${failed[0].error || 'unknown error'}).`
     );
     err.partial = true;
     err.uploaded = uploaded;
@@ -65,4 +82,19 @@ export async function uploadFinanceFiles(files, { onProgress } = {}) {
   }
 
   return uploaded;
+}
+
+/**
+ * Fetch the next finance reference number(s) for a project.
+ * @param {string} projectId
+ * @param {number} count
+ */
+export async function fetchNextFinanceReferences(projectId, count = 1) {
+  if (!projectId) return [];
+  const res = await axios.get('/api/finance/next-reference', {
+    params: { project: projectId, count },
+    headers: { 'x-skip-toast': 'true' },
+    withCredentials: true,
+  });
+  return res.data?.data?.references || [];
 }

@@ -98,6 +98,18 @@ export function buildFinanceTableColumns({
       },
     },
     {
+      key: 'referenceNumber',
+      header: 'Ref #',
+      mobileHidden: true,
+      render: (row) => (
+        row._isDivider || row.isFolder ? null : (
+          <span className="text-[10px] font-black text-[var(--color-text-secondary)] uppercase tracking-widest tabular-nums">
+            {row.referenceNumber || '—'}
+          </span>
+        )
+      ),
+    },
+    {
       key: 'project',
       header: 'Project',
       mobileHidden: true,

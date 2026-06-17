@@ -56,6 +56,8 @@ function registerRoutes(app) {
   });
   app.use('/api/', (req, res, next) => {
     if (req.path === '/health' || req.path === '/openapi.json') return next();
+    // File uploads do not require Mongo — allow UploadThing route during DB reconnect blips.
+    if (req.path.startsWith('/uploadthing')) return next();
     return SystemHealthService.middleware(req, res, next);
   });
   app.use(traceMiddleware);
@@ -146,6 +148,18 @@ function registerRoutes(app) {
   app.use('/api/admin/system-health', require('../routes/systemHealthAdminRoutes'));
   app.use('/api/admin', require('../routes/masterclassReviewAdminRoutes'));
 
+  // UploadThing v7 requires Content-Type exactly 'application/json' when Express has already parsed req.body.
+  app.use('/api/uploadthing', (req, _res, next) => {
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+      req.headers['content-type'] = 'application/json';
+    } else {
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.startsWith('application/json')) {
+        req.headers['content-type'] = 'application/json';
+      }
+    }
+    next();
+  });
   app.use('/api/uploadthing', uploadRateLimit, createRouteHandler({ router: uploadRouter }));
 
   if (config.NODE_ENV === 'production') {

@@ -4,6 +4,19 @@ const { getDateKey, startOfDayFromKey } = require('./attendanceDate');
 const escapeRegExp = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
+ * Normalize a Mongo filter into an $and clause list.
+ * Preserves top-level keys (status, priority, …) alongside existing $and entries.
+ */
+function flattenFilterToAndClauses(filter = {}) {
+  if (!filter || typeof filter !== 'object') return [{}];
+  const { $and, ...rest } = filter;
+  const clauses = [];
+  if (Array.isArray($and) && $and.length) clauses.push(...$and);
+  if (Object.keys(rest).length > 0) clauses.push(rest);
+  return clauses.length ? clauses : [{}];
+}
+
+/**
  * Apply Todo page filters to an existing task query (scope=todo).
  */
 function applyTodoFilters(filter = {}, query = {}, { skipStatFilter = false } = {}) {
@@ -81,4 +94,4 @@ function getTodoSort(sortField, sortOrder) {
   return { [field]: order, _id: 1 };
 }
 
-module.exports = { applyTodoFilters, getTodoSort };
+module.exports = { applyTodoFilters, getTodoSort, flattenFilterToAndClauses };

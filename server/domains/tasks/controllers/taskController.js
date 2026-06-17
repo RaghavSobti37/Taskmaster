@@ -254,7 +254,11 @@ exports.getTasks = async (req, res, next) => {
         ],
       };
 
-      const { applyTodoFilters, getTodoSort } = require('../../../utils/todoQueryBuilder');
+      const {
+        applyTodoFilters,
+        getTodoSort,
+        flattenFilterToAndClauses,
+      } = require('../../../utils/todoQueryBuilder');
       const statsBaseFilter = mergeTaskListFilter({ ...queryFilter }, { includeOldCompleted: includeAllCompleted });
       const page = parseInt(req.query.page, 10) || 1;
       const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
@@ -268,8 +272,8 @@ exports.getTasks = async (req, res, next) => {
       if (useSplitPagination) {
         const activeFilter = applyTodoFilters(statsBaseFilter, req.query);
         const completedBase = applyTodoFilters(statsBaseFilter, req.query, { skipStatFilter: true });
-        const activeClauses = activeFilter.$and || [activeFilter];
-        const completedClauses = completedBase.$and || [completedBase];
+        const activeClauses = flattenFilterToAndClauses(activeFilter);
+        const completedClauses = flattenFilterToAndClauses(completedBase);
         const activeQuery = { $and: [...activeClauses, { status: { $ne: 'done' } }] };
         const completedQuery = { $and: [...completedClauses, { status: 'done' }] };
         const Task = require('../models/Task');
@@ -334,7 +338,8 @@ exports.getTasks = async (req, res, next) => {
     if (isProjectList) {
       const completedLimit = Math.min(Math.max(parseInt(req.query.completedLimit, 10) || 5, 1), 50);
       const completedPage = Math.max(parseInt(req.query.completedPage, 10) || 1, 1);
-      const baseClauses = queryFilter.$and || [queryFilter];
+      const { flattenFilterToAndClauses } = require('../../../utils/todoQueryBuilder');
+      const baseClauses = flattenFilterToAndClauses(queryFilter);
       const activeFilter = { $and: [...baseClauses, { status: { $ne: 'done' } }] };
       const completedFilter = { $and: [...baseClauses, { status: 'done' }] };
       const completedSort = { completedAt: -1, updatedAt: -1, _id: -1 };
@@ -623,7 +628,7 @@ exports.reportBug = async (req, res, next) => {
       // Platform owner fixes bugs directly — self-assigned so completion does not route to reporter.
       await TaskAssignment.deleteMany({ taskId: taskDto._id })
         .session(session)
-        .setOptions(bypassOptions('bug-report-assignment-reset'));
+        ;
       await TaskAssignment.create([{
         taskId: taskDto._id,
         userId: platformOwner._id,

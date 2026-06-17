@@ -1,4 +1,5 @@
-const { applyTodoFilters, getTodoSort } = require('../utils/todoQueryBuilder');
+const { applyTodoFilters, getTodoSort, flattenFilterToAndClauses } = require('../utils/todoQueryBuilder');
+const { mergeTaskListFilter } = require('../utils/taskListFilter');
 
 describe('todoQueryBuilder', () => {
   describe('applyTodoFilters', () => {
@@ -36,6 +37,32 @@ describe('todoQueryBuilder', () => {
     it('maps statFilter in-review', () => {
       const result = applyTodoFilters({}, { statFilter: 'in-review' });
       expect(result.status).toBe('in-review');
+    });
+
+    it('keeps status when base filter already uses $and (split pagination case)', () => {
+      const userScope = { $or: [{ createdBy: 'user1' }] };
+      const statsBase = mergeTaskListFilter(userScope);
+      const filtered = applyTodoFilters(statsBase, { status: 'in-review' });
+      const clauses = flattenFilterToAndClauses(filtered);
+      const activeQuery = { $and: [...clauses, { status: { $ne: 'done' } }] };
+
+      expect(clauses.some((c) => c.status === 'in-review')).toBe(true);
+      expect(clauses.some((c) => c.$or)).toBe(true);
+      expect(activeQuery.$and.some((c) => c.status === 'in-review')).toBe(true);
+    });
+  });
+
+  describe('flattenFilterToAndClauses', () => {
+    it('wraps a simple filter in a single clause', () => {
+      expect(flattenFilterToAndClauses({ status: 'in-review' })).toEqual([{ status: 'in-review' }]);
+    });
+
+    it('merges top-level keys with existing $and entries', () => {
+      const base = { $and: [{ $or: [{ createdBy: 'a' }] }], status: 'in-review' };
+      expect(flattenFilterToAndClauses(base)).toEqual([
+        { $or: [{ createdBy: 'a' }] },
+        { status: 'in-review' },
+      ]);
     });
   });
 

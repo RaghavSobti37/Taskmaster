@@ -55,5 +55,27 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "overrides": {
+    "form-data": "^4.0.4",
+    "minimist": "^1.2.8",
+    "shell-quote": "^1.8.3",
+    "ws": "^8.18.2",
+    "@trigger.dev/core": {
+      "ws": "^8.18.2",
+      "socket.io-client": "^4.8.1"
+    },
+    "esbuild": "^0.25.0",
+    "js-yaml": "^4.1.0",
+    "protobufjs": "^7.4.0",
+    "semver": "^7.7.2",
+    "qs": "^6.14.0",
+    "uuid": "^11.1.0",
+    "tough-cookie": "^4.1.4",
+    "cookie": "^0.7.2",
+    "js-cookie": "^3.0.5",
+    "ip-address": "^10.0.1",
+    "systeminformation": "^5.27.14",
+    "@opentelemetry/core": "^2.8.0"
   }
 }

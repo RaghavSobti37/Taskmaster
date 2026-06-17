@@ -16,6 +16,9 @@ test-results/
 playwright-report/
 e2e/.auth/
 node_modules
+server/ut7test/
+client/package-lock.json
+server/package-lock.json
 *.csv
 server/uploads/
 *.log
@@ -73,3 +76,4 @@ docs/workspaces_projects.txt
 nestjs-server/generated/
 nestjs-server/dist/
 tscacademy_logo.png
+package-lock.json

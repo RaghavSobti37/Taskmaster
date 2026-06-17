@@ -22,7 +22,7 @@ services:
     region: oregon
     plan: starter
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -86,7 +86,7 @@ services:
     region: oregon
     plan: starter
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -136,7 +136,7 @@ services:
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: node scripts/runDailyBackup.js
     envVars:
       - key: NODE_ENV
@@ -172,7 +172,7 @@ services:
     name: CoreKnot-subscription-reminders
     schedule: "30 3 * * *"
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: node scripts/runSubscriptionReminders.js
     envVars:
       - key: NODE_ENV
@@ -183,7 +183,7 @@ services:
     name: CoreKnot-crm-reach-out-digest
     schedule: "0 19 * * *"
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: node scripts/runCrmReachOutDigest.js
     envVars:
       - key: NODE_ENV
@@ -200,7 +200,7 @@ services:
     name: CoreKnot-keep-warm
     schedule: "*/14 * * * *"
     rootDir: server
-    buildCommand: npm install
+    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
     startCommand: node scripts/keepWarm.js
     envVars:
       - key: NODE_ENV

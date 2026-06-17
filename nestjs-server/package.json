@@ -26,21 +26,21 @@
   "dependencies": {
     "@coreknot/contracts": "*",
     "@nestjs/bullmq": "^11.0.4",
-    "@nestjs/common": "^11.1.26",
+    "@nestjs/common": "^11.1.27",
     "@nestjs/config": "^4.0.4",
-    "@nestjs/core": "^11.1.26",
-    "@nestjs/platform-express": "^11.1.26",
-    "@prisma/client": "^6.19.3",
-    "bullmq": "^5.77.6",
+    "@nestjs/core": "^11.1.27",
+    "@nestjs/platform-express": "^11.1.27",
+    "@prisma/client": "^7.8.0",
+    "bullmq": "^5.78.1",
     "cookie-parser": "^1.4.7",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^5.11.0",
     "jsonwebtoken": "^9.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "svix": "^1.66.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.23",

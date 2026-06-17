@@ -1,9 +1,8 @@
 import { generateUploadButton, generateUploadDropzone, generateReactHelpers } from '@uploadthing/react';
 
-const apiBase = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
-const uploadthingUrl =
-  (import.meta.env.VITE_UPLOADTHING_URL || '').trim()
-  || (apiBase ? `${apiBase}/api/uploadthing` : '/api/uploadthing');
+/** Match axios: relative /api so session cookies stay on the page origin (Vite/Vercel proxy). */
+const explicitUploadthingUrl = (import.meta.env.VITE_UPLOADTHING_URL || '').trim();
+const uploadthingUrl = explicitUploadthingUrl || '/api/uploadthing';
 
 const resolveRequestUrl = (input) => {
   if (typeof input === 'string') return input;
@@ -15,12 +14,9 @@ const resolveRequestUrl = (input) => {
 const shouldIncludeCredentials = (requestUrl) => {
   if (requestUrl.includes('ingest.uploadthing.com')) return false;
   if (!requestUrl) return true;
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  return (
-    requestUrl.startsWith('/') ||
-    requestUrl.startsWith(apiBase) ||
-    requestUrl.includes('/api/uploadthing')
-  );
+  if (requestUrl.startsWith('/')) return true;
+  if (typeof window !== 'undefined' && requestUrl.startsWith(window.location.origin)) return true;
+  return requestUrl.includes('/api/uploadthing');
 };
 
 const uploadFetch = (input, init = {}) => {

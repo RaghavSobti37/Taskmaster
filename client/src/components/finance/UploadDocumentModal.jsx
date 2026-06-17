@@ -193,6 +193,8 @@ const UploadDocumentModal = ({
   const [uploadFolderLabel, setUploadFolderLabel] = useState('');
   const [uploadNewFolderName, setUploadNewFolderName] = useState('');
   const [resolvingFolders, setResolvingFolders] = useState(false);
+  const [defaultReferenceNumber, setDefaultReferenceNumber] = useState('');
+  const [loadingReference, setLoadingReference] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -203,7 +205,33 @@ const UploadDocumentModal = ({
     setUploadFolderId(currentFolderId || null);
     setUploadFolderLabel(currentFolder?.folderName || '');
     setUploadNewFolderName('');
+    setDefaultReferenceNumber('');
   }, [isOpen, selectedProject, currentFolderId, currentFolder?.folderName, projects]);
+
+  useEffect(() => {
+    if (!isOpen || !uploadProject) {
+      setDefaultReferenceNumber('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    setLoadingReference(true);
+    fetchNextFinanceReferences(uploadProject, Math.max(1, stagedFiles.length || 1))
+      .then((refs) => {
+        if (!cancelled) setDefaultReferenceNumber(refs[0] || '');
+      })
+      .catch((err) => {
+        console.error('Failed to load reference number:', err);
+        if (!cancelled) setDefaultReferenceNumber('');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingReference(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, uploadProject, stagedFiles.length]);
 
   const { data: foldersRes } = useQuery({
     queryKey: ['finance-folders', uploadProject],
@@ -216,7 +244,7 @@ const UploadDocumentModal = ({
 
   const projectFolders = foldersRes?.data || [];
 
-  const applyDefaultsToStaged = (project, folderId, folderLabel, newFolderName) => {
+  const applyDefaultsToStaged = (project, folderId, folderLabel, newFolderName, referenceNumber) => {
     setStagedFiles((prev) =>
       prev.map((f) => ({
         ...f,
@@ -224,6 +252,7 @@ const UploadDocumentModal = ({
         folderId: folderId ?? null,
         folderLabel: folderLabel || '',
         newFolderName: newFolderName || '',
+        referenceNumber: referenceNumber ?? f.referenceNumber ?? '',
       }))
     );
   };
@@ -271,7 +300,7 @@ const UploadDocumentModal = ({
     setUploadFolderId(null);
     setUploadFolderLabel('');
     setUploadNewFolderName('');
-    applyDefaultsToStaged(projectId, null, '', '');
+    applyDefaultsToStaged(projectId, null, '', '', '');
     if (projectId && stagedFiles.length > 0) {
       await refreshReferencesForProject(projectId);
     }
@@ -373,7 +402,7 @@ const UploadDocumentModal = ({
 
   const pickFiles = (fileList) => {
     if (!fileList?.length || isUploading || !uploadProject) return;
-    onFilesSelected(fileList);
+    onFilesSelected(fileList, uploadProject, defaultReferenceNumber);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -430,6 +459,32 @@ const UploadDocumentModal = ({
             onChange={handleFolderChange}
             disabled={!uploadProject}
           />
+          <div>
+            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
+              Reference #
+            </label>
+            <input
+              type="text"
+              value={defaultReferenceNumber}
+              disabled={!uploadProject || loadingReference}
+              placeholder={
+                !uploadProject
+                  ? 'Select a project first'
+                  : loadingReference
+                    ? 'Generating…'
+                    : 'e.g. TSCCO-HM-001'
+              }
+              onChange={(e) => {
+                const value = e.target.value;
+                setDefaultReferenceNumber(value);
+                applyDefaultsToStaged(uploadProject, uploadFolderId, uploadFolderLabel, uploadNewFolderName, value);
+              }}
+              className="w-full px-3 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg text-sm disabled:opacity-50"
+            />
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+              Auto-generated from workspace/project. Increments per document — editable before save.
+            </p>
+          </div>
         </div>
 
         {stagedFiles.length > 0 ? (

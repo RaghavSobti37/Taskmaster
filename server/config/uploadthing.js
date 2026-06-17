@@ -5,8 +5,10 @@ const f = createUploadthing();
 
 const requireAuthenticatedUpload = (req) => {
   const token = getTokenFromRequest(req);
-  if (!token) throw new Error('Unauthorized');
-  return { userId: 'authenticated-user' };
+  if (!token && !req.user) {
+    throw new Error('Unauthorized — sign in again and retry the upload');
+  }
+  return { userId: req.user?._id?.toString() || 'authenticated-user' };
 };
 
 const uploadRouter = {

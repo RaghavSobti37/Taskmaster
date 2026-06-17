@@ -521,20 +521,21 @@ const FinancePage = () => {
     setSelectedDoc(row);
   }, [selectedProject, navigateToFolder]);
 
-  const handleFilesSelected = async (fileList) => {
+  const handleFilesSelected = async (fileList, projectId, startingReference = '') => {
     const files = Array.from(fileList || []);
     if (files.length === 0) return;
     setIsUploading(true);
     setUploadProgress(0);
 
+    const effectiveProject = projectId || selectedProject || (projects[0]?._id || '');
+
     const buildStaged = (uploadedItems, sourceFiles) => {
       const baseId = Date.now();
-      const projectId = selectedProject || (projects[0]?._id || '');
       return uploadedItems.map((item, index) => ({
         id: `${baseId}-${index}`,
         title: item.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim(),
         description: '',
-        project: projectId,
+        project: effectiveProject,
         folderId: currentFolderId || null,
         folderLabel: activeFolder?.folderName || '',
         newFolderName: '',
@@ -549,16 +550,21 @@ const FinancePage = () => {
     };
 
     const attachReferences = async (staged) => {
-      const projectId = staged[0]?.project;
-      if (!projectId) return staged;
+      if (!effectiveProject) return staged;
       try {
-        const refs = await fetchNextFinanceReferences(projectId, staged.length);
+        const refs = await fetchNextFinanceReferences(effectiveProject, staged.length);
         return staged.map((entry, index) => ({
           ...entry,
-          referenceNumber: refs[index] || entry.referenceNumber || '',
+          referenceNumber: refs[index] || startingReference || entry.referenceNumber || '',
         }));
       } catch (refErr) {
         console.error('Reference number lookup failed:', refErr);
+        if (startingReference) {
+          return staged.map((entry, index) => ({
+            ...entry,
+            referenceNumber: index === 0 ? startingReference : entry.referenceNumber,
+          }));
+        }
         return staged;
       }
     };

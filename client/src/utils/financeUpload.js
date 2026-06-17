@@ -58,7 +58,10 @@ export async function uploadFinanceFiles(files, { onProgress } = {}) {
         }
       });
     } catch (err) {
-      const message = err?.message || 'Upload failed';
+      let message = err?.message || 'Upload failed';
+      if (/middleware|unauthorized|not authorized/i.test(message)) {
+        message = 'Session expired or upload not authorized — refresh the page and try again';
+      }
       batch.forEach((file) => failed.push({ fileName: file.name, error: message }));
     }
 

@@ -13,6 +13,7 @@ const DEFAULT_COUNTS = {
   calendar: { today: 0 },
   notifications: { unread: 0, byCategory: {} },
   review: { pending: 0 },
+  projects: { overdue: 0, review: 0 },
 };
 
 export const useStatusCounts = (enabled = true) => {

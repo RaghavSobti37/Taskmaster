@@ -16,6 +16,7 @@ const { validateBody } = require('../validation/validateBody');
 const { FOLLOWUP_DATE_FIELD } = require('../utils/followupDateQuery');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
+const { countProjectOverdueTasks, countProjectReviewTasks } = require('../utils/projectStatusCounts');
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
@@ -83,11 +84,21 @@ router.get('/status-counts', protect, async (req, res) => {
     });
 
     let reviewPendingCount = 0;
+    let projectReviewCount = 0;
+    let reviewQueue = [];
     try {
-      const reviewQueue = await TaskService.getReviewQueue(req.user);
+      reviewQueue = await TaskService.getReviewQueue(req.user);
       reviewPendingCount = reviewQueue.length;
+      projectReviewCount = countProjectReviewTasks(reviewQueue);
     } catch (reviewErr) {
       logger.warn('status-counts review queue', reviewErr?.message);
+    }
+
+    let projectOverdueCount = 0;
+    try {
+      projectOverdueCount = await countProjectOverdueTasks(req.user);
+    } catch (projectErr) {
+      logger.warn('status-counts project overdue', projectErr?.message);
     }
 
     const allowed = await getAllowedCategoriesForUser(req.user);
@@ -98,6 +109,7 @@ router.get('/status-counts', protect, async (req, res) => {
       calendar: { today: todayCalendarCount },
       notifications: { unread: 0, byCategory: {}, localOnly: true, allowedCategories: ['all', ...allowed] },
       review: { pending: reviewPendingCount },
+      projects: { overdue: projectOverdueCount, review: projectReviewCount },
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch status counts' });

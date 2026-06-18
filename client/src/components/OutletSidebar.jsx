@@ -251,6 +251,7 @@ const OutletSidebar = () => {
     calendar: { today: 0 },
     notifications: { unread: 0, byCategory: {} },
     review: { pending: 0 },
+    projects: { overdue: 0, review: 0 },
   } } = useStatusCounts(shellQueriesEnabled);
   const isMobile = useIsMobile();
   const departmentSlug = getDepartmentSlug(user);

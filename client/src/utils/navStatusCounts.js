@@ -44,12 +44,14 @@ export function getNavCountsForPath(path, statusCounts = {}) {
     case '/calendar':
       return { count: 0, todayCount: calendar.today || 0 };
     case '/projects': {
-      const reviewPending = review.pending || 0;
-      const overdue = tasks.overdue || 0;
+      const projects = statusCounts.projects || {};
+      const reviewPending = projects.review || 0;
+      const overdue = projects.overdue || 0;
+      const badgeCount = overdue > 0 ? overdue : reviewPending;
       return {
         count: overdue,
         todayCount: overdue > 0 ? 0 : reviewPending,
-        badgeCount: overdue + reviewPending,
+        badgeCount,
         badgeVariant: overdue > 0 ? 'rose' : 'amber',
       };
     }

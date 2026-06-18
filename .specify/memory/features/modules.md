@@ -143,5 +143,6 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 ## Admin & roles
 
+- **Platform settings** — `/admin/platform-settings` — user pickers for digest/backup/subscription/password-reset recipients, CRM call reps, root admins, QA exclusions, mail approvers, auto project members
 - AdminRolesPage, PagePermissionsEditor � department page keys synced with server gates
 - System health card on dashboard (systemHealth.js)

@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Platform settings admin UI for email and role routing
+
+- **What:** Admin → Platform settings (`/admin/platform-settings`) — user pickers for CRM digest recipients, backup alerts, subscription fallback, password-reset CC, CRM call reps, root admins, QA exclusions, mail approvers, auto project members, etc. Mongo `PlatformSettings` drives runtime; env vars remain fallback only.
+- **Why:** Stop hardcoding ops emails in `render.yaml` / `.env`; configure recipients in-app.
+- **Files:** `server/routes/platformSettingsRoutes.js`, `server/utils/platformNotificationRecipients.js`, `client/src/pages/admin/AdminPlatformSettings.jsx`, `shared/platformRoleDefinitions.js`
+- **Branch:** `main` · **Commit:** `59dc9d37`
+
+---
+
 ## 2026-06-18 — Fix Vercel build: crmDigestProjects ESM facade
 
 - **What:** Split `shared/crmDigestProjects` into `.cjs` (Node) + `.js` ESM facade (Vite); server requires point at `.cjs`.

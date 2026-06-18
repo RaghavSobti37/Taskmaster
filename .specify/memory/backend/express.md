@@ -41,6 +41,7 @@ Legacy shims remain in `server/routes/`, `server/controllers/`, `server/models/`
 | `/api/gamification` | XP, leaderboard |
 | `/api/notifications` | In-app inbox |
 | `/api/webhooks` | External webhook ingress |
+| `/api/admin/platform-settings` | Platform roles + notification routing (admin UI) |
 | `/api/admin/scripts` | Whitelisted script runner |
 | `/api/qa` | QA testing runner |
 

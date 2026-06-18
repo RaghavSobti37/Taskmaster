@@ -41,6 +41,8 @@ npm run audit:history     # After history rewrite or fork import
 
 Repo skills: `git-push`, `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`, `coreknot-session-boot`.
 
+**Platform settings UI:** Admin → Platform settings (`/admin/platform-settings`) — configure notification recipients and protected roles without editing env/render.yaml.
+
 **Ship workflow:** `/git-push` → `.cursor/skills/git-push/SKILL.md` (commit, push, sync `.specify/memory/` + docs).
 
 ---

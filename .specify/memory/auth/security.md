@@ -71,11 +71,13 @@
 
 - Continued tenantPlugin + explicit tenantId checks on sensitive mutations; not all collections fully audited yet
 
-### Platform roles
+### Platform roles & notification routing
 
-- `PlatformSettings` model in MongoDB
-- `ROOT_ADMIN_USER_IDS` / `PLATFORM_OWNER_USER_ID` env vars
-- `shared/platformRoleDefinitions.js`
+- `PlatformSettings` singleton in MongoDB — **Admin → Platform settings** (`/admin/platform-settings`)
+- User pickers replace env-only routing for: CRM digest, backup alerts, subscription fallback, password-reset CC, CRM call reps, root admins, QA exclusions, mail approvers, auto project members
+- Env vars (`CRM_REACH_OUT_DIGEST_EMAIL`, `BACKUP_NOTIFY_EMAIL`, `ROOT_ADMIN_USER_IDS`, etc.) remain **fallback** when no users configured
+- `GET /api/admin/platform-settings/exclusions` — lightweight client cache (root admin IDs, QA exclusions, mail approvers)
+- `shared/platformRoleDefinitions.js` — field labels + sections
 
 ### Project roles (`shared/projectRoles.js`)
 

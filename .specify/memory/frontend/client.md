@@ -59,7 +59,7 @@ React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Frame
 | `/emails/*` | Email hub (campaigns, templates, analytics) |
 | `/campaign/:campaignId` | Campaign detail |
 | `/admin` | Data Hub |
-| `/admin/console`, `/admin/qa`, `/admin/scripts` | Admin tooling |
+| `/admin/console`, `/admin/qa`, `/admin/scripts`, `/admin/platform-settings` | Admin tooling |
 | `/artists/:id/*` | Artist detail (Artist OS) |
 | `/artist-workspace/:id/*` | Membership-gated artist workspace |
 | `/artist-workspace/:id/accept` | Accept team invite |

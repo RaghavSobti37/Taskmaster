@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import { Button, SearchInput } from '../ui';
-import NexusDropdown from './NexusDropdown';
+import NexusDropdown from '../ui/NexusDropdown';
 
 const userLabel = (user) => {
   if (!user) return '';

@@ -66,32 +66,87 @@
     "form-data": "^4.0.4",
     "minimist": "^1.2.8",
     "shell-quote": "^1.8.3",
-    "ws": "^8.18.2",
+    "ws": "^8.21.0",
+    "multer": "^2.2.0",
+    "effect": "^3.21.3",
+    "quill": "^2.0.3",
+    "@clerk/shared": {
+      "js-cookie": "^3.0.8"
+    },
+    "@uploadthing/shared": {
+      "effect": "^3.21.3"
+    },
+    "uploadthing": {
+      "effect": "^3.21.3"
+    },
+    "react-quill": {
+      "quill": "2.0.3"
+    },
+    "geoip-lite": {
+      "ip-address": "^10.1.1"
+    },
+    "imap": {
+      "utf7": "^1.0.2"
+    },
+    "utf7": {
+      "semver": "^7.7.2"
+    },
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "^4.1.1"
+    },
     "@trigger.dev/core": {
-      "ws": "^8.18.2",
-      "socket.io-client": "^4.8.3",
-      "socket.io": "^4.8.3",
-      "systeminformation": "^5.27.14"
+      "ws": "$ws",
+      "socket.io-client": "$socket.io-client",
+      "socket.io": "$socket.io",
+      "systeminformation": "$systeminformation",
+      "@opentelemetry/core": "$@opentelemetry/core",
+      "@opentelemetry/resources": "$@opentelemetry/resources",
+      "@opentelemetry/sdk-trace-base": "$@opentelemetry/sdk-trace-base",
+      "@opentelemetry/sdk-metrics": "$@opentelemetry/sdk-metrics",
+      "@opentelemetry/sdk-logs": "$@opentelemetry/sdk-logs",
+      "@opentelemetry/sdk-trace-node": "$@opentelemetry/sdk-trace-node",
+      "cookie": "$cookie",
+      "engine.io": "$engine.io",
+      "engine.io-client": "$engine.io-client"
+    },
+    "@sentry/node": {
+      "@opentelemetry/core": "$@opentelemetry/core",
+      "@opentelemetry/resources": "$@opentelemetry/resources",
+      "@opentelemetry/sdk-trace-base": "$@opentelemetry/sdk-trace-base"
     },
     "lighthouse": {
-      "ws": "^8.18.2"
+      "ws": "^8.21.0"
     },
+    "engine.io": "^6.6.6",
     "engine.io-client": "^6.6.6",
+    "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "socket.io-client@4.7.5": "4.8.3",
     "ws@8.17.1": "8.21.0",
     "ws@7.5.11": "8.21.0",
+    "ws@8.20.1": "8.21.0",
     "esbuild": "^0.25.0",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "protobufjs": "^7.4.0",
     "semver": "^7.7.2",
     "qs": "^6.14.0",
     "uuid": "^11.1.0",
     "tough-cookie": "^4.1.4",
     "cookie": "^0.7.2",
-    "js-cookie": "^3.0.5",
-    "ip-address": "^10.0.1",
-    "systeminformation": "^5.27.14",
-    "@opentelemetry/core": "^2.8.0"
+    "js-cookie": "^3.0.8",
+    "ip-address": "^10.1.1",
+    "systeminformation": "^5.31.7",
+    "@opentelemetry/core": "^2.8.0",
+    "@opentelemetry/resources": "^2.8.0",
+    "@opentelemetry/sdk-trace-base": "^2.8.0",
+    "@opentelemetry/sdk-metrics": "^2.8.0",
+    "@opentelemetry/sdk-logs": "^2.8.0",
+    "@opentelemetry/sdk-trace-node": "^2.8.0",
+    "@opentelemetry/otlp-exporter-base": "^0.218.1",
+    "@opentelemetry/otlp-transformer": "^0.218.1",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.218.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.218.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.218.1",
+    "@opentelemetry/host-metrics": "^0.38.1"
   }
 }

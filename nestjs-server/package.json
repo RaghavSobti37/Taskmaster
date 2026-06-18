@@ -38,6 +38,7 @@
     "express": "^5.2.1",
     "ioredis": "^5.11.0",
     "jsonwebtoken": "^9.0.0",
+    "multer": "^2.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "svix": "^1.66.0",

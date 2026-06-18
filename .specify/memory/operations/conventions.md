@@ -31,6 +31,7 @@ npm run audit:history     # After history rewrite or fork import
 
 | Path | Purpose |
 | --- | --- |
+| `.cursor/rules/agent-os.mdc` | Agent OS — Ponytail + Superpowers + Caveman layers |
 | `.cursor/rules/backend-standards.mdc` | Express route patterns, validation, errors |
 | `.cursor/rules/component-standards.mdc` | React component structure |
 | `.cursor/rules/rbac-defense.mdc` | Page + API permission alignment |

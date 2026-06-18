@@ -14,7 +14,7 @@
 | --- | --- |
 | **auth** | Login/register/OAuth, JWT sessions, user CRUD |
 | **tasks** | Tasks, assignments, activity, review workflow, mentions |
-| **projects** | Workspaces, phases, KRAs, goals, project analytics |
+| **projects** | Workspaces, phases, KRAs, goals, workspace goals, project analytics |
 | **crm** | Leads, follow-ups, CSV import, artist CRM, stats/audits |
 | **data-hub** | Person spine, folder inlets, reconcile, backups |
 | **mail** | Campaigns, templates, HolySheet, Resend, open/click tracking |

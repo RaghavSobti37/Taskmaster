@@ -8,6 +8,8 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 - CRUD projects, members, roles, workload, hours, analytics
 - Project goals/KRA with snapshot history
+- **Workspace goals** — `WorkspaceGoal` model + `GET/PUT /api/projects/workspace/:workspaceId/goals`; UI in `WorkspaceGoalsPanel` (workspace settings)
+- **CRM digest settings** — per TSC Academy / TSC Films project on Goals tab (`ProjectCrmDigestSettings`); overrides env `CRM_DIGEST_*` via `crmDigestSettingsService` + `shared/crmDigestProjects.js`
 - Optimistic concurrency via `__v` on project updates
 - **Pages:** `/projects`, `/projects/:id`, `/projects/:id/analytics`
 
@@ -37,6 +39,8 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - Strict phone validation — E.164 normalization, HTTP 409 on duplicate
 - Booked calls via website webhook (2:1:1 rep split)
 - Artist CRM (`crmType: artist`) — 6-sheet CSV import
+- **Daily reach-out digest** — cron email to ops leads; project-level monthly target + plan values when configured on Goals tab
+- **Lead follow-up datetime** — `leadFollowupDateTime.js` normalizes date+time for notifications
 - **Lead detail enrichment:** `leadEnrichmentService` + `shared/leadWebinarQna.cjs` (webinar Q&A from `qnaAnswered`/metadata); Artist Path responses via `personId`; `LeadArtistJourneySection` on Leads modal; `useLeadDetail`
 - **Pages:** `/crm` (Leads, Followups, Bookings tabs)
 

@@ -81,6 +81,23 @@ npm run backup:daily --prefix server
 
 ---
 
+## Mongo → Postgres ETL (NestJS cutover)
+
+Preview Supabase Postgres is filled from Mongo via `nestjs-server/scripts/etl/mongo-to-postgres.ts`.
+
+| Script | Role |
+| --- | --- |
+| `npm run etl:preview` | Preview DB load (`run-preview-etl.js`) |
+| `npm run etl:prod-cutover` | Production cutover runner |
+| `nestjs-server/scripts/etl/validate-counts.ts` | Row-count parity vs `shared/etlCoverage.js` |
+| `scripts/migrationReadiness.js` | End-to-end migration gate |
+| `scripts/productionReadiness.js` | Prod env + upload smoke checks |
+| `server/scripts/verifyLocalMigration.js` | Local Nest strangler readiness |
+
+Coverage map: `shared/etlCoverage.js`. Topology: `docs/DATA_ENV_TOPOLOGY.md`, `docs/PREVIEW_SUPABASE_CUTOVER.md`.
+
+---
+
 ## Email campaign location analytics
 
 Charts use **registered CRM city** — not IP geo (email tracking geo is LOCKED separately).

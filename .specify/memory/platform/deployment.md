@@ -41,6 +41,7 @@
 | --- | --- | --- |
 | `CoreKnot-api` | Web | Production API |
 | `coreknot-api-staging` | Web | Staging API |
+| `coreknot-nest-staging` | Web | NestJS strangler (Postgres preview DB, port 5001, `rootDir: nestjs-server`) |
 | `taskmaster-redis` | Key Value | BullMQ + notification locks |
 | `CoreKnot-daily-backup` | Cron | `runDailyBackup.js` (IST) |
 | `CoreKnot-subscription-reminders` | Cron | `runSubscriptionReminders.js` |

@@ -139,7 +139,7 @@ services:
     region: oregon
     plan: starter
     rootDir: nestjs-server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=@coreknot/nestjs-server && npm run build --workspace=@coreknot/nestjs-server
+    buildCommand: cd .. && npm ci --workspace=@coreknot/nestjs-server && npm run build --workspace=@coreknot/nestjs-server
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     autoDeploy: false

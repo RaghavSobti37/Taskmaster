@@ -13,7 +13,7 @@ const {
   emptyCrmDigestSettings,
   getCrmDigestSegmentForProject,
   normalizePlanValues,
-} = require('../../../../shared/crmDigestProjects');
+} = require('../../../../shared/crmDigestProjects.cjs');
 const { getCurrentWeekRange } = require('../../../utils/attendanceDate');
 
 const METRIC_KEYS = ['sales', 'totalReach', 'warmLeads', 'audienceExposure'];

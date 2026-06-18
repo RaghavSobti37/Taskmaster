@@ -3,7 +3,7 @@ const projectGoalsService = require('../services/projectGoalsService');
 const { canAccessProject } = require('../../../utils/projectAccess');
 const { getProjectRoleForUser } = require('../../../../shared/projectRoles');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
-const { getCrmDigestSegmentForProject } = require('../../../../shared/crmDigestProjects');
+const { getCrmDigestSegmentForProject } = require('../../../../shared/crmDigestProjects.cjs');
 
 async function loadProjectWithAccess(req, projectId) {
   const project = await Project.findById(projectId);

@@ -2,7 +2,7 @@ const {
   getCrmDigestSegmentForProject,
   normalizePlanValues,
   CRM_DIGEST_SEGMENTS,
-} = require('../../shared/crmDigestProjects');
+} = require('../../shared/crmDigestProjects.cjs');
 
 describe('crmDigestProjects', () => {
   test('getCrmDigestSegmentForProject matches TSC Academy and Films', () => {
@@ -21,7 +21,7 @@ describe('crmDigestProjects', () => {
   });
 
   test('getCrmDigestSegmentForWorkspace matches TSC workspaces', () => {
-    const { getCrmDigestSegmentForWorkspace } = require('../../shared/crmDigestProjects');
+    const { getCrmDigestSegmentForWorkspace } = require('../../shared/crmDigestProjects.cjs');
     expect(getCrmDigestSegmentForWorkspace('TSC ACADEMY')?.key).toBe('academy');
     expect(getCrmDigestSegmentForWorkspace('TSC FILMS')?.key).toBe('films');
     expect(getCrmDigestSegmentForWorkspace('GENERAL')).toBeNull();

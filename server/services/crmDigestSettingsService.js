@@ -7,7 +7,7 @@ const {
   emptyCrmDigestSettings,
   getCrmDigestSegmentForProject,
   normalizePlanValues,
-} = require('../../shared/crmDigestProjects');
+} = require('../../shared/crmDigestProjects.cjs');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 
 const BYPASS = bypassOptions('crm-digest-settings');

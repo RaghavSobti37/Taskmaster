@@ -9,7 +9,7 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 - **What:** `scripts/render-build.sh` wipes cached `node_modules` then `npm ci`; `render.yaml` + `syncRenderBuildCommands.js` sync Dashboard build settings. Replaces bare `npm install` that failed with ENOTEMPTY on Render cache.
 - **Why:** Production deploy failed — Dashboard still used `npm install` at repo root against 536MB cached node_modules.
 - **Files:** `scripts/render-build.sh`, `scripts/syncRenderBuildCommands.js`, `render.yaml`, `package.json`
-- **Branch:** `main` · **Commit:** (pending)
+- **Branch:** `main` · **Commit:** `cc7ca74a`
 - **Ops:** Run `npm run render:sync-build:deploy` with `RENDER_API_KEY`, or set build command manually + clear build cache.
 
 ---

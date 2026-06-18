@@ -16,10 +16,11 @@ fi
 
 case "$TARGET" in
   api)
-    npm ci --omit=dev --workspace=coreknot-server
+    # Render Node 22 bundles npm 10; monorepo overrides/lockfile require npm 11 for `npm ci`.
+    npx --yes npm@11.4.2 ci --omit=dev --workspace=coreknot-server
     ;;
   nest)
-    npm ci --workspace=@coreknot/nestjs-server
+    npx --yes npm@11.4.2 ci --workspace=@coreknot/nestjs-server
     npm run build --workspace=@coreknot/nestjs-server
     ;;
   *)

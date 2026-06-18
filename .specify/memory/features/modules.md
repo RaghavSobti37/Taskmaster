@@ -9,7 +9,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - CRUD projects, members, roles, workload, hours, analytics
 - Project goals/KRA with snapshot history
 - **Workspace goals** — `WorkspaceGoal` model + `GET/PUT /api/projects/workspace/:workspaceId/goals`; UI in `WorkspaceGoalsPanel` (workspace settings)
-- **CRM digest settings** — per TSC Academy / TSC Films project on Goals tab (`ProjectCrmDigestSettings`); overrides env `CRM_DIGEST_*` via `crmDigestSettingsService` + `shared/crmDigestProjects.js`
+- **CRM digest settings** — per TSC Academy / TSC Films project on Goals tab (`ProjectCrmDigestSettings`); overrides env `CRM_DIGEST_*` via `crmDigestSettingsService` + `shared/crmDigestProjects.cjs` (Node) / `.js` ESM facade (Vite)
 - Optimistic concurrency via `__v` on project updates
 - **Pages:** `/projects`, `/projects/:id`, `/projects/:id/analytics`
 

@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Fix Vercel build: crmDigestProjects ESM facade
+
+- **What:** Split `shared/crmDigestProjects` into `.cjs` (Node) + `.js` ESM facade (Vite); server requires point at `.cjs`.
+- **Why:** Vite/Rollup could not resolve `CRM_DIGEST_PLAN_OPTIONS` named export from CJS `module.exports` — production build failed on `ProjectCrmDigestSettings.jsx`.
+- **Files:** `shared/crmDigestProjects.cjs`, `shared/crmDigestProjects.js`, `server/services/crmDigestSettingsService.js`, `server/domains/projects/*`
+- **Branch:** `main` · **Commit:** `5b888a6b`
+
+---
+
 ## 2026-06-18 — Workspace goals, CRM digest settings, migration ETL
 
 - **What:** Workspace-level goals API/UI; per-project CRM digest settings (monthly target, plan values) on TSC projects; expanded Mongo→Postgres ETL + `validate-counts`; NestJS staging service in `render.yaml`; lead follow-up datetime + notification dispatcher fixes; migration readiness scripts (`migrationReadiness`, `productionReadiness`, `verifyLocalMigration`).

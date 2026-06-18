@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Projects sidebar badge matches project overdue counts
+
+- **What:** `/api/notifications/status-counts` returns `projects.overdue` and `projects.review`; sidebar Projects badge uses those (not global todo overdue + review sum).
+- **Why:** Sidebar showed 22 while Projects page showed 3 overdue — badge counted all assigned tasks, not project-scoped overdue on cards.
+- **Files:** `server/utils/projectStatusCounts.js`, `server/routes/notificationRoutes.js`, `client/src/utils/navStatusCounts.js`, `client/src/hooks/useStatusCounts.js`, `client/src/components/OutletSidebar.jsx`
+- **Branch:** `main` · **Commit:** `8ba2e4a8`
+
+---
+
 ## 2026-06-18 — Dependabot npm audit dependency patches
 
 - **What:** Bumped `vite` 6.4.3, `multer` 2.2.0, `quill`/`effect` 2.x/3.21+, `js-cookie`/`ip-address` overrides; expanded root `package.json` `overrides` for `ws`, OpenTelemetry, `systeminformation`, Clerk, uploadthing, jest `js-yaml`.

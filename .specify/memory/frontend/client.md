@@ -97,9 +97,10 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 
 ### Query & error UX (Jun 2026)
 
-- QueryErrorBanner � shared TanStack Query error surface with retry
-- queryDefaults.js / queryClient.js � centralized stale times and invalidation helpers
+- QueryErrorBanner — shared TanStack Query error surface with retry
+- queryDefaults.js / queryClient.js — centralized stale times and invalidation helpers
 - ForcePasswordChangeGate replaces modal for mandatory password rotation
+- `navStatusCounts.js` — sidebar badges; Projects uses `statusCounts.projects` (project-scoped overdue/review, not global todo counts)
 
 ## UI conventions
 

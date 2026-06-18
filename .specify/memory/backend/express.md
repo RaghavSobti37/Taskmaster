@@ -39,7 +39,7 @@ Legacy shims remain in `server/routes/`, `server/controllers/`, `server/models/`
 | `/api/attendance` | Check-in/out, leave |
 | `/api/finance` | Documents, OCR, approvals |
 | `/api/gamification` | XP, leaderboard |
-| `/api/notifications` | In-app inbox |
+| `/api/notifications` | In-app inbox; `GET /status-counts` includes `projects.overdue` / `projects.review` for sidebar badges |
 | `/api/webhooks` | External webhook ingress |
 | `/api/admin/platform-settings` | Platform roles + notification routing (admin UI) |
 | `/api/admin/scripts` | Whitelisted script runner |

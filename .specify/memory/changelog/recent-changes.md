@@ -13,6 +13,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Fix Vercel build: PlatformSettingsUserField import
+
+- **What:** `PlatformSettingsUserField.jsx` imports `NexusDropdown` from `../ui/NexusDropdown` (was wrong `./NexusDropdown`).
+- **Why:** New platform settings UI broke Vite production build — module not found on Linux.
+- **Files:** `client/src/components/admin/PlatformSettingsUserField.jsx`
+- **Branch:** `main` · **Commit:** `7b7bb719`
+
+---
+
 ## 2026-06-18 — Fix Vercel build: crmDigestProjects ESM facade
 
 - **What:** Split `shared/crmDigestProjects` into `.cjs` (Node) + `.js` ESM facade (Vite); server requires point at `.cjs`.

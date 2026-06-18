@@ -15,7 +15,20 @@ const {
 } = require('../utils/uploadthingCredentials');
 
 const envPath = path.join(__dirname, '../.env');
+const renderEnvPath = path.join(__dirname, '../.env.render');
 const printToken = process.argv.includes('--print-token');
+
+function writeTokenToEnvFile(filePath, encoded) {
+  if (!fs.existsSync(filePath)) return false;
+  let envText = fs.readFileSync(filePath, 'utf8');
+  if (/^UPLOADTHING_TOKEN=/m.test(envText)) {
+    envText = envText.replace(/^UPLOADTHING_TOKEN=.*$/m, `UPLOADTHING_TOKEN="${encoded}"`);
+  } else {
+    envText += `\nUPLOADTHING_TOKEN="${encoded}"\n`;
+  }
+  fs.writeFileSync(filePath, envText);
+  return true;
+}
 
 let raw = String(process.env.UPLOADTHING_TOKEN || '').replace(/^"|"$/g, '');
 let tokenData = parseUploadthingToken(raw);
@@ -35,17 +48,27 @@ if (secret) {
   console.log(`  token/secret match: ${tokenData.apiKey === secret ? 'yes' : 'NO — run without --print-token to fix local .env'}`);
 }
 
+if (renderEnvPath && fs.existsSync(renderEnvPath)) {
+  const renderRaw = fs.readFileSync(renderEnvPath, 'utf8');
+  const renderMatch = renderRaw.match(/^UPLOADTHING_TOKEN=(.*)$/m);
+  if (renderMatch) {
+    const renderToken = parseUploadthingToken(renderMatch[1]);
+    const renderFp = fingerprintApiKey(renderToken?.apiKey);
+    console.log(`  .env.render token: ${renderFp || 'invalid'}`);
+    if (renderToken?.apiKey && renderToken.apiKey !== tokenData.apiKey) {
+      console.log('  WARNING: server/.env.render TOKEN does not match local — Render dashboard may still be wrong.');
+    }
+  }
+}
+
 if (!creds.ok) {
   tokenData.apiKey = secret;
   const encoded = Buffer.from(JSON.stringify(tokenData)).toString('base64');
-  let envText = fs.readFileSync(envPath, 'utf8');
-  if (/^UPLOADTHING_TOKEN=/m.test(envText)) {
-    envText = envText.replace(/^UPLOADTHING_TOKEN=.*$/m, `UPLOADTHING_TOKEN="${encoded}"`);
-  } else {
-    envText += `\nUPLOADTHING_TOKEN="${encoded}"\n`;
+  writeTokenToEnvFile(envPath, encoded);
+  if (writeTokenToEnvFile(renderEnvPath, encoded)) {
+    console.log('\nFixed server/.env.render UPLOADTHING_TOKEN — paste same value into Render dashboard.');
   }
-  fs.writeFileSync(envPath, envText);
-  console.log('\nFixed local .env — TOKEN apiKey synced to UPLOADTHING_SECRET.');
+  console.log('Fixed local .env — TOKEN apiKey synced to UPLOADTHING_SECRET.');
   raw = encoded;
   tokenData = parseUploadthingToken(encoded);
 } else {

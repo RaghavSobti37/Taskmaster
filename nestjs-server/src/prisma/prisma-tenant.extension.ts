@@ -34,6 +34,20 @@ function mergeTenantWhere(
   return { AND: [where, { tenantId }] };
 }
 
+/** update/delete by unique id — AND wrapper breaks Prisma WhereUniqueInput */
+function scopeWriteWhere(
+  where: QueryArgs | undefined,
+  tenantId: string,
+): QueryArgs {
+  if (!where) return { tenantId };
+  const keys = Object.keys(where);
+  const key = keys[0];
+  if (keys.length === 1 && key && (key === 'id' || key.includes('_'))) {
+    return { ...where, tenantId };
+  }
+  return mergeTenantWhere(where, tenantId);
+}
+
 function injectTenantData(
   data: QueryArgs | QueryArgs[] | undefined,
   tenantId: string,
@@ -75,7 +89,7 @@ export function createTenantExtension(tenantContext: TenantContextService) {
 
           if (WRITE_OPS.has(operation)) {
             if ('where' in nextArgs && nextArgs.where) {
-              nextArgs.where = mergeTenantWhere(
+              nextArgs.where = scopeWriteWhere(
                 nextArgs.where as QueryArgs,
                 tenantId,
               );

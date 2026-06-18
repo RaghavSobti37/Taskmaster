@@ -7,6 +7,7 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { Badge, PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
+import WorkspaceGoalsPanel from '../../components/project/WorkspaceGoalsPanel';
 import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { suggestProjectRole } from '../../utils/taskText';
 import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
@@ -419,6 +420,8 @@ const WorkspaceSettings = () => {
           )}
         </div>
       </section>
+
+      <WorkspaceGoalsPanel workspaceName={workspaceName} />
 
       {projects.length > 0 && (
         <section className="py-8 space-y-4 mb-6">

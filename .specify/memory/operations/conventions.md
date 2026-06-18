@@ -38,7 +38,9 @@ npm run audit:history     # After history rewrite or fork import
 | `.cursor/rules/react-query-errors.mdc` | TanStack Query error UX |
 | `.cursor/skills/coreknot-session-boot/SKILL.md` | Session bootstrap before code changes |
 
-Repo skills: `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`.
+Repo skills: `git-push`, `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`, `coreknot-session-boot`.
+
+**Ship workflow:** `/git-push` → `.cursor/skills/git-push/SKILL.md` (commit, push, sync `.specify/memory/` + docs).
 
 ---
 ### Email engine summary (LOCKED)

@@ -48,7 +48,11 @@ exports.createLead = async (req, res) => {
     }
     res.status(result.status).json(result.lead);
   } catch (error) {
-    logger.error('crmController', 'Create lead ', { error: error.message || error });
+    logger.error('crmController', 'Create lead', {
+      error: error.message || error,
+      code: error.code,
+      name: error.name,
+    });
     res.status(400).json({ error: 'Failed to create lead' });
   }
 };

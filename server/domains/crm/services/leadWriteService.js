@@ -237,6 +237,48 @@ async function sendFirstCallNotifications(lead) {
   }
 }
 
+async function runPostCreateLeadSideEffects(lead, user) {
+  const ContactService = require('../../../services/ContactService');
+  try {
+    await ContactService.mergeContact({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      city: lead.city,
+      recordId: lead._id,
+      summary: { leadStatus: lead.leadStatus, source: lead.source },
+    }, 'crm');
+  } catch (err) {
+    logger.error('leadWriteService', 'mergeContact after lead create', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+
+  try {
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
+  } catch (err) {
+    logger.error('leadWriteService', 'realtime broadcast after lead create', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+
+  try {
+    const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
+      userId: user._id,
+      lead: { _id: lead._id },
+    });
+    const { isQaSyncGamification } = require('../../../utils/qaProbeContext');
+    if (isQaSyncGamification()) await xpJob;
+  } catch (err) {
+    logger.error('leadWriteService', 'gamification after lead create', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+}
+
 async function createLead(user, body) {
   const leadData = { ...pick(body, ALLOWED_LEAD_FIELDS), createdBy: user._id };
   leadData.crmType = inferCrmTypeForUser(user, leadData.crmType);
@@ -260,7 +302,6 @@ async function createLead(user, body) {
   }
 
   const PersonIdentityService = require('../../../services/PersonIdentityService');
-  const ContactService = require('../../../services/ContactService');
   const resolved = await PersonIdentityService.resolvePerson(
     { name: leadData.name, email: leadData.email, phone: leadData.phone, city: leadData.city },
     { source: 'lead' },
@@ -281,21 +322,7 @@ async function createLead(user, body) {
     }
     throw err;
   }
-  await ContactService.mergeContact({
-    name: lead.name,
-    email: lead.email,
-    phone: lead.phone,
-    city: lead.city,
-    recordId: lead._id,
-    summary: { leadStatus: lead.leadStatus, source: lead.source },
-  }, 'crm');
-  broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
-  const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
-    userId: user._id,
-    lead: { _id: lead._id },
-  });
-  const { isQaSyncGamification } = require('../../../utils/qaProbeContext');
-  if (isQaSyncGamification()) await xpJob;
+  await runPostCreateLeadSideEffects(lead, user);
 
   return { lead, status: 201 };
 }

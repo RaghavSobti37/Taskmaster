@@ -1,15 +1,23 @@
 const ADMIN_SLUG = 'admin';
 const ARTIST_MANAGEMENT_SLUG = 'artist-management';
+const ARTIST_BUSINESS_SLUG = 'artist-business';
 
 const isArtistManagementDept = (dept) => {
   if (!dept || typeof dept !== 'object') return false;
   return dept.slug === ARTIST_MANAGEMENT_SLUG || dept.permissionPreset === ARTIST_MANAGEMENT_SLUG;
 };
 
+const isArtistBusinessDept = (dept) => {
+  if (!dept || typeof dept !== 'object') return false;
+  return dept.slug === ARTIST_BUSINESS_SLUG || dept.permissionPreset === ARTIST_BUSINESS_SLUG;
+};
+
 const applyDepartmentPageGuarantees = (pages, dept) => {
-  if (!isArtistManagementDept(dept)) return pages;
-  if (pages.includes('artists')) return pages;
-  return [...pages, 'artists'];
+  let next = pages;
+  if (isArtistManagementDept(dept) || isArtistBusinessDept(dept)) {
+    if (!next.includes('artists')) next = [...next, 'artists'];
+  }
+  return next;
 };
 
 const PAGE_GROUPS = [
@@ -109,6 +117,7 @@ const PRESET_PAGES = {
   operations: [...BASE_PAGE_KEYS, ...OPS_EXTRA_PAGES],
   sales: [...BASE_PAGE_KEYS, 'leads', 'followups', 'bookings'],
   'artist-management': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
+  'artist-business': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
   creative: [...BASE_PAGE_KEYS, ...CREATIVE_EXTRA_PAGES],
   standard: BASE_PAGE_KEYS,
 };
@@ -181,6 +190,8 @@ const isOpsUser = (user) => isAdminUser(user) || hasAnyPageAccess(user, OPS_PAGE
 
 const isArtistManagerUser = (user) => isAdminUser(user) || hasPageAccess(user, 'artists');
 
+const isArtistBusinessUser = (user) => isAdminUser(user) || isArtistBusinessDept(user?.departmentId);
+
 const validatePagePermissions = (pages) => {
   if (!Array.isArray(pages)) return { valid: false, error: 'pagePermissions must be an array' };
   const invalid = pages.filter((k) => !ALL_PAGE_KEYS.includes(k));
@@ -205,6 +216,7 @@ module.exports = {
   isSalesUser,
   isOpsUser,
   isArtistManagerUser,
+  isArtistBusinessUser,
   hasCrmPageAccess,
   CRM_PAGE_KEYS,
   OPS_PAGE_KEYS,

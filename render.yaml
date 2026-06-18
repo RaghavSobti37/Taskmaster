@@ -132,6 +132,43 @@ services:
       - key: SUPABASE_BACKUP_BUCKET
         value: taskmaster-backups
 
+  # NestJS staging — Postgres strangler (attendance first); preview Supabase DATABASE_URL
+  - type: web
+    name: coreknot-nest-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: nestjs-server
+    buildCommand: cd .. && npm ci --omit=dev --workspace=@coreknot/nestjs-server && npm run build --workspace=@coreknot/nestjs-server
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: false
+    branch: main
+    envVars:
+      - key: HUSKY
+        value: "0"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5001"
+      - key: DD_SERVICE
+        value: coreknot-nest-api
+      - key: DD_ENV
+        value: staging
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: taskmaster-redis-staging
+          type: keyvalue
+          property: connectionString
+
   - type: cron
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
@@ -191,7 +228,9 @@ services:
       - key: CRM_REACH_OUT_DIGEST_ENABLED
         value: "true"
       - key: CRM_REACH_OUT_DIGEST_EMAIL
-        value: rohith@theshakticollective.in,raghavraj@theshakticollective.in
+        sync: false
+      - key: CRM_DIGEST_MONTHLY_TARGET_LAKHS
+        value: "10"
       - key: RESEND_API_KEY
         sync: false
       - key: MONGODB_URI_PROD

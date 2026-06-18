@@ -68,6 +68,9 @@ export default function ProjectGoalMetricCards({
         const p = progress[key] || { current: 0, target: 0 };
         const increment = weekly?.increments?.[key];
         let info = p.target ? `Target: ${meta.format(p.target)}` : 'Auto-synced from CRM, Exly, and Artists';
+        if (p.projectTargetSum > 0 && p.target) {
+          info += ` · Projects sum: ${meta.format(p.projectTargetSum)}`;
+        }
         if (p.overridden) {
           info = `Manual · Auto was ${meta.format(p.auto ?? 0)}${p.target ? ` · Target: ${meta.format(p.target)}` : ''}`;
         }

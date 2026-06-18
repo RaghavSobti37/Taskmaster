@@ -1,18 +1,10 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { sendPushToUser } = require('./pushNotificationService');
-
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
-  auth: {
-    user: process.env.EMAIL_ADDRESS || 'placeholder@gmail.com',
-    pass: process.env.EMAIL_PASSWORD || 'placeholder_pass'
-  }
-});
+const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
 
 const escapeHtml = (str) => String(str || '')
   .replace(/&/g, '&amp;')
@@ -44,15 +36,19 @@ const buildNotificationHtml = ({ title, message, category, actionUrl, recipientN
 };
 
 const sendNotificationEmail = async (user, payload) => {
-  if (!user?.email || process.env.EMAIL_ADDRESS === 'placeholder@gmail.com') return false;
+  if (!user?.email) return false;
   try {
     const html = buildNotificationHtml({ ...payload, recipientName: user.name });
-    await transporter.sendMail({
-      from: process.env.EMAIL_ADDRESS,
+    const from = (
+      process.env.SYSTEM_VERIFIED_FROM_EMAIL
+      || process.env.SUBSCRIPTION_FROM_EMAIL
+      || 'noreply@theshakticollective.in'
+    ).trim();
+    await dispatchEmailPayload({
       to: user.email,
       subject: payload.title,
-      text: payload.message,
-      html
+      html,
+      from,
     });
     return true;
   } catch (err) {

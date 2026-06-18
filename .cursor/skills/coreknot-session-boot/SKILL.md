@@ -17,7 +17,7 @@ Run at start of non-trivial Taskmaster work.
 3. Locked zones if touching:
    - `docs/EMAIL_ENGINE_LOCKED.md` + `.cursor/rules/email-engine-locked.mdc`
    - `docs/LOGO_LOCKED.md` + `.cursor/rules/logo-mark-locked.mdc`
-4. `.specify/memory/recent-changes.md` — if exists
+4. `.specify/memory/changelog/recent-changes.md` — if exists
 5. Task-specific doc from `docs/DOCUMENTATION_INDEX.md`
 
 ## Quick anchors

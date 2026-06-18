@@ -36,4 +36,4 @@ description: >-
 
 ## Keep fresh
 
-After major fixes, append deltas to `.specify/memory/recent-changes.md` (no secrets).
+After major fixes, append deltas to `.specify/memory/changelog/recent-changes.md` (no secrets).

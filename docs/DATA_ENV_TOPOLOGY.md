@@ -40,6 +40,14 @@ MAIL_USE_PROD_DB=false
 ## Local NestJS (Docker Postgres)
 
 ```bash
+npm run local:setup    # sync env + docker postgres + ETL from Mongo
+npm run local:verify   # health + auth + row counts
+npm run dev:nest       # Nest on :5001 (attendance + task reads)
+```
+
+Or step-by-step:
+
+```bash
 cd nestjs-server
 docker compose up -d --wait
 npm run db:setup

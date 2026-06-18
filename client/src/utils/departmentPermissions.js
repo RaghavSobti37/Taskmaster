@@ -20,6 +20,7 @@ export {
   isSalesUser,
   isOpsUser,
   isArtistManagerUser,
+  isArtistBusinessUser,
   groupHasVisiblePages,
 } from './pagePermissions';
 

@@ -41,6 +41,19 @@ async function main() {
     dbUrl ? 'set' : 'unset — use nestjs-server/.env'
   );
 
+  const nestEnvPath = path.join(__dirname, '../../nestjs-server/.env');
+  let nestJwt = '';
+  if (require('fs').existsSync(nestEnvPath)) {
+    const nestRaw = require('fs').readFileSync(nestEnvPath, 'utf8');
+    nestJwt = (nestRaw.match(/^JWT_SECRET=(.*)$/m) || [])[1]?.trim() || '';
+  }
+  const serverJwt = String(process.env.JWT_SECRET || '').trim();
+  check(
+    'JWT_SECRET matches server + nestjs-server/.env',
+    Boolean(serverJwt && nestJwt && serverJwt === nestJwt),
+    serverJwt ? 'aligned' : 'run npm run local:sync-env'
+  );
+
   console.log('\nPreview / prod Supabase (manual)');
   check(
     'MONGODB_URI_PROD set (ETL source)',
@@ -59,6 +72,9 @@ async function main() {
   );
 
   console.log('\nCommands');
+  console.log('  npm run local:sync-env');
+  console.log('  npm run local:setup');
+  console.log('  npm run local:verify');
   console.log('  npm run sync:prod-to-local:operational');
   console.log('  npm run purge:local-crm-datahub');
   console.log('  cd nestjs-server && npm run db:setup && npm run etl:local-operational');

@@ -14,12 +14,12 @@ Phased path: **prod Mongo → Supabase preview → Vercel preview test → prod 
 1. Create Supabase project `coreknot-preview` (Dashboard → New project).
 2. Copy connection string → `nestjs-server/.env.preview` (gitignored) or Render staging env:
    - `DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres`
-3. Apply schema:
+3. Apply schema (automated in `npm run preview:etl`; manual equivalent):
    ```bash
    cd nestjs-server
    set DATABASE_URL=<preview-url>   # PowerShell: $env:DATABASE_URL=...
    npm run db:push
-   npm run etl:prisma:push
+   npm run prisma:generate
    ```
 
 ## Phase B — Full prod ETL → preview
@@ -70,6 +70,7 @@ Vercel project → Environment Variables → **Preview** only:
 |----------|-------|
 | `VITE_API_URL` | `stagingApiUrl` |
 | `RENDER_API_PROXY_URL` | `stagingApiUrl` |
+| `NEST_API_PROXY_URL` | `stagingNestApiUrl` (attendance strangler only) |
 
 Regenerate `client/vercel.json` if using `generateVercelConfig.js`.
 

@@ -97,6 +97,7 @@ export const PRESET_PAGES = {
   operations: [...BASE_PAGE_KEYS, ...OPS_EXTRA_PAGES],
   sales: [...BASE_PAGE_KEYS, 'leads', 'followups', 'bookings'],
   'artist-management': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
+  'artist-business': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
   creative: [...BASE_PAGE_KEYS, ...CREATIVE_EXTRA_PAGES],
   standard: BASE_PAGE_KEYS,
 };
@@ -113,22 +114,31 @@ export const PERMISSION_PRESET_OPTIONS = [
   { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, ops logs, office assets' },
   { value: 'sales', label: 'Sales', description: 'Base workspace + CRM pages' },
   { value: 'artist-management', label: 'Artist Management', description: 'Base workspace + artists + artist CRM' },
+  { value: 'artist-business', label: 'Artist Business', description: 'Artist bookings CRM + TSC Films project access' },
   { value: 'creative', label: 'Creative', description: 'Base workspace + assets, features, workflows, office assets' },
   { value: 'standard', label: 'Standard', description: 'Dashboard, tasks, projects, and office tools only' },
 ];
 
 const ADMIN_SLUG = 'admin';
 const ARTIST_MANAGEMENT_SLUG = 'artist-management';
+const ARTIST_BUSINESS_SLUG = 'artist-business';
 
 function isArtistManagementDept(dept) {
   if (!dept || typeof dept !== 'object') return false;
   return dept.slug === ARTIST_MANAGEMENT_SLUG || dept.permissionPreset === ARTIST_MANAGEMENT_SLUG;
 }
 
+function isArtistBusinessDept(dept) {
+  if (!dept || typeof dept !== 'object') return false;
+  return dept.slug === ARTIST_BUSINESS_SLUG || dept.permissionPreset === ARTIST_BUSINESS_SLUG;
+}
+
 function applyDepartmentPageGuarantees(pages, dept) {
-  if (!isArtistManagementDept(dept)) return pages;
-  if (pages.includes('artists')) return pages;
-  return [...pages, 'artists'];
+  let next = pages;
+  if (isArtistManagementDept(dept) || isArtistBusinessDept(dept)) {
+    if (!next.includes('artists')) next = [...next, 'artists'];
+  }
+  return next;
 }
 
 export function isDepartmentAdmin(dept) {
@@ -202,6 +212,12 @@ export function isOpsUser(user) {
 
 export function isArtistManagerUser(user) {
   return isAdminUser(user) || hasPageAccess(user, 'artists');
+}
+
+export function isArtistBusinessUser(user) {
+  if (isAdminUser(user)) return true;
+  const dept = user?.departmentId;
+  return isArtistBusinessDept(dept);
 }
 
 export function canAccessOrgAccounts(user) {

@@ -5,7 +5,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
 
-const PROD_HEALTH = process.env.PROD_HEALTH_URL || 'https://taskmaster-jfw0.onrender.com/api/health';
+const PROD_HEALTH = process.env.PROD_HEALTH_URL || 'https://YOUR-RENDER-SERVICE.onrender.com/api/health';
 
 async function main() {
   const local = validateUploadthingCredentials();

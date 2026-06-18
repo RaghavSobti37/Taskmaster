@@ -212,4 +212,21 @@ describe('CRM API integration', () => {
     expect(match.status).toBe('Pending');
     expect(match.date).toBe(followupDate);
   });
+
+  it('returns 201 when contact hub sync fails after lead is saved', async () => {
+    const ContactService = require('../services/ContactService');
+    const spy = jest.spyOn(ContactService, 'mergeContact').mockRejectedValueOnce(new Error('contact hub failed'));
+    const leadPhone = `+9198765${String(Date.now()).slice(-5)}`;
+
+    const createRes = await salesAgent.post('/api/crm/leads').send({
+      name: 'Side Effect Fail Lead',
+      phone: leadPhone,
+      email: `sidefx-${Date.now()}@coreknot-test.local`,
+      leadStatus: 'New',
+    });
+
+    expect(createRes.statusCode).toBe(201);
+    expect(createRes.body.name).toBe('Side Effect Fail Lead');
+    spy.mockRestore();
+  });
 });

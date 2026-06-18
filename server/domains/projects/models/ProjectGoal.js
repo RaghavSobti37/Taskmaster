@@ -38,6 +38,16 @@ const schema = new mongoose.Schema({
     warmLeads: metricOverrideSchema,
     audienceExposure: metricOverrideSchema,
   },
+  crmDigest: {
+    monthlyTargetLakhs: { type: Number, default: 0 },
+    planValues: {
+      'One-Time': { type: Number, default: 0 },
+      '3 Mo': { type: Number, default: 0 },
+      '6 Mo': { type: Number, default: 0 },
+      '9 Mo': { type: Number, default: 0 },
+    },
+    crmType: { type: String, enum: ['sales', 'artist'], default: 'sales' },
+  },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

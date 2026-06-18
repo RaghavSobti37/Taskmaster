@@ -1,5 +1,8 @@
 const {
   summarizeDailyCallStats,
+  summarizeMonthlyBusinessFromLeads,
+  resolveLeadDealValue,
+  formatLakhs,
   buildDigestHtml,
   REP_SECTIONS,
 } = require('../services/crmReachOutDigestService');
@@ -28,9 +31,54 @@ describe('crmReachOutDigestService', () => {
     expect(parseRecipientEmails(['a@x.com', 'b@x.com'])).toEqual(['a@x.com', 'b@x.com']);
   });
 
+  test('summarizeMonthlyBusinessFromLeads totals closed leads and lakhs value', () => {
+    const leads = [
+      { planOption: '3 Mo', metadata: {} },
+      { planOption: 'One-Time', metadata: { dealValue: 75000 } },
+    ];
+    const planValueMap = { 'One-Time': 50000, '3 Mo': 45000, '6 Mo': 0, '9 Mo': 0 };
+    const summary = summarizeMonthlyBusinessFromLeads(leads, 2, planValueMap);
+    expect(summary.leadsClosed).toBe(2);
+    expect(summary.totalValueRupees).toBe(120000);
+    expect(summary.valueLabel).toBe('1.2 Lakhs');
+    expect(summary.targetLabel).toBe('2 Lakhs');
+    expect(summary.progressPct).toBe(60);
+  });
+
+  test('resolveLeadDealValue prefers metadata over plan map', () => {
+    expect(resolveLeadDealValue({ planOption: '3 Mo', metadata: { dealValue: 99000 } }, { '3 Mo': 45000 })).toBe(99000);
+    expect(resolveLeadDealValue({ planOption: '6 Mo', metadata: {} }, { '6 Mo': 85000 })).toBe(85000);
+  });
+
+  test('formatLakhs renders Indian lakh label', () => {
+    expect(formatLakhs(250000)).toBe('2.5 Lakhs');
+    expect(formatLakhs(0)).toBe('0 Lakhs');
+  });
+
   test('buildDigestHtml renders stat sections without change tables', () => {
     const html = buildDigestHtml({
       periodLabel: 'Tuesday, 17 June 2026',
+      monthlyBusiness: {
+        monthLabel: 'June 2026',
+        academy: {
+          title: 'Academy business (month)',
+          projectName: 'TSC Academy',
+          leadsClosed: 4,
+          valueLabel: '3.5 Lakhs',
+          targetLabel: '10 Lakhs',
+          targetLakhs: 10,
+          progressPct: 35,
+        },
+        films: {
+          title: 'Artist business (month)',
+          projectName: 'TSC Films',
+          leadsClosed: 2,
+          valueLabel: '1.2 Lakhs',
+          targetLabel: '5 Lakhs',
+          targetLakhs: 5,
+          progressPct: 24,
+        },
+      },
       sections: REP_SECTIONS.map((sectionMeta) => ({
         sectionMeta,
         repUser: { name: sectionMeta.key === 'akash' ? 'Akash' : 'Satyam Mishra' },
@@ -57,6 +105,10 @@ describe('crmReachOutDigestService', () => {
     });
     expect(html).toContain('Artist Calls');
     expect(html).toContain('Sales &amp; Other Calls');
+    expect(html).toContain('Business done in the month');
+    expect(html).toContain('Leads closed');
+    expect(html).toContain('Academy business');
+    expect(html).toContain('Artist business');
     expect(html).toContain('Calls made');
     expect(html).toContain('Meaningful');
     expect(html).toContain('Assigned pipeline');

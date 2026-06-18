@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
-const { parse, addMinutes, isBefore, isAfter } = require('date-fns');
+const { addMinutes, isBefore, isAfter } = require('date-fns');
 const logger = require('../utils/logger');
 const { MODULE } = require('../../shared/systemLogContract');
 const { createNotification } = require('./notificationDispatcher');
@@ -10,6 +10,10 @@ const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { getISTDate, getDateKey, todayStart, isWeekend } = require('../utils/attendanceDate');
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const { getSharedRedis } = require('../utils/sharedRedis');
+const {
+  parseLeadFollowupDateTime,
+  formatFollowupScheduleLabel,
+} = require('../utils/leadFollowupDateTime');
 const redis = getSharedRedis();
 
 // Redis lock helpers
@@ -37,6 +41,21 @@ const releaseLock = async (lockKey) => {
   }
 };
 
+async function notifyRepForFollowup(lead, rep, { title, message }) {
+  if (!rep?._id) return;
+  await createNotification({
+    recipientId: rep._id,
+    title,
+    message,
+    category: 'crm',
+    type: 'reminder',
+    relatedLeadId: lead._id,
+    actionUrl: buildLeadActionUrl(lead._id),
+    sendEmail: true,
+    iconType: 'system',
+  });
+}
+
 const checkFollowups = async () => {
   const lockKey = 'notification-lock:followups';
   const hasLock = await acquireLock(lockKey, 60);
@@ -51,32 +70,25 @@ const checkFollowups = async () => {
     const thirtyMinsBefore = addMinutes(now, -30);
 
     const leads = await Lead.find({
+      leadStatus: { $ne: 'Converted' },
       nextFollowupDate: { $exists: true, $ne: '' },
       nextFollowupTime: { $exists: true, $ne: '' },
-      reminderSent: false
+      reminderSent: false,
     }).populate('assignedRepId');
 
     for (const lead of leads) {
       try {
-        const followupStr = `${lead.nextFollowupDate} ${lead.nextFollowupTime}`;
-        let followupDate = parse(followupStr, 'dd-MM-yyyy HH:mm', new Date());
-        if (isNaN(followupDate.getTime())) {
-          followupDate = parse(followupStr, 'dd-MM-yyyy h:mm a', new Date());
-        }
-        if (isNaN(followupDate.getTime())) continue;
+        const followupDate = parseLeadFollowupDateTime(lead);
+        if (!followupDate) continue;
 
         if (isBefore(followupDate, thirtyMinsFromNow) && isAfter(followupDate, thirtyMinsBefore)) {
           const rep = lead.assignedRepId;
           if (!rep) continue;
 
-          await createNotification({
-            recipientId: rep._id,
-            title: 'Upcoming Call',
-            message: `Reminder: call ${lead.name} at ${lead.nextFollowupTime}. Click to view pitch notes.`,
-            category: 'crm',
-            type: 'reminder',
-            relatedLeadId: lead._id,
-            actionUrl: buildLeadActionUrl(lead._id)
+          const scheduleLabel = formatFollowupScheduleLabel(lead);
+          await notifyRepForFollowup(lead, rep, {
+            title: `Follow-up due: ${lead.name}`,
+            message: `You have a follow-up with ${lead.name} at ${scheduleLabel}. Open CoreKnot to view pitch notes and complete the call.`,
           });
 
           lead.reminderSent = true;
@@ -86,12 +98,44 @@ const checkFollowups = async () => {
         logger.error('Reminder', `Error processing reminder for lead ${lead._id}`, { error: err.message });
       }
     }
+
+    await checkOverdueFollowups(now);
   } catch (err) {
     logger.error('Reminder', 'Error in checkFollowups', { error: err.message, persist: true, module: MODULE.SYSTEM });
   } finally {
     await releaseLock(lockKey);
   }
 };
+
+async function checkOverdueFollowups(now = getISTDate()) {
+  const overdueCutoff = addMinutes(now, -30);
+  const leads = await Lead.find({
+    leadStatus: { $ne: 'Converted' },
+    nextFollowupDate: { $exists: true, $ne: '' },
+    notifiedOverdue: false,
+  }).populate('assignedRepId');
+
+  for (const lead of leads) {
+    try {
+      const followupDate = parseLeadFollowupDateTime(lead);
+      if (!followupDate || !isBefore(followupDate, overdueCutoff)) continue;
+
+      const rep = lead.assignedRepId;
+      if (!rep) continue;
+
+      const scheduleLabel = formatFollowupScheduleLabel(lead);
+      await notifyRepForFollowup(lead, rep, {
+        title: `Overdue follow-up: ${lead.name}`,
+        message: `Follow-up with ${lead.name} was due ${scheduleLabel}. Please call or reschedule in CoreKnot.`,
+      });
+
+      lead.notifiedOverdue = true;
+      await lead.save();
+    } catch (err) {
+      logger.error('Reminder', `Error processing overdue follow-up for lead ${lead._id}`, { error: err.message });
+    }
+  }
+}
 
 const hasRecordedCheckOut = (entry) =>
   !!(entry?.outTimeRecord?.manualTimestamp || entry?.outTimeRecord?.systemTimestamp);
@@ -164,4 +208,10 @@ const init = () => {
   }, { timezone: 'Asia/Kolkata' });
 };
 
-module.exports = { init, checkFollowups, sendAttendanceCheckoutReminders };
+module.exports = {
+  init,
+  checkFollowups,
+  checkOverdueFollowups,
+  notifyRepForFollowup,
+  sendAttendanceCheckoutReminders,
+};

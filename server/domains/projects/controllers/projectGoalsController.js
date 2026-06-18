@@ -3,6 +3,7 @@ const projectGoalsService = require('../services/projectGoalsService');
 const { canAccessProject } = require('../../../utils/projectAccess');
 const { getProjectRoleForUser } = require('../../../../shared/projectRoles');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
+const { getCrmDigestSegmentForProject } = require('../../../../shared/crmDigestProjects');
 
 async function loadProjectWithAccess(req, projectId) {
   const project = await Project.findById(projectId);
@@ -52,6 +53,45 @@ exports.getProjectGoalsWeekly = async (req, res) => {
     await loadProjectWithAccess(req, req.params.id);
     const data = await projectGoalsService.getGoalProgress(req.params.id);
     res.json({ history: data.history, weekly: data.weekly });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.getCrmDigestSettings = async (req, res) => {
+  try {
+    const project = await loadProjectWithAccess(req, req.params.id);
+    const segment = getCrmDigestSegmentForProject(project);
+    if (!segment) {
+      return res.status(404).json({ error: 'CRM digest settings are only available on TSC Academy or TSC Films projects' });
+    }
+    const data = await projectGoalsService.getCrmDigestSettingsForProject(req.params.id);
+    res.json({
+      ...data,
+      canEdit: isAdminUser(req.user),
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.updateCrmDigestSettings = async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required to update CRM digest settings' });
+    }
+    const project = await loadProjectWithAccess(req, req.params.id);
+    const segment = getCrmDigestSegmentForProject(project);
+    if (!segment) {
+      return res.status(400).json({ error: 'CRM digest settings are only available on TSC Academy or TSC Films projects' });
+    }
+    const data = await projectGoalsService.updateCrmDigestSettings(
+      req.params.id,
+      req.body,
+      req.user._id,
+      segment,
+    );
+    res.json(data);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }

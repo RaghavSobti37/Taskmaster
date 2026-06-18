@@ -12,6 +12,7 @@ import {
   PROJECT_GOAL_METRIC_LABELS,
 } from '../../utils/projectGoalMetrics';
 import ProjectGoalMetricCards, { ProjectGoalMetricCardsSkeleton } from './ProjectGoalMetricCards';
+import ProjectCrmDigestSettings from './ProjectCrmDigestSettings';
 
 function KeywordInput({ label, hint, values, onChange }) {
   const [text, setText] = useState('');
@@ -165,6 +166,7 @@ export default function ProjectGoalsPanel({ projectId, project, startInEdit = fa
 
   return (
     <div className="space-y-6 p-4">
+      <ProjectCrmDigestSettings projectId={projectId} project={project} />
       <div className="flex items-center justify-end gap-3">
         {canEdit && !draft && (
           <Button variant="secondary" size="sm" onClick={startEdit}>Edit goals & links</Button>

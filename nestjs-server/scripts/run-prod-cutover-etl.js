@@ -67,6 +67,23 @@ function main() {
     MONGODB_URI: mongoProd,
   };
 
+  const nestDir = path.join(ROOT, 'nestjs-server');
+  const push = spawnSync('npm', ['run', 'db:push'], {
+    cwd: nestDir,
+    env,
+    stdio: 'inherit',
+    shell: true,
+  });
+  if (push.status !== 0) process.exit(push.status ?? 1);
+
+  const gen = spawnSync('npm', ['run', 'prisma:generate'], {
+    cwd: nestDir,
+    env,
+    stdio: 'inherit',
+    shell: true,
+  });
+  if (gen.status !== 0) process.exit(gen.status ?? 1);
+
   const tiers = dryRun ? ['--dry-run'] : [];
   for (let tier = 1; tier <= 4; tier += 1) {
     const r = spawnSync(

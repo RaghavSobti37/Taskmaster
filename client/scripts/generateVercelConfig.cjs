@@ -24,6 +24,21 @@ const readLocalProductionApiUrl = () => {
   }
 };
 
+const readLocalNestApiUrl = () => {
+  const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
+  if (!fs.existsSync(localHosts)) return '';
+  try {
+    const json = JSON.parse(fs.readFileSync(localHosts, 'utf8'));
+    return String(
+      json.stagingNestApiUrl
+      || json.derived?.stagingNestApiUrl
+      || '',
+    ).trim().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+};
+
 /** Suspended / wrong hosts — never proxy mobile /api traffic here. */
 const BANNED_PROXY_HOSTS = new Set([
   'coreknot-jfw0.onrender.com',
@@ -44,6 +59,24 @@ const pickProxyUrl = () => {
       const host = new URL(url).hostname.toLowerCase();
       if (!BANNED_PROXY_HOSTS.has(host)) return url;
       console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+};
+
+const pickNestProxyUrl = () => {
+  const candidates = [
+    process.env.NEST_API_PROXY_URL,
+    readLocalNestApiUrl(),
+  ].map(normalizeProxyUrl).filter(Boolean);
+
+  for (const url of candidates) {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (!BANNED_PROXY_HOSTS.has(host)) return url;
+      console.warn(`[generateVercelConfig] skipping banned Nest proxy host: ${host}`);
     } catch {
       /* ignore */
     }
@@ -72,6 +105,7 @@ const existingRewritesLookValid = (existing) => {
 };
 
 const proxyUrl = pickProxyUrl();
+const nestProxyUrl = pickNestProxyUrl();
 const onVercel = process.env.VERCEL === '1';
 
 if (onVercel && !proxyUrl) {
@@ -113,13 +147,41 @@ if (proxyUrl) {
   socketDestination = `${parsed.origin}/socket.io/$1`;
 }
 
+let nestAttendanceDestination = '';
+if (nestProxyUrl) {
+  try {
+    const nestParsed = new URL(nestProxyUrl);
+    if (!nestParsed.hostname.endsWith('.onrender.com')) {
+      console.error('[generateVercelConfig] NEST_API_PROXY_URL host must be *.onrender.com');
+      process.exit(1);
+    }
+    nestAttendanceDestination = `${nestParsed.origin}/api/attendance`;
+  } catch {
+    console.error('[generateVercelConfig] Invalid NEST_API_PROXY_URL:', nestProxyUrl);
+    process.exit(1);
+  }
+}
+
 if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
   console.error('[generateVercelConfig] Refusing placeholder proxy destination on Vercel');
   process.exit(1);
 }
 
 const payload = {
-  rewrites: template.rewrites.map((rule) => {
+  rewrites: [
+    ...(nestAttendanceDestination
+      ? [
+          {
+            source: '/api/attendance',
+            destination: nestAttendanceDestination,
+          },
+          {
+            source: '/api/attendance/:path*',
+            destination: `${nestAttendanceDestination}/:path*`,
+          },
+        ]
+      : []),
+    ...template.rewrites.map((rule) => {
     if (rule.source === '/api/(.*)') {
       return { ...rule, destination: apiDestination };
     }
@@ -128,6 +190,7 @@ const payload = {
     }
     return rule;
   }),
+  ],
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
 };
@@ -152,4 +215,7 @@ for (const file of targets) {
 if (proxyUrl) {
   console.log(`[generateVercelConfig] /api rewrite → ${apiDestination.replace('/$1', '')}`);
   console.log(`[generateVercelConfig] /socket.io rewrite → ${socketDestination.replace('/$1', '')}`);
+}
+if (nestAttendanceDestination) {
+  console.log(`[generateVercelConfig] /api/attendance strangler → ${nestAttendanceDestination}`);
 }

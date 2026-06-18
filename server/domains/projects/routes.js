@@ -25,7 +25,13 @@ const {
   getProjectGoals,
   updateProjectGoals,
   getProjectGoalsWeekly,
+  getCrmDigestSettings,
+  updateCrmDigestSettings,
 } = require('./controllers/projectGoalsController');
+const {
+  getWorkspaceGoals,
+  updateWorkspaceGoals,
+} = require('./controllers/workspaceGoalsController');
 const {
   getProjectKra,
   getMyProjectKra,
@@ -70,6 +76,9 @@ router.route('/workspaces')
   .post(validateBody(createWorkspaceBody), createWorkspace)
   .put(validateBody(reorderWorkspacesBody), reorderWorkspaces);
 
+router.get('/workspaces/:name/goals', getWorkspaceGoals);
+router.put('/workspaces/:name/goals', updateWorkspaceGoals);
+
 router.route('/workspaces/:name')
   .get(getWorkspaceByName)
   .patch(validateBody(workspaceUpdateBody), updateWorkspace)
@@ -92,6 +101,8 @@ router.get('/:id/analytics', getProjectAnalytics);
 router.get('/:id/goals', getProjectGoals);
 router.put('/:id/goals', updateProjectGoals);
 router.get('/:id/goals/weekly', getProjectGoalsWeekly);
+router.get('/:id/goals/crm-digest', getCrmDigestSettings);
+router.put('/:id/goals/crm-digest', updateCrmDigestSettings);
 router.get('/:id/kra', getProjectKra);
 router.get('/:id/kra/me', getMyProjectKra);
 router.put('/:id/kra/:userId', upsertProjectKra);

@@ -8,6 +8,12 @@ const Artist = require('../../../models/Artist');
 const ArtistMetrics = require('../../../models/ArtistMetrics');
 const { findLeadsInDateRange } = require('../../crm/services/leadQueryService');
 const { normalizeArtistKey } = require('../../../utils/artistEnquiryProjectResolver');
+const {
+  CRM_DIGEST_PLAN_OPTIONS,
+  emptyCrmDigestSettings,
+  getCrmDigestSegmentForProject,
+  normalizePlanValues,
+} = require('../../../../shared/crmDigestProjects');
 const { getCurrentWeekRange } = require('../../../utils/attendanceDate');
 
 const METRIC_KEYS = ['sales', 'totalReach', 'warmLeads', 'audienceExposure'];
@@ -158,6 +164,7 @@ async function getOrCreateGoal(projectId) {
         warmLeads: { enabled: false, value: 0 },
         audienceExposure: { enabled: false, value: 0 },
       },
+      crmDigest: emptyCrmDigestSettings(),
     });
   }
   return goal;
@@ -297,10 +304,39 @@ async function updateGoal(projectId, payload, userId) {
   return getGoalProgress(projectId);
 }
 
+async function updateCrmDigestSettings(projectId, payload, userId, segment) {
+  const goal = await getOrCreateGoal(projectId);
+  const monthlyTargetLakhs = Number(payload?.monthlyTargetLakhs);
+  goal.crmDigest = {
+    monthlyTargetLakhs: Number.isFinite(monthlyTargetLakhs) && monthlyTargetLakhs >= 0
+      ? monthlyTargetLakhs
+      : 0,
+    planValues: normalizePlanValues(payload?.planValues),
+    crmType: segment?.crmType || 'sales',
+  };
+  goal.updatedBy = userId;
+  await goal.save();
+  return getGoalProgress(projectId);
+}
+
+async function getCrmDigestSettingsForProject(projectId) {
+  const project = await Project.findById(projectId).select('name workspace').lean();
+  const segment = getCrmDigestSegmentForProject(project);
+  if (!segment) return null;
+  const goal = await getOrCreateGoal(projectId);
+  return {
+    segment,
+    crmDigest: goal.crmDigest || emptyCrmDigestSettings(segment.crmType),
+    canConfigure: true,
+  };
+}
+
 module.exports = {
   aggregateProjectMetrics,
   getGoalProgress,
   updateGoal,
+  updateCrmDigestSettings,
+  getCrmDigestSettingsForProject,
   captureWeeklySnapshot,
   METRIC_KEYS,
 };

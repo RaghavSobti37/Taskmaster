@@ -14,7 +14,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import dotenv from 'dotenv';
 import type mongoose from 'mongoose';
-import { PrismaClient, Prisma } from '../../generated/etl-client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 const SERVER_ROOT = path.resolve(__dirname, '../../../server');
 const serverRequire = createRequire(path.join(SERVER_ROOT, 'package.json'));
@@ -31,17 +31,31 @@ type PrismaDelegate =
   | 'tenant'
   | 'user'
   | 'department'
-  | 'platformSettings'
+  | 'workspace'
   | 'project'
+  | 'projectMember'
+  | 'phase'
   | 'person'
   | 'team'
   | 'task'
+  | 'taskAssignment'
+  | 'taskType'
+  | 'taskDependency'
+  | 'taskMentionAccess'
   | 'lead'
+  | 'leadNote'
+  | 'leadExlyOffering'
+  | 'cRMConfig'
+  | 'cRMImport'
   | 'exlyBooking'
   | 'attendance'
+  | 'leaveRequest'
+  | 'gamificationConfig'
+  | 'notification'
+  | 'personIdentifier'
+  | 'projectGoal'
   | 'taskActivity'
-  | 'mailEvent'
-  | 'notification';
+  | 'mailEvent';
 
 interface CollectionDef {
   tier: Tier;
@@ -50,6 +64,10 @@ interface CollectionDef {
   mongoModelPath: string;
   prismaDelegate: PrismaDelegate;
   map: (doc: MongoDoc) => Record<string, unknown>;
+  filterBatch?: (
+    prisma: PrismaClient,
+    batch: Record<string, unknown>[],
+  ) => Promise<Record<string, unknown>[]>;
 }
 
 interface MongoDoc {
@@ -232,31 +250,27 @@ const COLLECTIONS: CollectionDef[] = [
     }),
   },
   {
-    tier: 1,
-    key: 'platformsettings',
-    label: 'PlatformSettings',
-    mongoModelPath: 'models/PlatformSettings.js',
-    prismaDelegate: 'platformSettings',
+    tier: 2,
+    key: 'workspaces',
+    label: 'Workspace',
+    mongoModelPath: 'models/Workspace.js',
+    prismaDelegate: 'workspace',
     map: (doc) => ({
       id: toId(doc._id)!,
-      singletonKey: toStr(doc.singletonKey, 'global'),
-      rootAdminUserIds: toIds(doc.rootAdminUserIds),
-      platformOwnerUserId: toId(doc.platformOwnerUserId),
-      attendanceExcludedUserIds: toIds(doc.attendanceExcludedUserIds),
-      qaExcludedUserIds: toIds(doc.qaExcludedUserIds),
-      mailTemplateApproverUserIds: toIds(doc.mailTemplateApproverUserIds),
-      autoProjectMemberUserIds: toIds(doc.autoProjectMemberUserIds),
-      qaAdminUserId: toId(doc.qaAdminUserId),
-      updatedBy: toId(doc.updatedBy),
+      tenantId: toId(doc.tenantId),
+      name: toStr(doc.name).toUpperCase(),
+      color: toStr(doc.color, '#64748b'),
+      order: toInt(doc.order),
+      defaultMembers: toJson(doc.defaultMembers),
+      createdById: toId(doc.createdBy),
       createdAt: toDate(doc.createdAt) ?? new Date(),
-      updatedAt: toDate(doc.updatedAt) ?? new Date(),
     }),
   },
   {
     tier: 2,
     key: 'projects',
     label: 'Project',
-    mongoModelPath: 'models/Project.js',
+    mongoModelPath: 'domains/projects/models/Project.js',
     prismaDelegate: 'project',
     map: (doc) => ({
       id: toId(doc._id)!,
@@ -265,8 +279,6 @@ const COLLECTIONS: CollectionDef[] = [
       description: toOptStr(doc.description),
       outletId: toStr(doc.outletId),
       ownerId: toId(doc.owner)!,
-      members: toIds(doc.members),
-      memberRoles: toJson(doc.memberRoles),
       status: toStr(doc.status, 'active'),
       tags: Array.isArray(doc.tags) ? doc.tags.map((t) => toStr(t)) : [],
       teams: Array.isArray(doc.teams) ? doc.teams.map((t) => toStr(t)) : [],
@@ -280,6 +292,31 @@ const COLLECTIONS: CollectionDef[] = [
       createdAt: toDate(doc.createdAt) ?? new Date(),
       updatedAt: toDate(doc.updatedAt) ?? new Date(),
     }),
+  },
+  {
+    tier: 2,
+    key: 'phases',
+    label: 'Phase',
+    mongoModelPath: 'domains/projects/models/Phase.js',
+    prismaDelegate: 'phase',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      name: toStr(doc.name),
+      description: toOptStr(doc.description),
+      projectId: toId(doc.projectId)!,
+      dueDate: toDate(doc.dueDate),
+      status: toStr(doc.status, 'todo'),
+      isExternal: toBool(doc.isExternal),
+      progress: toInt(doc.progress),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const projectIds = new Set(
+        (await prisma.project.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      return batch.filter((row) => projectIds.has(String(row.projectId || '')));
+    },
   },
   {
     tier: 2,
@@ -345,14 +382,59 @@ const COLLECTIONS: CollectionDef[] = [
       actualHours: toFloat(doc.actualHours),
       progress: toInt(doc.progress),
       completedAt: toDate(doc.completedAt),
-      dependencies: toIds(doc.dependencies),
       createdById: toId(doc.createdBy),
-      mentionAccessIds: toIds(doc.mentionAccessIds),
       notifiedOverdue: toBool(doc.notifiedOverdue),
       color: toOptStr(doc.color),
       createdAt: toDate(doc.createdAt) ?? new Date(),
       updatedAt: toDate(doc.updatedAt) ?? new Date(),
     }),
+    filterBatch: async (prisma, batch) => {
+      const projectIds = new Set(
+        (await prisma.project.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      const phaseIds = new Set(
+        (await prisma.phase.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      return batch
+        .filter((row) => !row.projectId || projectIds.has(String(row.projectId)))
+        .map((row) => {
+          const next = { ...row };
+          if (next.phaseId && !phaseIds.has(String(next.phaseId))) next.phaseId = null;
+          return next;
+        });
+    },
+  },
+  {
+    tier: 3,
+    key: 'taskassignments',
+    label: 'TaskAssignment',
+    mongoModelPath: 'domains/tasks/models/TaskAssignment.js',
+    prismaDelegate: 'taskAssignment',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      taskId: toId(doc.taskId)!,
+      userId: toId(doc.userId)!,
+      assignedAt: toDate(doc.assignedAt) ?? new Date(),
+      assignedById: toId(doc.assignedBy),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const tasks = await prisma.task.findMany({ select: { id: true, tenantId: true } });
+      const taskById = new Map(tasks.map((row) => [row.id, row.tenantId]));
+      const userIds = new Set(
+        (await prisma.user.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      return batch
+        .filter(
+          (row) =>
+            taskById.has(String(row.taskId || '')) && userIds.has(String(row.userId || '')),
+        )
+        .map((row) => ({
+          ...row,
+          tenantId: row.tenantId || taskById.get(String(row.taskId || '')),
+        }))
+        .filter((row) => Boolean(row.tenantId));
+    },
   },
   {
     tier: 3,
@@ -369,7 +451,6 @@ const COLLECTIONS: CollectionDef[] = [
       transactionIdExly: toOptStr(doc.transactionIdExly),
       exlyOfferingId: toOptStr(doc.exlyOfferingId),
       exlyOfferingTitle: toOptStr(doc.exlyOfferingTitle),
-      exlyOfferings: toJson(doc.exlyOfferings),
       crmType: toStr(doc.crmType, 'sales'),
       artistProject: toOptStr(doc.artistProject),
       contactCategory: toOptStr(doc.contactCategory),
@@ -393,7 +474,6 @@ const COLLECTIONS: CollectionDef[] = [
       callStatus: toStr(doc.callStatus, 'Pending'),
       leadStatus: toStr(doc.leadStatus, 'New'),
       remarks: toOptStr(doc.remarks),
-      notes: toJson(doc.notes),
       source: toStr(doc.source, 'Organic / Direct'),
       planOption: toOptStr(doc.planOption),
       nextFollowupDate: toOptStr(doc.nextFollowupDate),
@@ -461,6 +541,7 @@ const COLLECTIONS: CollectionDef[] = [
     prismaDelegate: 'attendance',
     map: (doc) => ({
       id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
       userId: toId(doc.userId)!,
       username: toOptStr(doc.username),
       date: toDate(doc.date) ?? new Date(),
@@ -479,6 +560,249 @@ const COLLECTIONS: CollectionDef[] = [
       createdAt: toDate(doc.createdAt) ?? new Date(),
       updatedAt: toDate(doc.updatedAt) ?? new Date(),
     }),
+    filterBatch: async (prisma, batch) => {
+      const users = await prisma.user.findMany({ select: { id: true, tenantId: true } });
+      const tenantByUser = new Map(users.map((row) => [row.id, row.tenantId]));
+      return batch
+        .filter((row) => tenantByUser.has(String(row.userId || '')))
+        .map((row) => ({
+          ...row,
+          tenantId: row.tenantId || tenantByUser.get(String(row.userId || '')),
+        }))
+        .filter((row) => Boolean(row.tenantId));
+    },
+  },
+  {
+    tier: 3,
+    key: 'tasktypes',
+    label: 'TaskType',
+    mongoModelPath: 'domains/tasks/models/TaskType.js',
+    prismaDelegate: 'taskType',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      name: toStr(doc.name),
+      departmentId: toId(doc.departmentId),
+      projectRole: toOptStr(doc.projectRole),
+      isActive: toBool(doc.isActive, true),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+    }),
+  },
+  {
+    tier: 3,
+    key: 'leaverequests',
+    label: 'LeaveRequest',
+    mongoModelPath: 'models/LeaveRequest.js',
+    prismaDelegate: 'leaveRequest',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      userId: toId(doc.userId)!,
+      username: toOptStr(doc.username),
+      fromDate: toDate(doc.fromDate) ?? new Date(),
+      toDate: toDate(doc.toDate) ?? new Date(),
+      reason: toStr(doc.reason, ''),
+      status: toStr(doc.status, 'pending'),
+      reviewedById: toId(doc.reviewedBy),
+      reviewedAt: toDate(doc.reviewedAt),
+      reviewNote: toStr(doc.reviewNote, ''),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const users = await prisma.user.findMany({ select: { id: true, tenantId: true } });
+      const tenantByUser = new Map(users.map((row) => [row.id, row.tenantId]));
+      return batch
+        .filter((row) => tenantByUser.has(String(row.userId || '')))
+        .map((row) => ({
+          ...row,
+          tenantId: row.tenantId || tenantByUser.get(String(row.userId || '')),
+        }))
+        .filter((row) => Boolean(row.tenantId));
+    },
+  },
+  {
+    tier: 3,
+    key: 'crmconfigs',
+    label: 'CRMConfig',
+    mongoModelPath: 'domains/crm/models/CRMConfig.js',
+    prismaDelegate: 'cRMConfig',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      configKey: toStr(doc.configKey, 'default'),
+      callStatuses: toJson(doc.callStatuses ?? []),
+      leadStatuses: toJson(doc.leadStatuses ?? []),
+      artistTypes: toJson(doc.artistTypes ?? []),
+      meaningfulConnectStatuses: toJson(doc.meaningfulConnectStatuses ?? []),
+      qualities: toJson(doc.qualities ?? []),
+      updatedById: toId(doc.updatedBy),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+  },
+  {
+    tier: 3,
+    key: 'crmimports',
+    label: 'CRMImport',
+    mongoModelPath: 'domains/crm/models/CRMImport.js',
+    prismaDelegate: 'cRMImport',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      filename: toStr(doc.filename),
+      leadCount: toInt(doc.leadCount),
+      crmType: toStr(doc.crmType, 'sales'),
+      sheetTemplate: toOptStr(doc.sheetTemplate),
+      createdById: toId(doc.createdBy)!,
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const userIds = new Set(
+        (await prisma.user.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      return batch.filter((row) => userIds.has(String(row.createdById || '')));
+    },
+  },
+  {
+    tier: 3,
+    key: 'gamificationconfigs',
+    label: 'GamificationConfig',
+    mongoModelPath: 'models/GamificationConfig.js',
+    prismaDelegate: 'gamificationConfig',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      taskCompletion: toInt(doc.taskCompletion, 10),
+      taskCreation: toInt(doc.taskCreation, 5),
+      projectCreation: toInt(doc.projectCreation, 15),
+      dailyLog: toInt(doc.dailyLog, 5),
+      attendanceLog: toInt(doc.attendanceLog, 5),
+      attendanceDayBonus: toInt(doc.attendanceDayBonus, 20),
+      assetUpload: toInt(doc.assetUpload, 5),
+      leadCapture: toInt(doc.leadCapture, 10),
+      invoiceSubmission: toInt(doc.invoiceSubmission, 10),
+      reviewApproval: toInt(doc.reviewApproval, 5),
+      calendarEventCreated: toInt(doc.calendarEventCreated, 5),
+      announcementCreated: toInt(doc.announcementCreated, 5),
+      leaveApplied: toInt(doc.leaveApplied, 0),
+      commentCreation: toInt(doc.commentCreation, 0),
+      dailyMissionBaseReward: toInt(doc.dailyMissionBaseReward, 25),
+      stepXp: toInt(doc.stepXp, 5),
+      baseXp: toInt(doc.baseXp, 0),
+      lastRecalculatedAt: toDate(doc.lastRecalculatedAt),
+      lastRecalcWeeklyPrior: toJson(doc.lastRecalcWeeklyPrior),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const tenants = await prisma.tenant.findMany({ select: { id: true } });
+      if (tenants.length === 0) return [];
+      const byTenant = new Map<string, Record<string, unknown>>();
+      for (const row of batch) {
+        const tenantId = String(row.tenantId || tenants[0].id);
+        if (!byTenant.has(tenantId)) {
+          byTenant.set(tenantId, { ...row, tenantId });
+        }
+      }
+      return [...byTenant.values()];
+    },
+  },
+  {
+    tier: 3,
+    key: 'notifications',
+    label: 'Notification',
+    mongoModelPath: 'models/Notification.js',
+    prismaDelegate: 'notification',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      recipientId: toId(doc.recipient)!,
+      title: toStr(doc.title),
+      message: toStr(doc.message),
+      type: toStr(doc.type, 'reminder'),
+      category: toStr(doc.category, 'system'),
+      read: toBool(doc.read),
+      relatedLeadId: toId(doc.relatedLeadId),
+      relatedTaskId: toId(doc.relatedTaskId),
+      relatedProjectId: toId(doc.relatedProjectId),
+      actionUrl: toStr(doc.actionUrl, ''),
+      actorId: toId(doc.actorId),
+      iconType: toStr(doc.iconType, 'system'),
+      emailSent: toBool(doc.emailSent),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const userIds = new Set(
+        (await prisma.user.findMany({ select: { id: true, tenantId: true } })).map((row) => row.id),
+      );
+      const users = await prisma.user.findMany({ select: { id: true, tenantId: true } });
+      const tenantByUser = new Map(users.map((row) => [row.id, row.tenantId]));
+      return batch
+        .filter((row) => userIds.has(String(row.recipientId || '')))
+        .map((row) => ({
+          ...row,
+          tenantId: row.tenantId || tenantByUser.get(String(row.recipientId || '')),
+        }))
+        .filter((row) => Boolean(row.tenantId));
+    },
+  },
+  {
+    tier: 3,
+    key: 'personidentifiers',
+    label: 'PersonIdentifier',
+    mongoModelPath: 'models/PersonIdentifier.js',
+    prismaDelegate: 'personIdentifier',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      personId: toId(doc.personId)!,
+      type: toStr(doc.type),
+      valueNormalized: toStr(doc.valueNormalized),
+      source: toStr(doc.source, 'unknown'),
+      verified: toBool(doc.verified),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const persons = await prisma.person.findMany({ select: { id: true, tenantId: true } });
+      const personIds = new Set(persons.map((row) => row.id));
+      const tenantByPerson = new Map(persons.map((row) => [row.id, row.tenantId]));
+      return batch
+        .filter((row) => personIds.has(String(row.personId || '')))
+        .map((row) => ({
+          ...row,
+          tenantId: row.tenantId || tenantByPerson.get(String(row.personId || '')),
+        }))
+        .filter((row) => Boolean(row.tenantId));
+    },
+  },
+  {
+    tier: 2,
+    key: 'projectgoals',
+    label: 'ProjectGoal',
+    mongoModelPath: 'domains/projects/models/ProjectGoal.js',
+    prismaDelegate: 'projectGoal',
+    map: (doc) => ({
+      id: toId(doc._id)!,
+      tenantId: toId(doc.tenantId),
+      projectId: toId(doc.projectId)!,
+      startDate: toDate(doc.startDate),
+      endDate: toDate(doc.endDate),
+      targets: toJson(doc.targets ?? {}),
+      sourceLinks: toJson(doc.sourceLinks ?? {}),
+      metricOverrides: toJson(doc.metricOverrides ?? {}),
+      updatedById: toId(doc.updatedBy),
+      createdAt: toDate(doc.createdAt) ?? new Date(),
+      updatedAt: toDate(doc.updatedAt) ?? new Date(),
+    }),
+    filterBatch: async (prisma, batch) => {
+      const projectIds = new Set(
+        (await prisma.project.findMany({ select: { id: true } })).map((row) => row.id),
+      );
+      return batch.filter((row) => projectIds.has(String(row.projectId || '')));
+    },
   },
   {
     tier: 4,
@@ -530,7 +854,7 @@ const COLLECTIONS: CollectionDef[] = [
       updatedAt: toDate(doc.updatedAt) ?? new Date(),
     }),
   },
-  // Notifications are local-only (device inbox) — not migrated to Postgres.
+  // LeadNote / LeadExlyOffering / TaskDependency / TaskMentionAccess — flattened in migrate* helpers.
 ];
 
 function resolveMongoUri(): string {
@@ -622,6 +946,26 @@ async function countMongo(Model: mongoose.Model<unknown>): Promise<number> {
   return Model.countDocuments({}).setOptions({ bypassTenant: true });
 }
 
+async function insertBatch(
+  prisma: PrismaClient,
+  def: CollectionDef,
+  delegate: {
+    createMany: (args: {
+      data: Record<string, unknown>[];
+      skipDuplicates: boolean;
+    }) => Promise<{ count: number }>;
+  },
+  batch: Record<string, unknown>[],
+): Promise<number> {
+  let data = batch;
+  if (def.filterBatch) {
+    data = await def.filterBatch(prisma, batch);
+  }
+  if (data.length === 0) return 0;
+  const result = await delegate.createMany({ data, skipDuplicates: true });
+  return result.count;
+}
+
 async function migrateCollection(
   prisma: PrismaClient,
   def: CollectionDef,
@@ -671,16 +1015,14 @@ async function migrateCollection(
         batch = [];
         continue;
       }
-      const result = await delegate.createMany({ data: batch, skipDuplicates: true });
-      inserted += result.count;
+      inserted += await insertBatch(prisma, def, delegate, batch);
       batch = [];
       process.stdout.write(`  … ${scanned}/${mongoCount} scanned, ${inserted} inserted\r`);
     }
   }
 
   if (batch.length > 0 && !dryRun) {
-    const result = await delegate.createMany({ data: batch, skipDuplicates: true });
-    inserted += result.count;
+    inserted += await insertBatch(prisma, def, delegate, batch);
   }
 
   const postgresCountAfter = dryRun
@@ -756,6 +1098,473 @@ async function migrateCollectionMongoOnly(
   };
 }
 
+async function migrateProjectMembers(
+  prisma: PrismaClient,
+  dryRun: boolean,
+): Promise<RunStats> {
+  const Model = requireMongoModel('domains/projects/models/Project.js');
+  const mongoCount = await countMongo(Model);
+  const postgresCountBefore = await countPostgres(prisma, 'projectMember');
+
+  console.log(`\n[Tier 2] ProjectMember (flattened from projects)`);
+  console.log(`  Mongo projects: ${mongoCount} | Postgres (before): ${postgresCountBefore}`);
+
+  if (mongoCount === 0 || dryRun) {
+    return {
+      key: 'projectmembers',
+      label: 'ProjectMember',
+      tier: 2,
+      mongoCount,
+      postgresCountBefore,
+      postgresCountAfter: postgresCountBefore,
+      scanned: 0,
+      inserted: 0,
+      skippedDryRun: dryRun ? mongoCount : 0,
+    };
+  }
+
+  const validUserIds = new Set(
+    (await prisma.user.findMany({ select: { id: true } })).map((row) => row.id),
+  );
+
+  const cursor = Model.find({})
+    .setOptions({ bypassTenant: true })
+    .cursor({ batchSize: BATCH_SIZE });
+
+  let batch: Record<string, unknown>[] = [];
+  let scanned = 0;
+  let inserted = 0;
+
+  for await (const raw of cursor) {
+    const doc = raw as MongoDoc & {
+      members?: unknown[];
+      memberRoles?: Array<{ user?: unknown; role?: string }>;
+      owner?: unknown;
+    };
+    scanned += 1;
+    const projectId = toId(doc._id)!;
+    const tenantId = toId(doc.tenantId);
+    const roleByUser = new Map<string, string>();
+
+    if (Array.isArray(doc.memberRoles)) {
+      for (const row of doc.memberRoles) {
+        const userId = toId(row.user);
+        if (userId) roleByUser.set(userId, toStr(row.role, 'member'));
+      }
+    }
+
+    const memberIds = new Set(toIds(doc.members));
+    for (const userId of memberIds) {
+      if (!validUserIds.has(userId)) continue;
+      batch.push({
+        id: `${projectId}_${userId}`,
+        tenantId,
+        projectId,
+        userId,
+        role: roleByUser.get(userId) || 'member',
+      });
+    }
+
+    const ownerId = toId(doc.owner);
+    if (ownerId && !memberIds.has(ownerId) && validUserIds.has(ownerId)) {
+      batch.push({
+        id: `${projectId}_${ownerId}`,
+        tenantId,
+        projectId,
+        userId: ownerId,
+        role: roleByUser.get(ownerId) || 'owner',
+      });
+    }
+
+    if (batch.length >= BATCH_SIZE) {
+      const result = await prisma.projectMember.createMany({
+        data: batch,
+        skipDuplicates: true,
+      });
+      inserted += result.count;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await prisma.projectMember.createMany({
+      data: batch,
+      skipDuplicates: true,
+    });
+    inserted += result.count;
+  }
+
+  const postgresCountAfter = await countPostgres(prisma, 'projectMember');
+  console.log(
+    `  Done — scanned ${scanned} projects, inserted ${inserted} members, Postgres (after): ${postgresCountAfter}`,
+  );
+
+  return {
+    key: 'projectmembers',
+    label: 'ProjectMember',
+    tier: 2,
+    mongoCount,
+    postgresCountBefore,
+    postgresCountAfter,
+    scanned,
+    inserted,
+    skippedDryRun: 0,
+  };
+}
+
+async function migrateTaskDependencies(
+  prisma: PrismaClient,
+  dryRun: boolean,
+): Promise<RunStats> {
+  const Model = requireMongoModel('domains/tasks/models/Task.js');
+  const mongoCount = await countMongo(Model);
+  const postgresCountBefore = await countPostgres(prisma, 'taskDependency');
+
+  console.log(`\n[Tier 3] TaskDependency (flattened from tasks)`);
+  console.log(`  Mongo tasks: ${mongoCount} | Postgres (before): ${postgresCountBefore}`);
+
+  if (mongoCount === 0 || dryRun) {
+    return {
+      key: 'taskdependencies',
+      label: 'TaskDependency',
+      tier: 3,
+      mongoCount,
+      postgresCountBefore,
+      postgresCountAfter: postgresCountBefore,
+      scanned: 0,
+      inserted: 0,
+      skippedDryRun: dryRun ? mongoCount : 0,
+    };
+  }
+
+  const taskIds = new Set(
+    (await prisma.task.findMany({ select: { id: true, tenantId: true } })).map((row) => row.id),
+  );
+  const tenantByTask = new Map(
+    (await prisma.task.findMany({ select: { id: true, tenantId: true } })).map((row) => [
+      row.id,
+      row.tenantId,
+    ]),
+  );
+
+  const cursor = Model.find({})
+    .setOptions({ bypassTenant: true })
+    .cursor({ batchSize: BATCH_SIZE });
+
+  let batch: Record<string, unknown>[] = [];
+  let scanned = 0;
+  let inserted = 0;
+
+  for await (const raw of cursor) {
+    const doc = raw as MongoDoc & { dependencies?: unknown[] };
+    scanned += 1;
+    const taskId = toId(doc._id)!;
+    if (!taskIds.has(taskId)) continue;
+    const tenantId = toId(doc.tenantId) || tenantByTask.get(taskId);
+    for (const dep of toIds(doc.dependencies)) {
+      if (!taskIds.has(dep) || dep === taskId) continue;
+      batch.push({
+        id: `${taskId}:${dep}`,
+        tenantId,
+        taskId,
+        dependsOnTaskId: dep,
+      });
+    }
+    if (batch.length >= BATCH_SIZE) {
+      const result = await prisma.taskDependency.createMany({ data: batch, skipDuplicates: true });
+      inserted += result.count;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await prisma.taskDependency.createMany({ data: batch, skipDuplicates: true });
+    inserted += result.count;
+  }
+
+  const postgresCountAfter = await countPostgres(prisma, 'taskDependency');
+  console.log(
+    `  Done — scanned ${scanned} tasks, inserted ${inserted} deps, Postgres (after): ${postgresCountAfter}`,
+  );
+
+  return {
+    key: 'taskdependencies',
+    label: 'TaskDependency',
+    tier: 3,
+    mongoCount,
+    postgresCountBefore,
+    postgresCountAfter,
+    scanned,
+    inserted,
+    skippedDryRun: 0,
+  };
+}
+
+async function migrateTaskMentionAccess(
+  prisma: PrismaClient,
+  dryRun: boolean,
+): Promise<RunStats> {
+  const Model = requireMongoModel('domains/tasks/models/Task.js');
+  const mongoCount = await countMongo(Model);
+  const postgresCountBefore = await countPostgres(prisma, 'taskMentionAccess');
+
+  console.log(`\n[Tier 3] TaskMentionAccess (flattened from tasks)`);
+  console.log(`  Mongo tasks: ${mongoCount} | Postgres (before): ${postgresCountBefore}`);
+
+  if (mongoCount === 0 || dryRun) {
+    return {
+      key: 'taskmentionaccess',
+      label: 'TaskMentionAccess',
+      tier: 3,
+      mongoCount,
+      postgresCountBefore,
+      postgresCountAfter: postgresCountBefore,
+      scanned: 0,
+      inserted: 0,
+      skippedDryRun: dryRun ? mongoCount : 0,
+    };
+  }
+
+  const tasks = await prisma.task.findMany({ select: { id: true, tenantId: true } });
+  const taskIds = new Set(tasks.map((row) => row.id));
+  const tenantByTask = new Map(tasks.map((row) => [row.id, row.tenantId]));
+  const userIds = new Set(
+    (await prisma.user.findMany({ select: { id: true } })).map((row) => row.id),
+  );
+
+  const cursor = Model.find({})
+    .setOptions({ bypassTenant: true })
+    .cursor({ batchSize: BATCH_SIZE });
+
+  let batch: Record<string, unknown>[] = [];
+  let scanned = 0;
+  let inserted = 0;
+
+  for await (const raw of cursor) {
+    const doc = raw as MongoDoc & { mentionAccessIds?: unknown[] };
+    scanned += 1;
+    const taskId = toId(doc._id)!;
+    if (!taskIds.has(taskId)) continue;
+    const tenantId = toId(doc.tenantId) || tenantByTask.get(taskId);
+    for (const userId of toIds(doc.mentionAccessIds)) {
+      if (!userIds.has(userId)) continue;
+      batch.push({
+        id: `${taskId}:${userId}`,
+        tenantId,
+        taskId,
+        userId,
+      });
+    }
+    if (batch.length >= BATCH_SIZE) {
+      const result = await prisma.taskMentionAccess.createMany({ data: batch, skipDuplicates: true });
+      inserted += result.count;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await prisma.taskMentionAccess.createMany({ data: batch, skipDuplicates: true });
+    inserted += result.count;
+  }
+
+  const postgresCountAfter = await countPostgres(prisma, 'taskMentionAccess');
+  console.log(
+    `  Done — scanned ${scanned} tasks, inserted ${inserted} mention access rows, Postgres (after): ${postgresCountAfter}`,
+  );
+
+  return {
+    key: 'taskmentionaccess',
+    label: 'TaskMentionAccess',
+    tier: 3,
+    mongoCount,
+    postgresCountBefore,
+    postgresCountAfter,
+    scanned,
+    inserted,
+    skippedDryRun: 0,
+  };
+}
+
+async function migrateLeadNotes(
+  prisma: PrismaClient,
+  dryRun: boolean,
+): Promise<RunStats> {
+  const Model = requireMongoModel('domains/crm/models/Lead.js');
+  const mongoCount = await countMongo(Model);
+  const postgresCountBefore = await countPostgres(prisma, 'leadNote');
+
+  console.log(`\n[Tier 3] LeadNote (flattened from leads)`);
+  console.log(`  Mongo leads: ${mongoCount} | Postgres (before): ${postgresCountBefore}`);
+
+  if (mongoCount === 0 || dryRun) {
+    return {
+      key: 'leadnotes',
+      label: 'LeadNote',
+      tier: 3,
+      mongoCount,
+      postgresCountBefore,
+      postgresCountAfter: postgresCountBefore,
+      scanned: 0,
+      inserted: 0,
+      skippedDryRun: dryRun ? mongoCount : 0,
+    };
+  }
+
+  const leadIds = new Set(
+    (await prisma.lead.findMany({ select: { id: true, tenantId: true } })).map((row) => row.id),
+  );
+  const tenantByLead = new Map(
+    (await prisma.lead.findMany({ select: { id: true, tenantId: true } })).map((row) => [
+      row.id,
+      row.tenantId,
+    ]),
+  );
+
+  const cursor = Model.find({})
+    .setOptions({ bypassTenant: true })
+    .cursor({ batchSize: BATCH_SIZE });
+
+  let batch: Record<string, unknown>[] = [];
+  let scanned = 0;
+  let inserted = 0;
+
+  for await (const raw of cursor) {
+    const doc = raw as MongoDoc & {
+      notes?: Array<{ text?: string; author?: string; date?: unknown }>;
+    };
+    scanned += 1;
+    const leadId = toId(doc._id)!;
+    if (!leadIds.has(leadId)) continue;
+    const tenantId = toId(doc.tenantId) || tenantByLead.get(leadId);
+    const notes = Array.isArray(doc.notes) ? doc.notes : [];
+    notes.forEach((note, index) => {
+      const text = toStr(note?.text).trim();
+      if (!text) return;
+      batch.push({
+        id: `${leadId}:note:${index}`,
+        tenantId,
+        leadId,
+        text,
+        author: toStr(note?.author, 'unknown'),
+        date: toDate(note?.date) ?? new Date(),
+      });
+    });
+    if (batch.length >= BATCH_SIZE) {
+      const result = await prisma.leadNote.createMany({ data: batch, skipDuplicates: true });
+      inserted += result.count;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await prisma.leadNote.createMany({ data: batch, skipDuplicates: true });
+    inserted += result.count;
+  }
+
+  const postgresCountAfter = await countPostgres(prisma, 'leadNote');
+  console.log(
+    `  Done — scanned ${scanned} leads, inserted ${inserted} notes, Postgres (after): ${postgresCountAfter}`,
+  );
+
+  return {
+    key: 'leadnotes',
+    label: 'LeadNote',
+    tier: 3,
+    mongoCount,
+    postgresCountBefore,
+    postgresCountAfter,
+    scanned,
+    inserted,
+    skippedDryRun: 0,
+  };
+}
+
+async function migrateLeadExlyOfferings(
+  prisma: PrismaClient,
+  dryRun: boolean,
+): Promise<RunStats> {
+  const Model = requireMongoModel('domains/crm/models/Lead.js');
+  const mongoCount = await countMongo(Model);
+  const postgresCountBefore = await countPostgres(prisma, 'leadExlyOffering');
+
+  console.log(`\n[Tier 3] LeadExlyOffering (flattened from leads)`);
+  console.log(`  Mongo leads: ${mongoCount} | Postgres (before): ${postgresCountBefore}`);
+
+  if (mongoCount === 0 || dryRun) {
+    return {
+      key: 'leadexlyofferings',
+      label: 'LeadExlyOffering',
+      tier: 3,
+      mongoCount,
+      postgresCountBefore,
+      postgresCountAfter: postgresCountBefore,
+      scanned: 0,
+      inserted: 0,
+      skippedDryRun: dryRun ? mongoCount : 0,
+    };
+  }
+
+  const leads = await prisma.lead.findMany({ select: { id: true, tenantId: true } });
+  const leadIds = new Set(leads.map((row) => row.id));
+  const tenantByLead = new Map(leads.map((row) => [row.id, row.tenantId]));
+
+  const cursor = Model.find({})
+    .setOptions({ bypassTenant: true })
+    .cursor({ batchSize: BATCH_SIZE });
+
+  let batch: Record<string, unknown>[] = [];
+  let scanned = 0;
+  let inserted = 0;
+
+  for await (const raw of cursor) {
+    const doc = raw as MongoDoc & {
+      exlyOfferings?: Array<{ offeringId?: string; title?: string; purchasedAt?: unknown }>;
+    };
+    scanned += 1;
+    const leadId = toId(doc._id)!;
+    if (!leadIds.has(leadId)) continue;
+    const tenantId = toId(doc.tenantId) || tenantByLead.get(leadId);
+    const offerings = Array.isArray(doc.exlyOfferings) ? doc.exlyOfferings : [];
+    offerings.forEach((offering, index) => {
+      batch.push({
+        id: `${leadId}:offering:${index}`,
+        tenantId,
+        leadId,
+        offeringId: toOptStr(offering?.offeringId),
+        title: toOptStr(offering?.title),
+        purchasedAt: toDate(offering?.purchasedAt),
+      });
+    });
+    if (batch.length >= BATCH_SIZE) {
+      const result = await prisma.leadExlyOffering.createMany({ data: batch, skipDuplicates: true });
+      inserted += result.count;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    const result = await prisma.leadExlyOffering.createMany({ data: batch, skipDuplicates: true });
+    inserted += result.count;
+  }
+
+  const postgresCountAfter = await countPostgres(prisma, 'leadExlyOffering');
+  console.log(
+    `  Done — scanned ${scanned} leads, inserted ${inserted} offerings, Postgres (after): ${postgresCountAfter}`,
+  );
+
+  return {
+    key: 'leadexlyofferings',
+    label: 'LeadExlyOffering',
+    tier: 3,
+    mongoCount,
+    postgresCountBefore,
+    postgresCountAfter,
+    scanned,
+    inserted,
+    skippedDryRun: 0,
+  };
+}
+
 function printSummary(stats: RunStats[], dryRun: boolean): void {
   console.log('\n══════════════════════════════════════════════════════════');
   console.log(dryRun ? 'ETL SUMMARY (DRY RUN)' : 'ETL SUMMARY');
@@ -818,6 +1627,17 @@ async function main(): Promise<void> {
     for (const def of collections) {
       if (postgresReady) {
         stats.push(await migrateCollection(prisma, def, options.dryRun));
+        if (def.key === 'projects' && !options.dryRun) {
+          stats.push(await migrateProjectMembers(prisma, options.dryRun));
+        }
+        if (def.key === 'tasks' && !options.dryRun) {
+          stats.push(await migrateTaskDependencies(prisma, options.dryRun));
+          stats.push(await migrateTaskMentionAccess(prisma, options.dryRun));
+        }
+        if (def.key === 'leads' && !options.dryRun) {
+          stats.push(await migrateLeadNotes(prisma, options.dryRun));
+          stats.push(await migrateLeadExlyOfferings(prisma, options.dryRun));
+        }
       } else {
         stats.push(await migrateCollectionMongoOnly(def, options.dryRun));
       }

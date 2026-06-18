@@ -9,9 +9,10 @@ const { PRESET_PAGES } = require('../utils/pagePermissions');
 const DEFAULT_DEPARTMENTS = [
   { name: 'Admin', slug: 'admin', sortOrder: 0, signupAllowed: false, permissionPreset: 'admin', pagePermissions: PRESET_PAGES.admin },
   { name: 'Artist Management', slug: 'artist-management', sortOrder: 1, signupAllowed: true, permissionPreset: 'artist-management', pagePermissions: PRESET_PAGES['artist-management'] },
-  { name: 'Operations', slug: 'ops', sortOrder: 2, signupAllowed: true, permissionPreset: 'ops', pagePermissions: PRESET_PAGES.ops },
-  { name: 'Sales', slug: 'sales', sortOrder: 3, signupAllowed: true, permissionPreset: 'sales', pagePermissions: PRESET_PAGES.sales },
-  { name: 'Creative', slug: 'creative', sortOrder: 4, signupAllowed: true, permissionPreset: 'creative', pagePermissions: PRESET_PAGES.creative },
+  { name: 'Artist Business', slug: 'artist-business', sortOrder: 2, signupAllowed: false, permissionPreset: 'artist-business', pagePermissions: PRESET_PAGES['artist-business'] },
+  { name: 'Operations', slug: 'ops', sortOrder: 3, signupAllowed: true, permissionPreset: 'ops', pagePermissions: PRESET_PAGES.ops },
+  { name: 'Sales', slug: 'sales', sortOrder: 4, signupAllowed: true, permissionPreset: 'sales', pagePermissions: PRESET_PAGES.sales },
+  { name: 'Creative', slug: 'creative', sortOrder: 5, signupAllowed: true, permissionPreset: 'creative', pagePermissions: PRESET_PAGES.creative },
 ];
 
 const BASE_ROLE_SLUGS = new Set(DEFAULT_DEPARTMENTS.map((d) => d.slug));

@@ -11,6 +11,7 @@ const { warmPipelineQuery } = require('../utils/crmPipelineFilters');
 const { getDateKey, todayEnd, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
 const { getSharedRedis } = require('../utils/sharedRedis');
 const logger = require('../utils/logger');
+const { loadCrmDigestConfig } = require('./crmDigestSettingsService');
 const { MODULE } = require('../../shared/systemLogContract');
 
 const BYPASS = bypassOptions('crm-reach-out-digest');
@@ -53,6 +54,121 @@ const PIPELINE_ROWS = [
   { key: 'converted', label: 'Converted (pipeline)' },
   { key: 'conversionRate', label: 'Conversion rate', suffix: '%' },
 ];
+
+const DEFAULT_PLAN_VALUES = {
+  'One-Time': 0,
+  '3 Mo': 0,
+  '6 Mo': 0,
+  '9 Mo': 0,
+};
+
+const parsePlanValueMap = () => ({ ...DEFAULT_PLAN_VALUES });
+
+const getMonthStartFromKey = (dateKey) => {
+  const key = String(dateKey || getDateKey());
+  const monthPrefix = key.slice(0, 7);
+  return startOfDayFromKey(`${monthPrefix}-01`);
+};
+
+const getMonthToDateRange = (dateKey = getDateKey()) => ({
+  rangeStart: getMonthStartFromKey(dateKey),
+  rangeEnd: dateKey === getDateKey() ? todayEnd() : endOfDayFromKey(dateKey),
+});
+
+const formatMonthLabel = (dateKey) => {
+  const anchor = new Date(`${dateKey}T12:00:00+05:30`);
+  return anchor.toLocaleDateString('en-IN', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
+};
+
+const formatLakhs = (rupees) => {
+  const lakhs = (Number(rupees) || 0) / 100000;
+  if (lakhs === 0) return '0 Lakhs';
+  const formatted = Number(lakhs.toFixed(2)).toLocaleString('en-IN', {
+    maximumFractionDigits: 2,
+  });
+  return `${formatted} Lakhs`;
+};
+
+const resolveLeadDealValue = (lead, planValueMap = DEFAULT_PLAN_VALUES) => {
+  const metadata = lead?.metadata || {};
+  const fromMetadata = Number(metadata.dealValue ?? metadata.dealAmount ?? metadata.convertedValue);
+  if (Number.isFinite(fromMetadata) && fromMetadata > 0) return fromMetadata;
+  const planValue = planValueMap[lead?.planOption];
+  return Number.isFinite(Number(planValue)) && Number(planValue) > 0 ? Number(planValue) : 0;
+};
+
+const summarizeMonthlyBusinessFromLeads = (leads, targetLakhs = 0, planValueMap = DEFAULT_PLAN_VALUES) => {
+  const leadsClosed = leads.length;
+  const totalValueRupees = leads.reduce((sum, lead) => sum + resolveLeadDealValue(lead, planValueMap), 0);
+  const valueLakhs = totalValueRupees / 100000;
+  const progressPct = targetLakhs > 0
+    ? Number(((valueLakhs / targetLakhs) * 100).toFixed(1))
+    : null;
+
+  return {
+    leadsClosed,
+    totalValueRupees,
+    valueLakhs,
+    targetLakhs,
+    progressPct,
+    valueLabel: formatLakhs(totalValueRupees),
+    targetLabel: targetLakhs > 0 ? formatLakhs(targetLakhs * 100000) : null,
+  };
+};
+
+async function fetchMonthlyBusinessDone(dateKey = getDateKey(), crmType = 'sales', digestSettings = null) {
+  const { rangeStart, rangeEnd } = getMonthToDateRange(dateKey);
+  const targetLakhs = digestSettings?.monthlyTargetLakhs || 0;
+  const planValueMap = digestSettings?.planValues || parsePlanValueMap();
+  const conversionAudits = await CRMAudit.find({
+    fieldChanged: 'leadStatus',
+    newValue: { $regex: /^converted$/i },
+    timestamp: { $gte: rangeStart, $lte: rangeEnd },
+  })
+    .select('leadId')
+    .lean()
+    .setOptions(BYPASS);
+
+  const leadIds = [...new Set(conversionAudits.map((log) => String(log.leadId)).filter(Boolean))];
+  if (!leadIds.length) {
+    return summarizeMonthlyBusinessFromLeads([], targetLakhs, planValueMap);
+  }
+
+  const leads = await Lead.find({
+    _id: { $in: leadIds },
+    crmType,
+  })
+    .select('planOption metadata')
+    .lean()
+    .setOptions(BYPASS);
+
+  return summarizeMonthlyBusinessFromLeads(leads, targetLakhs, planValueMap);
+}
+
+async function fetchMonthlyBusinessOverview(dateKey = getDateKey()) {
+  const digestConfig = await loadCrmDigestConfig();
+  const [academy, films] = await Promise.all([
+    fetchMonthlyBusinessDone(dateKey, 'sales', digestConfig.academy?.settings),
+    fetchMonthlyBusinessDone(dateKey, 'artist', digestConfig.films?.settings),
+  ]);
+  return {
+    monthLabel: formatMonthLabel(dateKey),
+    academy: {
+      ...academy,
+      title: digestConfig.academy?.segment?.digestTitle || 'Academy business (month)',
+      projectName: digestConfig.academy?.projectName || 'TSC Academy',
+    },
+    films: {
+      ...films,
+      title: digestConfig.films?.segment?.digestTitle || 'Artist business (month)',
+      projectName: digestConfig.films?.projectName || 'TSC Films',
+    },
+  };
+}
 
 const parseRecipientEmails = (raw) => {
   if (!raw) return [];
@@ -266,12 +382,65 @@ function buildRepSectionHtml(sectionMeta, repUser, dailyStats, pipelineStats, pe
   `;
 }
 
-function buildDigestHtml({ periodLabel, sections, testMode = false }) {
+function buildSegmentBusinessCard(segment, monthBusiness) {
+  const targetBlock = monthBusiness.targetLakhs > 0
+    ? `
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #334155;">
+        <p style="margin:0 0 6px;color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;">Target of the month</p>
+        <p style="margin:0 0 4px;color:#f8fafc;font-size:18px;font-weight:700;">${escapeHtml(monthBusiness.targetLabel)}</p>
+        <p style="margin:0;color:#94a3b8;font-size:12px;">Progress: ${escapeHtml(String(monthBusiness.progressPct ?? 0))}%</p>
+      </div>
+    `
+    : `
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #334155;">
+        <p style="margin:0;color:#64748b;font-size:12px;">Target not set in ${escapeHtml(segment.projectName)} project settings.</p>
+      </div>
+    `;
+
+  return `
+    <div style="padding:16px;border:1px solid #334155;border-radius:8px;background:#111827;">
+      <h3 style="margin:0 0 4px;color:#2dd4bf;font-size:16px;">${escapeHtml(segment.title)}</h3>
+      <p style="margin:0 0 14px;color:#94a3b8;font-size:12px;">${escapeHtml(segment.projectName)}</p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+        <div style="padding:12px;border:1px solid #334155;border-radius:8px;background:#0f172a;text-align:center;">
+          <p style="margin:0 0 6px;color:#94a3b8;font-size:10px;text-transform:uppercase;">Leads closed</p>
+          <p style="margin:0;color:#f8fafc;font-size:22px;font-weight:700;">${escapeHtml(monthBusiness.leadsClosed)}</p>
+        </div>
+        <div style="padding:12px;border:1px solid #334155;border-radius:8px;background:#0f172a;text-align:center;">
+          <p style="margin:0 0 6px;color:#94a3b8;font-size:10px;text-transform:uppercase;">Value</p>
+          <p style="margin:0;color:#f8fafc;font-size:22px;font-weight:700;">${escapeHtml(monthBusiness.valueLabel)}</p>
+        </div>
+      </div>
+      ${targetBlock}
+    </div>
+  `;
+}
+
+function buildMonthBusinessHtml(monthlyBusiness) {
+  if (!monthlyBusiness) return '';
+  const cards = [monthlyBusiness.academy, monthlyBusiness.films]
+    .filter(Boolean)
+    .map((segment) => buildSegmentBusinessCard(segment, segment))
+    .join('');
+
+  return `
+    <section style="margin:0 0 24px;padding:20px;border:1px solid #2dd4bf;border-radius:10px;background:#0f172a;">
+      <h2 style="margin:0 0 4px;color:#f8fafc;font-size:18px;">Business done in the month</h2>
+      <p style="margin:0 0 16px;color:#94a3b8;font-size:13px;">${escapeHtml(monthlyBusiness.monthLabel)} · month to date</p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+        ${cards}
+      </div>
+    </section>
+  `;
+}
+
+function buildDigestHtml({ periodLabel, sections, monthlyBusiness = null, testMode = false }) {
   const body = sections.map(({ sectionMeta, repUser, dailyStats, pipelineStats }) =>
     buildRepSectionHtml(sectionMeta, repUser, dailyStats, pipelineStats, periodLabel)
   ).join('');
 
   const title = testMode ? 'CRM Call Stats (Test)' : 'CRM Daily Call Stats';
+  const monthBlock = buildMonthBusinessHtml(monthlyBusiness);
 
   return `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:28px;">
@@ -279,8 +448,9 @@ function buildDigestHtml({ periodLabel, sections, testMode = false }) {
       <p style="margin:0 0 24px;color:#94a3b8;font-size:14px;line-height:1.5;">
         ${escapeHtml(periodLabel)} · Akash (artist) and Satyam (sales) call stats from CoreKnot CRM.
       </p>
+      ${monthBlock}
       ${body}
-      <p style="color:#64748b;font-size:12px;margin:24px 0 0;">Activity counts are based on CRM updates during the period. Pipeline totals reflect current assigned leads.</p>
+      <p style="color:#64748b;font-size:12px;margin:24px 0 0;">Activity counts are based on CRM updates during the period. Monthly business targets are configured in TSC Academy and TSC Films project settings.</p>
     </div>
   `;
 }
@@ -377,8 +547,11 @@ async function runCrmReachOutDigest(options = {}) {
   }
 
   try {
-    const sections = await resolveRepSections(rangeStart, rangeEnd);
-    const html = buildDigestHtml({ periodLabel, sections, testMode });
+    const [sections, monthlyBusiness] = await Promise.all([
+      resolveRepSections(rangeStart, rangeEnd),
+      fetchMonthlyBusinessOverview(dateKey),
+    ]);
+    const html = buildDigestHtml({ periodLabel, sections, monthlyBusiness, testMode });
     const subjectPrefix = testMode ? '[CoreKnot] [TEST] ' : '[CoreKnot] ';
     const subject = `${subjectPrefix}CRM call stats — ${periodLabel}`;
 
@@ -401,6 +574,7 @@ async function runCrmReachOutDigest(options = {}) {
         periodLabel,
         recipient,
         subject,
+        monthBusiness: monthlyBusiness,
         sections: sectionSummary,
       };
     }
@@ -415,6 +589,7 @@ async function runCrmReachOutDigest(options = {}) {
     logger.info('CrmReachOutDigest', 'Daily stats digest sent', {
       dateKey,
       recipients,
+      monthBusiness: monthlyBusiness,
       sections: sectionSummary,
       module: MODULE.SYSTEM,
     });
@@ -424,6 +599,7 @@ async function runCrmReachOutDigest(options = {}) {
       dateKey,
       recipient,
       recipients,
+      monthBusiness: monthlyBusiness,
       sections: sectionSummary,
     };
   } catch (error) {
@@ -461,6 +637,12 @@ module.exports = {
   summarizeDailyCallStats,
   fetchAuditLogsForRep,
   fetchPipelineTotalsForRep,
+  fetchMonthlyBusinessDone,
+  fetchMonthlyBusinessOverview,
+  summarizeMonthlyBusinessFromLeads,
+  resolveLeadDealValue,
+  formatLakhs,
+  parsePlanValueMap,
   getRecipientEmail,
   getRecipientEmails,
   parseRecipientEmails,

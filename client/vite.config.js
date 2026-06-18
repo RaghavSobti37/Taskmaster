@@ -20,10 +20,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const agentationEnabled =
     mode === 'development' && env.VITE_ENABLE_AGENTATION === 'true'
-  // Attendance strangler: VITE_NEST_ATTENDANCE=true → NestJS :5001; override via VITE_ATTENDANCE_PROXY
-  const attendanceProxyTarget =
-    env.VITE_ATTENDANCE_PROXY
-    || (env.VITE_NEST_ATTENDANCE === 'true' ? 'http://127.0.0.1:5001' : 'http://127.0.0.1:5000')
+  // Strangler: VITE_NEST_ATTENDANCE / VITE_NEST_TASKS → NestJS :5001
+  const nestProxy = (envKey, overrideKey, fallbackPort = '5001') =>
+    env[overrideKey]
+    || (env[envKey] === 'true' ? `http://127.0.0.1:${fallbackPort}` : 'http://127.0.0.1:5000')
+  const attendanceProxyTarget = nestProxy('VITE_NEST_ATTENDANCE', 'VITE_ATTENDANCE_PROXY')
+  const tasksProxyTarget = nestProxy('VITE_NEST_TASKS', 'VITE_TASKS_PROXY')
 
   return {
   define: {
@@ -103,6 +105,16 @@ export default defineConfig(({ mode }) => {
         changeOrigin: true,
         cookieDomainRewrite: '',
       },
+      '^/api/tasks/.+/activity': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
+      '/api/tasks': {
+        target: tasksProxyTarget,
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
@@ -138,6 +150,16 @@ export default defineConfig(({ mode }) => {
       // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
       '/api/attendance': {
         target: attendanceProxyTarget,
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
+      '^/api/tasks/.+/activity': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
+      '/api/tasks': {
+        target: tasksProxyTarget,
         changeOrigin: true,
         cookieDomainRewrite: '',
       },

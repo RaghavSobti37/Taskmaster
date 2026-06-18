@@ -1,12 +1,14 @@
 const zlib = require('zlib');
-const { promisify } = require('util');
 const { SUPABASE_BACKUP_BUCKET } = require('../../config/supabase');
 const { isSupabaseEnabled } = require('../../config/supabase');
 const { getSupabaseClient, queryPg, preferRestPostgres } = require('./client');
 const { upsertRows, selectRows, deleteRows } = require('./restQuery');
 const logger = require('../../utils/logger');
 
-const gzip = promisify(zlib.gzip);
+const CURSOR_BATCH_SIZE = 500;
+const COLLECTION_PAUSE_MS = 100;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function snapshotRow(snapshot) {
   return {
@@ -90,15 +92,29 @@ async function exportCollectionToSupabase(sourceDb, snapshotDate, collectionName
   }
 
   const sourceCollection = sourceDb.collection(collectionName);
-  const lines = [];
-  const cursor = sourceCollection.find({}).batchSize(500);
+  const gzipStream = zlib.createGzip();
+  const compressedChunks = [];
+
+  gzipStream.on('data', (chunk) => compressedChunks.push(chunk));
+
+  let documentCount = 0;
+  const cursor = sourceCollection.find({}).batchSize(CURSOR_BATCH_SIZE);
 
   for await (const doc of cursor) {
-    lines.push(JSON.stringify(doc));
+    const line = `${JSON.stringify(doc)}\n`;
+    if (!gzipStream.write(line)) {
+      await new Promise((resolve) => gzipStream.once('drain', resolve));
+    }
+    documentCount += 1;
   }
 
-  const ndjson = lines.length ? `${lines.join('\n')}\n` : '';
-  const compressed = await gzip(ndjson);
+  await new Promise((resolve, reject) => {
+    gzipStream.on('end', resolve);
+    gzipStream.on('error', reject);
+    gzipStream.end();
+  });
+
+  const compressed = Buffer.concat(compressedChunks);
   const storagePath = `${snapshotDate}/${collectionName}.json.gz`;
 
   const { error } = await client.storage
@@ -112,7 +128,7 @@ async function exportCollectionToSupabase(sourceDb, snapshotDate, collectionName
 
   return {
     collectionName,
-    documentCount: lines.length,
+    documentCount,
     compressedBytes: compressed.length,
     storagePath,
   };
@@ -169,6 +185,7 @@ async function runSupabaseProductionBackup({
       compressedBytes: row.compressedBytes,
     });
     logger.info('SupabaseBackup', `Uploaded ${collectionName}`, row);
+    await sleep(COLLECTION_PAUSE_MS);
   }
 
   const totalBytes = exported.reduce((sum, row) => sum + row.compressedBytes, 0);

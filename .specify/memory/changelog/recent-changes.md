@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Dependabot npm audit dependency patches
+
+- **What:** Bumped `vite` 6.4.3, `multer` 2.2.0, `quill`/`effect` 2.x/3.21+, `js-cookie`/`ip-address` overrides; expanded root `package.json` `overrides` for `ws`, OpenTelemetry, `systeminformation`, Clerk, uploadthing, jest `js-yaml`.
+- **Why:** Clear high/moderate Dependabot alerts on `package-lock.json` without dropping lockfiles.
+- **Files:** `package.json`, `package-lock.json`, `client/package.json`, `server/package.json`, `nestjs-server/package.json`
+- **Branch:** `main` · **Commit:** `c5162078`
+
+---
+
 ## 2026-06-18 — Platform settings admin UI for email and role routing
 
 - **What:** Admin → Platform settings (`/admin/platform-settings`) — user pickers for CRM digest recipients, backup alerts, subscription fallback, password-reset CC, CRM call reps, root admins, QA exclusions, mail approvers, auto project members, etc. Mongo `PlatformSettings` drives runtime; env vars remain fallback only.

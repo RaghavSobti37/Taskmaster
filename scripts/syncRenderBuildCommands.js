@@ -157,7 +157,7 @@ async function main() {
     updated += 1;
     console.log('    patched');
 
-    if (shouldDeploy && /coreknot-api|taskmaster/i.test(String(service.name))) {
+    if (shouldDeploy && /^taskmaster$/i.test(String(service.name))) {
       await triggerDeploy(service.id);
       console.log(`    deploy triggered${clearCache ? ' (cache cleared)' : ''}`);
     }

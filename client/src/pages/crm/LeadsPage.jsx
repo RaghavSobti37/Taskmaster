@@ -336,9 +336,10 @@ export default function LeadsPage() {
   const { data, isLoading, isError, error, refetch } = useLiveLeads(queryParams);
   const statsParams = useMemo(() => (artistMode ? { crmType: 'artist' } : {}), [artistMode]);
   const { data: statsData } = useCRMStats(true, { queryParams: statsParams });
-  const { data: salesTeam = [] } = useSalesReps(!artistRepContext);
-  const { data: artistTeam = [] } = useArtistReps(artistRepContext);
-  const team = artistRepContext ? artistTeam : salesTeam;
+  const { data: salesTeam = [] } = useSalesReps(true);
+  const { data: artistTeam = [] } = useArtistReps(artistMode || artistRepContext);
+  const filterTeam = artistMode ? artistTeam : salesTeam;
+  const assignTeam = artistRepContext ? artistTeam : salesTeam;
   const { data: crmConfig } = useCRMConfig();
 
   const leads = data?.leads || [];
@@ -563,7 +564,52 @@ export default function LeadsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {artistMode ? (
+          <NexusDropdown
+            label="Interest"
+            placeholder="Interest Level"
+            options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
+            value={filters.leadStatus}
+            onChange={(v) => {
+              setStatFilter(null);
+              setFilters({ ...filters, leadStatus: v, warmPipeline: false });
+            }}
+          />
+          <NexusDropdown
+            label="Meaningful Connect"
+            placeholder="Meaningful Connect"
+            options={[{ value: 'all', label: 'All' }, ...meaningfulConnectList.map((s) => ({ value: s, label: s }))]}
+            value={filters.meaningfulConnect}
+            onChange={(v) => {
+              setStatFilter(v === 'YES' ? 'meaningful' : null);
+              setFilters({ ...filters, meaningfulConnect: v, warmPipeline: false });
+            }}
+          />
+          <NexusDropdown
+            label="Source"
+            placeholder="Source"
+            options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map((s) => ({ value: s, label: s }))]}
+            value={filters.source}
+            onChange={(v) => setFilters({ ...filters, source: v })}
+          />
+          <NexusDropdown
+            label="Quality"
+            placeholder="Quality"
+            options={[{ value: 'all', label: 'All Quality' }, ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` }))]}
+            value={filters.leadQuality}
+            onChange={(v) => setFilters({ ...filters, leadQuality: v })}
+          />
+          <NexusDropdown
+            label={artistMode ? 'Manager' : 'Agent'}
+            placeholder={artistMode ? 'Manager' : 'Agent'}
+            options={[
+              { value: 'all', label: artistMode ? 'All Managers' : 'All Agents' },
+              { value: 'unassigned', label: 'Unassigned' },
+              ...filterTeam.map((r) => ({ value: r._id, label: r.name })),
+            ]}
+            value={filters.assignedRepId}
+            onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
+          />
+          {artistMode && (
             <>
               <NexusDropdown
                 label="Project"
@@ -602,50 +648,6 @@ export default function LeadsPage() {
                 value={filters.emailStatus || 'all'}
                 onChange={(v) => setFilters({ ...filters, emailStatus: v })}
               />
-            </>
-          ) : (
-            <>
-          <NexusDropdown
-            label="Interest"
-            placeholder="Interest Level"
-            options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
-            value={filters.leadStatus}
-            onChange={(v) => {
-              setStatFilter(null);
-              setFilters({ ...filters, leadStatus: v, warmPipeline: false });
-            }}
-          />
-          <NexusDropdown
-            label="Meaningful Connect"
-            placeholder="Meaningful Connect"
-            options={[{ value: 'all', label: 'All' }, ...meaningfulConnectList.map((s) => ({ value: s, label: s }))]}
-            value={filters.meaningfulConnect}
-            onChange={(v) => {
-              setStatFilter(v === 'YES' ? 'meaningful' : null);
-              setFilters({ ...filters, meaningfulConnect: v, warmPipeline: false });
-            }}
-          />
-          <NexusDropdown
-            label="Source"
-            placeholder="Source"
-            options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map((s) => ({ value: s, label: s }))]}
-            value={filters.source}
-            onChange={(v) => setFilters({ ...filters, source: v })}
-          />
-          <NexusDropdown
-            label="Quality"
-            placeholder="Quality"
-            options={[{ value: 'all', label: 'All Quality' }, ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` }))]}
-            value={filters.leadQuality}
-            onChange={(v) => setFilters({ ...filters, leadQuality: v })}
-          />
-          <NexusDropdown
-            label="Agent"
-            placeholder="Agent"
-            options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map((r) => ({ value: r._id, label: r.name }))]}
-            value={filters.assignedRepId}
-            onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
-          />
             </>
           )}
         </>
@@ -810,7 +812,7 @@ export default function LeadsPage() {
                 onChange={(e) => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
               >
                 <option value="" disabled>Pending Assignment</option>
-                {team.map((rep) => (
+                {assignTeam.map((rep) => (
                   <option key={rep._id} value={rep._id}>{rep.name}</option>
                 ))}
               </select>

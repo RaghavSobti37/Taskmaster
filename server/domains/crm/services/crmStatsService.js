@@ -1,21 +1,12 @@
-const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
-const { applyCrmScopeToQuery, resolveCrmScope } = require('../../../utils/crmScope');
+const { applyCrmScopeToQuery } = require('../../../utils/crmScope');
 const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 
 async function getCRMStats(user, queryParams = {}) {
   const { calculateStats } = require('../../../workers/statsWorker');
   const scopeQuery = {};
   applyCrmScopeToQuery(scopeQuery, user, queryParams);
-  const { restrictToOwn } = resolveCrmScope(user, queryParams.crmType);
-  const matchStage = restrictToOwn && user?._id
-    ? {
-      ...scopeQuery,
-      assignedRepId: scopeQuery.assignedRepId || new mongoose.Types.ObjectId(user._id),
-    }
-    : { ...scopeQuery };
-
-  return calculateStats(matchStage);
+  return calculateStats(scopeQuery);
 }
 
 async function getRepSummary() {

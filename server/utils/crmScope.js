@@ -33,19 +33,32 @@ function resolveCrmScope(user, queryCrmType) {
     return { crmType: CRM_TYPES.ARTIST, restrictToOwn: false };
   }
   if (slug === SALES_SLUG) {
-    return { crmType: CRM_TYPES.SALES, restrictToOwn: true };
+    // Whole sales team shares one pipeline; toolbar filters (incl. Agent) apply team-wide.
+    return { crmType: CRM_TYPES.SALES, restrictToOwn: false };
   }
 
   // Custom page permissions: infer from explicit query if CRM access granted
   const requested = queryCrmType === CRM_TYPES.ARTIST || queryCrmType === CRM_TYPES.SALES
     ? queryCrmType
     : CRM_TYPES.SALES;
-  return { crmType: requested, restrictToOwn: true };
+  return { crmType: requested, restrictToOwn: false };
+}
+
+/**
+ * Sales/custom CRM users may only mutate leads assigned to them; list/stats stay team-wide.
+ */
+function shouldRestrictCrmMutationsToOwn(user) {
+  if (isAdminUser(user)) return false;
+  const slug = getDepartmentSlug(user);
+  if (slug === ARTIST_SLUG) return false;
+  if (slug === SALES_SLUG) return true;
+  return true;
 }
 
 /** Apply crmType + optional rep scoping to a Mongo query object. */
-function applyCrmScopeToQuery(query, user, reqQuery = {}) {
-  const { crmType, restrictToOwn } = resolveCrmScope(user, reqQuery.crmType);
+function applyCrmScopeToQuery(query, user, reqQuery = {}, options = {}) {
+  const { crmType } = resolveCrmScope(user, reqQuery.crmType);
+  const restrictToOwnLeads = options.restrictToOwnLeads === true;
 
   if (crmType === CRM_TYPES.SALES) {
     applySalesCrmTypeFilter(query);
@@ -57,7 +70,7 @@ function applyCrmScopeToQuery(query, user, reqQuery = {}) {
     query.crmType = reqQuery.crmType;
   }
 
-  if (restrictToOwn && user?._id) {
+  if (restrictToOwnLeads && user?._id) {
     query.assignedRepId = mongoose.Types.ObjectId.isValid(user._id)
       ? new mongoose.Types.ObjectId(user._id)
       : user._id;
@@ -69,4 +82,5 @@ function applyCrmScopeToQuery(query, user, reqQuery = {}) {
 module.exports = {
   resolveCrmScope,
   applyCrmScopeToQuery,
+  shouldRestrictCrmMutationsToOwn,
 };

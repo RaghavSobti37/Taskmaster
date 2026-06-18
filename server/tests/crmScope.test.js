@@ -29,15 +29,15 @@ describe('crmScope', () => {
     expect(query.assignedRepId).toBeUndefined();
   });
 
-  it('sales reps stay scoped to their own leads', () => {
+  it('sales reps browse shared sales pipeline without rep lock', () => {
     expect(resolveCrmScope(salesUser)).toEqual({
       crmType: CRM_TYPES.SALES,
-      restrictToOwn: true,
+      restrictToOwn: false,
     });
 
     const query = {};
     applyCrmScopeToQuery(query, salesUser);
-    expect(query.assignedRepId?.toString()).toBe(salesUser._id);
+    expect(query.assignedRepId).toBeUndefined();
     expect(query.$and).toEqual([{
       $or: [
         { crmType: CRM_TYPES.SALES },

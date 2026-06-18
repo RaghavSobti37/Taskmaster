@@ -18,7 +18,7 @@ import {
   getQueryErrorMessage,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { crmQueryParamsForUser, crmRestrictsToOwnLeads } from '../../utils/crmScope';
+import { crmQueryParamsForUser } from '../../utils/crmScope';
 import { useLiveLeads, useSalesReps, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { format, isPast, isToday, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -70,7 +70,6 @@ export default function FollowupsPage() {
     order: sortOrder,
     hasFollowup: 'true',
     followupTab: activeTab,
-    ...(crmRestrictsToOwnLeads(user) ? { assignedRepId: user?._id } : {}),
   }));
 
   const leads = data?.leads || [];

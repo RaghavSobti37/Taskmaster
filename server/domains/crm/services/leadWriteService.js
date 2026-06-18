@@ -23,7 +23,7 @@ const { getDepartmentSlug, ARTIST_SLUG } = require('../../../utils/departmentPer
 const { CRM_TYPES } = require('../../../../shared/artistCrmTaxonomy');
 const { normalizeAndValidateLeadFields } = require('../../../utils/leadValidation');
 const { assignLeadToRep, assignLeadToArtistRep } = require('../../../utils/crmAssignment');
-const { applyCrmScopeToQuery } = require('../../../utils/crmScope');
+const { applyCrmScopeToQuery, shouldRestrictCrmMutationsToOwn } = require('../../../utils/crmScope');
 const auditService = require('./auditService');
 const { getTenantId } = require('../../../utils/tenantContext');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
@@ -418,7 +418,9 @@ async function deleteLead(user, leadId, queryParams = {}) {
   }
 
   const query = { _id: new mongoose.Types.ObjectId(leadId) };
-  applyCrmScopeToQuery(query, user, queryParams);
+  applyCrmScopeToQuery(query, user, queryParams, {
+    restrictToOwnLeads: shouldRestrictCrmMutationsToOwn(user),
+  });
 
   const lead = await Lead.findOne(query).lean();
   if (!lead) return { error: 'Lead not found', status: 404 };

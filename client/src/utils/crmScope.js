@@ -1,4 +1,4 @@
-import { getDepartmentSlug, isAdminUser, SALES_SLUG, ARTIST_SLUG } from './departmentPermissions';
+import { getDepartmentSlug, isAdminUser, ARTIST_SLUG } from './departmentPermissions';
 
 export const CRM_TYPES = {
   SALES: 'sales',
@@ -23,10 +23,9 @@ export function resolveClientCrmType(user) {
   return CRM_TYPES.SALES;
 }
 
-/** Sales reps only see their own leads; artist-management sees full artist CRM. */
-export function crmRestrictsToOwnLeads(user) {
-  if (!user || isAdminUser(user)) return false;
-  return getDepartmentSlug(user) === SALES_SLUG;
+/** CRM list/follow-up pages share team pipelines; filters narrow results. */
+export function crmRestrictsToOwnLeads() {
+  return false;
 }
 
 export function crmQueryParamsForUser(user, extra = {}) {

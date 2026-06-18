@@ -191,7 +191,7 @@ services:
       - key: CRM_REACH_OUT_DIGEST_ENABLED
         value: "true"
       - key: CRM_REACH_OUT_DIGEST_EMAIL
-        sync: false
+        value: rohith@theshakticollective.in,raghavraj@theshakticollective.in
       - key: RESEND_API_KEY
         sync: false
       - key: MONGODB_URI_PROD

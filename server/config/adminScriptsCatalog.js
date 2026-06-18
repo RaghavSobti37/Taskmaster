@@ -83,8 +83,8 @@ module.exports = [
   {
     id: 'crm-reach-out-digest',
     fileName: 'runCrmReachOutDigest.js',
-    title: 'CRM Reach-Out Daily Digest',
-    description: 'Sends Akash + Satyam CRM update digest to CRM_REACH_OUT_DIGEST_EMAIL (today, production).',
+    title: 'CRM Reach-Out Daily Stats',
+    description: 'Sends today\'s call stats for Akash + Satyam to CRM_REACH_OUT_DIGEST_EMAIL (production).',
     category: 'Backup & cron',
     safety: 'caution',
     args: ['--prod', '--force'],
@@ -92,11 +92,11 @@ module.exports = [
   {
     id: 'crm-reach-out-test-7d',
     fileName: 'runCrmReachOutDigest.js',
-    title: 'CRM Reach-Out Test (7 days)',
-    description: 'Test digest with last 7 days of Akash + Satyam CRM activity. Pass --to on CLI or set CRM_REACH_OUT_DIGEST_EMAIL.',
+    title: 'CRM Reach-Out Test Stats',
+    description: 'Test email with call stats (use --to and --days on CLI for custom recipient/range).',
     category: 'Backup & cron',
     safety: 'caution',
-    args: ['--prod', '--force', '--test', '--days', '7'],
+    args: ['--prod', '--force', '--test', '--days', '1'],
   },
 
   // —— QA ——

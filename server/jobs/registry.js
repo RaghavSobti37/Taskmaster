@@ -37,7 +37,7 @@ const CRON_JOBS = [
     module: '../services/crmReachOutDigestService',
     init: 'init',
     schedule: '0 19 * * *',
-    description: 'Daily CRM reach-out digest email to manager (Akash + Satyam)',
+    description: 'Daily CRM call stats email to manager (Akash + Satyam)',
   },
   {
     id: 'supabase-sync',

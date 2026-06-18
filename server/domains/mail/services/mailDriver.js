@@ -10,9 +10,22 @@ if (ENV_CONFIG.mailProvider === 'sendgrid' && ENV_CONFIG.sendgridApiKey) {
   sgMail.setApiKey(ENV_CONFIG.sendgridApiKey);
 }
 
+const normalizeToList = (to) => {
+  if (!to) return [];
+  const parts = Array.isArray(to) ? to : [to];
+  return [...new Set(
+    parts
+      .flatMap((entry) => String(entry).split(/[,;]/))
+      .map((email) => email.trim())
+      .filter(Boolean),
+  )];
+};
+
 const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
   const senderEmail = from || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev';
   const ccList = cc ? (Array.isArray(cc) ? cc : [cc]).filter(Boolean) : [];
+  const toList = normalizeToList(to);
+  if (!toList.length) throw new Error('Email dispatch requires at least one recipient');
 
   if (resend) {
     // Primary modern production pipeline via Resend
@@ -20,32 +33,32 @@ const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
     try {
       const payload = {
         from: senderEmail,
-        to: [to],
+        to: toList,
         subject: subject,
         html: html,
       };
       if (ccList.length) payload.cc = ccList;
       const { data, error } = await resend.emails.send(payload);
       if (error) {
-        console.error(`❌ [Resend Error] Failed to dispatch email to ${to}:`, error.message);
+        console.error(`❌ [Resend Error] Failed to dispatch email to ${toList.join(', ')}:`, error.message);
         throw new Error(error.message || 'Resend send failed');
       }
-      console.log(`📡 [Resend API] Email dispatched successfully to: ${to} (ID: ${data?.id})`);
+      console.log(`📡 [Resend API] Email dispatched successfully to: ${toList.join(', ')} (ID: ${data?.id})`);
       return data;
     } catch (err) {
-      console.error(`❌ [Resend Error] Failed to dispatch email to ${to}:`, err.message);
+      console.error(`❌ [Resend Error] Failed to dispatch email to ${toList.join(', ')}:`, err.message);
       throw err;
     }
   } else if (ENV_CONFIG.mailProvider === 'sendgrid' && ENV_CONFIG.sendgridApiKey && !ENV_CONFIG.sendgridApiKey.includes('mock_key')) {
     // SendGrid fallback
     await sgMail.send({
-      to,
+      to: toList,
       from: senderEmail,
       subject,
       html,
       ...(ccList.length ? { cc: ccList } : {}),
     });
-    console.log(`📡 [SendGrid] Email dispatched successfully to: ${to}`);
+    console.log(`📡 [SendGrid] Email dispatched successfully to: ${toList.join(', ')}`);
   } else {
     // Local development fallback testing loop
     const transporter = nodemailer.createTransport({
@@ -60,14 +73,14 @@ const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
     try {
       const info = await transporter.sendMail({
         from: `"${from || 'Coreknot Sandbox'}" <sandbox@coreknot.io>`,
-        to,
+        to: toList.join(', '),
         subject,
         html,
         ...(ccList.length ? { cc: ccList.join(', ') } : {}),
       });
       console.log(`🧪 [Sandbox Dev] Email simulated. Preview URL: ${nodemailer.getTestMessageUrl(info) || 'N/A'}`);
     } catch (err) {
-      console.log(`🧪 [Sandbox Dev] Mock email dispatch logged for: ${to} - Subject: "${subject}"`);
+      console.log(`🧪 [Sandbox Dev] Mock email dispatch logged for: ${toList.join(', ')} - Subject: "${subject}"`);
     }
   }
 };

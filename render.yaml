@@ -22,7 +22,7 @@ services:
     region: oregon
     plan: starter
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -86,7 +86,7 @@ services:
     region: oregon
     plan: starter
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -139,7 +139,7 @@ services:
     region: oregon
     plan: starter
     rootDir: nestjs-server
-    buildCommand: cd .. && npm ci --workspace=@coreknot/nestjs-server && npm run build --workspace=@coreknot/nestjs-server
+    buildCommand: cd .. && bash scripts/render-build.sh nest
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     autoDeploy: false
@@ -173,7 +173,7 @@ services:
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: node scripts/runDailyBackup.js
     envVars:
       - key: NODE_ENV
@@ -209,7 +209,7 @@ services:
     name: CoreKnot-subscription-reminders
     schedule: "30 3 * * *"
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: node scripts/runSubscriptionReminders.js
     envVars:
       - key: NODE_ENV
@@ -220,7 +220,7 @@ services:
     name: CoreKnot-crm-reach-out-digest
     schedule: "0 19 * * *"
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: node scripts/runCrmReachOutDigest.js
     envVars:
       - key: NODE_ENV
@@ -239,7 +239,7 @@ services:
     name: CoreKnot-keep-warm
     schedule: "*/14 * * * *"
     rootDir: server
-    buildCommand: cd .. && npm ci --omit=dev --workspace=coreknot-server
+    buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: node scripts/keepWarm.js
     envVars:
       - key: NODE_ENV

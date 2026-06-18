@@ -4,6 +4,16 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-18 — Render build ENOTEMPTY fix (cache-safe npm ci)
+
+- **What:** `scripts/render-build.sh` wipes cached `node_modules` then `npm ci`; `render.yaml` + `syncRenderBuildCommands.js` sync Dashboard build settings. Replaces bare `npm install` that failed with ENOTEMPTY on Render cache.
+- **Why:** Production deploy failed — Dashboard still used `npm install` at repo root against 536MB cached node_modules.
+- **Files:** `scripts/render-build.sh`, `scripts/syncRenderBuildCommands.js`, `render.yaml`, `package.json`
+- **Branch:** `main` · **Commit:** (pending)
+- **Ops:** Run `npm run render:sync-build:deploy` with `RENDER_API_KEY`, or set build command manually + clear build cache.
+
+---
+
 ## 2026-06-18 — Projects sidebar badge matches project overdue counts
 
 - **What:** `/api/notifications/status-counts` returns `projects.overdue` and `projects.review`; sidebar Projects badge uses those (not global todo overdue + review sum).

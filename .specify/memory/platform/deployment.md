@@ -47,6 +47,8 @@
 | `CoreKnot-subscription-reminders` | Cron | `runSubscriptionReminders.js` |
 | `CoreKnot-keep-warm` | Cron | `keepWarm.js` every 14 min |
 
+**Build command (all Node services):** `cd .. && bash scripts/render-build.sh api` (or `nest` for NestJS). Never bare `npm install` — Render cache + install causes `ENOTEMPTY`. Sync Dashboard drift: `npm run render:sync-build:deploy` (requires `RENDER_API_KEY`).
+
 > Cron services may exist as blueprint only until provisioned. Use admin **DB Backup** or `npm run backup:daily` as fallback.
 
 ---

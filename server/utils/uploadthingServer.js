@@ -1,16 +1,12 @@
 const { UTApi, UTFile } = require('uploadthing/server');
+const { resolveUploadthingApiKey, validateUploadthingCredentials } = require('./uploadthingCredentials');
 
-let utApiKey;
-try {
-  const tokenData = JSON.parse(Buffer.from(process.env.UPLOADTHING_TOKEN || '', 'base64').toString());
-  utApiKey = tokenData.apiKey;
-} catch {
-  utApiKey = process.env.UPLOADTHING_SECRET;
+const creds = validateUploadthingCredentials();
+if (!creds.ok) {
+  console.error(`[uploadthing] ${creds.message}`);
 }
 
-if (!utApiKey) {
-  console.error('[uploadthing] Missing UPLOADTHING_TOKEN or UPLOADTHING_SECRET — file uploads will fail.');
-}
+const utApiKey = resolveUploadthingApiKey();
 
 const utapi = new UTApi({ apiKey: utApiKey });
 

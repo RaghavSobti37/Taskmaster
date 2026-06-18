@@ -12,7 +12,7 @@ const { setupSentryExpress } = require('../utils/sentry');
 const asyncHandler = require('../middleware/asyncHandler');
 const { apiOk, apiError } = require('../utils/apiResponse');
 const { uploadRateLimit } = require('../middleware/rateLimits');
-const { protect } = require('../middleware/authMiddleware');
+const { protectUploadthingClient } = require('../middleware/uploadthingAuth');
 
 /** Domain mount prefixes — used by startup banner. */
 const API_DOMAINS = [
@@ -161,7 +161,7 @@ function registerRoutes(app) {
     }
     next();
   });
-  app.use('/api/uploadthing', protect);
+  app.use('/api/uploadthing', protectUploadthingClient);
   app.use('/api/uploadthing', uploadRateLimit, createRouteHandler({ router: uploadRouter }));
 
   if (config.NODE_ENV === 'production') {

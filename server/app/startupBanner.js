@@ -4,6 +4,7 @@ const { getApiDomainManifest } = require('./registerRoutes');
 const { CRON_JOBS, QUEUE_WORKERS } = require('../jobs/registry');
 const { isRedisAvailable } = require('../services/backgroundQueue');
 const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('../utils/trackingUrls');
+const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
 const { isSupabaseEnabled, getSupabaseConfig } = require('../config/supabase');
 
 let printed = false;
@@ -66,6 +67,13 @@ function printStartupBanner({ jobsStarted = [], jobsSkipped = 0 } = {}) {
   if (config.isDevelopment) {
     const nestPort = process.env.NESTJS_PORT || '5001';
     console.log(`[BOOT] Strangler: attendance → NestJS :${nestPort} (vite proxy)`);
+  }
+
+  const uploadCreds = validateUploadthingCredentials();
+  if (!uploadCreds.ok) {
+    console.warn(`[BOOT] UploadThing: misconfigured — ${uploadCreds.message}`);
+  } else {
+    console.log(`[BOOT] UploadThing: ready${uploadCreds.appId ? ` — ${uploadCreds.appId}` : ''}`);
   }
 }
 

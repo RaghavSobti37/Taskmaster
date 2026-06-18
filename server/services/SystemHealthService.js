@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
 
 let systemStatus = 'STARTING';
 let failReason = null;
@@ -51,6 +52,20 @@ class SystemHealthService {
       supabaseStatus = 'unknown';
     }
 
+    const uploadCreds = validateUploadthingCredentials();
+    const uploadthing = uploadCreds.ok
+      ? {
+          ok: true,
+          state: 'ready',
+          appId: uploadCreds.appId || null,
+          keyFingerprint: uploadCreds.keyFingerprint || null,
+        }
+      : {
+          ok: false,
+          state: uploadCreds.message?.includes('Missing') ? 'missing' : 'misconfigured',
+          reason: uploadCreds.message,
+        };
+
     return {
       status: systemStatus,
       reason: failReason,
@@ -67,6 +82,7 @@ class SystemHealthService {
           ok: supabaseStatus === 'enabled',
           state: supabaseStatus,
         },
+        uploadthing,
       },
       uptimeSeconds: Math.floor(process.uptime()),
     };

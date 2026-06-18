@@ -67,6 +67,7 @@ export const PAGE_GROUPS = [
     label: 'Admin',
     pages: [
       { key: 'admin_users', label: 'Users', path: '/admin/users' },
+      { key: 'admin_users', label: 'Platform settings', path: '/admin/platform-settings' },
       { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
       { key: 'admin_roles', label: 'Roles', path: '/admin/roles' },
       { key: 'admin_data', label: 'Data Hub', path: '/admin' },

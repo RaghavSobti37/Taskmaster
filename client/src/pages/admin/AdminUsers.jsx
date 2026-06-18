@@ -21,7 +21,7 @@ import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 import {
   useUserDirectory, useCRMStats, useMailStats, useDataHubFolders,
   useUpdateUser, useDeleteUser, useCreateUser,
-  useDepartments
+  useDepartments, usePlatformExclusions,
 } from '../../hooks/useTaskmasterQueries';
 import {
   ADMIN_RIBBON_QUERY_OPTS,
@@ -56,6 +56,7 @@ const AdminUsers = () => {
 
   const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
   const { data: departments = [] } = useDepartments();
+  const { data: platformExclusions = {} } = usePlatformExclusions();
   const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
   const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
   const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
@@ -140,8 +141,8 @@ const AdminUsers = () => {
   }, [confirm, deleteUserMutation]);
 
   const getDeleteBlockReason = useCallback(
-    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser),
-    [currentUser]
+    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser, platformExclusions),
+    [currentUser, platformExclusions]
   );
 
   const filteredUsers = useMemo(() => {

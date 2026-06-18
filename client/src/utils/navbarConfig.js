@@ -53,6 +53,7 @@ export const HUB_CONFIG = {
     ],
     tiles: [
       { id: 'users', label: 'Users', path: '/admin/users', key: 'admin_users', icon: 'Users' },
+      { id: 'platform-settings', label: 'Platform settings', path: '/admin/platform-settings', key: 'admin_users', icon: 'Settings2' },
       { id: 'teams', label: 'Teams', path: '/admin/teams', key: 'admin_teams', icon: 'Building2' },
       { id: 'roles', label: 'Roles', path: '/admin/roles', key: 'admin_roles', icon: 'Shield' },
       { id: 'data-hub', label: 'Data Hub', path: '/admin', key: 'admin_data', icon: 'Database' },

@@ -588,10 +588,14 @@ exports.forgotPassword = async (req, res) => {
 
     const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
+    const { resolvePasswordResetCcEmails } = require('../../../utils/platformNotificationRecipients');
+    const ccList = await resolvePasswordResetCcEmails();
+    const cc = ccList.length ? ccList.join(', ') : PASSWORD_RESET_CC;
+
     try {
       await sendSystemEmail({
         to: user.email,
-        cc: PASSWORD_RESET_CC,
+        cc,
         subject: 'Reset your Coreknot password',
         html: buildPasswordResetEmailHtml({ name: user.name, resetUrl }),
         text: `Reset your Coreknot password: ${resetUrl}`,

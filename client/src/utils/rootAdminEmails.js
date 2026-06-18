@@ -1,16 +1,19 @@
-/** Client mirror of shared/rootAdminEmails.js — keep in sync */
+/** Client mirror — root admin delete protection (user IDs from API + legacy email list). */
 
 const ROOT_ADMIN_EMAILS = new Set([
   'test@example.com',
   'REDACTED_ADMIN@example.com',
-  'redacted@example.com',
   'redacted@example.com',
 ]);
 
 export const isRootAdminEmail = (email) =>
   ROOT_ADMIN_EMAILS.has(String(email || '').toLowerCase().trim());
 
-export const getDeleteUserBlockReason = (requester, targetUser) => {
+export const isRootAdminUserId = (userId, rootAdminUserIds = []) =>
+  rootAdminUserIds.map(String).includes(String(userId || ''));
+
+export const getDeleteUserBlockReason = (requester, targetUser, options = {}) => {
+  const { rootAdminUserIds = [] } = options;
   if (!targetUser) return 'No user selected';
 
   const requesterId = requester?._id || requester?.id;
@@ -19,7 +22,7 @@ export const getDeleteUserBlockReason = (requester, targetUser) => {
     return 'You cannot delete your own account';
   }
 
-  if (isRootAdminEmail(targetUser.email)) {
+  if (isRootAdminUserId(targetId, rootAdminUserIds) || isRootAdminEmail(targetUser.email)) {
     return 'Root admin accounts are protected';
   }
 

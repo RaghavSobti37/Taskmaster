@@ -13,6 +13,14 @@ const BYPASS = bypassOptions('booked-call-rep-lookup');
  * Resolve Satyam User _id from sales department.
  */
 async function resolveSatyamSalesRepId() {
+  const { getBookedCallSalesRepUserId } = require('../../shared/platformUserIds');
+  const { loadPlatformSettings } = require('../services/platformSettingsService');
+  await loadPlatformSettings();
+  const settingsId = getBookedCallSalesRepUserId();
+  if (settingsId && mongoose.Types.ObjectId.isValid(settingsId)) {
+    return new mongoose.Types.ObjectId(settingsId);
+  }
+
   const envId = (process.env.BOOKED_CALL_SALES_REP_ID || process.env.SATYAM_SALES_REP_ID || '').trim();
   if (envId && mongoose.Types.ObjectId.isValid(envId)) {
     return new mongoose.Types.ObjectId(envId);

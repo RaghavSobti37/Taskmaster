@@ -1,18 +1,14 @@
-/** Client mirror of shared/mailTemplateApprovers.js — keep in sync */
-
 import { isAdminUser } from './departmentPermissions';
 
-const MAIL_TEMPLATE_APPROVER_EMAILS = [
-  'redacted-staff@example.com',
-];
+const APPROVER_EMAILS = new Set(['redacted-staff@example.com']);
 
-const MAIL_TEMPLATE_APPROVER_SET = new Set(
-  MAIL_TEMPLATE_APPROVER_EMAILS.map((e) => e.trim().toLowerCase())
-);
+export const canApproveMailTemplates = (user, options = {}) => {
+  if (!user) return false;
+  if (isAdminUser(user)) return true;
 
-export const isMailTemplateApproverEmail = (email) =>
-  MAIL_TEMPLATE_APPROVER_SET.has(String(email || '').trim().toLowerCase());
+  const { mailTemplateApproverUserIds = [] } = options;
+  const userId = String(user._id || user.id || '');
+  if (mailTemplateApproverUserIds.map(String).includes(userId)) return true;
 
-/** Admin department or named mail template approvers. */
-export const canApproveMailTemplates = (user) =>
-  isAdminUser(user) || isMailTemplateApproverEmail(user?.email);
+  return APPROVER_EMAILS.has(String(user.email || '').trim().toLowerCase());
+};

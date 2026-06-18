@@ -15,6 +15,7 @@ import {
   useApproveMailTemplate,
   useRejectMailTemplate,
   useDeleteMailTemplate,
+  usePlatformExclusions,
 } from '../../hooks/useTaskmasterQueries';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -87,8 +88,9 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { user } = useAuth();
+  const { data: platformExclusions = {} } = usePlatformExclusions();
   const isAdmin = isAdminUser(user);
-  const canApprove = canApproveMailTemplates(user);
+  const canApprove = canApproveMailTemplates(user, platformExclusions);
 
   const {
     data: allTemplates = [],

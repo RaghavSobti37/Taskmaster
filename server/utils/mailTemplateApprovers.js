@@ -1,10 +1,9 @@
-const { isMailTemplateApproverEmail } = require('../../shared/mailTemplateApprovers');
+const { isMailTemplateApproverUser } = require('../../shared/platformUserIds');
 const { isAdminUser } = require('./departmentPermissions');
 
 const canApproveMailTemplates = (user) =>
-  isAdminUser(user) || isMailTemplateApproverEmail(user?.email);
+  isAdminUser(user) || isMailTemplateApproverUser(user);
 
 module.exports = {
   canApproveMailTemplates,
-  isMailTemplateApproverEmail,
 };

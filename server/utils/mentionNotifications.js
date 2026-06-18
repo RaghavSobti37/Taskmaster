@@ -71,6 +71,7 @@ const buildMentionNotifications = async ({
 
   const { isQaProbeActive } = require('./qaProbeContext');
   const { userMatchesQaExclusion } = require('../../shared/qaExcludedUsers');
+  const { isQaExcludedUser } = require('../../shared/platformUserIds');
   const qaActive = isQaProbeActive();
 
   for (const label of addedLabels) {
@@ -78,7 +79,7 @@ const buildMentionNotifications = async ({
     if (!mentioned) continue;
 
     const recipientId = mentioned._id.toString();
-    if (qaActive && userMatchesQaExclusion(mentioned)) continue;
+    if (qaActive && (userMatchesQaExclusion(mentioned) || isQaExcludedUser(mentioned))) continue;
     if (recipientId === actorId) continue;
     if (task && skipAssignees && assigneeSet.has(recipientId)) continue;
     if (notified.has(recipientId)) continue;

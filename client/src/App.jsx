@@ -109,6 +109,7 @@ const NotesPage = lazyWithRetry(() => import('./pages/notes/NotesPage'));
 const NoteEditorPage = lazyWithRetry(() => import('./pages/notes/NoteEditorPage'));
 import ArtistPathPage from './pages/admin/ArtistPathPage';
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
+const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPlatformSettings'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
@@ -277,6 +278,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
               </Route>
               <Route element={<PageRoute page="admin_teams" />}>
                 <Route path="/admin/teams" element={<AdminTeamsPage />} />

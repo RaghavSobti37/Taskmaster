@@ -11,7 +11,7 @@ const { buildUserMonthlyReport } = require('../../../services/monthlyReportServi
 const { validatePasswordStrength, generateSecurePassword } = require('../../../utils/passwordValidation');
 const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
-const { isRootAdminEmail } = require('../../../../shared/rootAdminEmails');
+const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
@@ -32,7 +32,7 @@ async function validateDepartmentAssignment(departmentId, requester) {
 }
 
 async function ensureRootAdminDepartment(user, departmentId) {
-  if (!isRootAdminEmail(user.email)) return null;
+  if (!isProtectedRootAdmin(user)) return null;
   const adminDept = await Department.findOne({ slug: ADMIN_SLUG });
   if (!adminDept) return 'Admin department not configured';
   if (departmentId && departmentId.toString() !== adminDept._id.toString()) {
@@ -265,7 +265,7 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (isRootAdminEmail(targetUser.email)) {
+    if (isProtectedRootAdmin(targetUser)) {
       return res.status(403).json({ error: 'Root admin accounts are protected' });
     }
 

@@ -1,10 +1,17 @@
 const { canApproveMailTemplates } = require('../utils/mailTemplateApprovers');
 const { hasPageAccess } = require('../utils/pagePermissions');
+const { setRuntimePlatformSettings } = require('../../shared/platformUserIds');
 
 describe('mail template approvers', () => {
-  test('Harshika can approve mail templates', () => {
+  const APPROVER_ID = 'cccccccccccccccccccccccc';
+
+  beforeEach(() => {
+    setRuntimePlatformSettings({ mailTemplateApproverUserIds: [APPROVER_ID] });
+  });
+
+  test('platform settings approver can approve mail templates', () => {
     expect(
-      canApproveMailTemplates({ email: 'redacted-staff@example.com', departmentId: { slug: 'sales' } })
+      canApproveMailTemplates({ _id: APPROVER_ID, departmentId: { slug: 'sales' } })
     ).toBe(true);
   });
 

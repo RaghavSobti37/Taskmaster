@@ -181,10 +181,12 @@ const parseRecipientEmails = (raw) => {
   )];
 };
 
-const getRecipientEmails = () =>
-  parseRecipientEmails(process.env.CRM_REACH_OUT_DIGEST_EMAIL || process.env.ADMIN_EMAIL || '');
+const getRecipientEmails = async () => {
+  const { resolveCrmDigestRecipientEmails } = require('../utils/platformNotificationRecipients');
+  return resolveCrmDigestRecipientEmails();
+};
 
-const getRecipientEmail = () => getRecipientEmails().join(', ');
+const getRecipientEmail = async () => (await getRecipientEmails()).join(', ');
 
 const getFromEmail = () => {
   const raw = (
@@ -525,7 +527,7 @@ async function runCrmReachOutDigest(options = {}) {
 
   const recipients = recipientOverride
     ? parseRecipientEmails(recipientOverride)
-    : getRecipientEmails();
+    : await getRecipientEmails();
   if (!recipients.length) {
     logger.warn('CrmReachOutDigest', 'No CRM_REACH_OUT_DIGEST_EMAIL configured');
     return { sent: false, reason: 'missing_recipient' };

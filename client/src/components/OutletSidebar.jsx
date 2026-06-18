@@ -95,7 +95,7 @@ const PAGE_CONFIG = {
     icon: Shield,
     label: 'Admin',
     accessKey: 'admin_console',
-    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
+    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
     end: true,
   },
 };

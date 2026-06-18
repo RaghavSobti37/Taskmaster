@@ -53,6 +53,12 @@ export const useDeleteTeam = () => {
   });
 };
 
+export const usePlatformExclusions = () => useQuery({
+  queryKey: ['platform-exclusions'],
+  queryFn: async () => (await axios.get('/api/admin/platform-settings/exclusions')).data,
+  staleTime: 1000 * 60 * 5,
+});
+
 const useUpdateUserDepartment = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -71,6 +71,22 @@ const getAutoProjectMemberUserIds = () =>
 
 const getQaAdminUserId = () => singleIdFor('qaAdminUserId', 'QA_ADMIN_USER_ID');
 
+const getCrmDigestRecipientUserIds = () =>
+  idsFor('crmDigestRecipientUserIds', 'CRM_DIGEST_RECIPIENT_USER_IDS');
+
+const getBackupNotifyUserIds = () => idsFor('backupNotifyUserIds', 'BACKUP_NOTIFY_USER_IDS');
+
+const getSubscriptionReminderFallbackUserIds = () =>
+  idsFor('subscriptionReminderFallbackUserIds', 'SUBSCRIPTION_REMINDER_FALLBACK_USER_IDS');
+
+const getPasswordResetCcUserIds = () => idsFor('passwordResetCcUserIds', 'PASSWORD_RESET_CC_USER_IDS');
+
+const getPrimaryCallAssigneeUserId = () =>
+  singleIdFor('primaryCallAssigneeUserId', 'PRIMARY_CALL_ASSIGNEE_ID');
+
+const getBookedCallSalesRepUserId = () =>
+  singleIdFor('bookedCallSalesRepUserId', 'BOOKED_CALL_SALES_REP_ID');
+
 module.exports = {
   OBJECT_ID_RE,
   parseUserIdList,
@@ -88,4 +104,10 @@ module.exports = {
   isMailTemplateApproverUser,
   getAutoProjectMemberUserIds,
   getQaAdminUserId,
+  getCrmDigestRecipientUserIds,
+  getBackupNotifyUserIds,
+  getSubscriptionReminderFallbackUserIds,
+  getPasswordResetCcUserIds,
+  getPrimaryCallAssigneeUserId,
+  getBookedCallSalesRepUserId,
 };

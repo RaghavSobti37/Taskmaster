@@ -24,8 +24,8 @@ import {
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
 import { DataHubContent } from './DataHubPage';
-import { 
-  useUserDirectory, useTeams, useCRMStats, useMailStats, useDataHubFolders, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
+import {
+  useUserDirectory, useTeams, useCRMStats, useMailStats, useDataHubFolders, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, usePlatformExclusions
 } from '../../hooks/useTaskmasterQueries';
 import {
   ADMIN_RIBBON_QUERY_OPTS,
@@ -62,6 +62,7 @@ const AdminPanel = () => {
   const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
   const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
   const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
+  const { data: platformExclusions = {} } = usePlatformExclusions();
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -120,8 +121,8 @@ const AdminPanel = () => {
   }, [confirm, deleteUserMutation, toast]);
 
   const getDeleteBlockReason = useCallback(
-    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser),
-    [currentUser]
+    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser, platformExclusions),
+    [currentUser, platformExclusions]
   );
 
   const handleCreateTeam = useCallback(async () => {

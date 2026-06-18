@@ -24,8 +24,11 @@ const formatInr = (amount) =>
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const getNotifyEmail = () =>
-  (process.env.SUBSCRIPTION_REMINDERS_EMAIL || process.env.ADMIN_EMAIL || '').trim();
+const getNotifyEmail = async () => {
+  const { resolveSubscriptionFallbackEmails } = require('../utils/platformNotificationRecipients');
+  const emails = await resolveSubscriptionFallbackEmails();
+  return emails.join(', ');
+};
 
 const getFromEmail = () => {
   const raw = (process.env.SUBSCRIPTION_FROM_EMAIL || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'noreply@theshakticollective.in').trim();
@@ -51,7 +54,7 @@ const buildReminderHtml = (subscription, usedByName) => `
   </div>
 `;
 
-const resolveRecipients = async (subscription, fallbackEmail) => {
+const resolveRecipients = async (subscription, fallbackEmails = []) => {
   const entries = Array.isArray(subscription.usedBy)
     ? subscription.usedBy
     : subscription.usedBy
@@ -72,7 +75,7 @@ const resolveRecipients = async (subscription, fallbackEmail) => {
 
   const unique = [...new Set(emails.filter(Boolean))];
   if (unique.length) return unique;
-  return fallbackEmail ? [fallbackEmail] : [];
+  return [...new Set((fallbackEmails || []).filter(Boolean))];
 };
 
 const formatUsedByNames = (usedBy) => {
@@ -92,14 +95,15 @@ const normalizeUsedByOnDoc = (subscription) => {
 };
 
 const runSubscriptionReminders = async () => {
+  const { resolveSubscriptionFallbackEmails } = require('../utils/platformNotificationRecipients');
   const today = startOfDay(new Date());
   const targetDueDate = addDays(today, REMINDER_DAYS);
   const targetEnd = new Date(targetDueDate);
   targetEnd.setHours(23, 59, 59, 999);
 
-  const fallbackEmail = getNotifyEmail();
-  if (!fallbackEmail) {
-    logger.warn('SubscriptionReminders', 'No SUBSCRIPTION_REMINDERS_EMAIL or ADMIN_EMAIL configured');
+  const fallbackEmails = await resolveSubscriptionFallbackEmails();
+  if (!fallbackEmails.length) {
+    logger.warn('SubscriptionReminders', 'No subscription fallback recipients configured');
     return { sent: 0, skipped: 0, reason: 'missing_recipient' };
   }
 
@@ -119,7 +123,7 @@ const runSubscriptionReminders = async () => {
 
   for (const subscription of dueSoon) {
     normalizeUsedByOnDoc(subscription);
-    const recipients = await resolveRecipients(subscription, fallbackEmail);
+    const recipients = await resolveRecipients(subscription, fallbackEmails);
     if (!recipients.length) {
       skipped += 1;
       continue;

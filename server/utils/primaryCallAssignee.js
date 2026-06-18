@@ -27,6 +27,14 @@ async function findUserByPatterns(patterns, deptSlug = null) {
  * Defaults to Akash in artist-management, then sales.
  */
 async function resolvePrimaryCallAssigneeId() {
+  const { getPrimaryCallAssigneeUserId } = require('../../shared/platformUserIds');
+  const { loadPlatformSettings } = require('../services/platformSettingsService');
+  await loadPlatformSettings();
+  const settingsId = getPrimaryCallAssigneeUserId();
+  if (settingsId && mongoose.Types.ObjectId.isValid(settingsId)) {
+    return new mongoose.Types.ObjectId(settingsId);
+  }
+
   const envId = process.env.PRIMARY_CALL_ASSIGNEE_ID;
   if (envId && mongoose.Types.ObjectId.isValid(envId)) {
     return new mongoose.Types.ObjectId(envId);

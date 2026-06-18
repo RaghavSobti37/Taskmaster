@@ -357,12 +357,14 @@ exports.createProject = async (req, res) => {
       mergeMemberEntry(providedMembers, providedRoles, req.user._id, 'admin');
     }
 
-    // Ensure redacted-staff@example.com is automatically added to all new projects
-    const deepank = await User.findOne({ email: 'redacted-staff@example.com' });
-    if (deepank) {
-      const deepankIdStr = deepank._id.toString();
-      if (!providedMembers.some((m) => memberIdStr(m) === deepankIdStr)) {
-        mergeMemberEntry(providedMembers, providedRoles, deepank._id, 'artist_management');
+    // Auto project members from PlatformSettings (fallback: env AUTO_PROJECT_MEMBER_USER_IDS)
+    const { getAutoProjectMemberUserIds } = require('../../../shared/platformUserIds');
+    const { loadPlatformSettings } = require('../../../services/platformSettingsService');
+    await loadPlatformSettings();
+    const autoMemberIds = getAutoProjectMemberUserIds();
+    for (const memberId of autoMemberIds) {
+      if (!providedMembers.some((m) => memberIdStr(m) === String(memberId))) {
+        mergeMemberEntry(providedMembers, providedRoles, memberId, 'artist_management');
       }
     }
 

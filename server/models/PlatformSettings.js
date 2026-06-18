@@ -10,6 +10,12 @@ const platformSettingsSchema = new mongoose.Schema(
     mailTemplateApproverUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     autoProjectMemberUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     qaAdminUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    crmDigestRecipientUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    backupNotifyUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    subscriptionReminderFallbackUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    passwordResetCcUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    primaryCallAssigneeUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    bookedCallSalesRepUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

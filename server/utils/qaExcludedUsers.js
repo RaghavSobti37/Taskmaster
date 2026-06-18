@@ -5,13 +5,21 @@ const {
   qaExcludedEmailNinFilter,
   QA_EXCLUDED_EMAILS,
 } = require('../../shared/qaExcludedUsers');
+const { isQaExcludedUser, getQaExcludedUserIds } = require('../../shared/platformUserIds');
 const { isQaProbeActive } = require('./qaProbeContext');
 
 let excludedIdCache = null;
 
 async function refreshExcludedUserIds() {
-  const matched = await User.find({ email: { $in: QA_EXCLUDED_EMAILS } }).select('_id email').lean();
-  excludedIdCache = new Set(matched.map((u) => u._id.toString()));
+  const emailMatched = await User.find({ email: { $in: QA_EXCLUDED_EMAILS } })
+    .select('_id email')
+    .lean();
+  const platformIds = getQaExcludedUserIds();
+  const idSet = new Set([
+    ...emailMatched.map((u) => u._id.toString()),
+    ...platformIds.map(String),
+  ]);
+  excludedIdCache = idSet;
   return excludedIdCache;
 }
 
@@ -22,6 +30,7 @@ async function getExcludedUserIds() {
 
 async function isQaExcludedUserId(userId) {
   if (!userId) return false;
+  if (isQaExcludedUser({ _id: userId })) return true;
   const ids = await getExcludedUserIds();
   return ids.has(userId.toString());
 }
@@ -33,7 +42,7 @@ async function shouldSuppressNotificationForRecipient(recipientId) {
 }
 
 function pickFirstNonExcludedUser(users = []) {
-  return users.find((u) => u && !userMatchesQaExclusion(u)) || null;
+  return users.find((u) => u && !userMatchesQaExclusion(u) && !isQaExcludedUser(u)) || null;
 }
 
 module.exports = {

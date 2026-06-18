@@ -13,8 +13,11 @@ const formatBytes = (bytes) => {
   return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 };
 
-const getNotifyEmail = () =>
-  (process.env.BACKUP_NOTIFY_EMAIL || process.env.ADMIN_EMAIL || '').trim();
+const getNotifyEmail = async () => {
+  const { resolveBackupNotifyEmails } = require('../utils/platformNotificationRecipients');
+  const emails = await resolveBackupNotifyEmails();
+  return emails.join(', ');
+};
 
 const getFromEmail = () => {
   const raw = (process.env.BACKUP_FROM_EMAIL || 'noreply@theshakticollective.in').trim();
@@ -81,7 +84,7 @@ const buildFailureHtml = (result) => `
 `;
 
 const notifyBackupResult = async (result) => {
-  const to = getNotifyEmail();
+  const to = await getNotifyEmail();
   if (!to) {
     logger.warn('BackupNotify', 'No BACKUP_NOTIFY_EMAIL or ADMIN_EMAIL configured; skipping email');
     return { sent: false, reason: 'missing_recipient' };

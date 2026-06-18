@@ -99,6 +99,7 @@ const DEPARTMENT_PRESETS = {
     { id: 'data-hub', label: 'Data Hub', icon: 'Database', path: '/admin', type: 'nav', shortcut: 'G H' },
     { id: 'admin-console', label: 'Admin Console', icon: 'Database', path: '/admin/console', type: 'nav', shortcut: 'G B' },
     { id: 'users', label: 'Users', icon: 'Users', path: '/admin/users', type: 'nav', shortcut: 'G U' },
+    { id: 'platform-settings', label: 'Platform settings', icon: 'Settings2', path: '/admin/platform-settings', type: 'nav' },
     { id: 'roles', label: 'Roles', icon: 'Shield', path: '/admin/roles', type: 'nav' },
     { id: 'inbox', label: 'Inbox', icon: 'Inbox', path: '/inbox', type: 'nav', shortcut: 'G I' },
     { id: 'dash', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', type: 'nav', shortcut: 'G D' },

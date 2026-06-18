@@ -1,13 +1,7 @@
 const FinanceDocument = require('../models/FinanceDocument');
 const Project = require('../models/Project');
-const axios = require('axios');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
-
-/** Lazy-load OCR stack (pdf-parse/tesseract) — avoids Jest native handle leaks at import. */
-async function runDocumentOcr(buffer, mimeType) {
-  const { parseDocument } = require('../utils/documentParser');
-  return parseDocument(buffer, mimeType);
-}
+const { scheduleFinanceDocumentOcr } = require('../utils/financeOcr');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
 const { getNextReferenceNumbers, createReferenceAllocator } = require('../services/financeReferenceService');
 const {
@@ -48,22 +42,6 @@ const uploadDocument = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
-    // Run OCR parsing if URL is provided
-    let extractedText = '';
-    let docMetadata = {};
-    if (fileUrl) {
-      try {
-        const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
-        const parsed = await runDocumentOcr(buffer, mimeType);
-        extractedText = parsed.extractedText;
-        docMetadata = parsed.metadata;
-      } catch (err) {
-        console.error('Error parsing document for OCR:', err);
-      }
-    }
-
     let docReference = (referenceNumber || '').trim();
     if (!docReference) {
       [docReference] = await getNextReferenceNumbers(project, 1);
@@ -74,7 +52,7 @@ const uploadDocument = async (req, res) => {
       description: description || '',
       project,
       folderId: folderId || null,
-      category: category || docMetadata.detectedCategory || 'other',
+      category: category || 'other',
       referenceNumber: docReference,
       fileUrl,
       fileKey,
@@ -82,18 +60,20 @@ const uploadDocument = async (req, res) => {
       fileSize,
       fileType,
       uploadedBy: req.user._id,
-      extractedText,
+      extractedText: '',
       metadata: {
-        amount: docMetadata.amount || 0,
-        currency: docMetadata.currency || 'INR',
-        vendor: docMetadata.vendor || '',
-        date: docMetadata.date || null,
-        tax: docMetadata.tax || 0,
-        detectedCategory: docMetadata.detectedCategory || 'other'
-      }
+        amount: 0,
+        currency: 'INR',
+        vendor: '',
+        date: null,
+        tax: 0,
+        detectedCategory: category || 'other',
+      },
     });
 
     await doc.save();
+
+    scheduleFinanceDocumentOcr(doc._id, { fileUrl, fileType, fileName, fileSize });
 
     const populated = await populateFinanceDoc(doc._id);
 
@@ -123,19 +103,6 @@ const uploadDocumentsBulk = async (req, res) => {
         if (!folder) continue;
       }
 
-      let extractedText = '';
-      let docMetadata = {};
-      try {
-        const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
-        const parsed = await runDocumentOcr(buffer, mimeType);
-        extractedText = parsed.extractedText;
-        docMetadata = parsed.metadata;
-      } catch (err) {
-        console.error('Error parsing document for OCR in bulk:', err);
-      }
-
       const docReference = await allocateReference(project, referenceNumber);
 
       const doc = new FinanceDocument({
@@ -143,7 +110,7 @@ const uploadDocumentsBulk = async (req, res) => {
         description: description || '',
         project,
         folderId: folderId || null,
-        category: category || docMetadata.detectedCategory || 'other',
+        category: category || 'other',
         referenceNumber: docReference,
         fileUrl,
         fileKey,
@@ -151,18 +118,19 @@ const uploadDocumentsBulk = async (req, res) => {
         fileSize,
         fileType,
         uploadedBy: req.user._id,
-        extractedText,
+        extractedText: '',
         metadata: {
-          amount: docMetadata.amount || 0,
-          currency: docMetadata.currency || 'INR',
-          vendor: docMetadata.vendor || '',
-          date: docMetadata.date || null,
-          tax: docMetadata.tax || 0,
-          detectedCategory: docMetadata.detectedCategory || 'other'
-        }
+          amount: 0,
+          currency: 'INR',
+          vendor: '',
+          date: null,
+          tax: 0,
+          detectedCategory: category || 'other',
+        },
       });
 
       await doc.save();
+      scheduleFinanceDocumentOcr(doc._id, { fileUrl, fileType, fileName, fileSize });
       savedDocs.push(doc._id);
     }
 

@@ -225,15 +225,43 @@ function parseMetadataFromText(text) {
   return metadata;
 }
 
+const EMPTY_METADATA = {
+  amount: 0,
+  currency: 'INR',
+  vendor: '',
+  date: null,
+  tax: 0,
+  detectedCategory: 'other',
+};
+
+function getParseMaxBytes() {
+  const configured = Number(process.env.FINANCE_OCR_MAX_BYTES);
+  return Number.isFinite(configured) && configured > 0 ? configured : 8 * 1024 * 1024;
+}
+
+function shouldSkipImageOcr() {
+  return process.env.FINANCE_SKIP_IMAGE_OCR === '1' || process.env.RENDER === 'true';
+}
+
 /**
  * Main parse function. Detects type and extracts data.
  */
-async function parseDocument(fileBuffer, mimeType) {
-  let extractedText = '';
+async function parseDocument(fileBuffer, mimeType, options = {}) {
+  const maxBytes = getParseMaxBytes();
+  const size = options.fileSize ?? fileBuffer?.length ?? 0;
+  if (size > maxBytes) {
+    return { extractedText: '', metadata: { ...EMPTY_METADATA } };
+  }
 
-  if (mimeType?.includes('pdf')) {
+  let extractedText = '';
+  const normalizedMime = String(mimeType || '').toLowerCase();
+
+  if (normalizedMime.includes('pdf') || /\.pdf$/i.test(normalizedMime)) {
     extractedText = await extractTextFromPDF(fileBuffer);
-  } else if (mimeType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(mimeType)) {
+  } else if (normalizedMime.includes('image') || /\.(png|jpe?g|webp)$/i.test(normalizedMime)) {
+    if (shouldSkipImageOcr()) {
+      return { extractedText: '', metadata: { ...EMPTY_METADATA } };
+    }
     extractedText = await extractTextFromImage(fileBuffer);
   }
 
@@ -241,7 +269,7 @@ async function parseDocument(fileBuffer, mimeType) {
 
   return {
     extractedText,
-    metadata
+    metadata,
   };
 }
 

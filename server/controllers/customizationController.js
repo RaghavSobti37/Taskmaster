@@ -15,6 +15,10 @@ const {
 } = require('../utils/dashboardComponents');
 const { hasPageAccess, hasAnyPageAccess } = require('../utils/pagePermissions');
 const { isLegacyNavbarGroups, migrateLegacyNavbarGroups } = require('../utils/navbarMigration');
+const {
+  findOrCreateNavbarPreference,
+  upsertNavbarPreference,
+} = require('../utils/navbarPreferenceService');
 
 const HUB_PATH_CHILD_KEYS = {
   '/crm': ['leads', 'followups', 'bookings'],
@@ -433,16 +437,7 @@ exports.getNavbarPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
 
-    let preferences = await NavbarPreference.findOneAndUpdate(
-      { userId },
-      {
-        $setOnInsert: {
-          userId,
-          groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS,
-        },
-      },
-      { new: true, upsert: true }
-    );
+    let preferences = await findOrCreateNavbarPreference(userId);
 
     if (preferences.pageOrder && !preferences.groups?.length) {
       preferences = await NavbarPreference.findOneAndUpdate(
@@ -507,14 +502,10 @@ exports.saveNavbarPreferences = async (req, res, next) => {
       req.user
     );
 
-    const preferences = await NavbarPreference.findOneAndUpdate(
-      { userId },
-      {
-        groups: sortedGroups,
-        updatedAt: new Date()
-      },
-      { new: true, upsert: true }
-    );
+    const preferences = await upsertNavbarPreference(userId, {
+      groups: sortedGroups,
+      updatedAt: new Date(),
+    });
 
     res.json(preferences);
   } catch (error) {
@@ -528,14 +519,10 @@ exports.resetNavbarToDefaults = async (req, res, next) => {
   try {
     const userId = req.user._id;
 
-    const preferences = await NavbarPreference.findOneAndUpdate(
-      { userId },
-      {
-        groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS,
-        updatedAt: new Date()
-      },
-      { new: true, upsert: true }
-    );
+    const preferences = await upsertNavbarPreference(userId, {
+      groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS,
+      updatedAt: new Date(),
+    });
 
     const response = preferences.toObject ? preferences.toObject() : preferences;
     response.groups = filterNavbarGroupsForUser(response.groups, req.user);

@@ -16,14 +16,25 @@ const ArtistMetricsSchema = new mongoose.Schema({
     },
     instagram: {
       followers: { type: Number, default: 0 },
+      engagementRate: { type: Number, default: 0 },
+      avgLikes: { type: Number, default: 0 },
+      likesGrowth: { type: Number, default: 0 },
       reelsPerformance: {
         views: { type: Number, default: 0 },
+        likes: { type: Number, default: 0 },
+        comments: { type: Number, default: 0 },
         saves: { type: Number, default: 0 },
         shares: { type: Number, default: 0 }
       },
+      stories: {
+        reach: { type: Number, default: 0 },
+        impressions: { type: Number, default: 0 }
+      },
       followerVelocity: { type: Number, default: 0 },
       audienceQuality: { type: Number, default: 0 },
-      profileVisitRatio: { type: Number, default: 0 }
+      profileVisitRatio: { type: Number, default: 0 },
+      demographics: { type: mongoose.Schema.Types.Mixed, default: {} },
+      mastersheetImportedAt: { type: Date }
     },
     spotify: {
       monthlyListeners: { type: Number, default: 0 },

@@ -14,7 +14,7 @@
     }
   ],
   "buildCommand": "npm run vercel-build",
-  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd .. && rm -rf node_modules client/node_modules && npm install -g npm@11 && npm install --legacy-peer-deps -w CoreKnot-client",
+  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd .. && rm -rf node_modules client/node_modules && npx --yes npm@11 install --legacy-peer-deps -w CoreKnot-client",
   "env": {
     "VERCEL_FORCE_NO_BUILD_CACHE": "1"
   }

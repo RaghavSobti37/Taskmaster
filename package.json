@@ -2,6 +2,7 @@
   "name": "coreknot",
   "private": true,
   "version": "1.0.7",
+  "packageManager": "npm@11.13.0",
   "description": "CoreKnot monorepo — client + server",
   "workspaces": [
     "client",

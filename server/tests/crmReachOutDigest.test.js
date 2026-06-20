@@ -4,7 +4,6 @@ const {
   resolveLeadDealValue,
   formatLakhs,
   buildDigestHtml,
-  REP_SECTIONS,
 } = require('../services/crmReachOutDigestService');
 
 describe('crmReachOutDigestService', () => {
@@ -79,29 +78,54 @@ describe('crmReachOutDigestService', () => {
           progressPct: 24,
         },
       },
-      sections: REP_SECTIONS.map((sectionMeta) => ({
-        sectionMeta,
-        repUser: { name: sectionMeta.key === 'akash' ? 'Akash' : 'Satyam Mishra' },
-        dailyStats: {
-          callsMade: 12,
-          connected: 5,
-          meaningful: 3,
-          converted: 1,
-          busy: 2,
-          dnp: 4,
-          followupsSet: 6,
-          notesAdded: 2,
-          leadsTouched: 14,
+      sections: [
+        {
+          sectionMeta: { key: 'artist', title: 'Artist Calls', subtitle: 'Artist CRM', crmType: 'artist' },
+          repUser: { name: 'Artist Rep' },
+          dailyStats: {
+            callsMade: 12,
+            connected: 5,
+            meaningful: 3,
+            converted: 1,
+            busy: 2,
+            dnp: 4,
+            followupsSet: 6,
+            notesAdded: 2,
+            leadsTouched: 14,
+          },
+          pipelineStats: {
+            totalLeads: 100,
+            connected: 20,
+            meaningful: 15,
+            warmLeads: 15,
+            converted: 8,
+            conversionRate: 8,
+          },
         },
-        pipelineStats: {
-          totalLeads: 100,
-          connected: 20,
-          meaningful: 15,
-          warmLeads: 15,
-          converted: 8,
-          conversionRate: 8,
+        {
+          sectionMeta: { key: 'sales-1', title: 'Sales & Other Calls', subtitle: 'Sales CRM', crmType: 'sales' },
+          repUser: { name: 'Sales Rep' },
+          dailyStats: {
+            callsMade: 12,
+            connected: 5,
+            meaningful: 3,
+            converted: 1,
+            busy: 2,
+            dnp: 4,
+            followupsSet: 6,
+            notesAdded: 2,
+            leadsTouched: 14,
+          },
+          pipelineStats: {
+            totalLeads: 100,
+            connected: 20,
+            meaningful: 15,
+            warmLeads: 15,
+            converted: 8,
+            conversionRate: 8,
+          },
         },
-      })),
+      ],
     });
     expect(html).toContain('Artist Calls');
     expect(html).toContain('Sales &amp; Other Calls');

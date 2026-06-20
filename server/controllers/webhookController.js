@@ -3,7 +3,7 @@ const Lead = require('../models/Lead');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep, leadService: LeadService } = require('../domains/crm/crmFacade');
-const { assignNextBookedCallRep } = require('../utils/bookedCallRepAssignment');
+const { assignNextBookedCallRep, resolveBookedCallRepPhone } = require('../utils/bookedCallRepAssignment');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../domains/artists/artistFacade');
 const { processArtistPathWebhook } = require('../domains/artists/services/artistPathImportService');
@@ -20,8 +20,10 @@ const { sendAiSensyMessage } = require('../utils/aisensyClient');
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
+const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
 
 const REP_BYPASS = bypassOptions('book-call-rep-fetch');
+const LEAD_BYPASS = bypassOptions('book-call-lead-lookup');
 
 async function sendBookedCallNotifications(data, rep, lead, istDateStr, istTimeDisplay) {
   const { name, phone, whatsapp, course } = data;
@@ -52,9 +54,10 @@ async function sendBookedCallNotifications(data, rep, lead, istDateStr, istTimeD
     name,
   );
 
-  if (rep?.phone) {
+  const repPhone = rep?._id ? await resolveBookedCallRepPhone(rep._id) : null;
+  if (repPhone && rep?.name) {
     await sendAiSensyMessage(
-      rep.phone,
+      repPhone,
       'sales_rep_new_booking_alert',
       [rep.name.split(' ')[0], name, course, istDateStr, istTimeDisplay],
       {
@@ -114,11 +117,11 @@ exports.processBookedCallLogic = async (data, options = {}) => {
     const normalizedPhone = identity.phone;
 
     // 1. Assign Rep (Only if new lead or lead has no rep)
-    const leadLookup = { $or: [] };
+    const leadLookup = { crmType: CRM_TYPES.SALES, $or: [] };
     if (normalizedEmail) leadLookup.$or.push({ email: normalizedEmail });
     if (normalizedPhone) leadLookup.$or.push({ phone: normalizedPhone });
     let lead = leadLookup.$or.length
-      ? await Lead.findOne(leadLookup)
+      ? await Lead.findOne(leadLookup).setOptions(LEAD_BYPASS)
       : null;
     let rep = null;
 
@@ -188,6 +191,7 @@ exports.processBookedCallLogic = async (data, options = {}) => {
 
     // 2. Upsert Lead in CRM
     const leadData = {
+      crmType: CRM_TYPES.SALES,
       name: normalizedName,
       nameKey: identity.nameKey,
       phone: normalizedPhone,
@@ -236,7 +240,13 @@ exports.processBookedCallLogic = async (data, options = {}) => {
       });
     }
 
-    return { success: true, message: 'Call booked in CRM', leadId: lead._id };
+    return {
+      success: true,
+      message: 'Call booked in CRM',
+      leadId: lead._id,
+      assignedRepId: rep._id,
+      assignedRepName: rep.name,
+    };
   } catch (error) {
     console.error('Webhook Processing Error:', error);
     throw error; // Let BullMQ handle retry
@@ -358,6 +368,8 @@ exports.handleBookedCall = async (req, res) => {
       success: true,
       message: 'Call booked in CRM',
       leadId: result?.leadId,
+      assignedRepId: result?.assignedRepId,
+      assignedRepName: result?.assignedRepName,
     });
   } catch (error) {
     console.error('Book-call webhook error:', error);

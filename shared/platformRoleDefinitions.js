@@ -113,9 +113,9 @@ const CRM_ROUTING_FIELDS = [
   {
     key: 'bookedCallSalesRepUserId',
     section: 'crm',
-    label: 'Sales call rep',
+    label: 'Sales call rep (legacy)',
     description:
-      'Website book-a-call + sales CRM section in daily digest. Replaces BOOKED_CALL_SALES_REP_ID.',
+      'Optional digest-only override. Website book-a-call uses round-robin across all users in the Sales department.',
     multiple: false,
     envFallback: 'BOOKED_CALL_SALES_REP_ID',
   },

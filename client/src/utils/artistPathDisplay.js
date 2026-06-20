@@ -30,7 +30,7 @@ export const QUESTION_GROUPS = [
   },
   {
     title: 'Goals & support',
-    keys: ['learningNeeds', 'mentorshipNeeds', 'curationNeeds', 'fandomNeeds', 'aspirationalGoal'],
+    keys: ['learningNeeds', 'mentorshipNeeds', 'curationNeeds', 'fandomNeeds', 'aspirationalGoal', 'anythingElse'],
   },
   {
     title: 'Legacy fields',

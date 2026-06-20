@@ -234,11 +234,14 @@ async function processArtistEnquiryLogic(data) {
 
       if (assigneeId) {
         createNotification({
-          userId: assigneeId,
-          type: 'system',
+          recipientId: assigneeId,
+          category: 'crm',
+          type: 'alert',
           title: 'New artist booking enquiry',
           message: `${normalized.name} — ${artistProject}`,
+          relatedLeadId: leadId,
           actionUrl: buildLeadActionUrl(lead._id),
+          sendEmail: true,
         }).catch(() => {});
       }
     } catch (err) {

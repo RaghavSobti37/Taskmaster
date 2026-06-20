@@ -3,8 +3,8 @@ const Lead = require('../models/Lead');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
+const { assignNextBookedCallRep } = require('./bookedCallRepAssignment');
 const { resolvePrimaryCallAssigneeId } = require('./primaryCallAssignee');
-const { resolveSatyamSalesRepId } = require('./bookedCallRepAssignment');
 
 const SALES_SLUG = 'sales';
 const ARTIST_SLUG = 'artist-management';
@@ -22,8 +22,8 @@ const getArtistRepUsers = async (session = null) => {
 };
 
 const assignLeadToRep = async (session = null) => {
-  const satyamId = await resolveSatyamSalesRepId();
-  if (satyamId) return satyamId;
+  const roundRobinId = await assignNextBookedCallRep();
+  if (roundRobinId) return roundRobinId;
 
   const reps = await getSalesRepUsers(session);
   if (reps.length === 0) return null;

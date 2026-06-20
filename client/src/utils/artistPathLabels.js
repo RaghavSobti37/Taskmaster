@@ -18,6 +18,7 @@ export const ANSWER_LABELS = {
   curationNeeds: 'Curation needs',
   fandomNeeds: 'Fandom needs',
   aspirationalGoal: 'Aspirational goal',
+  anythingElse: 'Anything else',
   instagram: 'Instagram',
   spotify: 'Spotify',
   youtube: 'YouTube',

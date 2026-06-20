@@ -16,6 +16,8 @@ const platformSettingsSchema = new mongoose.Schema(
     passwordResetCcUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     primaryCallAssigneeUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     bookedCallSalesRepUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    /** Atomic counter for website book-a-call round-robin when Redis unavailable */
+    bookedCallRoundRobinCounter: { type: Number, default: 0 },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

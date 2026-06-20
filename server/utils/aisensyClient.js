@@ -22,10 +22,16 @@ async function sendAiSensyMessage(destination, campaign, params, attributes, use
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const json = await res.json();
-    console.log(`[AiSensy Webhook Response for ${campaign}]:`, json);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.success === false) {
+      console.error(`[AiSensy] ${campaign} failed (${res.status}):`, json);
+      return { ok: false, status: res.status, body: json };
+    }
+    console.log(`[AiSensy] ${campaign} sent to ${cleanDestination.slice(-4).padStart(cleanDestination.length, '*')}`);
+    return { ok: true, status: res.status, body: json };
   } catch (e) {
-    console.error('[AiSensy] Fetch Error:', e);
+    console.error('[AiSensy] Fetch Error:', e.message || e);
+    return { ok: false, error: e.message || String(e) };
   }
 }
 

@@ -5,7 +5,7 @@ const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('./mailDriver');
 const { resolvePrimaryCallAssigneeId } = require('../utils/primaryCallAssignee');
-const { resolveSatyamSalesRepId } = require('../utils/bookedCallRepAssignment');
+const { listSalesDepartmentReps } = require('../utils/bookedCallRepAssignment');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 const { warmPipelineQuery } = require('../utils/crmPipelineFilters');
 const { getDateKey, todayEnd, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
@@ -17,22 +17,29 @@ const { MODULE } = require('../../shared/systemLogContract');
 const BYPASS = bypassOptions('crm-reach-out-digest');
 const redis = getSharedRedis();
 
-const REP_SECTIONS = [
-  {
-    key: 'akash',
-    title: 'Artist Calls',
-    subtitle: 'Akash — artist bookings & artist CRM',
-    crmType: 'artist',
-    resolveUserId: resolvePrimaryCallAssigneeId,
-  },
-  {
-    key: 'satyam',
-    title: 'Sales & Other Calls',
-    subtitle: 'Satyam — website book-a-call & sales CRM',
-    crmType: 'sales',
-    resolveUserId: resolveSatyamSalesRepId,
-  },
-];
+const ARTIST_SECTION = {
+  key: 'artist',
+  title: 'Artist Calls',
+  subtitle: 'Artist bookings & artist CRM',
+  crmType: 'artist',
+  resolveUserId: resolvePrimaryCallAssigneeId,
+};
+
+async function buildRepSectionMetas() {
+  const metas = [ARTIST_SECTION];
+  const salesReps = await listSalesDepartmentReps();
+  for (const rep of salesReps) {
+    const repId = rep._id;
+    metas.push({
+      key: `sales-${repId}`,
+      title: 'Sales & Other Calls',
+      subtitle: `${rep.name} — website book-a-call & sales CRM`,
+      crmType: 'sales',
+      resolveUserId: async () => repId,
+    });
+  }
+  return metas;
+}
 
 const STAT_ROWS = [
   { key: 'callsMade', label: 'Calls made', highlight: true },
@@ -448,7 +455,7 @@ function buildDigestHtml({ periodLabel, sections, monthlyBusiness = null, testMo
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:28px;">
       <h1 style="color:#f8fafc;margin:0 0 8px;font-size:22px;font-weight:600;">${escapeHtml(title)}</h1>
       <p style="margin:0 0 24px;color:#94a3b8;font-size:14px;line-height:1.5;">
-        ${escapeHtml(periodLabel)} · Akash (artist) and Satyam (sales) call stats from CoreKnot CRM.
+        ${escapeHtml(periodLabel)} · Per-rep call stats from CoreKnot CRM (sales team + artist CRM).
       </p>
       ${monthBlock}
       ${body}
@@ -459,8 +466,9 @@ function buildDigestHtml({ periodLabel, sections, monthlyBusiness = null, testMo
 
 async function resolveRepSections(rangeStart, rangeEnd) {
   const sections = [];
+  const sectionMetas = await buildRepSectionMetas();
 
-  for (const sectionMeta of REP_SECTIONS) {
+  for (const sectionMeta of sectionMetas) {
     const userId = await sectionMeta.resolveUserId();
     if (!userId) {
       sections.push({
@@ -649,6 +657,6 @@ module.exports = {
   getRecipientEmails,
   parseRecipientEmails,
   getFromEmail,
-  REP_SECTIONS,
+  buildRepSectionMetas,
   STAT_ROWS,
 };

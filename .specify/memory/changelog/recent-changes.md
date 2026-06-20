@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-20 — Legacy server script cleanup and finance OCR limits
+
+- **What:** Removed ad-hoc migration/test scripts from `server/` root; extracted `financeOcrLimits.js` (max bytes, skip image OCR on Render); shared AiSensy client in CRM lead writes; dropped AuthContext idle keep-warm polling; synced Vercel rewrite config.
+- **Why:** Reduce repo noise and Render OOM risk on finance OCR; centralize WhatsApp dispatch.
+- **Files:** `server/utils/financeOcrLimits.js`, `server/domains/crm/services/leadWriteService.js`, `client/src/contexts/AuthContext.jsx`, `vercel.json`, `client/vercel.json`
+- **Branch:** `main` · **Commit:** `b58779ea`
+
+---
+
 ## 2026-06-18 — Render build ENOTEMPTY fix (cache-safe npm ci)
 
 - **What:** `scripts/render-build.sh` wipes cached `node_modules` then `npm ci`; `render.yaml` + `syncRenderBuildCommands.js` sync Dashboard build settings. Replaces bare `npm install` that failed with ENOTEMPTY on Render cache.

@@ -343,7 +343,18 @@ exports.createUserAdmin = async (req, res) => {
 
 exports.updateUserAdmin = async (req, res) => {
   try {
-    const { name, email, phone, departmentId, teams, dateOfBirth, newPassword, pagePermissions } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      departmentId,
+      teams,
+      dateOfBirth,
+      newPassword,
+      pagePermissions,
+      suspended,
+      suspensionReason,
+    } = req.body;
 
     const targetUser = await User.findById(req.params.id).select('+password');
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
@@ -368,6 +379,12 @@ exports.updateUserAdmin = async (req, res) => {
     if (teams !== undefined) targetUser.teams = Array.isArray(teams) ? teams.map((t) => t.toUpperCase()) : [];
     if (dateOfBirth !== undefined) {
       targetUser.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    }
+    if (suspended !== undefined) {
+      const suspendedBool = Boolean(suspended);
+      targetUser.suspended = suspendedBool;
+      targetUser.suspendedAt = suspendedBool ? (targetUser.suspendedAt || new Date()) : null;
+      targetUser.suspensionReason = suspendedBool ? (String(suspensionReason || '').trim()) : '';
     }
 
     if (pagePermissions !== undefined) {

@@ -188,6 +188,10 @@ exports.login = async (req, res) => {
     }
 
     if (user && isMatch) {
+      if (user.suspended) {
+        clearAuthCookie(res, req);
+        return apiError(res, 'Account suspended. Contact an administrator.', 403);
+      }
       const stillOnDefaultPassword = await user.comparePassword(getDefaultSeedPassword());
       const seededWithoutPasswordChange = user.mustChangePassword === false;
       const shouldFlagDefaultPassword = stillOnDefaultPassword
@@ -243,6 +247,10 @@ exports.googleLogin = async (req, res) => {
         password: Math.random().toString(36).slice(-8),
         avatar: picture,
       });
+    }
+    if (user.suspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
     const populated = await User.findById(user._id)
@@ -463,6 +471,10 @@ exports.oauthEstablishSession = async (req, res) => {
 
     if (!populated) {
       return res.status(401).json({ error: 'User no longer exists' });
+    }
+    if (populated.suspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
     await finishAuthSession(req, res, populated._id);

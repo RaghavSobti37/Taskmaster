@@ -77,6 +77,8 @@ const AdminUsers = () => {
         pagePermissions: selectedUser.pagePermissions?.length
           ? [...selectedUser.pagePermissions]
           : resolveDepartmentPages(selectedUser.departmentId || {}),
+        suspended: !!selectedUser.suspended,
+        suspensionReason: selectedUser.suspensionReason || '',
         newPassword: '',
         confirmPassword: '',
       };
@@ -114,6 +116,8 @@ const AdminUsers = () => {
         dateOfBirth: editUserData.dateOfBirth || null,
         teams: [],
         pagePermissions: editUserData.useCustomPagePermissions ? editUserData.pagePermissions : [],
+        suspended: !!editUserData.suspended,
+        suspensionReason: editUserData.suspended ? (editUserData.suspensionReason || '') : '',
       };
       if (editUserData.newPassword) payload.newPassword = editUserData.newPassword;
       await updateUserMutation.mutateAsync({ id: selectedUser._id, data: payload });
@@ -368,6 +372,29 @@ const AdminUsers = () => {
                 <PagePermissionsEditor
                   selectedPages={editUserData.pagePermissions || []}
                   onChange={(pages) => setEditUserData({ ...editUserData, pagePermissions: pages })}
+                />
+              )}
+            </Card>
+
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                Account Access
+              </h4>
+              <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!editUserData.suspended}
+                  onChange={(e) => setEditUserData((prev) => ({ ...prev, suspended: e.target.checked }))}
+                  className="rounded border-[var(--color-bg-border)]"
+                />
+                Suspend account (blocks Coreknot access, keeps data)
+              </label>
+              {editUserData.suspended && (
+                <Input
+                  label="Suspension reason (optional)"
+                  placeholder="Internal note"
+                  value={editUserData.suspensionReason || ''}
+                  onChange={(e) => setEditUserData({ ...editUserData, suspensionReason: e.target.value })}
                 />
               )}
             </Card>

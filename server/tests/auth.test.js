@@ -95,5 +95,42 @@ describe('Authentication API', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body.email).toEqual('test@example.com');
     });
+
+    it('blocks suspended user login and protected route access', async () => {
+      const created = await User.findOne({ email: 'test@example.com' }).setOptions({ bypassTenant: true });
+      created.suspended = true;
+      created.suspendedAt = new Date();
+      await created.save();
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: TEST_PASSWORD,
+        });
+      expect(loginRes.statusCode).toEqual(403);
+      expect(String(loginRes.body.error || '')).toMatch(/suspended/i);
+
+      const agent = request.agent(app);
+      const okLogin = await agent.post('/api/auth/login').send({
+        email: 'test@example.com',
+        password: TEST_PASSWORD,
+      });
+      expect(okLogin.statusCode).toEqual(403);
+
+      await User.updateOne({ email: 'test@example.com' }, { $set: { suspended: false, suspendedAt: null } })
+        .setOptions({ bypassTenant: true });
+      const freshLogin = await agent.post('/api/auth/login').send({
+        email: 'test@example.com',
+        password: TEST_PASSWORD,
+      });
+      expect(freshLogin.statusCode).toEqual(200);
+
+      await User.updateOne({ email: 'test@example.com' }, { $set: { suspended: true, suspendedAt: new Date() } })
+        .setOptions({ bypassTenant: true });
+      const meRes = await agent.get('/api/auth/me');
+      expect(meRes.statusCode).toEqual(403);
+      expect(String(meRes.body.error || '')).toMatch(/suspended/i);
+    });
   });
 });

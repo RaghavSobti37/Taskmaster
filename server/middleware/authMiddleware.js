@@ -20,6 +20,7 @@ const {
   ADMIN_SLUG,
 } = require('../utils/departmentPermissions');
 const { verifySessionToken, isAbsoluteSessionExpired } = require('../utils/authSession');
+const { clearAuthCookie } = require('../utils/authCookie');
 
 const populateDepartment = (query) =>
   query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
@@ -91,6 +92,10 @@ const protect = async (req, res, next) => {
 
     if (!req.user) {
       return res.status(401).json({ error: 'User no longer exists' });
+    }
+    if (req.user.suspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
     touchLastOnline(req.user._id);

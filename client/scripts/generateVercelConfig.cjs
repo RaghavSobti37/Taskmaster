@@ -168,6 +168,7 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
 }
 
 const payload = {
+  ...(template.redirects ? { redirects: template.redirects } : {}),
   rewrites: [
     ...(nestAttendanceDestination
       ? [

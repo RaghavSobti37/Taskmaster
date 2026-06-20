@@ -5,7 +5,7 @@ const Project = require('../models/Project');
 
 const ALLOWED_EXT = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.xlsx', '.xls', '.doc', '.docx'];
 
-const DISK_TARGETS = [
+const DEFAULT_DISK_TARGETS = [
   {
     projectName: 'Havells mYOUsic',
     dir: 'C:\\Users\\ragha\\Downloads\\Basecamp Download (4)\\Havells mYOUsic',
@@ -27,6 +27,24 @@ const DISK_TARGETS = [
     primaryFolderName: null,
   },
 ];
+
+function resolveDiskTargets() {
+  const raw = process.env.FINANCE_DISK_TARGETS_JSON || '';
+  if (!raw.trim()) return DEFAULT_DISK_TARGETS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_DISK_TARGETS;
+    return parsed.filter((entry) =>
+      entry
+      && typeof entry.projectName === 'string'
+      && typeof entry.dir === 'string'
+    );
+  } catch {
+    return DEFAULT_DISK_TARGETS;
+  }
+}
+
+const DISK_TARGETS = resolveDiskTargets();
 
 function scanSourceRoot(rootDir) {
   const folders = [];

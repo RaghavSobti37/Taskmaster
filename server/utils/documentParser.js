@@ -1,7 +1,6 @@
-const fs = require('fs');
 const { PDFParse } = require('pdf-parse');
 const Tesseract = require('tesseract.js');
-const { parse } = require('path');
+const { getOcrMaxBytes, shouldRunImageOcr } = require('./financeOcrLimits');
 
 const MONTHS = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
@@ -234,20 +233,11 @@ const EMPTY_METADATA = {
   detectedCategory: 'other',
 };
 
-function getParseMaxBytes() {
-  const configured = Number(process.env.FINANCE_OCR_MAX_BYTES);
-  return Number.isFinite(configured) && configured > 0 ? configured : 8 * 1024 * 1024;
-}
-
-function shouldSkipImageOcr() {
-  return process.env.FINANCE_SKIP_IMAGE_OCR === '1' || process.env.RENDER === 'true';
-}
-
 /**
  * Main parse function. Detects type and extracts data.
  */
 async function parseDocument(fileBuffer, mimeType, options = {}) {
-  const maxBytes = getParseMaxBytes();
+  const maxBytes = getOcrMaxBytes();
   const size = options.fileSize ?? fileBuffer?.length ?? 0;
   if (size > maxBytes) {
     return { extractedText: '', metadata: { ...EMPTY_METADATA } };
@@ -259,7 +249,7 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
   if (normalizedMime.includes('pdf') || /\.pdf$/i.test(normalizedMime)) {
     extractedText = await extractTextFromPDF(fileBuffer);
   } else if (normalizedMime.includes('image') || /\.(png|jpe?g|webp)$/i.test(normalizedMime)) {
-    if (shouldSkipImageOcr()) {
+    if (!shouldRunImageOcr()) {
       return { extractedText: '', metadata: { ...EMPTY_METADATA } };
     }
     extractedText = await extractTextFromImage(fileBuffer);
@@ -274,9 +264,5 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
 }
 
 module.exports = {
-  extractTextFromPDF,
-  extractTextFromImage,
-  parseDateValue,
-  parseMetadataFromText,
-  parseDocument
+  parseDocument,
 };

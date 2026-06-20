@@ -1,10 +1,20 @@
 /** Platform owner emails — never deletable via admin UI or API. */
-const ROOT_ADMIN_EMAILS = new Set([
+const DEFAULT_ROOT_ADMIN_EMAILS = [
   'test@example.com',
   'REDACTED_ADMIN@example.com',
   'redacted@example.com',
   'redacted@example.com',
-]);
+];
+
+const parseRootAdminEmails = () => {
+  const raw = (process.env.ROOT_ADMIN_EMAILS || '').trim();
+  const values = raw
+    ? raw.split(',').map((v) => v.trim()).filter(Boolean)
+    : DEFAULT_ROOT_ADMIN_EMAILS;
+  return new Set(values.map((v) => v.toLowerCase()));
+};
+
+const ROOT_ADMIN_EMAILS = parseRootAdminEmails();
 
 const isRootAdminEmail = (email) => ROOT_ADMIN_EMAILS.has(String(email || '').toLowerCase().trim());
 

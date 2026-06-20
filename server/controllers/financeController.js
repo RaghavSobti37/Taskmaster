@@ -9,6 +9,7 @@ const {
   handleUploadFilesManyRequest,
   handleUploadSingleRequest,
 } = require('../utils/uploadthingServer');
+const { syncFolderPlacementFromDisk } = require('../utils/financeDiskSync');
 
 const populateFinanceDoc = (id) =>
   FinanceDocument.findById(id)
@@ -420,7 +421,6 @@ const deleteFolder = async (req, res) => {
 
 const syncFolderPlacementFromDiskHandler = async (req, res) => {
   try {
-    const { syncFolderPlacementFromDisk } = require('../utils/financeDiskSync');
     const results = await syncFolderPlacementFromDisk(req.user._id);
     res.json({ success: true, data: results, message: 'Folder placement synced from disk' });
   } catch (error) {

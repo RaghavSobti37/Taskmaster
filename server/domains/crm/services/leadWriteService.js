@@ -16,6 +16,7 @@ const {
   mergeCorruptLeadIntoKeeper,
 } = require('./leadDuplicateService');
 const logger = require('../../../utils/logger');
+const { sendAiSensyMessage } = require('../../../utils/aisensyClient');
 const { dispatchEmailPayload } = require('../../../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../../../config/realtime');
 const { queueGamificationEvent } = require('../../../services/backgroundQueue');
@@ -156,37 +157,6 @@ const prepareLeadContactUpdates = (updates, currentLead) => {
 
   return null;
 };
-
-async function sendAiSensyMessage(destination, campaign, params, attributes, userName) {
-  const cleanDestination = destination.replace(/\D/g, '');
-  const body = {
-    apiKey: process.env.AISENSY_API_KEY,
-    campaignName: campaign,
-    destination: cleanDestination,
-    templateParams: params,
-    userName: userName || 'User',
-  };
-  if (attributes) {
-    body.attributes = attributes;
-  }
-
-  if (!process.env.AISENSY_API_KEY) {
-    console.warn('[Warning] AISENSY_API_KEY not found in environment, skipping fetch');
-    return;
-  }
-
-  try {
-    const res = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json();
-    console.log(`[AiSensy Response for ${campaign}]:`, json);
-  } catch (e) {
-    console.error('[AiSensy] Fetch Error:', e);
-  }
-}
 
 async function sendFirstCallNotifications(lead) {
   if (!lead.phone && !lead.email) return;

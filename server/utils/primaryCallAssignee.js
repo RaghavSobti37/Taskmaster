@@ -3,10 +3,8 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const { ARTIST_SLUG, SALES_SLUG } = require('./departmentPermissions');
 
-const DEFAULT_CALL_ASSIGNEE = /akash/i;
-
 function namePatternsFromEnv() {
-  const raw = process.env.PRIMARY_CALL_ASSIGNEE_NAME || 'akash';
+  const raw = process.env.PRIMARY_CALL_ASSIGNEE_NAME || '';
   return raw.split(',').map((part) => part.trim()).filter(Boolean).map((part) => new RegExp(part, 'i'));
 }
 
@@ -24,7 +22,8 @@ async function findUserByPatterns(patterns, deptSlug = null) {
 
 /**
  * Primary outbound-call assignee (artist bookings + TSC book-a-call).
- * Defaults to Akash in artist-management, then sales.
+ * Source of truth: PlatformSettings / PRIMARY_CALL_ASSIGNEE_ID.
+ * Optional fallback: PRIMARY_CALL_ASSIGNEE_NAME patterns.
  */
 async function resolvePrimaryCallAssigneeId() {
   const { getPrimaryCallAssigneeUserId } = require('../../shared/platformUserIds');
@@ -41,6 +40,8 @@ async function resolvePrimaryCallAssigneeId() {
   }
 
   const patterns = namePatternsFromEnv();
+  if (!patterns.length) return null;
+
   const artist = await findUserByPatterns(patterns, ARTIST_SLUG);
   if (artist?._id) return artist._id;
 
@@ -52,7 +53,6 @@ async function resolvePrimaryCallAssigneeId() {
 }
 
 module.exports = {
-  DEFAULT_CALL_ASSIGNEE,
   resolvePrimaryCallAssigneeId,
   findUserByPatterns,
 };

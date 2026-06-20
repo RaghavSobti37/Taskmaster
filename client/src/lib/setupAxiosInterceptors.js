@@ -11,7 +11,6 @@ import { inferModuleFromRoute, SEVERITY } from './systemLogContract';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from '../utils/projectUtils';
 import { normalizeTasks, normalizeSchedulePayload } from '../utils/normalizeTask';
 import { triggerUnauthorized } from './authUnauthorized';
-import { touchKeepWarmActivity } from './idleKeepWarm';
 
 const normalizeProjectsInResponse = (url, data) => {
   if (data == null) return data;
@@ -37,7 +36,6 @@ const normalizeProjectsInResponse = (url, data) => {
 /** Register global axios interceptors (deferred from App mount to shrink initial JS). */
 export function setupAxiosInterceptors() {
   const reqInterceptor = axios.interceptors.request.use((config) => {
-    touchKeepWarmActivity();
     if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
       config.headers['X-Trace-Id'] = getClientTraceId();
     }

@@ -1,4 +1,41 @@
 {
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/about",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/contact",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/wp-admin/:path*",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/wp-login.php",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/xmlrpc.php",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/.env",
+      "destination": "/404",
+      "statusCode": 404
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

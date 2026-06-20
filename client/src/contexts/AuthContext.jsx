@@ -18,7 +18,6 @@ import { probeAuthSession } from '../utils/authSessionProbe';
 import { setSentryUser, clearSentryUser } from '../lib/sentry';
 import { setDatadogUser, clearDatadogUser } from '../lib/datadog';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
-import { startIdleKeepWarm } from '../lib/idleKeepWarm';
 
 const defaultAuthContext = {
   user: null,
@@ -248,21 +247,6 @@ export const AuthProvider = ({ children }) => {
 
     fetchUser();
   }, [fetchUser, queryClient]);
-
-  useEffect(() => {
-    if (user?._id) {
-      const interval = setInterval(() => {
-        fetchUser({ clearOn401: true, retries: 2 });
-      }, 5 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [user?._id, fetchUser]);
-
-  useEffect(() => {
-    if (!user?._id) return undefined;
-    return startIdleKeepWarm({ enabled: true });
-  }, [user?._id]);
 
   useEffect(() => {
     const onVisible = () => {

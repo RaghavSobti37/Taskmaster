@@ -19,7 +19,7 @@ const fetchRealtimeToken = async () => {
 const createSocket = async () => {
   const options = {
     withCredentials: true,
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
     autoConnect: true,
   };
 

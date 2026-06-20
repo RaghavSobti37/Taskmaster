@@ -26,7 +26,7 @@ const FRESH = process.argv.includes('--fresh');
 const SKIP_OCR = process.argv.includes('--skip-ocr');
 
 /** Attachments folder intentionally excluded */
-const SOURCE_ROOTS = [
+const DEFAULT_SOURCE_ROOTS = [
   {
     label: 'Havells mYOUsic',
     dir: 'C:\\Users\\ragha\\Downloads\\Basecamp Download (4)\\Havells mYOUsic',
@@ -48,6 +48,26 @@ const SOURCE_ROOTS = [
     projectName: 'Dattadham',
   },
 ];
+
+function resolveSourceRoots() {
+  const raw = process.env.FINANCE_DISK_TARGETS_JSON || '';
+  if (!raw.trim()) return DEFAULT_SOURCE_ROOTS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_SOURCE_ROOTS;
+    return parsed
+      .filter((entry) => entry && typeof entry.projectName === 'string' && typeof entry.dir === 'string')
+      .map((entry) => ({
+        label: entry.label || entry.projectName,
+        dir: entry.dir,
+        projectName: entry.projectName,
+      }));
+  } catch {
+    return DEFAULT_SOURCE_ROOTS;
+  }
+}
+
+const SOURCE_ROOTS = resolveSourceRoots();
 
 const ALLOWED_EXT = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.xlsx', '.xls', '.doc', '.docx'];
 

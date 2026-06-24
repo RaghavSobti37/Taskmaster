@@ -57,10 +57,10 @@
     "artist-crm:bulk:prod": "node server/scripts/bulkPushArtistCrmToProd.js --prod --fix-index"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "concurrently": "^9.1.2",
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^10.0.3",
     "husky": "^9.1.7",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

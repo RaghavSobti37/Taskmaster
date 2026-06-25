@@ -36,7 +36,14 @@ const CRM_FIELD_SELECT = 'w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border
 const loadLeadsFilters = () => {
   try {
     const raw = localStorage.getItem(CRM_LEADS_FILTERS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved.importSheet && saved.importSheet !== 'all' && (!saved.source || saved.source === 'all')) {
+        saved.source = saved.importSheet;
+      }
+      delete saved.importSheet;
+      return saved;
+    }
   } catch {
     /* ignore */
   }
@@ -47,7 +54,6 @@ const loadLeadsFilters = () => {
     source: 'all',
     leadQuality: 'all',
     assignedRepId: 'all',
-    importSheet: 'all',
     pageSize: 10,
   };
 };
@@ -376,10 +382,31 @@ export default function LeadsPage() {
       })
       .catch(() => {});
   }, [searchParams, leads]);
-  const sourcesList = useMemo(() => {
-    const base = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
-    const sheetSources = artistImportSheets.map((s) => s.source).filter(Boolean);
-    return [...new Set([...base, ...sheetSources])].sort((a, b) => a.localeCompare(b));
+  const sourceFilterOptions = useMemo(() => {
+    const defaults = ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
+    const sheetBySource = new Map(
+      artistImportSheets.map((s) => [s.source, s.label]),
+    );
+    const raw = crmConfig?.sources || defaults;
+    const options = [{ value: 'all', label: 'All Sources' }];
+    const seen = new Set(['all']);
+
+    for (const sheet of artistImportSheets) {
+      if (!sheet.source || seen.has(sheet.source)) continue;
+      seen.add(sheet.source);
+      options.push({ value: sheet.source, label: sheet.label });
+    }
+
+    for (const source of raw) {
+      if (!source || seen.has(source)) continue;
+      seen.add(source);
+      options.push({
+        value: source,
+        label: sheetBySource.get(source) || source,
+      });
+    }
+
+    return options;
   }, [crmConfig?.sources, artistImportSheets]);
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
@@ -602,7 +629,7 @@ export default function LeadsPage() {
           <NexusDropdown
             label="Source"
             placeholder="Source"
-            options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map((s) => ({ value: s, label: s }))]}
+            options={sourceFilterOptions}
             value={filters.source}
             onChange={(v) => setFilters({ ...filters, source: v })}
           />
@@ -626,19 +653,6 @@ export default function LeadsPage() {
           />
           {artistCrmView && (
             <>
-              <NexusDropdown
-                label="Sheet"
-                placeholder="Import sheet"
-                options={[
-                  { value: 'all', label: 'All Sheets' },
-                  ...artistImportSheets.map((s) => ({
-                    value: s.source,
-                    label: s.label,
-                  })),
-                ]}
-                value={filters.importSheet || 'all'}
-                onChange={(v) => setFilters({ ...filters, importSheet: v })}
-              />
               <NexusDropdown
                 label="Project"
                 placeholder="Artist"
@@ -687,7 +701,6 @@ export default function LeadsPage() {
           onRetry={() => refetch()}
         />
       )}
-      {artistCrmView && <ArtistCrmImportPanel />}
       <DataTable
         columns={columns}
         data={leads}

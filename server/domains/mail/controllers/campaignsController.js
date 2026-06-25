@@ -2,13 +2,11 @@ const MailCampaign = require('../models/MailCampaign');
 const MailEvent = require('../models/MailEvent');
 const EmailProfile = require('../models/EmailProfile');
 const Lead = require('../../../models/Lead');
-const { isAdminUser } = require('../../../utils/departmentPermissions');
 const { dispatchCampaignJobs } = require('../../../services/queueService');
 
 exports.list = async (req, res) => {
   try {
-    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
-    const campaigns = await MailCampaign.find(filter).sort('-createdAt').lean();
+    const campaigns = await MailCampaign.find({}).sort('-createdAt').lean();
     for (const camp of campaigns) {
       const total = camp.recipients?.length || 0;
       let sent = 0; let opened = 0; let clicked = 0; let bounced = 0; let unsubscribed = 0; let invalid = 0;
@@ -75,9 +73,6 @@ exports.send = async (req, res) => {
   try {
     const campaign = await MailCampaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    if (!isAdminUser(req.user) && campaign.createdBy?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Not authorized to send this campaign' });
-    }
     const result = await dispatchCampaignJobs(req.params.id);
     res.json({ message: 'Campaign dispatch started', ...result });
   } catch (err) {
@@ -285,9 +280,6 @@ exports.remove = async (req, res) => {
   try {
     const campaign = await MailCampaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    if (!isAdminUser(req.user) && campaign.createdBy?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Not authorized to delete this campaign' });
-    }
     const campaignId = req.params.id;
     await MailCampaign.findByIdAndDelete(campaignId);
     await MailEvent.deleteMany({ campaignId });

@@ -409,6 +409,9 @@ const processEmailJobInner = async ({
 
   const sendViaResend = async () => {
     if (!resend) return false;
+    const { getCampaignEmailConnection } = require('../../../services/campaignEmailQueue');
+    const { acquireResendSendSlot } = require('../../../utils/resendSendGate');
+    await acquireResendSendSlot(getCampaignEmailConnection());
     const { data, error } = await resend.emails.send(resendPayload);
     if (error) throw new Error(error.message || 'Resend send failed');
     messageIdStr = data?.id || messageIdStr;
@@ -520,7 +523,19 @@ const processEmailJobInner = async ({
 
     await checkCompletion();
   } catch (err) {
+    const { isResendRateLimitError } = require('../../../utils/resendSendGate');
     const failedRecipient = getRecipient();
+
+    if (isResendRateLimitError(err)) {
+      if (failedRecipient && failedRecipient.status !== 'Sent') {
+        await updateRecipientFields(Model, campaign._id, failedRecipient._id, {
+          status: 'Queued',
+          error: 'Rate limited — will retry',
+        });
+      }
+      throw err;
+    }
+
     if (failedRecipient) {
       await updateRecipientFields(Model, campaign._id, failedRecipient._id, {
         status: 'Failed',

@@ -9,6 +9,8 @@ const LEGACY_COOKIE_NAMES = ['coreknot_token_v2', 'coreknot_token'];
 const BUILTIN_FRONTEND_HOSTS = [
   'tsccoreknot.com',
   'www.tsccoreknot.com',
+  'landing.tsccoreknot.com',
+  'auth.tsccoreknot.com',
   'theshakticollective.in',
   'www.theshakticollective.in',
   'taskmaster-sand.vercel.app',
@@ -87,6 +89,17 @@ const readHeader = (req, name) => {
   return req.headers?.[key] || req.headers?.[name] || '';
 };
 
+/** Share session across tsccoreknot.com subdomains (app, landing, auth). */
+const getSharedCookieDomain = (req) => {
+  if (process.env.NODE_ENV !== 'production') return undefined;
+  const host = normalizeHost(readHeader(req, 'x-forwarded-host') || readHeader(req, 'host'));
+  if (!host) return undefined;
+  if (host === 'tsccoreknot.com' || host.endsWith('.tsccoreknot.com')) {
+    return '.tsccoreknot.com';
+  }
+  return undefined;
+};
+
 /** Vercel /api rewrite sets X-Forwarded-Host — use Lax cookies (not None+Partitioned). */
 const isFirstPartyProxiedRequest = (req) => {
   if (!req) return false;
@@ -121,6 +134,8 @@ const getCookieOptions = (req) => {
     maxAge: parseJwtExpiryMs(),
     path: '/',
   };
+  const domain = getSharedCookieDomain(req);
+  if (domain) options.domain = domain;
   if (isProd && !firstParty) {
     options.partitioned = true;
   }

@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /$
-Allow: /login$
-Allow: /register$
 Allow: /privacy$
 Allow: /userdata$
 Allow: /unsubscribe$
@@ -27,4 +25,4 @@ Allow: /
 User-agent: GPTBot
 Allow: /
 
-Sitemap: https://tsctaskmaster.com/sitemap.xml
+Sitemap: https://tsccoreknot.com/sitemap.xml

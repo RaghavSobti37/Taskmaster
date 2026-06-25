@@ -141,6 +141,7 @@ function registerRoutes(app) {
   app.use('/api/announcements', require('../routes/announcementRoutes'));
 
   // --- Admin ---
+  app.use('/api/admin/media-contacts', require('../routes/mediaContactRoutes'));
   app.use('/api/admin/platform-settings', require('../routes/platformSettingsRoutes'));
   app.use('/api/admin/roles', require('../routes/adminRolesRoutes'));
   app.use('/api/admin/scripts', require('../routes/adminScriptsRoutes'));

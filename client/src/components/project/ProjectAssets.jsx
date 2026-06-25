@@ -192,7 +192,7 @@ const ProjectAssets = ({ projectId }) => {
 
       <AnimatePresence>
         {showAddModal && (
-          <div className="tm-modal-overlay fixed inset-0 z-[200] p-4 bg-black/40 backdrop-blur-sm">
+          <div className="tm-modal-overlay fixed inset-0 z-[200] p-4 bg-black/40">
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="tm-modal-panel max-w-md bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[2.5rem] shadow-2xl overflow-hidden p-8" role="dialog" aria-modal="true">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-black uppercase tracking-tight text-[var(--color-text-primary)]">Add Project Asset</h3>

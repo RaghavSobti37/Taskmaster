@@ -2,7 +2,9 @@ require('./datadog-init');
 require('dotenv').config();
 
 const { initSentry } = require('./utils/sentry');
+const { initPostHog } = require('./utils/posthog');
 initSentry();
+initPostHog();
 
 const { loadConfig } = require('./config');
 loadConfig();

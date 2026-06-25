@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const MailEvent = require('../models/MailEvent');
 const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
+const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 
 const engagedRecipientPipeline = [
   { $unwind: '$recipients' },
@@ -40,7 +40,7 @@ async function getEngagedEmails() {
   return Array.from(engagedEmailsSet);
 }
 
-async function getCumulativeTagMetrics(_userId) {
+async function getCumulativeTagMetrics() {
   const [coreAgg, mailAgg] = await Promise.all([
     aggregateWithTenant(Campaign, [
       {
@@ -66,20 +66,18 @@ async function getCumulativeTagMetrics(_userId) {
   return { coreAgg, mailAgg };
 }
 
-async function getUserCampaignRecipients(userId) {
+async function getUserCampaignRecipients(_userId) {
   const [coreCamps, mailCamps] = await Promise.all([
-    Campaign.find({ createdBy: userId }, 'recipients').lean(),
-    MailCampaign.find({ createdBy: userId }, 'recipients').lean(),
+    Campaign.find({}, 'recipients').lean().setOptions(bypassOptions('org_campaign_recipients')),
+    MailCampaign.find({}, 'recipients').lean().setOptions(bypassOptions('org_campaign_recipients')),
   ]);
   return { coreCamps, mailCamps };
 }
 
 const BOUNCE_STATUSES = ['Bounced', 'Failed', 'Invalid'];
 
-async function countUserCampaignBounces(userId) {
-  const uid = new mongoose.Types.ObjectId(String(userId));
+async function countUserCampaignBounces(_userId) {
   const pipeline = [
-    { $match: { createdBy: uid } },
     { $unwind: '$recipients' },
     { $match: { 'recipients.status': { $in: BOUNCE_STATUSES } } },
     { $count: 'total' },

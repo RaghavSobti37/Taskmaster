@@ -123,7 +123,7 @@ const WorkflowCanvas = () => {
           <Background variant="dots" gap={16} size={1} color="var(--color-bg-border)" />
         </ReactFlow>
 
-        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-[var(--color-bg-surface)]/95 border border-[var(--color-bg-border)] px-3 py-1.5 rounded-[var(--radius-md)] text-[10px] font-mono text-[var(--color-text-muted)] backdrop-blur-sm">
+        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-[var(--color-bg-surface)]/95 border border-[var(--color-bg-border)] px-3 py-1.5 rounded-[var(--radius-md)] text-[10px] font-mono text-[var(--color-text-muted)]">
           <Badge variant="slate" className="text-[9px]">Active Canvas</Badge>
           <span>Nodes: {nodes.length}</span>
           <span>•</span>

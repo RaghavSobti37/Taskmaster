@@ -1,5 +1,9 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
+import { authUrl, landingUrl } from './config/siteUrls';
+import ExternalRedirect from './components/ExternalRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
@@ -111,6 +115,7 @@ import ArtistPathPage from './pages/admin/ArtistPathPage';
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPlatformSettings'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
+const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
@@ -134,6 +139,26 @@ const LegacyArtistAnalyticsRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
+function AppRootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return <AppBootFallback />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <ExternalRedirect to={landingUrl('/')} />;
+}
+
+const marketingAuthRoutes = (
+  <>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/relegends" element={<OTPVerificationPage />} />
+    <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
+    <Route path="/privacy" element={<PrivacyPolicy />} />
+    <Route path="/userdata" element={<UserDataDeletion />} />
+  </>
+);
+
 function App() {
   React.useEffect(() => {
     let teardown;
@@ -147,13 +172,32 @@ function App() {
     <Suspense fallback={<AppBootFallback />}>
       <RouteErrorBoundary>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/relegends" element={<OTPVerificationPage />} />
-          <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
+          {isLandingSite() && (
+            <>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/userdata" element={<UserDataDeletion />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          )}
+
+          {isAuthSite() && (
+            <>
+              {marketingAuthRoutes}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </>
+          )}
+
+          {isAppSite() && (
+            <>
+          <Route path="/" element={<AppRootRedirect />} />
+          <Route path="/login" element={<ExternalRedirect to={authUrl('/login')} />} />
+          <Route path="/register" element={<ExternalRedirect to={authUrl('/register')} />} />
+          <Route path="/forgot-password" element={<ExternalRedirect to={authUrl('/forgot-password')} />} />
+          <Route path="/reset-password" element={<ExternalRedirect to={authUrl('/reset-password')} />} />
+          <Route path="/relegends" element={<ExternalRedirect to={authUrl('/relegends')} />} />
+          <Route path="/auth/google/success" element={<ExternalRedirect to={authUrl('/auth/google/success')} />} />
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/userdata" element={<UserDataDeletion />} />
@@ -274,6 +318,7 @@ function App() {
                 <Route path="/admin" element={<AdminCRM />} />
                 <Route path="/admin/control" element={<AdminPanel />} />
                 <Route path="/admin/qa" element={<QATestingPage />} />
+                <Route path="/admin/media-list" element={<MediaListPage />} />
                 <Route path="/admin/audits" element={<Navigate to="/logs?view=lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
@@ -298,10 +343,8 @@ function App() {
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
-              <Route element={<PageRoute page="campaigns" />}>
-                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
-              </Route>
               <Route element={<PageRoute page="emails" />}>
+                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
                 <Route element={<EmailHubLayout />}>
                   <Route path="/emails" element={<EmailsOverviewPage />} />
                   <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
@@ -327,7 +370,9 @@ function App() {
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </>
+          )}
         </Routes>
       </RouteErrorBoundary>
     </Suspense>

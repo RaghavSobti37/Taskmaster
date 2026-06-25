@@ -356,7 +356,7 @@ const CommandPalette = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClosePalette}
-            className="absolute inset-0 bg-slate-950/40 dark:bg-slate-950/55 backdrop-blur-md"
+            className="absolute inset-0 bg-slate-950/40 dark:bg-slate-950/55"
           />
 
           <motion.div
@@ -403,7 +403,7 @@ const CommandPalette = () => {
                 sectionsWithIndex.map((section) => (
                     <div key={section.id} className="mb-1 last:mb-0">
                       {section.title && (
-                        <p className="sticky top-0 z-10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)] bg-[var(--color-bg-floating)]/95 backdrop-blur-sm">
+                        <p className="sticky top-0 z-10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)] bg-[var(--color-bg-floating)]/95">
                           {section.title}
                         </p>
                       )}

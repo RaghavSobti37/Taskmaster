@@ -32,4 +32,10 @@ describe('emails page access', () => {
       hasPageAccess({ departmentId: { slug: 'sales', pagePermissions: ['dashboard'] } }, 'emails')
     ).toBe(true);
   });
+
+  test('any authenticated user can open campaign detail pages', () => {
+    expect(
+      hasPageAccess({ departmentId: { slug: 'creative', pagePermissions: ['dashboard'] } }, 'campaigns')
+    ).toBe(true);
+  });
 });

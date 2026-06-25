@@ -96,7 +96,15 @@ const incrementProfileSendCount = async (profileId, providerKey = null) => {
   await profile.save();
 };
 
+const { getCache, setCache } = require('./cacheService');
+
+const TODAY_SEND_COUNTS_TTL_SECONDS = 60;
+
 const getTodaySendCountsByProfileProvider = async () => {
+  const cacheKey = `mail:today-send-counts:${todayStr()}`;
+  const cached = await getCache(cacheKey);
+  if (cached) return new Map(Object.entries(cached));
+
   const start = startOfTodayUtc();
   const counts = new Map();
 
@@ -122,6 +130,7 @@ const getTodaySendCountsByProfileProvider = async () => {
     counts.set(key, row.count);
   }
 
+  await setCache(cacheKey, Object.fromEntries(counts), TODAY_SEND_COUNTS_TTL_SECONDS);
   return counts;
 };
 

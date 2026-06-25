@@ -712,7 +712,7 @@ exports.getTodoStats = async (baseFilter) => {
   const tomorrow = new Date(todayStart);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const overdueExpr = {
+  const overdueMatch = {
     status: { $ne: 'done' },
     $expr: {
       $and: [
@@ -721,8 +721,7 @@ exports.getTodoStats = async (baseFilter) => {
       ],
     },
   };
-
-  const todayExpr = {
+  const todayMatch = {
     status: { $ne: 'done' },
     $expr: {
       $and: [
@@ -732,16 +731,25 @@ exports.getTodoStats = async (baseFilter) => {
     },
   };
 
-  const merge = (extra) => ({ $and: [baseFilter, extra] });
-
-  const [open, inReview, overdue, today] = await Promise.all([
-    Task.countDocuments(merge({ status: { $ne: 'done' } })),
-    Task.countDocuments(merge({ status: 'in-review' })),
-    Task.countDocuments(merge(overdueExpr)),
-    Task.countDocuments(merge(todayExpr)),
+  const [facet] = await Task.aggregate([
+    { $match: baseFilter },
+    {
+      $facet: {
+        open: [{ $match: { status: { $ne: 'done' } } }, { $count: 'n' }],
+        inReview: [{ $match: { status: 'in-review' } }, { $count: 'n' }],
+        overdue: [{ $match: overdueMatch }, { $count: 'n' }],
+        today: [{ $match: todayMatch }, { $count: 'n' }],
+      },
+    },
   ]);
 
-  return { open, inReview, overdue, today };
+  const pick = (bucket) => bucket?.[0]?.n || 0;
+  return {
+    open: pick(facet?.open),
+    inReview: pick(facet?.inReview),
+    overdue: pick(facet?.overdue),
+    today: pick(facet?.today),
+  };
 };
 
 exports.updateTask = async (taskId, updates, user, session) => {
@@ -1405,6 +1413,65 @@ exports.getReviewQueue = async (user) => {
 
   const mapped = tasks.map(mapTaskDTO);
   return filterReviewQueueTasks(mapped, user, (task) => task.assignments || [], { platformOwnerId });
+};
+
+/** Lightweight review counts for sidebar badges — no full task populate. */
+exports.countReviewQueue = async (user) => {
+  const platformOwnerId = await getPlatformOwnerUserId();
+  const isPlatformOwner = platformOwnerId && user._id.toString() === platformOwnerId;
+
+  let taskIds = [];
+  if (isPlatformOwner) {
+    const inReview = await Task.find({ status: 'in-review' }).select('_id').lean();
+    taskIds = inReview.map((t) => t._id);
+  } else {
+    const filter = getReviewQueueAssignmentFilter(user._id);
+    const delegated = await TaskAssignment.find(filter)
+      .select('taskId')
+      .lean();
+    taskIds = [...new Set(delegated.map((a) => a.taskId))];
+  }
+
+  if (!taskIds.length) {
+    return { pending: 0, projectReview: 0 };
+  }
+
+  const [tasks, assignments] = await Promise.all([
+    Task.find({ status: 'in-review', _id: { $in: taskIds } })
+      .select('_id createdBy projectId')
+      .lean(),
+    TaskAssignment.find({ taskId: { $in: taskIds } })
+      .select('taskId userId assignedBy')
+      .lean(),
+  ]);
+
+  const assignmentsByTask = new Map();
+  for (const row of assignments) {
+    const key = String(row.taskId);
+    if (!assignmentsByTask.has(key)) assignmentsByTask.set(key, []);
+    assignmentsByTask.get(key).push(row);
+  }
+
+  const lightweight = tasks.map((task) => ({
+    _id: task._id,
+    createdBy: task.createdBy,
+    projectId: task.projectId,
+    assignments: assignmentsByTask.get(String(task._id)) || [],
+  }));
+
+  const filtered = filterReviewQueueTasks(
+    lightweight,
+    user,
+    (task) => task.assignments || [],
+    { platformOwnerId },
+  );
+
+  const projectReview = filtered.filter((task) => {
+    const pid = task?.projectId?._id || task?.projectId;
+    return pid != null && pid !== '';
+  }).length;
+
+  return { pending: filtered.length, projectReview };
 };
 
 exports.getProjectRole = getProjectRole;

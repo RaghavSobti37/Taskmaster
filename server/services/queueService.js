@@ -25,8 +25,11 @@ const { countPendingRecipients } = require('../utils/campaignStats');
 
 const DISPATCH_CHUNK_SIZE = 100;
 const TRIGGER_BATCH_SIZE = 25;
-const MEMORY_SEND_CONCURRENCY = 3;
-const MEMORY_SEND_DELAY_MS = 150;
+/** Resend free tier is 2 req/s — keep in-process fallback under that. */
+const MEMORY_SEND_CONCURRENCY = 1;
+const MEMORY_SEND_DELAY_MS = 500;
+/** Hard cap so a misconfigured queue cannot OOM the web process. */
+const MEMORY_QUEUE_MAX_SIZE = 100;
 
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
@@ -117,9 +120,32 @@ const markRecipientsQueued = async (Model, campaignId, recipientIds) => {
   );
 };
 
+const resetRecipientsToPending = async (Model, campaignId, recipientIds) => {
+  if (!recipientIds.length) return;
+  const ids = recipientIds.map((id) => new mongoose.Types.ObjectId(String(id)));
+  await Model.updateOne(
+    { _id: campaignId },
+    { $set: { 'recipients.$[elem].status': 'Pending' } },
+    { arrayFilters: [{ 'elem._id': { $in: ids }, 'elem.status': 'Queued' }], ...BYPASS },
+  );
+};
+
+const buildRecipientJobData = (row, campaign, campaignId, isLegacy, jobIndex, tenantId) => ({
+  campaignId,
+  recipientId: row.recipientId.toString(),
+  email: row.email,
+  profileId: campaign.senderProfileId
+    ? (campaign.senderProfileId._id || campaign.senderProfileId).toString()
+    : null,
+  isLegacy,
+  jobIndex,
+  tenantId: tenantId ? String(tenantId) : undefined,
+});
+
 const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset = 0, tenantId }) => {
   const { triggerEmailCampaign } = require('./triggerService');
   const campaignId = campaign._id.toString();
+  const bullmqAvailable = isCampaignEmailQueueAvailable();
 
   const pendingIds = chunk
     .filter((row) => row.status === 'Pending')
@@ -128,37 +154,39 @@ const queueRecipientJobs = async ({ Model, campaign, isLegacy, chunk, jobOffset 
     await markRecipientsQueued(Model, campaign._id, pendingIds);
   }
 
-  const jobDataList = chunk.map((row, i) => ({
-    campaignId,
-    recipientId: row.recipientId.toString(),
-    email: row.email,
-    subject: campaign.subject || campaign.title,
-    content: campaign.content,
-    profileId: campaign.senderProfileId
-      ? (campaign.senderProfileId._id || campaign.senderProfileId).toString()
-      : null,
-    isLegacy,
-    jobIndex: jobOffset + i,
-    tenantId: tenantId ? String(tenantId) : undefined,
-  }));
+  const jobDataList = chunk.map((row, i) =>
+    buildRecipientJobData(row, campaign, campaignId, isLegacy, jobOffset + i, tenantId),
+  );
 
   for (let i = 0; i < jobDataList.length; i += TRIGGER_BATCH_SIZE) {
     const batch = jobDataList.slice(i, i + TRIGGER_BATCH_SIZE);
 
-    if (isCampaignEmailQueueAvailable()) {
+    if (bullmqAvailable) {
       try {
         await enqueueCampaignEmailJobs(batch);
         continue;
       } catch (err) {
-        logger.warn('Queue Service', 'BullMQ enqueue failed — falling back to memory queue', {
+        const batchRecipientIds = batch.map((job) => job.recipientId);
+        await resetRecipientsToPending(Model, campaign._id, batchRecipientIds);
+        logger.error('Queue Service', 'BullMQ enqueue failed — aborting dispatch (no memory fallback)', {
           error: err.message,
+          campaignId,
+          batchSize: batch.length,
         });
+        throw err;
       }
     }
 
     await Promise.all(batch.map(async (jobData) => {
       const triggered = await triggerEmailCampaign(jobData);
-      if (!triggered) memoryQueue.push(jobData);
+      if (!triggered) {
+        if (memoryQueue.length >= MEMORY_QUEUE_MAX_SIZE) {
+          throw new Error(
+            `Memory queue cap (${MEMORY_QUEUE_MAX_SIZE}) exceeded — configure Redis/BullMQ for large campaigns`,
+          );
+        }
+        memoryQueue.push(jobData);
+      }
     }));
   }
 

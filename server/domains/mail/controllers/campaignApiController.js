@@ -198,8 +198,6 @@ const aggregateTimeSeriesByHour = (points = []) => {
   return Object.values(map).sort((a, b) => new Date(a.time) - new Date(b.time));
 };
 
-const LARGE_CAMPAIGN_RECIPIENT_THRESHOLD = 1000;
-
 exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -219,22 +217,14 @@ exports.getById = async (req, res) => {
     const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
     const recipientCount = Math.max(campaign.recipientCount || 0, computed.total);
 
-    if (recipientCount > LARGE_CAMPAIGN_RECIPIENT_THRESHOLD) {
-      const { buildEngagementTimeSeries } = require('../../../utils/campaignRegisteredLocation');
-      const timeSeries = await buildEngagementTimeSeries(campaign._id);
-      if (timeSeries.length > 0) campaign.timeSeries = timeSeries;
-      else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
-      campaign.locationBreakdownRows = campaign.locationBreakdownRows || [];
-    } else {
-      const registered = await buildRegisteredLocationBreakdown(
-        campaign._id,
-        campaign.recipients || [],
-      );
-      campaign.locationBreakdown = registered.locationBreakdown;
-      campaign.locationBreakdownRows = registered.locationBreakdownRows;
-      if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
-      else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
-    }
+    const registered = await buildRegisteredLocationBreakdown(
+      campaign._id,
+      campaign.recipients || [],
+    );
+    campaign.locationBreakdown = registered.locationBreakdown;
+    campaign.locationBreakdownRows = registered.locationBreakdownRows;
+    if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
+    else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
 
     campaign.recipientCount = recipientCount;
     campaign.invalidEmailCount = computed.recipientStatusCounts.Invalid || 0;

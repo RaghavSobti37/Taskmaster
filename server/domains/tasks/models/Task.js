@@ -42,6 +42,8 @@ const taskSchema = new mongoose.Schema({
   color: { type: String }
 }, { timestamps: true });
 
+taskSchema.index({ createdBy: 1, status: 1 });
+taskSchema.index({ mentionAccessIds: 1, status: 1 });
 taskSchema.index({ projectId: 1, status: 1 });
 taskSchema.index({ phaseId: 1, status: 1 });
 taskSchema.index({ projectId: 1, dueDate: 1 });

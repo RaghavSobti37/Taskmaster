@@ -75,6 +75,7 @@ logSchema.pre('validate', function (next) {
   next();
 });
 
+logSchema.index({ userId: 1, action: 1, createdAt: -1 });
 logSchema.index({ origin: 1, status: 1, timestamp: -1 });
 logSchema.index({ userId: 1, createdAt: -1 });
 logSchema.index({ tenantId: 1, createdAt: -1 });

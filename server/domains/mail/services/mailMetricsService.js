@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const MailEvent = require('../models/MailEvent');
@@ -75,8 +76,28 @@ async function getUserCampaignRecipients(userId) {
   return { coreCamps, mailCamps };
 }
 
+const BOUNCE_STATUSES = ['Bounced', 'Failed', 'Invalid'];
+
+async function countUserCampaignBounces(userId) {
+  const uid = new mongoose.Types.ObjectId(String(userId));
+  const pipeline = [
+    { $match: { createdBy: uid } },
+    { $unwind: '$recipients' },
+    { $match: { 'recipients.status': { $in: BOUNCE_STATUSES } } },
+    { $count: 'total' },
+  ];
+
+  const [coreAgg, mailAgg] = await Promise.all([
+    aggregateWithTenant(Campaign, pipeline),
+    aggregateWithTenant(MailCampaign, pipeline),
+  ]);
+
+  return (coreAgg[0]?.total || 0) + (mailAgg[0]?.total || 0);
+}
+
 module.exports = {
   getEngagedEmails,
   getCumulativeTagMetrics,
   getUserCampaignRecipients,
+  countUserCampaignBounces,
 };

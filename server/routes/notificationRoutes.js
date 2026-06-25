@@ -16,10 +16,19 @@ const { validateBody } = require('../validation/validateBody');
 const { FOLLOWUP_DATE_FIELD } = require('../utils/followupDateQuery');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
-const { countProjectOverdueTasks, countProjectReviewTasks } = require('../utils/projectStatusCounts');
+const { countProjectOverdueTasks } = require('../utils/projectStatusCounts');
+const { getCache, setCache } = require('../services/cacheService');
+
+const STATUS_COUNTS_TTL_SECONDS = 20;
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
+    const cacheKey = `status-counts:v1:${req.user._id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const now = new Date();
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
@@ -85,11 +94,10 @@ router.get('/status-counts', protect, async (req, res) => {
 
     let reviewPendingCount = 0;
     let projectReviewCount = 0;
-    let reviewQueue = [];
     try {
-      reviewQueue = await TaskService.getReviewQueue(req.user);
-      reviewPendingCount = reviewQueue.length;
-      projectReviewCount = countProjectReviewTasks(reviewQueue);
+      const reviewCounts = await TaskService.countReviewQueue(req.user);
+      reviewPendingCount = reviewCounts.pending;
+      projectReviewCount = reviewCounts.projectReview;
     } catch (reviewErr) {
       logger.warn('status-counts review queue', reviewErr?.message);
     }
@@ -103,14 +111,17 @@ router.get('/status-counts', protect, async (req, res) => {
 
     const allowed = await getAllowedCategoriesForUser(req.user);
 
-    res.json({
+    const payload = {
       tasks: { overdue: overdueTasksCount, today: todayTasksCount, inReview: inReviewTasksCount },
       followups: { overdue: overdueFollowupsCount, today: todayFollowupsCount },
       calendar: { today: todayCalendarCount },
       notifications: { unread: 0, byCategory: {}, localOnly: true, allowedCategories: ['all', ...allowed] },
       review: { pending: reviewPendingCount },
       projects: { overdue: projectOverdueCount, review: projectReviewCount },
-    });
+    };
+
+    await setCache(cacheKey, payload, STATUS_COUNTS_TTL_SECONDS);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch status counts' });
   }

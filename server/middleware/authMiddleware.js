@@ -85,7 +85,8 @@ const protect = async (req, res, next) => {
     }
 
     req.user = await loadAuthUser(decoded.id);
-    if (req.user && decoded.jti) {
+    const isPageViewTelemetry = String(req.headers['x-telemetry'] || '').toLowerCase() === 'page-view';
+    if (req.user && decoded.jti && !isPageViewTelemetry) {
       const { touchSession } = require('../utils/sessionRegistry');
       await touchSession(decoded.id, decoded.jti, req);
     }

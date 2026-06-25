@@ -30,6 +30,7 @@ export function buildCampaignPayloadFromForm(formValues, approvedTemplates, cust
       filename: a.filename,
       contentType: a.contentType,
       storageKey: a.storageKey,
+      storageUrl: a.storageUrl,
     })),
     leadIds,
     customRecipients,

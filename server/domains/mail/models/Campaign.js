@@ -33,7 +33,8 @@ const campaignSchema = new mongoose.Schema({
   attachments: [{
     filename: String,
     contentType: String,
-    storageKey: String
+    storageKey: String,
+    storageUrl: String,
   }],
   status: { type: String, enum: ['Draft', 'Queued', 'Sending', 'Stopped', 'Completed', 'Failed'], default: 'Draft' },
   recipientCount: { type: Number, default: 0 },
@@ -71,6 +72,7 @@ const campaignSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+campaignSchema.index({ createdBy: 1 });
 campaignSchema.index({ 'recipients.messageId': 1 });
 campaignSchema.index({ 'recipients.email': 1 });
 

@@ -13,7 +13,9 @@ exports.getSmtpUsage = async (req, res) => {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     await syncProviderUsageFromEvents();
     const todayCounts = await getTodaySendCountsByProfileProvider();
-    const profiles = await EmailProfile.find(filter).lean();
+    const profiles = await EmailProfile.find(filter)
+      .select('-smtpPass -providerCredentials')
+      .lean();
     const usage = profiles.flatMap((p) => {
       const u = buildProfileUsage(p, todayCounts);
       if (u.rotation?.providers?.length) {
@@ -56,7 +58,9 @@ exports.list = async (req, res) => {
   try {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     const todayCounts = await getTodaySendCountsByProfileProvider();
-    const profiles = await EmailProfile.find(filter).lean();
+    const profiles = await EmailProfile.find(filter)
+      .select('-smtpPass -providerCredentials')
+      .lean();
     const enriched = profiles.map((p) => ({
       ...p,
       rotationProviderCount: FREE_ROTATION_PROVIDER_KEYS.length,

@@ -42,6 +42,8 @@ const emailProfileSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
+emailProfileSchema.index({ createdBy: 1 });
+
 emailProfileSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('EmailProfile', emailProfileSchema);

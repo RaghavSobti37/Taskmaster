@@ -3,14 +3,13 @@ const TaskAssignment = require('../../tasks/models/TaskAssignment');
 const Lead = require('../../../models/Lead');
 const Log = require('../../../models/Log');
 const Project = require('../../../models/Project');
-const { getUserCampaignRecipients } = require('../../mail/services/mailMetricsService');
+const { countUserCampaignBounces } = require('../../mail/services/mailMetricsService');
 const mongoose = require('mongoose');
 const logger = require('../../../utils/logger');
 const { isAdminUser, isOpsUser } = require('../../../utils/departmentPermissions');
 const Attendance = require('../../../models/Attendance');
 const { isAttendanceExcluded } = require('../../../utils/attendanceUsers');
 const { getCache, setCache } = require('../../../services/cacheService');
-const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const { getTenantId } = require('../../../utils/tenantContext');
 
@@ -78,13 +77,25 @@ const formatChartDayLabel = (dateKey) => {
 };
 
 const sumFocusHours = async (match) => {
-  const logs = await Log.find(match).select('details.timeSpent').lean();
-  const focusHours = logs.reduce(
-    (sum, log) => sum + parseTimeSpentToHours(log.details?.timeSpent),
-    0
+  const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
+  const [result] = await Log.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        logCount: { $sum: 1 },
+        timeSpentValues: { $push: { $ifNull: ['$details.timeSpent', ''] } },
+      },
+    },
+  ]);
+
+  const timeSpentValues = result?.timeSpentValues || [];
+  const focusHours = timeSpentValues.reduce(
+    (sum, raw) => sum + parseTimeSpentToHours(raw),
+    0,
   );
   const rounded = Math.round(focusHours * 100) / 100;
-  const logCount = logs.length;
+  const logCount = result?.logCount || 0;
   const focusAvgHours =
     logCount > 0 ? Math.round((rounded / logCount) * 10) / 10 : 0;
   return [{ focusHours: rounded, logCount, focusAvgHours }];
@@ -271,18 +282,11 @@ exports.getDashboardSummary = async (req, res) => {
         date: { $gte: today, $lte: todayEndTime }
       }).setOptions({ bypassTenant: true }).lean(),
 
-      // 6. Campaign Data for Bounces
-      getUserCampaignRecipients(userId),
+      // 6. Campaign bounce count
+      countUserCampaignBounces(userId),
     ]);
 
-    const { coreCamps, mailCamps } = campaignRecipients;
-
-    let bouncedEmails = 0;
-    for (const c of [...(coreCamps || []), ...(mailCamps || [])]) {
-      (c.recipients || []).forEach(r => {
-        if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) bouncedEmails++;
-      });
-    }
+    const bouncedEmails = campaignRecipients || 0;
 
     const tasks = taskStats[0] || { total: 0, completed: 0, critical: 0, overdue: 0 };
     const leads = leadStats[0] || { total: 0, converted: 0, highQuality: 0 };

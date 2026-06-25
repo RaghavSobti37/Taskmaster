@@ -3,7 +3,7 @@ const CRMConfig = require('../models/CRMConfig');
 const { mergeLeadStatusOptions } = require('../../../utils/crmPipelineFilters');
 const { getBookedCallsPublicConfig } = require('../../../utils/bookedCallsConfig');
 
-const { listImportSheetFilters } = require('../../../shared/artistCrmSheetAssignees');
+const { listImportSheetFilters } = require('../../../../shared/artistCrmSheetAssignees');
 
 async function getCRMConfig() {
   const knownSheetSources = listImportSheetFilters().map((s) => s.source);

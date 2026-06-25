@@ -40,10 +40,9 @@ async function getEngagedEmails() {
   return Array.from(engagedEmailsSet);
 }
 
-async function getCumulativeTagMetrics(userId) {
+async function getCumulativeTagMetrics(_userId) {
   const [coreAgg, mailAgg] = await Promise.all([
     aggregateWithTenant(Campaign, [
-      { $match: { createdBy: userId } },
       {
         $group: {
           _id: { $ifNull: ['$eventTag', 'General'] },
@@ -54,7 +53,6 @@ async function getCumulativeTagMetrics(userId) {
       },
     ]),
     aggregateWithTenant(MailCampaign, [
-      { $match: { createdBy: userId } },
       {
         $group: {
           _id: { $ifNull: ['$eventTag', 'General'] },

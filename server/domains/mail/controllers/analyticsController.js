@@ -1,14 +1,12 @@
 const MailCampaign = require('../models/MailCampaign');
 const MailEvent = require('../models/MailEvent');
 const Campaign = require('../models/Campaign');
-const { isAdminUser } = require('../../../utils/departmentPermissions');
 const { scanBounces, updateEmailTags } = require('../services/mailService');
 
 exports.getStats = async (req, res) => {
   try {
-    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
-    const mailCampaigns = await MailCampaign.find(filter).select('-recipients -content').lean();
-    const coreCampaigns = await Campaign.find(filter).select('-recipients -content').lean();
+    const mailCampaigns = await MailCampaign.find({}).select('-recipients -content').lean();
+    const coreCampaigns = await Campaign.find({}).select('-recipients -content').lean();
     const allCampaigns = [...mailCampaigns, ...coreCampaigns];
 
     let totalCampaigns = allCampaigns.length;

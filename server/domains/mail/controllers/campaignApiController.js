@@ -15,14 +15,9 @@ const { normalizeOutboundEmailHtml } = require('../../../utils/normalizeOutbound
 const { dispatchCampaignJobs, stopCampaign } = require('../../../services/queueService');
 const { computeRecipientStats, aggregateRecipientStats } = require('../../../utils/campaignStats');
 const { resolveCampaignByParam } = require('../campaignFacade');
-const { isAdminUser } = require('../../../utils/departmentPermissions');
 
-const assertCampaignAccess = (campaign, user) => {
-  if (!campaign) return false;
-  if (isAdminUser(user)) return true;
-  const ownerId = campaign.createdBy?._id || campaign.createdBy;
-  return ownerId && String(ownerId) === String(user._id);
-};
+/** Any authenticated user with emails page access can view and manage all org campaigns. */
+const assertCampaignAccess = (campaign, user) => Boolean(campaign && user);
 
 /** Avoid multi-MB JSON responses that timeout Vercel → Render proxy on large campaigns. */
 const slimCampaignForResponse = (campaign) => {
@@ -47,9 +42,7 @@ const {
 
 exports.list = async (req, res) => {
   try {
-    const userId = req.user._id;
     const listPipeline = [
-      ...(isAdminUser(req.user) ? [] : [{ $match: { createdBy: userId } }]),
       { $addFields: { recipientCount: { $size: { $ifNull: ['$recipients', []] } } } },
       { $project: { content: 0, recipients: 0 } },
       { $sort: { createdAt: -1 } },

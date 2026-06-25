@@ -60,8 +60,8 @@ async function findByIdOrCampaignId(id, options = {}) {
   return resolveCampaignByParam(id, options);
 }
 
-async function findAllForUser(userId, { isAdmin = false } = {}) {
-  const filter = isAdmin ? {} : { createdBy: userId };
+async function findAllForUser(_userId, { isAdmin: _isAdmin = false } = {}) {
+  const filter = {};
   const [mailCampaigns, coreCampaigns] = await Promise.all([
     MailCampaign.find(filter).sort('-createdAt').lean().setOptions(BYPASS),
     Campaign.find(filter).sort('-createdAt').lean().setOptions(BYPASS),

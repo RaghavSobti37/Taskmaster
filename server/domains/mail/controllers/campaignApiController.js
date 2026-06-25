@@ -96,10 +96,13 @@ exports.list = async (req, res) => {
 exports.uploadAttachment = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const { uploadSingleMulterFile } = require('../../../utils/uploadthingServer');
+    const uploaded = await uploadSingleMulterFile(req.file);
     res.json({
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
-      storageKey: req.file.filename
+      filename: uploaded.name || req.file.originalname,
+      contentType: uploaded.type || req.file.mimetype,
+      storageKey: uploaded.key,
+      storageUrl: uploaded.url,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -360,7 +363,8 @@ exports.create = async (req, res) => {
       attachments: (attachments || []).map((a) => ({
         filename: a.filename,
         contentType: a.contentType,
-        storageKey: a.storageKey
+        storageKey: a.storageKey,
+        storageUrl: a.storageUrl,
       })),
       eventTag: eventTag || 'General',
       recipients: allRecipients,
@@ -605,6 +609,7 @@ exports.resendFiltered = async (req, res) => {
         filename: a.filename,
         contentType: a.contentType,
         storageKey: a.storageKey,
+        storageUrl: a.storageUrl,
       })),
       eventTag: source.eventTag || 'General',
       recipients: filteredRecipients,

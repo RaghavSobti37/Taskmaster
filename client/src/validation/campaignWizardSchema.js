@@ -34,6 +34,7 @@ export const step4Schema = z.object({
     filename: z.string(),
     contentType: z.string().optional(),
     storageKey: z.string(),
+    storageUrl: z.string().optional(),
   })).optional(),
 });
 

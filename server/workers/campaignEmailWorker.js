@@ -14,7 +14,7 @@ const initCampaignEmailWorker = () => {
   }
 
   const concurrency = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_CONCURRENCY || '5', 10));
-  const rateLimit = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_RATE_LIMIT || '8', 10));
+  const rateLimit = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_RATE_LIMIT || '2', 10));
 
   const worker = new Worker(
     QUEUE_NAME,

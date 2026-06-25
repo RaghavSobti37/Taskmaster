@@ -1,7 +1,4 @@
 const express = require('express');
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const router = express.Router();
 const { protect, requirePageAccess } = require('../../../middleware/authMiddleware');
@@ -17,16 +14,8 @@ const emailsAccess = requirePageAccess('emails');
 
 router.use(protect, emailsAccess);
 
-const attachmentDir = path.join(__dirname, '../../../uploads/campaign-attachments');
-if (!fs.existsSync(attachmentDir)) fs.mkdirSync(attachmentDir, { recursive: true });
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: attachmentDir,
-    filename: (_req, file, cb) => {
-      cb(null, `${crypto.randomBytes(16).toString('hex')}_${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 

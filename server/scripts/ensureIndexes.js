@@ -20,13 +20,17 @@ const MODEL_LOADERS = [
   () => require('../domains/crm/models/Lead'),
   () => require('../models/Attendance'),
   () => require('../models/SystemLog'),
+  () => require('../models/Log'),
   () => require('../domains/mail/models/MailEvent'),
+  () => require('../domains/mail/models/Campaign'),
+  () => require('../domains/mail/models/EmailProfile'),
 ];
 
 /** MailEvent schema is LOCKED — add performance indexes here only. */
 const MAIL_EVENT_SCRIPT_INDEXES = [
   { key: { email: 1, timestamp: -1 }, name: 'perf_email_timestamp' },
   { key: { tenantId: 1, timestamp: -1 }, name: 'perf_tenant_timestamp', sparse: true },
+  { key: { eventType: 1, timestamp: 1, senderProfileId: 1 }, name: 'perf_event_timestamp_profile' },
 ];
 
 async function indexExists(collection, name) {

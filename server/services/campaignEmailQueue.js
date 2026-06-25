@@ -32,8 +32,12 @@ const isCampaignEmailQueueAvailable = () => {
   return connection.status === 'ready';
 };
 
+/** BullMQ custom job ids must not contain ":" */
+const buildCampaignEmailJobId = (campaignId, recipientId) =>
+  `${String(campaignId)}__${String(recipientId)}`;
+
 const buildJobOpts = (jobData) => ({
-  jobId: `${jobData.campaignId}:${jobData.recipientId}`,
+  jobId: buildCampaignEmailJobId(jobData.campaignId, jobData.recipientId),
   removeOnComplete: true,
   removeOnFail: 100,
   attempts: 3,
@@ -88,6 +92,7 @@ const removeCampaignJobsFromQueue = async (campaignId) => {
 
 module.exports = {
   QUEUE_NAME,
+  buildCampaignEmailJobId,
   isCampaignEmailQueueAvailable,
   enqueueCampaignEmailJobs,
   removeCampaignJobsFromQueue,

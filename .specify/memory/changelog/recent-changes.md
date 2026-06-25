@@ -9,7 +9,7 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 - **What:** `@vercel/analytics` + `<Analytics />` in `client/src/main.jsx` — covers `tsccoreknot.com`, `landing.tsccoreknot.com`, and `auth.tsccoreknot.com` (shared client bundle per `VITE_SITE_MODE`).
 - **Why:** Page-view telemetry in Vercel dashboard for app, landing, and auth deploys.
 - **Files:** `client/package.json`, `client/src/main.jsx`
-- **Branch:** `main` · **Commit:** _(pending push)_
+- **Branch:** `main` · **Commit:** `667bb0da`
 
 ---
 

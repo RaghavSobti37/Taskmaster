@@ -884,7 +884,7 @@ const FinancePage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[80] flex items-center justify-end"
+            className="fixed inset-0 bg-slate-900/80 z-[80] flex items-center justify-end"
           >
             {/* Modal Container */}
             <motion.div

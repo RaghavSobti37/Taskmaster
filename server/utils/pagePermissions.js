@@ -167,8 +167,8 @@ const getUserPagePermissions = (user) => {
 
 const hasPageAccess = (user, pageKey) => {
   if (!pageKey) return true;
-  // Mail template studio + /emails hub: any authenticated user (Jun 2026 regression fix)
-  if (pageKey === 'emails' && user) return true;
+  // Mail hub + campaign detail: any authenticated user
+  if ((pageKey === 'emails' || pageKey === 'campaigns') && user) return true;
   if (pageKey === 'admin_artist_path') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);

@@ -8,6 +8,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://127.0.0.1:4173',
   'https://tsccoreknot.com',
   'https://www.tsccoreknot.com',
+  'https://landing.tsccoreknot.com',
+  'https://auth.tsccoreknot.com',
   'https://theshakticollective.in',
   'https://www.theshakticollective.in',
 ];

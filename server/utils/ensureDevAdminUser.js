@@ -152,8 +152,9 @@ async function ensureDevAdminUser() {
 
       logger.info('authBootstrap', 'Set password on OAuth-only dev account', { email });
 
-    } else {
+    } else if (process.env.DEV_BOOTSTRAP_FORCE_PASSWORD === 'true') {
 
+      // Opt-in: reset bootstrap accounts to seed (e.g. after prod DB sync). Default off so local password changes stick.
       // eslint-disable-next-line no-await-in-loop
 
       const matchesSeed = await user.comparePassword(seedPassword);

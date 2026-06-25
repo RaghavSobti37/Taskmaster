@@ -183,7 +183,7 @@ export default function CampaignWizardShell() {
       <div className="relative">
         {isSubmitting && (
           <div
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-[var(--color-bg-primary)]/85 backdrop-blur-sm"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-[var(--color-bg-primary)]/85"
             aria-live="polite"
             aria-busy="true"
           >

@@ -1,5 +1,6 @@
 const { logFromError } = require('../services/systemLogService');
 const { captureException } = require('../utils/sentry');
+const { captureException: capturePostHogException } = require('../utils/posthog');
 
 const errorHandler = (err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -38,6 +39,12 @@ const errorHandler = (err, req, res, next) => {
       route: req.originalUrl,
       method: req.method,
       userId: req.user ? String(req.user._id) : 'unauthenticated',
+      statusCode,
+      traceId: req.traceId,
+    });
+    capturePostHogException(err, req, {
+      route: req.originalUrl,
+      method: req.method,
       statusCode,
       traceId: req.traceId,
     });

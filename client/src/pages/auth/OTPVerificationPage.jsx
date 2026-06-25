@@ -118,7 +118,7 @@ const OTPVerificationPage = () => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="tm-modal-panel max-w-md relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-gray-200 dark:border-slate-700 shadow-xl backdrop-blur-xl"
+        className="tm-modal-panel max-w-md relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-gray-200 dark:border-slate-700 shadow-xl"
       >
         {/* Header */}
         <div className="text-center mb-8">

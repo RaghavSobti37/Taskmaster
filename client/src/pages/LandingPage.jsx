@@ -1,5 +1,4 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -16,13 +15,29 @@ import { useAuth } from '../contexts/AuthContext';
 import MarketingPageBackground from '../components/MarketingPageBackground';
 import MarketingThemeToggle from '../components/MarketingThemeToggle';
 import BrandLogo from '../components/brand/BrandLogo';
+import { authUrl, appUrl, isAuthSite } from '../config/siteUrls';
+
+function AuthLink({ to, className, children, ...props }) {
+  if (isAuthSite()) {
+    return (
+      <Link to={to} className={className} {...props}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a href={authUrl(to)} className={className} {...props}>
+      {children}
+    </a>
+  );
+}
 
 export default function LandingPage() {
   const { user } = useAuth();
 
-  // If already authenticated, redirect to the dashboard page directly
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    window.location.replace(appUrl('/dashboard'));
+    return null;
   }
 
   const features = [
@@ -66,12 +81,12 @@ export default function LandingPage() {
           <Link to="/privacy" className="text-xs text-[var(--color-text-secondary)] hover:text-foreground transition hidden sm:inline">
             Privacy Policy
           </Link>
-          <Link to="/login" className="px-4 py-2 rounded-xl bg-card hover:bg-background border border-border text-xs font-bold text-foreground transition">
+          <AuthLink to="/login" className="px-4 py-2 rounded-xl bg-card hover:bg-background border border-border text-xs font-bold text-foreground transition">
             Sign In
-          </Link>
-          <Link to="/register" className="px-4 py-2 rounded-xl bg-[var(--color-brand-teal)] hover:bg-[var(--color-action-hover)] text-xs font-bold text-[var(--color-brand-cream)] transition shadow-lg shadow-[var(--color-brand-teal)]/20">
+          </AuthLink>
+          <AuthLink to="/register" className="px-4 py-2 rounded-xl bg-[var(--color-brand-teal)] hover:bg-[var(--color-action-hover)] text-xs font-bold text-[var(--color-brand-cream)] transition shadow-lg shadow-[var(--color-brand-teal)]/20">
             Get Started
-          </Link>
+          </AuthLink>
         </div>
       </header>
 
@@ -89,18 +104,18 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
-            <Link
+            <AuthLink
               to="/login"
               className="px-6 py-3.5 rounded-xl bg-[var(--color-brand-teal)] hover:bg-[var(--color-action-hover)] text-[var(--color-brand-cream)] font-bold text-sm transition flex items-center gap-2 shadow-xl shadow-[var(--color-brand-teal)]/25 group"
             >
               Sign In to Workspace <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
+            </AuthLink>
+            <AuthLink
               to="/register"
               className="px-6 py-3.5 rounded-xl bg-card hover:bg-background text-foreground border border-border font-bold text-sm transition"
             >
               Create Free Account
-            </Link>
+            </AuthLink>
           </div>
         </div>
       </section>

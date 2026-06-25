@@ -144,6 +144,7 @@ export default function OnboardingTour() {
 
   const finish = useCallback(() => {
     if (user?._id) markOnboardingCompleted(user._id);
+    window.dispatchEvent(new CustomEvent('coreknot:onboarding-complete'));
     setActive(false);
   }, [user?._id]);
 

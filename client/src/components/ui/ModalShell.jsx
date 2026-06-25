@@ -104,7 +104,7 @@ export const ModalShell = ({
       role="presentation"
     >
       <div
-        className="tm-modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        className="tm-modal-backdrop absolute inset-0 bg-black/40"
         onClick={handleBackdropClick}
       />
       <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>

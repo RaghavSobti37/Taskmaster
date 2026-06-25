@@ -225,7 +225,7 @@ const BottomNavigation = () => {
         aria-label="Primary"
         data-tour="bottom-nav"
       >
-        <div className="rounded-full border border-white/10 bg-[#1a1a1a]/95 px-1.5 py-[5px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div className="rounded-full border border-white/10 bg-[#1a1a1a]/95 px-1.5 py-[5px] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           <LayoutGroup id="bottom-nav">
             <div className="flex items-center justify-around">
               {NAV_SLOTS.map((slot, index) => (

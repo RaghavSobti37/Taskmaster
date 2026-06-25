@@ -23,7 +23,7 @@ const {
 } = require('./campaignEmailQueue');
 const { countPendingRecipients } = require('../utils/campaignStats');
 
-const DISPATCH_CHUNK_SIZE = 100;
+const { isResendRateLimitError } = require('../utils/resendSendGate');
 const TRIGGER_BATCH_SIZE = 25;
 /** Resend free tier is 2 req/s — keep in-process fallback under that. */
 const MEMORY_SEND_CONCURRENCY = 1;
@@ -66,6 +66,11 @@ const processMemoryQueue = async () => {
       try {
         await processEmailJob(jobData);
       } catch (err) {
+        if (isResendRateLimitError(err)) {
+          memoryQueue.push(jobData);
+          await new Promise((res) => setTimeout(res, 2000));
+          continue;
+        }
         logger.error('Memory Queue', 'Job failed', { error: err.message });
       }
       await new Promise((res) => setTimeout(res, MEMORY_SEND_DELAY_MS));
@@ -371,11 +376,32 @@ const dispatchCampaignJobs = async (campaignId) => {
   };
 };
 
+const resetRateLimitedFailures = async (Model) => {
+  const rateLimitError = { $regex: /too many requests|rate limit/i };
+  const result = await Model.updateMany(
+    { recipients: { $elemMatch: { status: 'Failed', error: rateLimitError } } },
+    { $set: { 'recipients.$[elem].status': 'Pending', 'recipients.$[elem].error': '' } },
+    {
+      arrayFilters: [{ 'elem.status': 'Failed', 'elem.error': rateLimitError }],
+      ...BYPASS,
+    },
+  );
+  return result.modifiedCount || 0;
+};
+
 const resumeStuckCampaigns = async () => {
   if (process.env.NODE_ENV === 'test') return { resumed: 0 };
 
   const filter = { status: { $in: ['Sending', 'Queued'] } };
   let resumed = 0;
+  let rateLimitRecovered = 0;
+
+  for (const Model of [Campaign, MailCampaign]) {
+    rateLimitRecovered += await resetRateLimitedFailures(Model);
+  }
+  if (rateLimitRecovered > 0) {
+    logger.info('Queue Service', `Reset ${rateLimitRecovered} rate-limited Failed recipients to Pending`);
+  }
 
   const resumeForModel = async (Model) => {
     const stuck = await Model.find(filter).select('_id title').lean();
@@ -395,7 +421,7 @@ const resumeStuckCampaigns = async () => {
   await resumeForModel(Campaign);
   await resumeForModel(MailCampaign);
 
-  return { resumed };
+  return { resumed, rateLimitRecovered };
 };
 
 /** Wait for in-memory fallback queue to finish (tests / graceful shutdown). */

@@ -8,6 +8,11 @@
 | **Legacy purge** | `coreknot_token_v2`, `coreknot_token` cleared on every response |
 | **Storage** | HttpOnly cookie — **not** localStorage |
 | **Client** | `axios.defaults.withCredentials = true` |
+| **Cookie domain (prod)** | `.tsccoreknot.com` when host is `tsccoreknot.com` or `*.tsccoreknot.com` — shares session across app, landing, auth subdomains |
+
+### Allowed frontend hosts (`authCookie.js` + CORS)
+
+`tsccoreknot.com`, `www`, `landing.tsccoreknot.com`, `auth.tsccoreknot.com`, `theshakticollective.in` (+ www), `taskmaster-sand.vercel.app`, plus `FRONTEND_URL` / `CORS_ALLOWED_ORIGINS`.
 
 ### Sliding sessions (`server/utils/authSession.js`)
 

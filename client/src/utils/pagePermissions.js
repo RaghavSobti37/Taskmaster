@@ -71,6 +71,12 @@ export const PAGE_GROUPS = [
       { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
       { key: 'admin_roles', label: 'Roles', path: '/admin/roles' },
       { key: 'admin_data', label: 'Data Hub', path: '/admin' },
+      { key: 'admin_ops_hub', label: 'Ops Hub', path: '/admin/ops-hub' },
+      { key: 'ops_hub_academy', label: 'Ops Hub — Academy', path: '/admin/ops-hub' },
+      { key: 'ops_hub_media', label: 'Ops Hub — Media', path: '/admin/ops-hub' },
+      { key: 'ops_hub_show_booking', label: 'Ops Hub — Show Booking', path: '/admin/ops-hub' },
+      { key: 'ops_hub_influencers', label: 'Ops Hub — Influencers', path: '/admin/ops-hub' },
+      { key: 'admin_data', label: 'Media List', path: '/admin/media-list' },
       { key: 'admin_artist_path', label: 'Artist Path', path: '/admin/artist-path' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
@@ -180,12 +186,21 @@ export function getUserPagePermissions(user) {
 
 export function hasPageAccess(user, pageKey) {
   if (!pageKey) return true;
-  // Mail template studio + /emails hub: any authenticated user (Jun 2026 regression fix)
-  if (pageKey === 'emails' && user) return true;
+  // Mail hub + campaign detail: any authenticated user
+  if ((pageKey === 'emails' || pageKey === 'campaigns') && user) return true;
   if (pageKey === 'admin_artist_path') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);
     return perms.includes('admin_artist_path') || perms.includes('admin_data');
+  }
+  if (pageKey === 'admin_ops_hub') {
+    if (isDepartmentAdmin(user?.departmentId)) return true;
+    const perms = getUserPagePermissions(user);
+    return perms.includes('admin_ops_hub')
+      || perms.includes('ops_hub_academy')
+      || perms.includes('ops_hub_media')
+      || perms.includes('ops_hub_show_booking')
+      || perms.includes('ops_hub_influencers');
   }
   if (isDepartmentAdmin(user?.departmentId)) return ALL_PAGE_KEYS.includes(pageKey);
   return getUserPagePermissions(user).includes(pageKey);

@@ -439,10 +439,10 @@ export default function CampaignDetails() {
 
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-2">
           <p className="text-[10px] text-[var(--color-text-muted)]">
-            Opens and clicks grouped by the city resolved from each event&apos;s IP address (exact geo lookup).
+            Opens and clicks grouped by each recipient&apos;s real city — datacenter and proxy IPs excluded.
           </p>
           <RegisteredLocationBarChart
-            title="Location breakdown (IP geo)"
+            title="Location breakdown"
             variant="histogram"
             data={locationData}
             height={256}

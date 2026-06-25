@@ -11,7 +11,7 @@ const {
   buildRegisteredLocationBreakdown,
   assertNoUnknownInBreakdown,
 } = require('../utils/campaignRegisteredLocation');
-const { isForbiddenBreakdownLabel } = require('../utils/geoLookup');
+const { isBreakdownPlaceLabel, isDatacenterCityLabel } = require('../utils/geoLookup');
 
 const BYPASS = { bypassTenant: true };
 const argv = process.argv.slice(2);
@@ -49,13 +49,15 @@ const limit = Math.max(1, parseInt(argv.find((a) => a.startsWith('--limit='))?.s
     const rows = registered.locationBreakdownRows || [];
     const breakdownOpens = rows.reduce((s, r) => s + (r.opens || 0), 0);
     const breakdownClicks = rows.reduce((s, r) => s + (r.clicks || 0), 0);
-    const unknownRow = rows.find((r) => isForbiddenBreakdownLabel(r.location || r.city));
+    const badRow = rows.find((r) => !isBreakdownPlaceLabel(r.location || r.city));
+    const datacenterRow = rows.find((r) => isDatacenterCityLabel(r.location || r.city));
     const coverage = registered.locationCoverage || assertNoUnknownInBreakdown(registered.locationBreakdown, []);
 
     const pass = coverage.ok
-      && !unknownRow
-      && (eventOpens === 0 || breakdownOpens === eventOpens)
-      && (eventClicks === 0 || breakdownClicks === eventClicks);
+      && !badRow
+      && !datacenterRow
+      && breakdownOpens <= eventOpens
+      && breakdownClicks <= eventClicks;
 
     if (!pass) failures += 1;
 
@@ -67,7 +69,8 @@ const limit = Math.max(1, parseInt(argv.find((a) => a.startsWith('--limit='))?.s
       cityCount: rows.length,
       topCities: rows.slice(0, 6).map((r) => ({ city: r.city, opens: r.opens, clicks: r.clicks })),
       coverage,
-      hasUnknownRow: Boolean(unknownRow),
+      hasBadRow: Boolean(badRow),
+      hasDatacenterRow: Boolean(datacenterRow),
       pass,
     }, null, 2));
   }
@@ -77,7 +80,7 @@ const limit = Math.max(1, parseInt(argv.find((a) => a.startsWith('--limit='))?.s
     console.error(`\n${failures} campaign(s) failed location coverage verification.`);
     process.exit(1);
   }
-  console.log(`\nAll ${campaigns.length} campaign(s) passed — no Unknown, totals match MailEvents.`);
+  console.log(`\nAll ${campaigns.length} campaign(s) passed — real cities only, no datacenter/country labels.`);
 })().catch((err) => {
   console.error(err);
   process.exit(1);

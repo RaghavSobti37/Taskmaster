@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
-import { hasPageAccess, hasAnyPageAccess, getDepartmentName, getDepartmentSlug } from '../utils/departmentPermissions';
+import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../utils/departmentPermissions';
 import { useNavbarPreferences } from '../hooks/useNavbarPreferences';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
@@ -254,7 +254,6 @@ const OutletSidebar = () => {
     projects: { overdue: 0, review: 0 },
   } } = useStatusCounts(shellQueriesEnabled);
   const isMobile = useIsMobile();
-  const departmentSlug = getDepartmentSlug(user);
 
   useEffect(() => {
     closeMobileSidebar();
@@ -350,8 +349,6 @@ const OutletSidebar = () => {
       );
     });
 
-  const hubsDefaultOpen = ['sales', 'ops', 'operations', 'admin', 'artist-management', 'creative'].includes(departmentSlug);
-
   const shellWidth = isMobile
     ? SIDEBAR_MOBILE_SHELL_WIDTH
     : showLabels
@@ -431,7 +428,7 @@ const OutletSidebar = () => {
               );
             }
 
-            const defaultOpen = group.defaultOpen ?? (group.id === 'hubs' ? hubsDefaultOpen : true);
+            const defaultOpen = group.defaultOpen ?? true;
             return (
               <NavGroup
                 key={group.id}

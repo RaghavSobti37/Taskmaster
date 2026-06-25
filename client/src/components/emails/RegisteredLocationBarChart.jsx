@@ -60,7 +60,7 @@ export default function RegisteredLocationBarChart({
   limit = 12,
   variant = 'horizontal',
   onLocationClick,
-  emptyMessage = 'No engagement yet — opens and clicks appear by city from each event\'s IP geolocation.',
+  emptyMessage = 'No engagement yet — opens and clicks appear by each recipient\'s real city.',
   className = '',
 }) {
   const histogram = variant === 'histogram';

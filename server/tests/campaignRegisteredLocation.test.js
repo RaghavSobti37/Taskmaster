@@ -7,8 +7,11 @@ const {
 } = require('../utils/campaignRegisteredLocation');
 const {
   isForbiddenBreakdownLabel,
+  isDatacenterCityLabel,
+  isBreakdownPlaceLabel,
   formatBreakdownPlaceLabel,
   storedCityFromEvent,
+  isUntrustedEventForGeo,
 } = require('../utils/geoLookup');
 
 describe('campaignRegisteredLocation', () => {
@@ -24,63 +27,84 @@ describe('campaignRegisteredLocation', () => {
     expect(emails).toEqual(['a@test.com', 'b@test.com']);
   });
 
-  test('attributeEventsToBreakdown groups opens/clicks by per-event IP city', () => {
+  test('attributeEventsToBreakdown groups opens/clicks by trusted city labels', () => {
     const events = [
       { eventType: 'Open', email: 'a@test.com' },
       { eventType: 'Open', email: 'b@test.com' },
-      { eventType: 'Open', email: 'b@test.com' },
       { eventType: 'Click', email: 'a@test.com' },
+      { eventType: 'Open', email: 'c@test.com' },
     ];
-    const eventCities = ['Nashik', 'Pune', 'Pune', 'Nashik'];
+    const eventCities = ['Nashik', 'Pune', 'Nashik', 'Global'];
 
     const { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, eventCities);
 
     expect(locationBreakdown.Nashik).toEqual({ opens: 1, clicks: 1 });
-    expect(locationBreakdown.Pune).toEqual({ opens: 2, clicks: 0 });
-    expect(locationBreakdown.Unknown).toBeUndefined();
+    expect(locationBreakdown.Pune).toEqual({ opens: 1, clicks: 0 });
+    expect(locationBreakdown.Global).toBeUndefined();
     expect(engagedByCity.Nashik.size).toBe(1);
-    expect(engagedByCity.Pune.size).toBe(1);
   });
 
-  test('formatLocationBreakdownRows filters forbidden labels', () => {
+  test('formatLocationBreakdownRows filters datacenter and country-code labels', () => {
     const enriched = enrichBreakdownWithCounts(
-      { Unknown: { opens: 34, clicks: 0 }, Nashik: { opens: 1, clicks: 1 } },
-      { Unknown: new Set(['u@test.com']), Nashik: new Set(['a@test.com']) },
+      {
+        'Mountain View': { opens: 50, clicks: 0 },
+        US: { opens: 20, clicks: 0 },
+        Nashik: { opens: 1, clicks: 1 },
+      },
+      {
+        'Mountain View': new Set(['x@test.com']),
+        US: new Set(['y@test.com']),
+        Nashik: new Set(['a@test.com']),
+      },
     );
 
     const rows = formatLocationBreakdownRows(enriched);
 
     expect(rows).toHaveLength(1);
     expect(rows[0].location).toBe('Nashik');
-    expect(rows.find((row) => row.location === 'Unknown')).toBeUndefined();
   });
 
-  test('assertNoUnknownInBreakdown fails when Unknown present', () => {
+  test('assertNoUnknownInBreakdown fails on Global and datacenter labels', () => {
     const result = assertNoUnknownInBreakdown(
-      { Unknown: { opens: 1, clicks: 0 } },
-      ['Unknown', 'Pune'],
+      { Global: { opens: 1, clicks: 0 }, 'Mountain View': { opens: 2, clicks: 0 } },
+      ['Pune'],
     );
     expect(result.ok).toBe(false);
-    expect(result.badLabels).toContain('Unknown');
-    expect(result.badEventCount).toBe(1);
+    expect(result.badLabels).toContain('Global');
+    expect(result.badLabels).toContain('Mountain View');
   });
 });
 
 describe('geoLookup breakdown helpers', () => {
-  test('isForbiddenBreakdownLabel rejects unknown variants', () => {
+  test('isForbiddenBreakdownLabel rejects unknown and country codes', () => {
     expect(isForbiddenBreakdownLabel('Unknown')).toBe(true);
-    expect(isForbiddenBreakdownLabel('unknown city')).toBe(true);
+    expect(isForbiddenBreakdownLabel('GB')).toBe(true);
+    expect(isForbiddenBreakdownLabel('Global')).toBe(true);
     expect(isForbiddenBreakdownLabel('Nashik')).toBe(false);
   });
 
-  test('formatBreakdownPlaceLabel prefers city then region-country', () => {
-    expect(formatBreakdownPlaceLabel({ city: 'Nashik', region: 'MH', country: 'IN' })).toBe('Nashik');
-    expect(formatBreakdownPlaceLabel({ city: null, region: 'Maharashtra', country: 'IN' })).toBe('Maharashtra, IN');
+  test('isDatacenterCityLabel flags Mountain View and Boardman', () => {
+    expect(isDatacenterCityLabel('Mountain View')).toBe(true);
+    expect(isDatacenterCityLabel('Boardman')).toBe(true);
+    expect(isDatacenterCityLabel('Pune')).toBe(false);
+    expect(isDatacenterCityLabel('Gūduvāncheri')).toBe(false);
   });
 
-  test('storedCityFromEvent reads webhook location fields', () => {
+  test('formatBreakdownPlaceLabel returns city only, not country codes', () => {
+    expect(formatBreakdownPlaceLabel({ city: 'Nashik', region: 'MH', country: 'IN' })).toBe('Nashik');
+    expect(formatBreakdownPlaceLabel({ city: null, region: null, country: 'GB' })).toBeNull();
+  });
+
+  test('isUntrustedEventForGeo flags Gmail image proxy opens', () => {
+    expect(isUntrustedEventForGeo({
+      eventType: 'Open',
+      userAgent: 'GoogleImageProxy',
+      ipAddress: '66.249.1.1',
+    })).toBe(true);
+  });
+
+  test('storedCityFromEvent rejects datacenter stored cities', () => {
+    expect(storedCityFromEvent({ location: { city: 'Mountain View' } })).toBeNull();
     expect(storedCityFromEvent({ location: { city: 'Jaipur' } })).toBe('Jaipur');
-    expect(storedCityFromEvent({ metadata: { city: 'Udaipur' } })).toBe('Udaipur');
-    expect(storedCityFromEvent({ metadata: { location: 'Kota, Rajasthan, IN' } })).toBe('Kota');
   });
 });

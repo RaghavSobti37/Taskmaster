@@ -155,6 +155,10 @@ const mergeNavbarWithDefaults = (userGroups) => {
       merged.push({ ...defaultGroup, pages: [...defaultGroup.pages] });
       continue;
     }
+    if (!userGroup.isCustom) {
+      if (defaultGroup.defaultOpen !== undefined) userGroup.defaultOpen = defaultGroup.defaultOpen;
+      if (defaultGroup.flat !== undefined) userGroup.flat = defaultGroup.flat;
+    }
     userGroup.pages = dedupeNavPages(userGroup.pages);
     const existingPaths = new Set((userGroup.pages || []).map((p) => p.path));
     for (const defaultPage of defaultGroup.pages) {

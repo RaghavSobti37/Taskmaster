@@ -61,7 +61,7 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
           <Users size={14} /> Location breakdown (all campaigns)
         </h3>
         <p className="text-[10px] text-[var(--color-text-muted)]">
-          Opens and clicks by city from each event&apos;s IP geolocation. Click a bar to view leads.
+          Opens and clicks by real reader city (proxy/datacenter IPs excluded). Click a bar to view leads.
         </p>
         <RegisteredLocationBarChart
           variant="histogram"

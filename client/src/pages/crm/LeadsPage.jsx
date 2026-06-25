@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useLiveLeads, useSalesReps, useArtistReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig, useLeadDetail } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useArtistReps, useArtistImportSheets, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig, useLeadDetail } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatExlyTag, MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
@@ -22,7 +22,7 @@ import LeadRowActions from '../../components/crm/LeadRowActions';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { applyFlashHighlight } from '../../utils/navigationHighlight';
-import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmContext } from '../../utils/crmScope';
+import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmView, isArtistCrmContext } from '../../utils/crmScope';
 import LeadArtistJourneySection from '../../components/crm/LeadArtistJourneySection';
 import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
@@ -47,6 +47,7 @@ const loadLeadsFilters = () => {
     source: 'all',
     leadQuality: 'all',
     assignedRepId: 'all',
+    importSheet: 'all',
     pageSize: 10,
   };
 };
@@ -54,6 +55,7 @@ const loadLeadsFilters = () => {
 export default function LeadsPage() {
   const { user } = useAuth();
   const artistMode = isArtistOnlyCrmUser(user);
+  const artistCrmView = isArtistCrmView(user);
   const [searchParams] = useSearchParams();
   const { confirm } = useConfirm();
   const toast = useToast();
@@ -337,9 +339,18 @@ export default function LeadsPage() {
   const statsParams = useMemo(() => (artistMode ? { crmType: 'artist' } : {}), [artistMode]);
   const { data: statsData } = useCRMStats(true, { queryParams: statsParams });
   const { data: salesTeam = [] } = useSalesReps(true);
-  const { data: artistTeam = [] } = useArtistReps(artistMode || artistRepContext);
-  const filterTeam = artistMode ? artistTeam : salesTeam;
-  const assignTeam = artistRepContext ? artistTeam : salesTeam;
+  const { data: artistTeam = [] } = useArtistReps(true);
+  const { data: artistImportSheets = [] } = useArtistImportSheets(artistCrmView);
+  const filterTeam = useMemo(() => {
+    if (artistMode) return artistTeam;
+    const byId = new Map();
+    for (const rep of [...salesTeam, ...artistTeam]) {
+      if (rep?._id) byId.set(String(rep._id), rep);
+    }
+    return [...byId.values()].sort((a, b) =>
+      String(a.name || '').localeCompare(String(b.name || '')));
+  }, [artistMode, salesTeam, artistTeam]);
+  const assignTeam = artistRepContext || artistMode ? artistTeam : filterTeam;
   const { data: crmConfig } = useCRMConfig();
 
   const leads = data?.leads || [];
@@ -365,7 +376,11 @@ export default function LeadsPage() {
       })
       .catch(() => {});
   }, [searchParams, leads]);
-  const sourcesList = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
+  const sourcesList = useMemo(() => {
+    const base = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
+    const sheetSources = artistImportSheets.map((s) => s.source).filter(Boolean);
+    return [...new Set([...base, ...sheetSources])].sort((a, b) => a.localeCompare(b));
+  }, [crmConfig?.sources, artistImportSheets]);
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
@@ -481,7 +496,7 @@ export default function LeadsPage() {
     },
     {
       header: artistMode ? 'Assigned Manager' : 'Assigned Agent',
-      sortable: false,
+      sortKey: 'assignedRepName',
       render: (row) => (
         <UserLabel
           user={row.assignedRep}
@@ -550,7 +565,7 @@ export default function LeadsPage() {
       }}
       toolbarActions={
         <>
-          {artistMode && <ArtistCrmImportPanel compact />}
+          {artistCrmView && <ArtistCrmImportPanel compact />}
           <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={14} /> {artistMode ? 'Add Contact' : 'Add Lead'}
           </Button>
@@ -609,8 +624,21 @@ export default function LeadsPage() {
             value={filters.assignedRepId}
             onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
           />
-          {artistMode && (
+          {artistCrmView && (
             <>
+              <NexusDropdown
+                label="Sheet"
+                placeholder="Import sheet"
+                options={[
+                  { value: 'all', label: 'All Sheets' },
+                  ...artistImportSheets.map((s) => ({
+                    value: s.source,
+                    label: s.label,
+                  })),
+                ]}
+                value={filters.importSheet || 'all'}
+                onChange={(v) => setFilters({ ...filters, importSheet: v })}
+              />
               <NexusDropdown
                 label="Project"
                 placeholder="Artist"
@@ -659,7 +687,7 @@ export default function LeadsPage() {
           onRetry={() => refetch()}
         />
       )}
-      {artistMode && <ArtistCrmImportPanel />}
+      {artistCrmView && <ArtistCrmImportPanel />}
       <DataTable
         columns={columns}
         data={leads}

@@ -16,6 +16,7 @@ const {
 } = require('../../../utils/artistContactFieldParser');
 const { normalizePersonRecord, applyPersonIdentityToDoc } = require('../../../utils/personNormalization');
 const { assignLeadToArtistRep } = require('../../../utils/crmAssignment');
+const { resolveAssigneeForImport } = require('../../../utils/artistCallAssignees');
 const logger = require('../../../utils/logger');
 
 const ARTIST_SLUG = 'artist-management';
@@ -680,17 +681,26 @@ function readCsvRows(filePath) {
   });
 }
 
-async function importArtistCsvFile({ filePath, filename, userId }) {
+async function importArtistCsvFile({ filePath, filename, userId, assignedRepId: forcedAssigneeId, sheetName }) {
   const template = detectSheetTemplate(filename);
   if (!template) {
     throw new Error(`Unknown artist CSV template for file: ${filename}`);
   }
 
+  const label = sheetName || filename.replace(/\.csv$/i, '');
+  const resolved = await resolveAssigneeForImport({
+    sheetName: label,
+    manualAssigneeId: forcedAssigneeId,
+  });
+  if (!resolved?.assigneeId) {
+    throw new Error('Could not resolve assignee for this sheet.');
+  }
+  const defaultAssigneeId = resolved.assigneeId;
+
   const artistDept = await Department.findOne({ slug: ARTIST_SLUG });
   const reps = artistDept
     ? await User.find({ departmentId: artistDept._id })
     : [];
-  const defaultAssigneeId = await assignLeadToArtistRep();
 
   const importSession = await CRMImport.create({
     filename,
@@ -719,13 +729,14 @@ async function importArtistCsvFile({ filePath, filename, userId }) {
       continue;
     }
     mapped.importId = importSession._id;
+    if (forcedAssigneeId) mapped.assignedRepId = forcedAssigneeId;
 
     const result = await finalizeLeadDoc(mapped, {
       userId,
       importId: importSession._id,
       repIndex,
       reps,
-      defaultAssigneeId,
+      defaultAssigneeId: forcedAssigneeId || defaultAssigneeId,
     });
     if (result.skipped) {
       logger.debug('artistCrmImport', `Row ${i + 2} skipped: ${result.reason || 'unknown'}`);

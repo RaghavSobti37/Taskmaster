@@ -432,11 +432,8 @@ exports.getSalesReps = async (req, res) => {
 
 exports.getArtistReps = async (req, res) => {
   try {
-    const artistDept = await Department.findOne({ slug: ARTIST_SLUG });
-    const filter = artistDept ? { departmentId: artistDept._id } : { _id: null };
-    const reps = await User.find(filter)
-      .select('_id name email avatar online lastOnline phone departmentId')
-      .populate('departmentId', 'name slug permissionPreset pagePermissions');
+    const { listArtistCallAssignees } = require('../../../utils/artistCallAssignees');
+    const reps = await listArtistCallAssignees();
     res.json(reps);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch artist management representatives' });

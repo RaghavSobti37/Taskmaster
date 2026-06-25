@@ -3,9 +3,22 @@ const {
   attributeRecipientsToBreakdown,
   formatLocationBreakdownRows,
   enrichBreakdownWithCounts,
+  collectEngagementEventEmails,
 } = require('../utils/campaignRegisteredLocation');
 
 describe('campaignRegisteredLocation', () => {
+  test('collectEngagementEventEmails dedupes and normalizes mail event addresses', () => {
+    const emails = collectEngagementEventEmails([
+      { email: 'A@Test.com' },
+      { email: 'a@test.com' },
+      { email: ' B@Test.com ' },
+      { email: '' },
+      {},
+    ]);
+
+    expect(emails).toEqual(['a@test.com', 'b@test.com']);
+  });
+
   test('attributeEventsToBreakdown groups opens/clicks by CRM city with unique counts', () => {
     const emailCityMap = new Map([
       ['a@test.com', 'Nashik'],

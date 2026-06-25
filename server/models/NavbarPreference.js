@@ -72,7 +72,7 @@ const DEFAULT_NAVBAR_GROUPS = [
     order: 3,
     visible: true,
     isCustom: false,
-    defaultOpen: false,
+    defaultOpen: true,
     pages: [
       { path: '/crm', label: 'CRM', order: 1, visible: true },
       { path: '/office', label: 'People & Office', order: 2, visible: true },

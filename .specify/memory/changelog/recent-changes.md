@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-25 — Vercel Web Analytics on all CoreKnot frontends
+
+- **What:** `@vercel/analytics` + `<Analytics />` in `client/src/main.jsx` — covers `tsccoreknot.com`, `landing.tsccoreknot.com`, and `auth.tsccoreknot.com` (shared client bundle per `VITE_SITE_MODE`).
+- **Why:** Page-view telemetry in Vercel dashboard for app, landing, and auth deploys.
+- **Files:** `client/package.json`, `client/src/main.jsx`
+- **Branch:** `main` · **Commit:** _(pending push)_
+
+---
+
 ## 2026-06-25 — Multi-site deploy, OG previews, cookie consent, onboarding checklist
 
 - **What:** Split marketing/auth from main app via `VITE_SITE_MODE` (`landing` / `auth` / `app`). Landing → `landing.tsccoreknot.com`; auth slugs on `auth.tsccoreknot.com` (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/relegends`, `/auth/google/success`); app host redirects `/` and auth paths externally. Session cookie `domain: .tsccoreknot.com` for cross-subdomain login. OG preview banner 1200×630 (`icons/og-preview.png`). Functional cookie banner gates Sentry/Datadog/PostHog. Amber **Onboarding checklist** in `ProfileCompletionAlerts` (profile + tour). `public/sitemap.xml` + robots fix.

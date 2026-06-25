@@ -24,6 +24,7 @@ import { initPostHog, getPostHogClient } from './lib/posthog';
 import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
+import { Analytics } from '@vercel/analytics/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
 const AgentationDev = __AGENTATION_ENABLED__
   ? lazy(() => import('./components/dev/AgentationDev'))
@@ -126,6 +127,7 @@ const appTree = (
                   <UnsavedChangesProvider>
                     <App />
                     <CookieBanner />
+                    <Analytics />
                     {AgentationDev ? (
                       <Suspense fallback={null}>
                         <AgentationDev />

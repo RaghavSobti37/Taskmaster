@@ -113,7 +113,7 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 
 - `lib/cookieConsent.js` — `coreknot_cookie_consent_v1` in localStorage
 - `CookieBanner` — Essential only / Accept all
-- `main.jsx` — Sentry, Datadog, PostHog init only after analytics consent; PostHog provider re-mounts on accept
+- `main.jsx` — Sentry, Datadog, PostHog init only after analytics consent; PostHog provider re-mounts on accept; `@vercel/analytics/react` `<Analytics />` on all deploy modes (app, landing, auth)
 
 ### Social preview (Jun 2026)
 

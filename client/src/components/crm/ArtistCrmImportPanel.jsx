@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Upload, ArrowRight, RefreshCw, Layers, UserCheck, Sparkles } from 'lucide-react';
 import { Button, Card, Badge } from '../ui';
+import { Modal } from '../ui/modals';
 import { useToast } from '../../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -103,14 +104,101 @@ export default function ArtistCrmImportPanel({ compact = false }) {
     }
   };
 
-  if (compact && step === 'upload') {
+  const mapStep = step === 'map' && preview && (
+    <div className="space-y-4 animate-in fade-in">
+      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-[var(--color-text-muted)]">
+        <Badge variant="info">{preview.filename}</Badge>
+        <span>{preview.rowCount} rows</span>
+        {preview.detectedAssignee && (
+          <Badge variant="success">
+            <Sparkles size={10} className="inline mr-1" />
+            Assignee: {preview.detectedAssignee.assigneeName}
+            {preview.detectedAssignee.source === 'sheet_rule' ? ' (sheet rule)' : ' (from sheet name)'}
+          </Badge>
+        )}
+        {preview.detectedTemplate && (
+          <Badge variant="info">Template: {preview.detectedTemplate}</Badge>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] md:col-span-2">
+          <Layers size={14} /> Column mapping
+        </div>
+        {(preview.fields || []).map((field) => (
+          <div key={field.key} className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider flex justify-between">
+              <span>{field.label}</span>
+              {field.required && <span className="text-rose-500">Required</span>}
+            </label>
+            <select
+              className={CRM_FIELD_SELECT}
+              value={mapping[field.key] || ''}
+              onChange={(e) => setMapping((prev) => ({ ...prev, [field.key]: e.target.value }))}
+            >
+              <option value="">— CSV column —</option>
+              {preview.headers.map((h) => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 text-[var(--color-text-muted)]">
+          <UserCheck size={12} /> Assign all new leads to
+        </label>
+        <select
+          className={CRM_FIELD_SELECT}
+          value={assignedRepId}
+          onChange={(e) => {
+            setAssignedRepId(e.target.value);
+            setAssigneeFromSheet(false);
+          }}
+        >
+          {assignees.map((rep) => (
+            <option key={rep._id} value={rep._id}>{rep.name}</option>
+          ))}
+        </select>
+        {assigneeFromSheet && (
+          <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+            Sheet name matched — override above if needed.
+          </p>
+        )}
+      </div>
+
+      <Button
+        onClick={runImport}
+        disabled={importing || !mapping.name || (!mapping.phone && !mapping.email) || !assignedRepId}
+        className="w-full"
+        variant="primary"
+      >
+        {importing ? <RefreshCw className="animate-spin" size={16} /> : <ArrowRight size={16} />}
+        Import {preview.rowCount} rows
+      </Button>
+    </div>
+  );
+
+  if (compact) {
     return (
-      <label className="inline-flex items-center gap-2 cursor-pointer">
-        <input type="file" accept=".csv" className="hidden" onChange={handleFilePick} disabled={loading} />
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border border-[var(--color-bg-border)]">
-          <Upload size={12} /> {loading ? '…' : 'Import CSV'}
-        </span>
-      </label>
+      <>
+        <label className="inline-flex items-center gap-2 cursor-pointer">
+          <input type="file" accept=".csv" className="hidden" onChange={handleFilePick} disabled={loading} />
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border border-[var(--color-bg-border)]">
+            <Upload size={12} /> {loading ? '…' : 'Import CSV'}
+          </span>
+        </label>
+        <Modal
+          isOpen={step === 'map' && !!preview}
+          onClose={reset}
+          title="Import CSV"
+          showFooter={false}
+          size="xl"
+        >
+          {mapStep}
+        </Modal>
+      </>
     );
   }
 
@@ -139,81 +227,7 @@ export default function ArtistCrmImportPanel({ compact = false }) {
         </label>
       )}
 
-      {step === 'map' && preview && (
-        <div className="space-y-4 animate-in fade-in">
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-[var(--color-text-muted)]">
-            <Badge variant="info">{preview.filename}</Badge>
-            <span>{preview.rowCount} rows</span>
-            {preview.detectedAssignee && (
-              <Badge variant="success">
-                <Sparkles size={10} className="inline mr-1" />
-                Assignee: {preview.detectedAssignee.assigneeName}
-                {preview.detectedAssignee.source === 'sheet_rule' ? ' (sheet rule)' : ' (from sheet name)'}
-              </Badge>
-            )}
-            {preview.detectedTemplate && (
-              <Badge variant="info">Template: {preview.detectedTemplate}</Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] md:col-span-2">
-              <Layers size={14} /> Column mapping
-            </div>
-            {(preview.fields || []).map((field) => (
-              <div key={field.key} className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider flex justify-between">
-                  <span>{field.label}</span>
-                  {field.required && <span className="text-rose-500">Required</span>}
-                </label>
-                <select
-                  className={CRM_FIELD_SELECT}
-                  value={mapping[field.key] || ''}
-                  onChange={(e) => setMapping((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                >
-                  <option value="">— CSV column —</option>
-                  {preview.headers.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 text-[var(--color-text-muted)]">
-              <UserCheck size={12} /> Assign all new leads to
-            </label>
-            <select
-              className={CRM_FIELD_SELECT}
-              value={assignedRepId}
-              onChange={(e) => {
-                setAssignedRepId(e.target.value);
-                setAssigneeFromSheet(false);
-              }}
-            >
-              {assignees.map((rep) => (
-                <option key={rep._id} value={rep._id}>{rep.name}</option>
-              ))}
-            </select>
-            {assigneeFromSheet && (
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                Sheet name matched — override above if needed.
-              </p>
-            )}
-          </div>
-
-          <Button
-            onClick={runImport}
-            disabled={importing || !mapping.name || (!mapping.phone && !mapping.email) || !assignedRepId}
-            className="w-full"
-            variant="primary"
-          >
-            {importing ? <RefreshCw className="animate-spin" size={16} /> : <ArrowRight size={16} />}
-            Import {preview.rowCount} rows
-          </Button>
-        </div>
-      )}
+      {mapStep}
     </Card>
   );
 }

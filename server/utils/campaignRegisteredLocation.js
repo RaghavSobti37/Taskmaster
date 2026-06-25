@@ -1,15 +1,22 @@
 /**
- * Campaign geo from CRM registration (Lead/Person city), not IP tracking.
- * Opens/clicks attributed to each recipient's registered location.
+ * Campaign location breakdown — each open/click attributed to IP geolocation city.
  */
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const PersonIndex = require('../models/PersonIndex');
+const {
+  isForbiddenBreakdownLabel,
+  resolveEventCityForBreakdown,
+  buildClickCityByEmailForBreakdown,
+  buildIpPlaceMap,
+  normalizeIp,
+  eventIp,
+} = require('./geoLookup');
 
 const BYPASS = { bypassTenant: true };
 
 const normalizeRegisteredLocation = (raw) =>
-  String(raw || 'unknown')
+  String(raw || '')
     .toLowerCase()
     .replace(/[().,]/g, '')
     .replace(/\s+/g, ' ')
@@ -17,7 +24,7 @@ const normalizeRegisteredLocation = (raw) =>
 
 const formatRegisteredLocationLabel = (raw) => {
   const normalized = normalizeRegisteredLocation(raw);
-  if (!normalized || normalized === 'unknown') return 'Unknown';
+  if (!normalized || normalized === 'unknown') return null;
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
@@ -28,7 +35,7 @@ const registeredCityFromLeadDoc = (doc) => {
   return formatRegisteredLocationLabel(raw);
 };
 
-/** Map lowercase emails to registered CRM city labels. */
+/** Map lowercase emails to CRM city labels (fallback when IP geo is missing). */
 const buildEmailRegisteredCityMap = async (recipients = [], extraEmails = []) => {
   const map = new Map();
 
@@ -111,14 +118,18 @@ const buildEngagementTimeSeries = async (campaignId) => {
   return Object.values(timeSeriesMap).sort((a, b) => new Date(a.time) - new Date(b.time));
 };
 
-const attributeEventsToBreakdown = (events, emailCityMap) => {
+const attributeEventsToBreakdown = (events, eventCities = []) => {
   const locationBreakdown = {};
   const engagedByCity = {};
 
-  for (const evt of events) {
+  for (let i = 0; i < events.length; i++) {
+    const evt = events[i];
     const email = String(evt.email || '').toLowerCase().trim();
     if (!email) continue;
-    const city = emailCityMap.get(email) || 'Unknown';
+
+    const city = eventCities[i];
+    if (!city || isForbiddenBreakdownLabel(city)) continue;
+
     if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
     if (evt.eventType === 'Open') locationBreakdown[city].opens++;
     else if (evt.eventType === 'Click') locationBreakdown[city].clicks++;
@@ -129,18 +140,23 @@ const attributeEventsToBreakdown = (events, emailCityMap) => {
   return { locationBreakdown, engagedByCity };
 };
 
-const resolveRegisteredCityForRecipient = (rec, emailCityMap) => {
+const resolveRegisteredCityForRecipient = async (rec, crmCityMap, ipCache) => {
   const email = String(rec?.email || '').toLowerCase().trim();
-  if (!email) return 'Unknown';
-  if (emailCityMap.has(email)) return emailCityMap.get(email);
-  const fromLead = registeredCityFromLeadDoc(
-    rec?.leadId && typeof rec.leadId === 'object' ? rec.leadId : null,
-  );
-  return fromLead || 'Unknown';
+  if (!email) return 'Global';
+
+  const syntheticEvt = {
+    eventType: 'Open',
+    email,
+    ipAddress: rec?.lastOpenIp || rec?.ipAddress,
+    location: rec?.location,
+    metadata: rec?.metadata,
+  };
+
+  return resolveEventCityForBreakdown(syntheticEvt, { crmCityMap, ipCache });
 };
 
-/** Fallback when MailEvents are missing — group Opened/Clicked recipients by CRM city. */
-const attributeRecipientsToBreakdown = (recipients = [], emailCityMap) => {
+/** Fallback when MailEvents are missing — group Opened/Clicked recipients by geo/CRM city. */
+const attributeRecipientsToBreakdown = async (recipients = [], crmCityMap, ipCache = new Map()) => {
   const locationBreakdown = {};
   const engagedByCity = {};
 
@@ -151,7 +167,9 @@ const attributeRecipientsToBreakdown = (recipients = [], emailCityMap) => {
     const email = String(rec?.email || '').toLowerCase().trim();
     if (!email) continue;
 
-    const city = resolveRegisteredCityForRecipient(rec, emailCityMap);
+    const city = await resolveRegisteredCityForRecipient(rec, crmCityMap, ipCache);
+    if (!city || isForbiddenBreakdownLabel(city)) continue;
+
     if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
     if (status === 'Opened') locationBreakdown[city].opens += 1;
     if (status === 'Clicked') {
@@ -168,6 +186,7 @@ const attributeRecipientsToBreakdown = (recipients = [], emailCityMap) => {
 const enrichBreakdownWithCounts = (locationBreakdown, engagedByCity) => {
   const enriched = {};
   for (const [city, stats] of Object.entries(locationBreakdown || {})) {
+    if (isForbiddenBreakdownLabel(city)) continue;
     enriched[city] = {
       opens: stats?.opens || 0,
       clicks: stats?.clicks || 0,
@@ -184,6 +203,7 @@ const breakdownHasEngagement = (locationBreakdown = {}) =>
 
 const formatLocationBreakdownRows = (locationBreakdown = {}) =>
   Object.entries(locationBreakdown)
+    .filter(([location]) => !isForbiddenBreakdownLabel(location))
     .map(([location, stats]) => ({
       location,
       city: location,
@@ -195,10 +215,6 @@ const formatLocationBreakdownRows = (locationBreakdown = {}) =>
     .filter((row) => row.count > 0 || row.opens > 0 || row.clicks > 0)
     .sort((a, b) => b.total - a.total);
 
-/**
- * @param {import('mongoose').Types.ObjectId} campaignId
- * @param {Array} recipients - campaign.recipients (leadId may be populated)
- */
 const collectEngagementEventEmails = (events = []) =>
   [...new Set(
     events
@@ -206,23 +222,64 @@ const collectEngagementEventEmails = (events = []) =>
       .filter(Boolean),
   )];
 
+const MAIL_EVENT_GEO_FIELDS = 'eventType email ipAddress userAgent location metadata timestamp';
+
+const resolveEventCitiesForBreakdown = async (events, crmCityMap) => {
+  const ipCache = new Map();
+  const ipPlaceMap = await buildIpPlaceMap(events, ipCache);
+  const clickCityByEmail = await buildClickCityByEmailForBreakdown(events, ipPlaceMap, ipCache);
+
+  const cities = [];
+  for (const evt of events) {
+    const city = await resolveEventCityForBreakdown(evt, {
+      crmCityMap,
+      clickCityByEmail,
+      ipPlaceMap,
+      ipCache,
+    });
+    cities.push(city);
+  }
+  return cities;
+};
+
+const assertNoUnknownInBreakdown = (locationBreakdown = {}, eventCities = []) => {
+  const badLabels = Object.keys(locationBreakdown).filter(isForbiddenBreakdownLabel);
+  const badEvents = eventCities.filter(isForbiddenBreakdownLabel);
+  return {
+    ok: badLabels.length === 0 && badEvents.length === 0,
+    badLabels,
+    badEventCount: badEvents.length,
+  };
+};
+
+/**
+ * @param {import('mongoose').Types.ObjectId} campaignId
+ * @param {Array} recipients - campaign.recipients (leadId may be populated)
+ */
 const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => {
   const events = await MailEvent.find({
     campaignId,
     eventType: { $in: ['Open', 'Click'] },
   })
-    .select('eventType email')
+    .select(MAIL_EVENT_GEO_FIELDS)
     .setOptions(BYPASS)
     .lean();
 
   const eventEmails = collectEngagementEventEmails(events);
-  const emailCityMap = await buildEmailRegisteredCityMap(recipients, eventEmails);
+  const crmCityMap = await buildEmailRegisteredCityMap(recipients, eventEmails);
+  const eventCities = await resolveEventCitiesForBreakdown(events, crmCityMap);
 
-  let { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, emailCityMap);
+  let { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, eventCities);
   if (!breakdownHasEngagement(locationBreakdown) && recipients.length > 0) {
-    ({ locationBreakdown, engagedByCity } = attributeRecipientsToBreakdown(recipients, emailCityMap));
+    const ipCache = new Map();
+    ({ locationBreakdown, engagedByCity } = await attributeRecipientsToBreakdown(
+      recipients,
+      crmCityMap,
+      ipCache,
+    ));
   }
 
+  const coverage = assertNoUnknownInBreakdown(locationBreakdown, eventCities);
   const enrichedBreakdown = enrichBreakdownWithCounts(locationBreakdown, engagedByCity);
   const timeSeries = await buildEngagementTimeSeries(campaignId);
 
@@ -230,25 +287,27 @@ const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => 
     locationBreakdown: enrichedBreakdown,
     locationBreakdownRows: formatLocationBreakdownRows(enrichedBreakdown),
     timeSeries,
-    emailCityMap,
+    emailCityMap: crmCityMap,
+    locationCoverage: coverage,
   };
 };
 
-/** Cross-campaign: engaged emails → CRM cities with opens/clicks/count. */
+/** Cross-campaign: engaged emails → IP geo cities with opens/clicks/count. */
 const buildCumulativeRegisteredLocationBreakdown = async (engagedEmails = []) => {
   const emails = engagedEmails.map((e) => String(e || '').toLowerCase().trim()).filter(Boolean);
-  const emailCityMap = await buildEmailRegisteredCityMap([], emails);
+  const crmCityMap = await buildEmailRegisteredCityMap([], emails);
 
   const eventFilter = emails.length
     ? { email: { $in: emails }, eventType: { $in: ['Open', 'Click'] } }
     : { eventType: { $in: ['Open', 'Click'] } };
 
   const events = await MailEvent.find(eventFilter)
-    .select('eventType email')
+    .select(MAIL_EVENT_GEO_FIELDS)
     .setOptions(BYPASS)
     .lean();
 
-  const { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, emailCityMap);
+  const eventCities = await resolveEventCitiesForBreakdown(events, crmCityMap);
+  const { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, eventCities);
   const enrichedBreakdown = enrichBreakdownWithCounts(locationBreakdown, engagedByCity);
   return formatLocationBreakdownRows(enrichedBreakdown);
 };
@@ -265,4 +324,6 @@ module.exports = {
   attributeRecipientsToBreakdown,
   formatLocationBreakdownRows,
   enrichBreakdownWithCounts,
+  resolveEventCitiesForBreakdown,
+  assertNoUnknownInBreakdown,
 };

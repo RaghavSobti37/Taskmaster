@@ -680,7 +680,7 @@ function readCsvRows(filePath) {
   });
 }
 
-async function importArtistCsvFile({ filePath, filename, userId }) {
+async function importArtistCsvFile({ filePath, filename, userId, assignedRepId: forcedAssigneeId }) {
   const template = detectSheetTemplate(filename);
   if (!template) {
     throw new Error(`Unknown artist CSV template for file: ${filename}`);
@@ -690,7 +690,7 @@ async function importArtistCsvFile({ filePath, filename, userId }) {
   const reps = artistDept
     ? await User.find({ departmentId: artistDept._id })
     : [];
-  const defaultAssigneeId = await assignLeadToArtistRep();
+  const defaultAssigneeId = forcedAssigneeId || await assignLeadToArtistRep();
 
   const importSession = await CRMImport.create({
     filename,
@@ -719,13 +719,14 @@ async function importArtistCsvFile({ filePath, filename, userId }) {
       continue;
     }
     mapped.importId = importSession._id;
+    if (forcedAssigneeId) mapped.assignedRepId = forcedAssigneeId;
 
     const result = await finalizeLeadDoc(mapped, {
       userId,
       importId: importSession._id,
       repIndex,
       reps,
-      defaultAssigneeId,
+      defaultAssigneeId: forcedAssigneeId || defaultAssigneeId,
     });
     if (result.skipped) {
       logger.debug('artistCrmImport', `Row ${i + 2} skipped: ${result.reason || 'unknown'}`);

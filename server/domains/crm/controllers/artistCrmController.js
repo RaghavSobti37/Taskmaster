@@ -1,7 +1,12 @@
 const path = require('path');
 const fs = require('fs');
 const { listSheetTemplates } = require('../../../../shared/artistCrmSheetMappings');
-const { importArtistCsvFile, detectSheetTemplate } = require('../services/artistCrmImportService');
+const { ARTIST_CRM_IMPORT_FIELDS } = require('../../../../shared/artistCrmImportFields');
+const {
+  previewArtistCsvFile,
+  importArtistCsvWithOptions,
+} = require('../services/artistCrmMappedImportService');
+const { listArtistCallAssignees } = require('../../../utils/artistCallAssignees');
 const { isAdminUser, isArtistManagerUser } = require('../../../utils/departmentPermissions');
 const logger = require('../../../utils/logger');
 
@@ -10,41 +15,73 @@ function requireArtistCrmAccess(req, res, next) {
   return res.status(403).json({ error: 'Artist CRM access required' });
 }
 
+function parseMappingBody(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 exports.getArtistTemplates = (req, res) => {
-  res.json({ templates: listSheetTemplates() });
+  res.json({
+    templates: listSheetTemplates(),
+    fields: ARTIST_CRM_IMPORT_FIELDS,
+  });
+};
+
+exports.getArtistCallAssignees = async (req, res) => {
+  try {
+    const assignees = await listArtistCallAssignees();
+    res.json(assignees);
+  } catch (err) {
+    logger.error('artistCrmController', 'assignees failed', { error: err.message });
+    res.status(500).json({ error: 'Failed to load assignees' });
+  }
+};
+
+exports.previewArtistCsv = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const preview = await previewArtistCsvFile(req.file.path, req.file.originalname);
+    fs.unlink(req.file.path, () => {});
+    res.json(preview);
+  } catch (err) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    logger.error('artistCrmController', 'preview failed', { error: err.message });
+    res.status(500).json({ error: err.message || 'Preview failed' });
+  }
 };
 
 exports.uploadArtistCsv = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const template = detectSheetTemplate(req.file.originalname);
-    if (!template) {
-      fs.unlink(req.file.path, () => {});
-      return res.status(400).json({
-        error: 'Unrecognized artist CSV filename. Expected YUGM media, Harshad Duhita sheets, or Event Database.',
-      });
-    }
+    const mapping = parseMappingBody(req.body?.mapping);
+    const assignedRepId = req.body?.assignedRepId;
 
-    const result = await importArtistCsvFile({
+    const result = await importArtistCsvWithOptions({
       filePath: req.file.path,
       filename: req.file.originalname,
       userId: req.user._id,
+      mapping,
+      assignedRepId,
     });
 
     fs.unlink(req.file.path, () => {});
-
     res.json({ success: true, ...result });
   } catch (err) {
     if (req.file?.path) fs.unlink(req.file.path, () => {});
     logger.error('artistCrmController', 'upload failed', { error: err.message });
-    res.status(500).json({ error: err.message || 'Import failed' });
+    res.status(400).json({ error: err.message || 'Import failed' });
   }
 };
 
 exports.importArtistFromPath = async (req, res) => {
   try {
-    const { filePath, filename } = req.body;
+    const { filePath, filename, mapping, assignedRepId } = req.body;
     if (!filePath || !filename) {
       return res.status(400).json({ error: 'filePath and filename required' });
     }
@@ -53,15 +90,17 @@ exports.importArtistFromPath = async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    const result = await importArtistCsvFile({
+    const result = await importArtistCsvWithOptions({
       filePath: resolved,
       filename,
       userId: req.user._id,
+      mapping: parseMappingBody(mapping),
+      assignedRepId,
     });
     res.json({ success: true, ...result });
   } catch (err) {
     logger.error('artistCrmController', 'import from path failed', { error: err.message });
-    res.status(500).json({ error: err.message || 'Import failed' });
+    res.status(400).json({ error: err.message || 'Import failed' });
   }
 };
 

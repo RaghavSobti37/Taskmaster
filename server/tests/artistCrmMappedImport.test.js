@@ -3,8 +3,10 @@ const {
   validateArtistCrmMapping,
 } = require('../../shared/artistCrmImportFields');
 const {
-  mapRowWithColumnMapping,
-} = require('../domains/crm/services/artistCrmMappedImportService');
+  extractAssigneeTokensFromSheetName,
+  matchAssigneeFromSheetName,
+  matchAssigneeToken,
+} = require('../utils/artistCallAssignees');
 
 describe('artistCrmImportFields', () => {
   test('suggestArtistCrmMapping matches common headers', () => {
@@ -25,7 +27,35 @@ describe('artistCrmImportFields', () => {
   });
 });
 
+describe('artistCallAssignees sheet name', () => {
+  const reps = [
+    { _id: '1', name: 'Akash Kumar' },
+    { _id: '2', name: 'Rohith Sharma' },
+    { _id: '3', name: 'Harshika Patel' },
+  ];
+
+  test('extracts tokens after dash', () => {
+    expect(extractAssigneeTokensFromSheetName('Private Shows - Akash')).toEqual(['Akash']);
+    expect(extractAssigneeTokensFromSheetName('Sponsors - Akash & Harshika')).toEqual(['Akash', 'Harshika']);
+  });
+
+  test('matchAssigneeFromSheetName picks first matching rep', () => {
+    const hit = matchAssigneeFromSheetName('Live Gig Venue - Deepank', [
+      { _id: '9', name: 'Deepank Soni' },
+      ...reps,
+    ]);
+    expect(hit.assigneeName).toBe('Deepank Soni');
+    expect(hit.source).toBe('sheet_rule');
+  });
+
+  test('matchAssigneeToken handles first name', () => {
+    expect(matchAssigneeToken('Akash', reps[0])).toBe(true);
+    expect(matchAssigneeToken('Rohith', reps[1])).toBe(true);
+  });
+});
+
 describe('artistCrmMappedImport mapRow', () => {
+  const { mapRowWithColumnMapping } = require('../domains/crm/services/artistCrmMappedImportService');
   test('maps row via column mapping', () => {
     const row = {
       'Event Name': 'Ziro Festival',

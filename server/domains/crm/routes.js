@@ -53,6 +53,7 @@ router.post('/sync-unsubscribed', admin, async (req, res) => {
 const artistCrmController = require('./controllers/artistCrmController');
 router.get('/artist/templates', artistCrmController.requireArtistCrmAccess, artistCrmController.getArtistTemplates);
 router.get('/artist/assignees', artistCrmController.requireArtistCrmAccess, artistCrmController.getArtistCallAssignees);
+router.get('/artist/import-sheets', requireCrmAccess, artistCrmController.getArtistImportSheets);
 router.post('/artist/preview', artistCrmController.requireArtistCrmAccess, upload.single('file'), artistCrmController.previewArtistCsv);
 router.post('/artist/upload', artistCrmController.requireArtistCrmAccess, upload.single('file'), artistCrmController.uploadArtistCsv);
 router.post('/artist/import', admin, artistCrmController.importArtistFromPath);

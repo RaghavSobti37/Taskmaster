@@ -16,7 +16,7 @@ const {
 } = require('./artistCrmImportService');
 const { detectSheetTemplate } = require('../../../../shared/artistCrmSheetMappings');
 const { parseContactField } = require('../../../utils/artistContactFieldParser');
-const { resolveArtistCallAssigneeId } = require('../../../utils/artistCallAssignees');
+const { resolveAssigneeForImport, matchAssigneeFromSheetName, listArtistCallAssignees } = require('../../../utils/artistCallAssignees');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 
 const TENANT_LOOKUP = bypassOptions('artist_crm_mapped_import');
@@ -166,17 +166,23 @@ async function bulkInsertNewLeads(docs) {
   return { created, duplicateSkipped };
 }
 
-async function previewArtistCsvFile(filePath, filename) {
+async function previewArtistCsvFile(filePath, filename, { sheetName } = {}) {
   const { headers, rows } = await readCsvRows(filePath);
   const template = detectSheetTemplate(filename);
+  const label = sheetName || filename.replace(/\.csv$/i, '');
+  const assignees = await listArtistCallAssignees();
+  const detectedAssignee = matchAssigneeFromSheetName(label, assignees);
+
   return {
     filename,
+    sheetName: label,
     headers,
     rowCount: rows.length,
     previewRows: rows.slice(0, PREVIEW_ROW_LIMIT),
     suggestedMapping: suggestArtistCrmMapping(headers),
     fields: ARTIST_CRM_IMPORT_FIELDS,
     detectedTemplate: template?.label || null,
+    detectedAssignee,
   };
 }
 
@@ -186,20 +192,28 @@ async function importArtistCsvWithOptions({
   userId,
   mapping,
   assignedRepId,
+  sheetName,
 }) {
-  const assigneeId = await resolveArtistCallAssigneeId(assignedRepId);
-  if (!assigneeId) {
-    throw new Error('Invalid assignee — choose Akash, Rohith, Atharva, or an artist-management rep.');
+  const label = sheetName || filename.replace(/\.csv$/i, '');
+  const resolved = await resolveAssigneeForImport({
+    sheetName: label,
+    manualAssigneeId: assignedRepId,
+  });
+  if (!resolved?.assigneeId) {
+    throw new Error('Could not resolve assignee — add name to sheet title (e.g. "Leads - Akash") or pick a rep.');
   }
+  const assigneeId = resolved.assigneeId;
 
   const template = detectSheetTemplate(filename);
   if (!mapping && template) {
-    return importArtistCsvFile({
+    const result = await importArtistCsvFile({
       filePath,
       filename,
       userId,
       assignedRepId: assigneeId,
+      sheetName: label,
     });
+    return { ...result, assignee: resolved.assigneeName, assigneeSource: resolved.source };
   }
 
   const mappingError = validateArtistCrmMapping(mapping || {});
@@ -284,6 +298,10 @@ async function importArtistCsvWithOptions({
     duplicateSkipped: bulk.duplicateSkipped,
     prepared: preparedDocs.length,
     assigneeId,
+    assignee: resolved.assigneeName,
+    assigneeSource: resolved.source,
+    matchedToken: resolved.matchedToken,
+    sheetName: label,
     mode: 'mapped_csv',
   };
 }

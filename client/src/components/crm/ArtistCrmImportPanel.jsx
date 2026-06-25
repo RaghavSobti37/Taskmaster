@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Upload, ArrowRight, RefreshCw, Layers, UserCheck } from 'lucide-react';
+import { Upload, ArrowRight, RefreshCw, Layers, UserCheck, Sparkles } from 'lucide-react';
 import { Button, Card, Badge } from '../ui';
 import { useToast } from '../../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ export default function ArtistCrmImportPanel({ compact = false }) {
   const [mapping, setMapping] = useState({});
   const [assignees, setAssignees] = useState([]);
   const [assignedRepId, setAssignedRepId] = useState('');
+  const [assigneeFromSheet, setAssigneeFromSheet] = useState(false);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -33,6 +34,7 @@ export default function ArtistCrmImportPanel({ compact = false }) {
     setPreview(null);
     setMapping({});
     setFile(null);
+    setAssigneeFromSheet(false);
   };
 
   const handleFilePick = async (e) => {
@@ -46,6 +48,12 @@ export default function ArtistCrmImportPanel({ compact = false }) {
       const { data } = await axios.post('/api/crm/artist/preview', formData);
       setPreview(data);
       setMapping(data.suggestedMapping || {});
+      if (data.detectedAssignee?.assigneeId) {
+        setAssignedRepId(String(data.detectedAssignee.assigneeId));
+        setAssigneeFromSheet(true);
+      } else {
+        setAssigneeFromSheet(false);
+      }
       setStep('map');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Could not read CSV');
@@ -76,11 +84,15 @@ export default function ArtistCrmImportPanel({ compact = false }) {
     formData.append('file', file);
     formData.append('mapping', JSON.stringify(mapping));
     formData.append('assignedRepId', assignedRepId);
+    formData.append('sheetName', preview.sheetName || file.name.replace(/\.csv$/i, ''));
+    formData.append('useSheetAssignee', assigneeFromSheet ? 'true' : 'false');
     try {
       const { data } = await axios.post('/api/crm/artist/upload', formData);
       const count = data.imported ?? data.prepared ?? 0;
       const skipped = data.skipped ?? 0;
-      toast.success(`Imported ${count} leads (${skipped} skipped — already in CRM)`);
+      const who = data.assignee || 'rep';
+      const viaSheet = data.assigneeSource === 'sheet_name' ? ' (from sheet name)' : '';
+      toast.success(`Imported ${count} leads to ${who}${viaSheet} — ${skipped} skipped`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'imports'] });
       reset();
@@ -108,7 +120,7 @@ export default function ArtistCrmImportPanel({ compact = false }) {
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Artist CRM Import</p>
           <p className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-xl">
-            Upload any CSV, map columns to CRM fields, assign to Akash / Rohith / Atharva or any artist-management rep.
+            Upload any CSV. If filename/sheet ends with <code className="font-mono text-[10px]">- Akash</code> (or Rohith, Atharva, Harshika…), leads auto-assign to that rep.
             Existing leads are skipped — nothing overwritten. Academy (sales) pipeline untouched.
           </p>
         </div>
@@ -121,7 +133,7 @@ export default function ArtistCrmImportPanel({ compact = false }) {
         <label className="w-full cursor-pointer flex flex-col items-center justify-center p-8 bg-[var(--color-bg-secondary)] border-2 border-dashed border-[var(--color-bg-border)] rounded-xl hover:border-[var(--color-action-primary)] transition-all">
           <Upload size={28} className="text-[var(--color-text-muted)] mb-2" />
           <span className="text-xs font-bold uppercase tracking-wider">Select CSV to import</span>
-          <span className="text-[10px] text-[var(--color-text-muted)] mt-1">Known templates still auto-detect from filename</span>
+          <span className="text-[10px] text-[var(--color-text-muted)] mt-1">Name file like <span className="font-mono">Leads - Akash.csv</span> to auto-assign</span>
           <input type="file" accept=".csv" className="hidden" onChange={handleFilePick} disabled={loading} />
           {loading && <span className="text-[10px] mt-2 text-[var(--color-action-primary)]">Reading file…</span>}
         </label>
@@ -132,8 +144,15 @@ export default function ArtistCrmImportPanel({ compact = false }) {
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-[var(--color-text-muted)]">
             <Badge variant="info">{preview.filename}</Badge>
             <span>{preview.rowCount} rows</span>
+            {preview.detectedAssignee && (
+              <Badge variant="success">
+                <Sparkles size={10} className="inline mr-1" />
+                Assignee: {preview.detectedAssignee.assigneeName}
+                {preview.detectedAssignee.source === 'sheet_rule' ? ' (sheet rule)' : ' (from sheet name)'}
+              </Badge>
+            )}
             {preview.detectedTemplate && (
-              <Badge variant="success">Template: {preview.detectedTemplate}</Badge>
+              <Badge variant="info">Template: {preview.detectedTemplate}</Badge>
             )}
           </div>
 
@@ -168,12 +187,20 @@ export default function ArtistCrmImportPanel({ compact = false }) {
             <select
               className={CRM_FIELD_SELECT}
               value={assignedRepId}
-              onChange={(e) => setAssignedRepId(e.target.value)}
+              onChange={(e) => {
+                setAssignedRepId(e.target.value);
+                setAssigneeFromSheet(false);
+              }}
             >
               {assignees.map((rep) => (
                 <option key={rep._id} value={rep._id}>{rep.name}</option>
               ))}
             </select>
+            {assigneeFromSheet && (
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                Sheet name matched — override above if needed.
+              </p>
+            )}
           </div>
 
           <Button

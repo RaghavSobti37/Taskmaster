@@ -18,8 +18,7 @@ const {
   isEmptyCsvRow,
 } = require('../domains/crm/services/artistCrmImportService');
 const { parseContactField } = require('../utils/artistContactFieldParser');
-const { resolvePrimaryCallAssigneeId, findUserByPatterns } = require('../utils/primaryCallAssignee');
-const { ARTIST_SLUG } = require('../utils/departmentPermissions');
+const { resolveAssigneeForImport } = require('../utils/artistCallAssignees');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 
 const DEFAULT_SPREADSHEET_ID = '1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A';
@@ -380,12 +379,8 @@ async function fetchAllSheetTabs(spreadsheetId) {
 }
 
 async function resolveAkashAssigneeId() {
-  const primary = await resolvePrimaryCallAssigneeId();
-  if (primary) return primary;
-  const akash = await findUserByPatterns([/akash/i], ARTIST_SLUG);
-  if (akash?._id) return akash._id;
-  const any = await findUserByPatterns([/akash/i]);
-  return any?._id || null;
+  const resolved = await resolveAssigneeForImport({});
+  return resolved?.assigneeId || null;
 }
 
 async function loadExistingIdentityRegistry(tenantId) {
@@ -623,12 +618,6 @@ async function importCrmLeadsFromLocalCsvDir({
     throw new Error(`CSV directory not found: ${csvDir}`);
   }
 
-  const assigneeId = forcedAssigneeId || await resolveAkashAssigneeId();
-  if (!assigneeId) {
-    throw new Error('Could not resolve Akash assignee — set PRIMARY_CALL_ASSIGNEE_ID or add Akash user.');
-  }
-
-  const assignee = await User.findById(assigneeId).select('name email').setOptions(TENANT_LOOKUP).lean();
   const tenantId = await resolveTenantId();
   const registry = await loadExistingIdentityRegistry(tenantId);
 
@@ -663,18 +652,38 @@ async function importCrmLeadsFromLocalCsvDir({
       rowObjects: rows,
     };
 
+    const sheetAssignee = await resolveAssigneeForImport({
+      sheetName,
+      manualAssigneeId: forcedAssigneeId,
+    });
+    if (!sheetAssignee?.assigneeId) {
+      sheetResults.push({
+        sheet: sheetName,
+        error: 'No assignee resolved from sheet name or fallback',
+        totalRows: rows.length,
+        prepared: 0,
+        skipped: rows.length,
+      });
+      continue;
+    }
+
     const { docs, sheetResult } = prepareLeadsFromTab({
       tab,
       spreadsheetId,
       userId,
       importId: importSession?._id,
       tenantId,
-      assigneeId,
+      assigneeId: sheetAssignee.assigneeId,
       registry,
       dryRun,
     });
     preparedDocs.push(...docs);
-    sheetResults.push(sheetResult);
+    sheetResults.push({
+      ...sheetResult,
+      assignee: sheetAssignee.assigneeName,
+      assigneeSource: sheetAssignee.source,
+      matchedToken: sheetAssignee.matchedToken,
+    });
   }
 
   let created = 0;
@@ -697,7 +706,6 @@ async function importCrmLeadsFromLocalCsvDir({
   return {
     spreadsheetId,
     csvDir,
-    assignee: assignee?.name || String(assigneeId),
     dryRun,
     sheets: sheetResults,
     prepared: preparedDocs.length,

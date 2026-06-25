@@ -16,6 +16,7 @@ const {
 } = require('../../../utils/artistContactFieldParser');
 const { normalizePersonRecord, applyPersonIdentityToDoc } = require('../../../utils/personNormalization');
 const { assignLeadToArtistRep } = require('../../../utils/crmAssignment');
+const { resolveAssigneeForImport } = require('../../../utils/artistCallAssignees');
 const logger = require('../../../utils/logger');
 
 const ARTIST_SLUG = 'artist-management';
@@ -680,17 +681,26 @@ function readCsvRows(filePath) {
   });
 }
 
-async function importArtistCsvFile({ filePath, filename, userId, assignedRepId: forcedAssigneeId }) {
+async function importArtistCsvFile({ filePath, filename, userId, assignedRepId: forcedAssigneeId, sheetName }) {
   const template = detectSheetTemplate(filename);
   if (!template) {
     throw new Error(`Unknown artist CSV template for file: ${filename}`);
   }
 
+  const label = sheetName || filename.replace(/\.csv$/i, '');
+  const resolved = await resolveAssigneeForImport({
+    sheetName: label,
+    manualAssigneeId: forcedAssigneeId,
+  });
+  if (!resolved?.assigneeId) {
+    throw new Error('Could not resolve assignee for this sheet.');
+  }
+  const defaultAssigneeId = resolved.assigneeId;
+
   const artistDept = await Department.findOne({ slug: ARTIST_SLUG });
   const reps = artistDept
     ? await User.find({ departmentId: artistDept._id })
     : [];
-  const defaultAssigneeId = forcedAssigneeId || await assignLeadToArtistRep();
 
   const importSession = await CRMImport.create({
     filename,

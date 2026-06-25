@@ -7,6 +7,7 @@ const {
   importArtistCsvWithOptions,
 } = require('../services/artistCrmMappedImportService');
 const { listArtistCallAssignees } = require('../../../utils/artistCallAssignees');
+const { listImportSheetFilters } = require('../../../../shared/artistCrmSheetAssignees');
 const { isAdminUser, isArtistManagerUser } = require('../../../utils/departmentPermissions');
 const logger = require('../../../utils/logger');
 
@@ -42,10 +43,15 @@ exports.getArtistCallAssignees = async (req, res) => {
   }
 };
 
+exports.getArtistImportSheets = (req, res) => {
+  res.json({ sheets: listImportSheetFilters() });
+};
+
 exports.previewArtistCsv = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const preview = await previewArtistCsvFile(req.file.path, req.file.originalname);
+    const sheetName = req.body?.sheetName || req.file.originalname.replace(/\.csv$/i, '');
+    const preview = await previewArtistCsvFile(req.file.path, req.file.originalname, { sheetName });
     fs.unlink(req.file.path, () => {});
     res.json(preview);
   } catch (err) {
@@ -61,6 +67,8 @@ exports.uploadArtistCsv = async (req, res) => {
 
     const mapping = parseMappingBody(req.body?.mapping);
     const assignedRepId = req.body?.assignedRepId;
+    const sheetName = req.body?.sheetName || req.file.originalname.replace(/\.csv$/i, '');
+    const useSheetAssignee = req.body?.useSheetAssignee !== 'false';
 
     const result = await importArtistCsvWithOptions({
       filePath: req.file.path,
@@ -68,6 +76,7 @@ exports.uploadArtistCsv = async (req, res) => {
       userId: req.user._id,
       mapping,
       assignedRepId,
+      sheetName: useSheetAssignee ? sheetName : null,
     });
 
     fs.unlink(req.file.path, () => {});

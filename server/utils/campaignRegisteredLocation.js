@@ -6,9 +6,10 @@ const Lead = require('../models/Lead');
 const PersonIndex = require('../models/PersonIndex');
 const {
   isForbiddenBreakdownLabel,
+  isBreakdownPlaceLabel,
+  isDatacenterCityLabel,
   resolveEventCityForBreakdown,
   buildClickCityByEmailForBreakdown,
-  buildIpPlaceMap,
   normalizeIp,
   eventIp,
 } = require('./geoLookup');
@@ -128,7 +129,7 @@ const attributeEventsToBreakdown = (events, eventCities = []) => {
     if (!email) continue;
 
     const city = eventCities[i];
-    if (!city || isForbiddenBreakdownLabel(city)) continue;
+    if (!city || !isBreakdownPlaceLabel(city)) continue;
 
     if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
     if (evt.eventType === 'Open') locationBreakdown[city].opens++;
@@ -142,7 +143,7 @@ const attributeEventsToBreakdown = (events, eventCities = []) => {
 
 const resolveRegisteredCityForRecipient = async (rec, crmCityMap, ipCache) => {
   const email = String(rec?.email || '').toLowerCase().trim();
-  if (!email) return 'Global';
+  if (!email) return null;
 
   const syntheticEvt = {
     eventType: 'Open',
@@ -168,7 +169,7 @@ const attributeRecipientsToBreakdown = async (recipients = [], crmCityMap, ipCac
     if (!email) continue;
 
     const city = await resolveRegisteredCityForRecipient(rec, crmCityMap, ipCache);
-    if (!city || isForbiddenBreakdownLabel(city)) continue;
+    if (!city || !isBreakdownPlaceLabel(city)) continue;
 
     if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
     if (status === 'Opened') locationBreakdown[city].opens += 1;
@@ -186,7 +187,7 @@ const attributeRecipientsToBreakdown = async (recipients = [], crmCityMap, ipCac
 const enrichBreakdownWithCounts = (locationBreakdown, engagedByCity) => {
   const enriched = {};
   for (const [city, stats] of Object.entries(locationBreakdown || {})) {
-    if (isForbiddenBreakdownLabel(city)) continue;
+    if (isForbiddenBreakdownLabel(city) || isDatacenterCityLabel(city)) continue;
     enriched[city] = {
       opens: stats?.opens || 0,
       clicks: stats?.clicks || 0,
@@ -203,7 +204,7 @@ const breakdownHasEngagement = (locationBreakdown = {}) =>
 
 const formatLocationBreakdownRows = (locationBreakdown = {}) =>
   Object.entries(locationBreakdown)
-    .filter(([location]) => !isForbiddenBreakdownLabel(location))
+    .filter(([location]) => isBreakdownPlaceLabel(location))
     .map(([location, stats]) => ({
       location,
       city: location,
@@ -226,15 +227,13 @@ const MAIL_EVENT_GEO_FIELDS = 'eventType email ipAddress userAgent location meta
 
 const resolveEventCitiesForBreakdown = async (events, crmCityMap) => {
   const ipCache = new Map();
-  const ipPlaceMap = await buildIpPlaceMap(events, ipCache);
-  const clickCityByEmail = await buildClickCityByEmailForBreakdown(events, ipPlaceMap, ipCache);
+  const clickCityByEmail = await buildClickCityByEmailForBreakdown(events, ipCache);
 
   const cities = [];
   for (const evt of events) {
     const city = await resolveEventCityForBreakdown(evt, {
       crmCityMap,
       clickCityByEmail,
-      ipPlaceMap,
       ipCache,
     });
     cities.push(city);
@@ -243,8 +242,8 @@ const resolveEventCitiesForBreakdown = async (events, crmCityMap) => {
 };
 
 const assertNoUnknownInBreakdown = (locationBreakdown = {}, eventCities = []) => {
-  const badLabels = Object.keys(locationBreakdown).filter(isForbiddenBreakdownLabel);
-  const badEvents = eventCities.filter(isForbiddenBreakdownLabel);
+  const badLabels = Object.keys(locationBreakdown).filter((l) => !isBreakdownPlaceLabel(l));
+  const badEvents = eventCities.filter((c) => c && !isBreakdownPlaceLabel(c));
   return {
     ok: badLabels.length === 0 && badEvents.length === 0,
     badLabels,

@@ -58,10 +58,10 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
 
       <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-          <Users size={14} /> Registered location breakdown (all campaigns)
+          <Users size={14} /> Location breakdown (all campaigns)
         </h3>
         <p className="text-[10px] text-[var(--color-text-muted)]">
-          Opens and clicks by each engaged recipient&apos;s CRM city — not IP tracking geo. Click a bar to view leads.
+          Opens and clicks by city from each event&apos;s IP geolocation. Click a bar to view leads.
         </p>
         <RegisteredLocationBarChart
           variant="histogram"

@@ -84,7 +84,7 @@ const ComponentsShowcase = () => {
       />
 
       {/* Quick nav */}
-      <Card className="p-3 sticky top-2 z-10 bg-[var(--color-bg-surface)]/95 backdrop-blur-sm">
+      <Card className="p-3 sticky top-2 z-10 bg-[var(--color-bg-surface)]/95">
         <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
           {[
             ['buttons', 'Buttons'],

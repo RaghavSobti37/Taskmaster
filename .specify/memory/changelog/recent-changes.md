@@ -4,6 +4,16 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-25 — Multi-site deploy, OG previews, cookie consent, onboarding checklist
+
+- **What:** Split marketing/auth from main app via `VITE_SITE_MODE` (`landing` / `auth` / `app`). Landing → `landing.tsccoreknot.com`; auth slugs on `auth.tsccoreknot.com` (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/relegends`, `/auth/google/success`); app host redirects `/` and auth paths externally. Session cookie `domain: .tsccoreknot.com` for cross-subdomain login. OG preview banner 1200×630 (`icons/og-preview.png`). Functional cookie banner gates Sentry/Datadog/PostHog. Amber **Onboarding checklist** in `ProfileCompletionAlerts` (profile + tour). `public/sitemap.xml` + robots fix.
+- **Why:** Separate deploy surfaces for marketing vs auth vs workspace; compliant analytics consent; better link previews; guided onboarding in-dashboard.
+- **Files:** `client/src/config/siteMode.js`, `client/src/config/siteUrls.js`, `client/src/App.jsx`, `client/src/components/CookieBanner.jsx`, `client/src/lib/cookieConsent.js`, `client/src/components/ProfileCompletionAlerts.jsx`, `client/scripts/generate-og-preview.mjs`, `sites/landing/vercel.json`, `sites/auth/vercel.json`, `server/utils/authCookie.js`, `server/app/cors.js`
+- **Deploy:** Two extra Vercel projects — root `sites/landing` + `sites/auth`; build `npm run vercel-build:landing` / `vercel-build:auth`. Redeploy Render API for cookie domain + CORS.
+- **Branch:** `main` · **Commit:** _(pending push)_
+
+---
+
 ## 2026-06-20 — Legacy server script cleanup and finance OCR limits
 
 - **What:** Removed ad-hoc migration/test scripts from `server/` root; extracted `financeOcrLimits.js` (max bytes, skip image OCR on Render); shared AiSensy client in CRM lead writes; dropped AuthContext idle keep-warm polling; synced Vercel rewrite config.

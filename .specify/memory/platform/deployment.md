@@ -4,11 +4,24 @@
 
 | Service | Host | Notes |
 | --- | --- | --- |
-| **Frontend** | Vercel (`tsccoreknot.com`) | Static SPA from `client/dist` |
+| **App (workspace)** | Vercel (`tsccoreknot.com`) | SPA `client/dist`, `VITE_SITE_MODE=app` (default) |
+| **Landing** | Vercel (`landing.tsccoreknot.com`) | Marketing only — `sites/landing/vercel.json`, `npm run vercel-build:landing` |
+| **Auth** | Vercel (`auth.tsccoreknot.com`) | Login/register/OAuth — `sites/auth/vercel.json`, `npm run vercel-build:auth` |
 | **API** | Render web service | `rootDir: server`, health `GET /api/health` |
 | **Redis** | Render Key Value | `noeviction` — **required** for BullMQ |
 | **MongoDB** | Atlas | `taskmaster_production` |
-| **Marketing site** | `theshakticollective.in` | Proxies book-call → Taskmaster webhook |
+| **Marketing site** | `theshakticollective.in` | Next.js; proxies forms → Taskmaster webhooks |
+
+### Multi-site env (`client/.env.example`)
+
+| Var | Default | Purpose |
+| --- | --- | --- |
+| `VITE_SITE_MODE` | `app` | `landing` \| `auth` \| `app` — set via `.env.landing` / `.env.auth` at build |
+| `VITE_LANDING_URL` | `https://landing.tsccoreknot.com` | External landing redirect from app `/` |
+| `VITE_AUTH_URL` | `https://auth.tsccoreknot.com` | External auth redirects from app host |
+| `VITE_APP_URL` | `https://tsccoreknot.com` | Post-login redirect from auth subdomain |
+
+Auth cookie shared across subdomains: `domain: .tsccoreknot.com` in prod (`server/utils/authCookie.js`). CORS allowlist includes `landing` + `auth` hosts.
 
 ---
 

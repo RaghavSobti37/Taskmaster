@@ -34,16 +34,28 @@ React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Frame
 
 ## Route map
 
-### Public (no auth)
+### Site modes (`client/src/config/siteMode.js`)
+
+| Mode | Host | Routes |
+| --- | --- | --- |
+| `app` (default) | `tsccoreknot.com` | Workspace + legal; `/` → landing if logged out; auth paths → `auth.tsccoreknot.com` |
+| `landing` | `landing.tsccoreknot.com` | `/` landing, `/privacy`, `/userdata` |
+| `auth` | `auth.tsccoreknot.com` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/relegends`, `/auth/google/success`, legal |
+
+URL helpers: `client/src/config/siteUrls.js` — `landingUrl()`, `authUrl()`, `appUrl()`, `resolveAppNavigationTarget()`.
+
+### Public (no auth) — auth subdomain or legacy same-host
 
 | Path | Page |
 | --- | --- |
-| `/` | `LandingPage` |
-| `/login`, `/register` | Auth pages |
+| `/login`, `/register` | Auth pages (`auth.tsccoreknot.com`) |
 | `/forgot-password`, `/reset-password` | Password reset |
+| `/relegends` | OTP verification |
 | `/auth/google/success` | OAuth ticket exchange |
 | `/privacy`, `/userdata` | Legal pages |
-| `/unsubscribe` | Email unsubscribe |
+| `/unsubscribe` | Email unsubscribe (app host) |
+
+Landing marketing page: `landing.tsccoreknot.com/` only (not on app host).
 
 ### Protected (MainLayout)
 
@@ -90,7 +102,24 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 
 ### Shell components
 
-`MainLayout`, `ProtectedRoute`, `PageRoute`, `CommandPalette`, `BottomNavigation`, `OutletSidebar`, `QuickAddMenu`, `HelpBugButton`, `PwaInstallBanner`, `NotificationBridge`
+`MainLayout`, `ProtectedRoute`, `PageRoute`, `CommandPalette`, `BottomNavigation`, `OutletSidebar`, `QuickAddMenu`, `HelpBugButton`, `PwaInstallBanner`, `NotificationBridge`, `CookieBanner`, `OnboardingTour`
+
+### Onboarding & profile alerts (Jun 2026)
+
+- `ProfileCompletionAlerts` — amber **Onboarding checklist** (password, phone, DOB, product tour); tour replay via `coreknot:replay-onboarding`
+- `OnboardingTour` — dashboard auto-start; completion → `coreknot:onboarding-complete` + `onboardingStorage.js`
+
+### Cookie consent & analytics (Jun 2026)
+
+- `lib/cookieConsent.js` — `coreknot_cookie_consent_v1` in localStorage
+- `CookieBanner` — Essential only / Accept all
+- `main.jsx` — Sentry, Datadog, PostHog init only after analytics consent; PostHog provider re-mounts on accept
+
+### Social preview (Jun 2026)
+
+- `scripts/generate-og-preview.mjs` → `public/icons/og-preview.png` (1200×630, brand mark + CoreKnot wordmark); runs on `prebuild`
+- `index.html` OG tags point at `https://tsccoreknot.com/icons/og-preview.png`
+- `public/sitemap.xml` — landing, auth, legal URLs
 
 ---
 

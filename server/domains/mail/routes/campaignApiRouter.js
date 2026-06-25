@@ -23,6 +23,7 @@ router.get('/', campaignApiController.list);
 router.post('/upload-attachment', upload.single('file'), campaignApiController.uploadAttachment);
 router.get('/:id/recipients/export', campaignApiController.exportRecipients);
 router.get('/:id/recipients', campaignApiController.getRecipients);
+router.get('/:id/analytics', campaignApiController.getAnalytics);
 router.get('/:id', campaignApiController.getById);
 router.post('/', validateBody(createCampaignBody), campaignApiController.create);
 router.post('/:id/dispatch', campaignApiController.dispatch);

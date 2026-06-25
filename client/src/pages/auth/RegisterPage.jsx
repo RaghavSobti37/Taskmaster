@@ -43,7 +43,7 @@ const RegisterPage = () => {
   return (
     <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
       <MarketingPageBackground />
-      <div className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="tm-modal-panel max-w-md relative z-10 bg-card p-8 rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
         <div className="text-center mb-8">
           <BrandLogo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>

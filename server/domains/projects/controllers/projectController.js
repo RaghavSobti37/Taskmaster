@@ -358,7 +358,7 @@ exports.createProject = async (req, res) => {
     }
 
     // Auto project members from PlatformSettings (fallback: env AUTO_PROJECT_MEMBER_USER_IDS)
-    const { getAutoProjectMemberUserIds } = require('../../../shared/platformUserIds');
+    const { getAutoProjectMemberUserIds } = require('../../../../shared/platformUserIds');
     const { loadPlatformSettings } = require('../../../services/platformSettingsService');
     await loadPlatformSettings();
     const autoMemberIds = getAutoProjectMemberUserIds();

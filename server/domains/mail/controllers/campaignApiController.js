@@ -210,20 +210,41 @@ exports.getById = async (req, res) => {
     const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
     const recipientCount = Math.max(campaign.recipientCount || 0, computed.total);
 
-    const registered = await buildRegisteredLocationBreakdown(
-      campaign._id,
-      campaign.recipients || [],
-    );
-    campaign.locationBreakdown = registered.locationBreakdown;
-    campaign.locationBreakdownRows = registered.locationBreakdownRows;
-    if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
-    else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
+    if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
 
     campaign.recipientCount = recipientCount;
     campaign.invalidEmailCount = computed.recipientStatusCounts.Invalid || 0;
     delete campaign.recipients;
 
     res.json(campaign);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getAnalytics = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const resolved = await resolveCampaignByParam(id, { lean: true, excludeRecipients: true });
+    if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const campaign = resolved.campaign;
+    const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
+
+    const registered = await buildRegisteredLocationBreakdown(campaign._id, []);
+    const timeSeries = registered.timeSeries.length > 0
+      ? registered.timeSeries
+      : storedTimeSeries;
+
+    res.json({
+      timeSeries,
+      locationBreakdown: registered.locationBreakdown,
+      locationBreakdownRows: registered.locationBreakdownRows,
+      locationCoverage: registered.locationCoverage,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

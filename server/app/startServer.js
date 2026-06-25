@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { config } = require('../config');
 const { corsAllowlist } = require('./cors');
 const { captureException } = require('../utils/sentry');
+const { shutdownPostHog } = require('../utils/posthog');
 const { writeSystemLog } = require('../services/systemLogService');
 const { SEVERITY, MODULE } = require('../../shared/systemLogContract');
 const {
@@ -194,6 +195,12 @@ async function gracefulShutdown() {
   try {
     const { closeRealtime } = require('../config/realtime');
     await closeRealtime();
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    await shutdownPostHog();
   } catch {
     /* ignore */
   }

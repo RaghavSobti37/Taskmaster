@@ -25,6 +25,12 @@ describe('CI production readiness smoke', () => {
     expect(typeof sentry.initSentry).toBe('function');
   });
 
+  it('PostHog server module exports captureEvent', () => {
+    const posthog = require('../utils/posthog');
+    expect(typeof posthog.captureEvent).toBe('function');
+    expect(typeof posthog.initPostHog).toBe('function');
+  });
+
   it('Datadog init file exists', () => {
     const initPath = path.join(__dirname, '../datadog-init.js');
     expect(fs.existsSync(initPath)).toBe(true);

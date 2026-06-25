@@ -3,7 +3,7 @@
 > **Start here.** This folder is the self-contained project memory — read only these docs to understand what CoreKnot is, how it works, and how to change it safely.
 >
 > **Product:** CoreKnot — enterprise CRM & operations hub for The Shakti Collective (TSC)  
-> **Repo:** `Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-06-20
+> **Repo:** `Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-06-25
 
 ---
 

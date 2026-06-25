@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import RegisteredLocationBarChart from '../components/emails/RegisteredLocationBarChart';
 import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon, Download } from 'lucide-react';
-import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
-import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
+import { Card, Button, Badge, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
+import { useCampaignDetails, useCampaignAnalytics, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
 import { formatTimestampWithTz } from '../utils/displayLabels';
 import { format } from 'date-fns';
@@ -31,17 +31,21 @@ const RESEND_STATUS_OPTIONS = [
   { id: 'Invalid', label: 'Invalid' },
 ];
 
+function SectionSkeleton({ height = 256, className = '' }) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${className}`}
+      style={{ height }}
+    />
+  );
+}
+
 export default function CampaignDetails() {
   const { campaignId: routeCampaignId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const backToEmails = location.state?.from || '/emails/campaigns';
-  const { data: campaign, isLoading, isError, error, refetch } = useCampaignDetails(routeCampaignId);
   const toast = useToast();
-  const { data: profiles = [] } = useMailProfiles();
-  const resendMutation = useResendCampaign();
-  const resendFilteredMutation = useResendFilteredCampaign();
-  const stopMutation = useStopCampaign();
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [recipientPage, setRecipientPage] = useState(1);
@@ -57,17 +61,32 @@ export default function CampaignDetails() {
   const [resendTargetStatuses, setResendTargetStatuses] = useState(['Failed', 'Bounced', 'Pending', 'Invalid']);
   const [exportingCsv, setExportingCsv] = useState(false);
 
+  const { data: campaign, isLoading: summaryLoading, isError, error, refetch } = useCampaignDetails(routeCampaignId);
+  const summaryReady = !!campaign;
   const campaignApiId = campaign?.campaignId || campaign?._id || routeCampaignId;
+
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    refetch: refetchAnalytics,
+  } = useCampaignAnalytics(routeCampaignId, { enabled: summaryReady });
+
+  const { data: profiles = [] } = useMailProfiles(showResendModal || showFilteredResendModal);
+  const resendMutation = useResendCampaign();
+  const resendFilteredMutation = useResendFilteredCampaign();
+  const stopMutation = useStopCampaign();
 
   const {
     data: recipientsData,
     isLoading: recipientsLoading,
     isFetching: recipientsFetching,
+    refetch: refetchRecipients,
   } = useCampaignRecipients(campaignApiId, {
     page: recipientPage,
     limit: recipientPageSize,
     status: statusFilter,
     hideInvalid: hideInvalidEmails,
+    enabled: summaryReady,
   });
 
   useEffect(() => {
@@ -259,8 +278,15 @@ export default function CampaignDetails() {
     }
   };
 
-  if (isLoading) return <PageSkeleton />;
-  if (isError) {
+  const handleRefresh = () => {
+    refetch();
+    if (summaryReady) {
+      refetchAnalytics();
+      refetchRecipients();
+    }
+  };
+
+  if (isError && !campaign) {
     return (
       <PageContainer className="!py-8">
         <QueryErrorBanner
@@ -273,7 +299,7 @@ export default function CampaignDetails() {
       </PageContainer>
     );
   }
-  if (!campaign) {
+  if (!summaryLoading && !campaign) {
     return (
       <PageContainer className="!py-12 text-center font-mono">
         <AlertCircle size={48} className="mx-auto text-rose-500 mb-4" />
@@ -284,30 +310,34 @@ export default function CampaignDetails() {
     );
   }
 
-  const chartData = (campaign.timeSeries || []).map(pt => ({
+  const timeSeriesSource = (analytics?.timeSeries?.length ? analytics.timeSeries : campaign?.timeSeries) || [];
+  const chartData = timeSeriesSource.map((pt) => ({
     timeStr: pt.time ? format(new Date(pt.time), 'HH:mm') : '',
     opens: pt.opens || 0,
-    clicks: pt.clicks || 0
+    clicks: pt.clicks || 0,
   }));
   const hasChartData = chartData.length > 0 && chartData.some((pt) => pt.opens > 0 || pt.clicks > 0);
 
-  const locationData = (Array.isArray(campaign.locationBreakdownRows) && campaign.locationBreakdownRows.length > 0
-    ? campaign.locationBreakdownRows
-    : Object.entries(
-        campaign.locationBreakdown && typeof campaign.locationBreakdown === 'object' && !Array.isArray(campaign.locationBreakdown)
-          ? campaign.locationBreakdown
-          : {}
-      ).map(([city, stats]) => ({ city, ...stats }))
-  )
-    .map((row) => ({
-      city: row.city || row.location,
-      count: Number(row.count) || 0,
-      opens: Number(row.opens) || 0,
-      clicks: Number(row.clicks) || 0,
-      total: row.total ?? ((Number(row.opens) || 0) + (Number(row.clicks) || 0)),
-    }))
-    .filter((r) => r.count > 0 || r.opens > 0 || r.clicks > 0)
-    .sort((a, b) => (b.count || b.total) - (a.count || a.total));
+  const locationData = (() => {
+    if (!analytics) return [];
+    const rows = Array.isArray(analytics.locationBreakdownRows) && analytics.locationBreakdownRows.length > 0
+      ? analytics.locationBreakdownRows
+      : Object.entries(
+        analytics.locationBreakdown && typeof analytics.locationBreakdown === 'object' && !Array.isArray(analytics.locationBreakdown)
+          ? analytics.locationBreakdown
+          : {},
+      ).map(([city, stats]) => ({ city, ...stats }));
+    return rows
+      .map((row) => ({
+        city: row.city || row.location,
+        count: Number(row.count) || 0,
+        opens: Number(row.opens) || 0,
+        clicks: Number(row.clicks) || 0,
+        total: row.total ?? ((Number(row.opens) || 0) + (Number(row.clicks) || 0)),
+      }))
+      .filter((r) => r.count > 0 || r.opens > 0 || r.clicks > 0)
+      .sort((a, b) => (b.count || b.total) - (a.count || a.total));
+  })();
 
   const totalRecipients = campaign?.recipientCount ?? campaign?.stats?.total ?? 0;
   const deliveredCount =
@@ -323,7 +353,7 @@ export default function CampaignDetails() {
     + (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Invalid || 0)
     + (recipientStatusCounts.Cancelled || 0);
 
-  const currentSenderLabel = (() => {
+  const currentSenderLabel = summaryReady ? (() => {
     if (campaign.senderMode === 'system_resend') {
       const from = campaign.resendFromEmail;
       if (from) return `Resend — ${displayNameForResendEmail(from)} (${from})`;
@@ -333,7 +363,7 @@ export default function CampaignDetails() {
     if (sp && typeof sp === 'object') return `Gmail — ${sp.name} (${sp.email})`;
     const p = profiles.find((pr) => pr._id === sp);
     return p ? `Gmail — ${p.name} (${p.email})` : 'Gmail profile';
-  })();
+  })() : '';
 
   return (
     <PageContainer className="!py-6 space-y-6">
@@ -342,15 +372,22 @@ export default function CampaignDetails() {
         <Button size="xs" variant="ghost" onClick={() => navigate(backToEmails)} className="flex items-center gap-2 shrink-0">
           <ArrowLeft size={14} /> Back to Campaigns
         </Button>
-        <span className="text-sm font-black text-[var(--color-text-primary)] truncate">{campaign.title}</span>
+        <span className="text-sm font-black text-[var(--color-text-primary)] truncate">
+          {summaryReady ? campaign.title : 'Loading campaign…'}
+        </span>
         </div>
         <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate max-w-[40%] hidden sm:block">
-          {currentSenderLabel} · {formatTimestampWithTz(campaign.createdAt, 'MMM dd, yyyy')}
+          {summaryReady ? (
+            <>{currentSenderLabel} · {formatTimestampWithTz(campaign.createdAt, 'MMM dd, yyyy')}</>
+          ) : (
+            <span className="inline-block h-3 w-40 animate-pulse rounded bg-[var(--color-bg-secondary)]" />
+          )}
         </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
+        {summaryReady ? (
+        [
           { label: 'Sent', value: deliveredCount, sub: `${totalRecipients} recipients`, color: 'var(--color-pastel-mint-text)' },
           { label: 'Opened', value: openedCount, sub: `${openRate}% rate`, color: '#38bdf8' },
           { label: 'Clicked', value: clickedCount, sub: `${clickRate}% rate`, color: '#10b981' },
@@ -376,9 +413,15 @@ export default function CampaignDetails() {
               </div>
             )}
           </div>
-        ))}
+        ))
+        ) : (
+          ['Sent', 'Opened', 'Clicked', 'Bounced'].map((label) => (
+            <SectionSkeleton key={label} height={112} />
+          ))
+        )}
       </div>
 
+      {summaryReady ? (
       <DataOverviewSection
         mobileCollapsed
         mobileMaxStats={2}
@@ -389,11 +432,15 @@ export default function CampaignDetails() {
           { id: 'pending', label: 'Pending / Queued', value: pendingCount, icon: Clock, variant: 'slate' },
         ]}
       />
+      ) : (
+        <SectionSkeleton height={88} />
+      )}
 
+      {summaryReady && (
       <PageToolbar
         actions={(
           <>
-            <Button size="xs" variant="secondary" onClick={() => refetch()} className="flex items-center gap-1">
+            <Button size="xs" variant="secondary" onClick={handleRefresh} className="flex items-center gap-1">
               <RefreshCw size={12} /> Refresh
             </Button>
             {isCampaignActive && (
@@ -410,6 +457,7 @@ export default function CampaignDetails() {
           </>
         )}
       />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
@@ -417,7 +465,9 @@ export default function CampaignDetails() {
             <Clock size={14} /> Engagement Over Time
           </h3>
           <div className="h-64 w-full">
-            {hasChartData ? (
+            {!summaryReady || analyticsLoading ? (
+              <SectionSkeleton height={256} className="h-full" />
+            ) : hasChartData ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
@@ -441,6 +491,9 @@ export default function CampaignDetails() {
           <p className="text-[10px] text-[var(--color-text-muted)]">
             Opens and clicks grouped by each recipient&apos;s real city — datacenter and proxy IPs excluded.
           </p>
+          {!summaryReady || analyticsLoading ? (
+            <SectionSkeleton height={256} />
+          ) : (
           <RegisteredLocationBarChart
             title="Location breakdown"
             variant="histogram"
@@ -448,6 +501,7 @@ export default function CampaignDetails() {
             height={256}
             limit={12}
           />
+          )}
         </Card>
       </div>
 
@@ -570,7 +624,7 @@ export default function CampaignDetails() {
             setRecipientPageSize(size);
             setRecipientPage(1);
           }}
-          isLoading={recipientsLoading}
+          isLoading={!summaryReady || recipientsLoading}
           emptyTitle="No recipients"
           emptyDescription="No recipients match this filter."
         />

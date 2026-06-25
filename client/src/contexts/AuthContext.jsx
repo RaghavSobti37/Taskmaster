@@ -17,6 +17,7 @@ import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { probeAuthSession } from '../utils/authSessionProbe';
 import { setSentryUser, clearSentryUser } from '../lib/sentry';
 import { setDatadogUser, clearDatadogUser } from '../lib/datadog';
+import { setPostHogUser, clearPostHogUser, capturePostHogEvent } from '../lib/posthog';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
 
 const defaultAuthContext = {
@@ -130,8 +131,10 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     setSessionReady(false);
     setUser(null);
+    capturePostHogEvent('user_logged_out');
     clearSentryUser();
     clearDatadogUser();
+    clearPostHogUser();
     setLoading(false);
   }, [queryClient]);
 
@@ -190,6 +193,7 @@ export const AuthProvider = ({ children }) => {
           setUser(newData);
           setSentryUser(newData);
           setDatadogUser(newData);
+          setPostHogUser(newData);
         }
         if (newData && !userRef.current) {
           recordAttendanceSessionLogin();
@@ -302,6 +306,7 @@ export const AuthProvider = ({ children }) => {
       const merged = mergeSessionUser(prev, nextUser);
       setSentryUser(merged);
       setDatadogUser(merged);
+      setPostHogUser(merged);
       return merged;
     });
   }, []);

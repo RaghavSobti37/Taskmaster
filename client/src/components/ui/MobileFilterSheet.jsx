@@ -23,7 +23,7 @@ export default function MobileFilterSheet({ open, onClose, title = 'Filters', ch
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] lg:hidden"
+            className="fixed inset-0 bg-black/50 z-[70] lg:hidden"
             onClick={onClose}
             aria-hidden
           />

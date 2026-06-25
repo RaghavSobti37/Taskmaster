@@ -78,7 +78,7 @@ const ResetPasswordPage = () => {
   return (
     <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-x-hidden overflow-y-auto grid place-items-center p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
       <MarketingPageBackground inkClassName="opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20" />
-      <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
         <div className="text-center mb-6">
           <BrandLogo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Choose a new password</h1>

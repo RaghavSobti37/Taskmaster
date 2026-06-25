@@ -142,11 +142,11 @@
     "@opentelemetry/sdk-metrics": "^2.8.0",
     "@opentelemetry/sdk-logs": "^2.8.0",
     "@opentelemetry/sdk-trace-node": "^2.8.0",
-    "@opentelemetry/otlp-exporter-base": "^0.218.1",
-    "@opentelemetry/otlp-transformer": "^0.218.1",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.218.1",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.218.1",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.218.1",
+    "@opentelemetry/otlp-exporter-base": "^0.219.0",
+    "@opentelemetry/otlp-transformer": "^0.219.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.219.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.219.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
     "@opentelemetry/host-metrics": "^0.38.1"
   }
 }

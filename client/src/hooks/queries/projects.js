@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import axios from 'axios';
 import { subscribeToChannel } from '../../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../../utils/projectUtils';
+import { invalidateStatusCounts } from '../../lib/queryInvalidation';
 
 const fetchProjects = async () => {
   const { data } = await axios.get('/api/projects');
@@ -32,6 +33,7 @@ export const useProjects = (enabled = true) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      invalidateStatusCounts(queryClient);
     });
   }, [queryClient]);
 

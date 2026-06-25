@@ -235,15 +235,3 @@ services:
         sync: false
       - key: MONGODB_URI_PROD
         sync: false
-  - type: cron
-    name: CoreKnot-keep-warm
-    schedule: "*/14 * * * *"
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
-    startCommand: node scripts/keepWarm.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      # Real URL: .cursor/production-hosts.local.json → productionApiHealthUrl (derived.keepWarmUrl)
-      - key: KEEP_WARM_URL
-        value: YOUR-PRODUCTION-API-HEALTH

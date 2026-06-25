@@ -45,7 +45,7 @@ const AdminScriptsPage = () => {
   const { data: queueStatus, isFetching: queuesFetching, refetch: refetchQueues } = useQuery({
     queryKey: ['admin-queues'],
     queryFn: async () => (await axios.get('/api/admin/queues/status')).data,
-    refetchInterval: 30_000,
+    refetchInterval: 120_000,
   });
 
   const filtered = useMemo(() => {

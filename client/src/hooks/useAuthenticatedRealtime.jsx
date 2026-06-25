@@ -22,6 +22,7 @@ export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
       const unsubTask = subscribeToChannel('tasks', 'task_change', () => {
         invalidateTaskDomain(queryClient);
         invalidateReviewTasks(queryClient);
+        invalidateStatusCounts(queryClient);
       });
 
       const unsubAwarded = subscribeToChannel(`user-${userId}`, 'xp_awarded', (payload) => {

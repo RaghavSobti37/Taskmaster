@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const SYSTEM_HEALTH_REFRESH_MS = 30_000;
+export const SYSTEM_HEALTH_REFRESH_MS = 120_000;
 
 export const useSystemHealth = (options = {}) => {
   const enabled = options.enabled !== false;

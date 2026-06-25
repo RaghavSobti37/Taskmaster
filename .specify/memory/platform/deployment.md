@@ -58,7 +58,6 @@ Auth cookie shared across subdomains: `domain: .tsccoreknot.com` in prod (`serve
 | `taskmaster-redis` | Key Value | BullMQ + notification locks |
 | `CoreKnot-daily-backup` | Cron | `runDailyBackup.js` (IST) |
 | `CoreKnot-subscription-reminders` | Cron | `runSubscriptionReminders.js` |
-| `CoreKnot-keep-warm` | Cron | `keepWarm.js` every 14 min |
 
 **Build command (all Node services):** `cd .. && bash scripts/render-build.sh api` (or `nest` for NestJS). Never bare `npm install` — Render cache + install causes `ENOTEMPTY`. Sync Dashboard drift: `npm run render:sync-build:deploy` (requires `RENDER_API_KEY`).
 
@@ -66,13 +65,15 @@ Auth cookie shared across subdomains: `domain: .tsccoreknot.com` in prod (`serve
 
 ---
 
-## Keep-warm (Render free tier)
+## API routing (hybrid — reduce Vercel edge)
 
-| Layer | Mechanism |
-| --- | --- |
-| **Primary** | GHA `.github/workflows/keep-warm.yml` — smart ping when idle ≥7 min |
-| **Client** | `client/src/lib/idleKeepWarm.js` — logged-in tab visible, 7 min idle → `/api/health` |
-| **Backup** | UptimeRobot or cron-job.org — see `docs/EXTERNAL_KEEP_WARM.md` |
+| Client | Axios base | Why |
+| --- | --- | --- |
+| **Desktop browser** | `VITE_API_URL` (Render direct) | API calls skip Vercel edge |
+| **Mobile / PWA** | Same-origin `/api` (Vercel rewrite) | Session cookies on frontend domain |
+| **Dev** | Vite proxy → `localhost:5000` | Local cookies |
+
+Socket.io always uses `VITE_API_URL` in production (`client/src/utils/apiBase.js`). Vercel `/api/*` rewrites remain for mobile and fallback.
 
 ---
 
@@ -94,7 +95,6 @@ npm run preflight    # env validation before dev
 | --- | --- |
 | `.github/workflows/ci.yml` | Exposure audit, Jest, Vitest, ESLint, build, Lighthouse, E2E |
 | `.github/workflows/deploy-render.yml` | Trigger Render deploy after CI on `main` |
-| `.github/workflows/keep-warm.yml` | API keep-warm cron |
 
 ---
 

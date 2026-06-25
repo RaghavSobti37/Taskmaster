@@ -53,7 +53,9 @@ const buildEmailRegisteredCityMap = async (recipients = [], extraEmails = []) =>
   const missing = uniqueEmails.filter((e) => !map.has(e));
   if (!missing.length) return map;
 
-  const leads = await Lead.find({ email: { $in: missing } })
+  const leads = await Lead.find({
+    $expr: { $in: [{ $toLower: '$email' }, missing] },
+  })
     .select('email location city')
     .setOptions(BYPASS)
     .lean();
@@ -67,7 +69,9 @@ const buildEmailRegisteredCityMap = async (recipients = [], extraEmails = []) =>
 
   const stillMissing = missing.filter((e) => !map.has(e));
   if (stillMissing.length) {
-    const persons = await PersonIndex.find({ email: { $in: stillMissing } })
+    const persons = await PersonIndex.find({
+      $expr: { $in: [{ $toLower: '$email' }, stillMissing] },
+    })
       .select('email city')
       .setOptions(BYPASS)
       .lean();
@@ -195,9 +199,14 @@ const formatLocationBreakdownRows = (locationBreakdown = {}) =>
  * @param {import('mongoose').Types.ObjectId} campaignId
  * @param {Array} recipients - campaign.recipients (leadId may be populated)
  */
-const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => {
-  const emailCityMap = await buildEmailRegisteredCityMap(recipients);
+const collectEngagementEventEmails = (events = []) =>
+  [...new Set(
+    events
+      .map((evt) => String(evt?.email || '').toLowerCase().trim())
+      .filter(Boolean),
+  )];
 
+const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => {
   const events = await MailEvent.find({
     campaignId,
     eventType: { $in: ['Open', 'Click'] },
@@ -205,6 +214,9 @@ const buildRegisteredLocationBreakdown = async (campaignId, recipients = []) => 
     .select('eventType email')
     .setOptions(BYPASS)
     .lean();
+
+  const eventEmails = collectEngagementEventEmails(events);
+  const emailCityMap = await buildEmailRegisteredCityMap(recipients, eventEmails);
 
   let { locationBreakdown, engagedByCity } = attributeEventsToBreakdown(events, emailCityMap);
   if (!breakdownHasEngagement(locationBreakdown) && recipients.length > 0) {
@@ -244,6 +256,7 @@ const buildCumulativeRegisteredLocationBreakdown = async (engagedEmails = []) =>
 module.exports = {
   normalizeRegisteredLocation,
   formatRegisteredLocationLabel,
+  collectEngagementEventEmails,
   buildEmailRegisteredCityMap,
   buildRegisteredLocationBreakdown,
   buildEngagementTimeSeries,

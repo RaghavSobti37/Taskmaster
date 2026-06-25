@@ -229,7 +229,7 @@ const AdminProjectAnalyticsPage = () => {
 
           {selectedProjectId && (
             <div ref={detailSectionRef} className="space-y-4 scroll-mt-4">
-              <div className="sticky top-0 z-20 -mx-1 px-1 py-3 bg-[var(--color-bg-primary)]/95 backdrop-blur-sm border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-3">
+              <div className="sticky top-0 z-20 -mx-1 px-1 py-3 bg-[var(--color-bg-primary)]/95 border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <h2 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate">
                     {selectedProject?.name || 'Project'} — detailed analytics

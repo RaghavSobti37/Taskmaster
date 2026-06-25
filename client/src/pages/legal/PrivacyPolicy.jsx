@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
     <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-hidden">
       <MarketingPageBackground inkClassName="opacity-30 mix-blend-multiply dark:mix-blend-screen dark:opacity-15" />
 
-      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-border bg-card/80 sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3 relative z-10">
           <BrandLogo size={40} />
           <div>

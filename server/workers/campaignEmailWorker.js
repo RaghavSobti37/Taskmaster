@@ -1,6 +1,7 @@
 const { Worker } = require('bullmq');
 const logger = require('../utils/logger');
 const { runWithWorkerTenant } = require('../utils/workerTenantContext');
+const { maxPerSecond } = require('../utils/resendSendGate');
 const {
   QUEUE_NAME,
   getCampaignEmailConnection,
@@ -13,8 +14,11 @@ const initCampaignEmailWorker = () => {
     return null;
   }
 
-  const concurrency = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_CONCURRENCY || '5', 10));
-  const rateLimit = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_RATE_LIMIT || '2', 10));
+  const rateLimit = maxPerSecond();
+  // ponytail: concurrency > rate limit causes Resend 429 bursts across parallel jobs
+  const configuredConcurrency = Math.max(1, parseInt(process.env.CAMPAIGN_EMAIL_CONCURRENCY || '1', 10));
+  const concurrency = Math.min(configuredConcurrency, rateLimit);
+  const limiterDurationMs = Math.ceil(1000 / rateLimit);
 
   const worker = new Worker(
     QUEUE_NAME,
@@ -30,7 +34,7 @@ const initCampaignEmailWorker = () => {
     {
       connection,
       concurrency,
-      limiter: { max: rateLimit, duration: 1000 },
+      limiter: { max: 1, duration: limiterDurationMs },
     },
   );
 
@@ -38,13 +42,17 @@ const initCampaignEmailWorker = () => {
     logger.error('campaignEmailWorker', `Job ${job?.id} failed`, {
       email: job?.data?.email,
       campaignId: job?.data?.campaignId,
+      attemptsMade: job?.attemptsMade,
       error: err.message,
     });
   });
 
   worker.on('error', () => {});
 
-  logger.info('campaignEmailWorker', `Started (concurrency=${concurrency}, rate=${rateLimit}/s)`);
+  logger.info(
+    'campaignEmailWorker',
+    `Started (concurrency=${concurrency}, pacing=1 per ${limiterDurationMs}ms, ~${rateLimit}/s)`,
+  );
   return worker;
 };
 

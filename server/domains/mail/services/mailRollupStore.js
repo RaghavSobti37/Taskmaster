@@ -4,6 +4,7 @@ const { isSupabaseEnabled } = require('../../../config/supabase');
 const { queryPg, preferRestPostgres } = require('../../../services/supabase/client');
 const { upsertRows, selectRows } = require('../../../services/supabase/restQuery');
 const { buildCumulativeRegisteredLocationBreakdown } = require('../../../utils/campaignRegisteredLocation');
+const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const logger = require('../../../utils/logger');
 
 const mergeTagMetrics = (coreRows, mailRows) => {
@@ -68,10 +69,9 @@ async function collectEngagedEmails() {
   return Array.from(engagedEmailsSet);
 }
 
-async function computeCumulativeMetricsForUser(userId) {
+async function computeCumulativeMetricsForUser(_userId) {
   const [coreAgg, mailAgg, engagedEmails] = await Promise.all([
-    Campaign.aggregate([
-      { $match: { createdBy: userId } },
+    aggregateWithTenant(Campaign, [
       {
         $group: {
           _id: { $ifNull: ['$eventTag', 'General'] },
@@ -81,8 +81,7 @@ async function computeCumulativeMetricsForUser(userId) {
         },
       },
     ]),
-    MailCampaign.aggregate([
-      { $match: { createdBy: userId } },
+    aggregateWithTenant(MailCampaign, [
       {
         $group: {
           _id: { $ifNull: ['$eventTag', 'General'] },

@@ -7,7 +7,7 @@ export default function MailLocationLeadsModal({ location, onClose }) {
   const { data: leads = [], isLoading } = useLocationLeads(location, true);
 
   return (
-    <div className="tm-modal-overlay fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm p-4">
+    <div className="tm-modal-overlay fixed inset-0 z-[1000] bg-black/60 p-4">
       <div className="tm-modal-panel max-w-3xl max-h-[80vh] bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true">
         <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
           <div>

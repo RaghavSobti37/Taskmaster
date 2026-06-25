@@ -66,14 +66,14 @@ function main() {
   fs.writeFileSync(NEST_ENV, nestEnv, 'utf8');
 
   let clientDev = readEnvFile(CLIENT_DEV_ENV);
-  clientDev = upsertKey(clientDev, 'VITE_NEST_ATTENDANCE', 'true');
+  clientDev = upsertKey(clientDev, 'VITE_NEST_ATTENDANCE', 'false');
   clientDev = upsertKey(clientDev, 'VITE_NEST_TASKS', 'false');
   fs.writeFileSync(CLIENT_DEV_ENV, clientDev, 'utf8');
 
   console.log('Local migration env synced:');
   console.log('  server/.env           JWT_SECRET aligned');
   console.log('  nestjs-server/.env    JWT_SECRET + DATABASE_URL');
-  console.log('  client/.env.development  VITE_NEST_ATTENDANCE=true (tasks stay on Express)');
+  console.log('  client/.env.development  Nest strangler off (Express :5000); set VITE_NEST_*=true when Nest runs on :5001');
 }
 
 main();

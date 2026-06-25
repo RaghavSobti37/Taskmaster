@@ -42,28 +42,8 @@ const mergeTagMetrics = (coreRows, mailRows) => {
 
 exports.getCumulativeMetrics = async (req, res) => {
   try {
-    const userId = req.user._id;
-
-    try {
-      const { isSupabaseEnabled } = require('../../../config/supabase');
-      const { readLatestMailRollups } = require('../../../services/supabase/mailRollupStore');
-      if (isSupabaseEnabled()) {
-        const cached = await readLatestMailRollups(userId);
-        if (cached?.aggregateData?.length || cached?.dynamicBreakdown?.length) {
-          return res.status(200).json({
-            ...cached,
-            source: 'supabase',
-          });
-        }
-      }
-    } catch (supabaseReadErr) {
-      logger.warn('dashboardMetricsController', 'Supabase rollup read failed — falling back to Mongo', {
-        error: supabaseReadErr.message,
-      });
-    }
-
     const [{ coreAgg, mailAgg }, engagedEmails] = await Promise.all([
-      getCumulativeTagMetrics(userId),
+      getCumulativeTagMetrics(),
       getEngagedEmails(),
     ]);
 

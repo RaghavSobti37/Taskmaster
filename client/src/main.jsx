@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
@@ -18,15 +18,52 @@ import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
-import { initSentry, setSentryUser, clearSentryUser } from './lib/sentry';
-import { initDatadogRum, setDatadogUser, clearDatadogUser } from './lib/datadog';
+import { initSentry } from './lib/sentry';
+import { initDatadogRum } from './lib/datadog';
+import { initPostHog, getPostHogClient } from './lib/posthog';
+import { hasAnalyticsConsent } from './lib/cookieConsent';
+import CookieBanner from './components/CookieBanner';
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
 const AgentationDev = __AGENTATION_ENABLED__
   ? lazy(() => import('./components/dev/AgentationDev'))
   : null;
 
-initSentry();
-initDatadogRum();
+const bootAnalytics = () => {
+  if (!hasAnalyticsConsent()) return;
+  initSentry();
+  initDatadogRum();
+  initPostHog();
+};
+
+bootAnalytics();
+
+function Root() {
+  const [posthogClient, setPosthogClient] = useState(() => getPostHogClient());
+
+  useEffect(() => {
+    const onConsent = (event) => {
+      if (!event.detail?.analytics) return;
+      bootAnalytics();
+      setPosthogClient(getPostHogClient());
+    };
+    window.addEventListener('coreknot:cookie-consent', onConsent);
+    return () => window.removeEventListener('coreknot:cookie-consent', onConsent);
+  }, []);
+
+  const tree = posthogClient ? (
+    <PostHogProvider client={posthogClient}>
+      <PostHogErrorBoundary>
+        {appTree}
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  ) : (
+    appTree
+  );
+
+  return tree;
+}
+
 applyPwaDesktopDocumentFlag();
 watchDisplayModeFlags();
 purgeExpiredNoteDrafts();
@@ -77,31 +114,36 @@ const MotionConfigBridge = ({ children }) => {
   );
 };
 
+const appTree = (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AuthProvider>
+        <ThemeProvider>
+          <MotionConfigBridge>
+            <SidebarProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <UnsavedChangesProvider>
+                    <App />
+                    <CookieBanner />
+                    {AgentationDev ? (
+                      <Suspense fallback={null}>
+                        <AgentationDev />
+                      </Suspense>
+                    ) : null}
+                  </UnsavedChangesProvider>
+                </ConfirmProvider>
+              </ToastProvider>
+            </SidebarProvider>
+          </MotionConfigBridge>
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AuthProvider>
-          <ThemeProvider>
-            <MotionConfigBridge>
-              <SidebarProvider>
-                <ToastProvider>
-                  <ConfirmProvider>
-                    <UnsavedChangesProvider>
-                      <App />
-                      {AgentationDev ? (
-                        <Suspense fallback={null}>
-                          <AgentationDev />
-                        </Suspense>
-                      ) : null}
-                    </UnsavedChangesProvider>
-                  </ConfirmProvider>
-                </ToastProvider>
-              </SidebarProvider>
-            </MotionConfigBridge>
-          </ThemeProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <Root />
   </React.StrictMode>,
 )

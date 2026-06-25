@@ -10,6 +10,8 @@ import {
   Activity,
   Shield,
   Music,
+  Newspaper,
+  Layers,
 } from 'lucide-react';
 import { PageContainer } from '../../components/ui/primitives';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +27,7 @@ const ICON_MAP = {
   BarChart3,
   Activity,
   Music,
+  Layers,
 };
 
 export default function AdminConsole() {

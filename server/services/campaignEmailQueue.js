@@ -39,9 +39,9 @@ const buildCampaignEmailJobId = (campaignId, recipientId) =>
 const buildJobOpts = (jobData) => ({
   jobId: buildCampaignEmailJobId(jobData.campaignId, jobData.recipientId),
   removeOnComplete: true,
-  removeOnFail: 100,
-  attempts: 3,
-  backoff: { type: 'exponential', delay: 2000 },
+  removeOnFail: 200,
+  attempts: 25,
+  backoff: { type: 'exponential', delay: 5000 },
 });
 
 const enqueueCampaignEmailJobs = async (jobDataList = []) => {

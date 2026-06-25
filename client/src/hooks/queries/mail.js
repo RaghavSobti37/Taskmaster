@@ -24,6 +24,13 @@ export const useCampaignDetails = (id) => useQuery({
   staleTime: 1000 * 30,
 });
 
+export const useCampaignAnalytics = (id, { enabled = true } = {}) => useQuery({
+  queryKey: ['campaign', id, 'analytics'],
+  queryFn: async () => (await axios.get(`/api/campaigns/${id}/analytics`)).data,
+  enabled: !!id && enabled,
+  staleTime: 1000 * 60,
+});
+
 export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false, enabled = true } = {}) => useQuery({
   queryKey: ['campaign', id, 'recipients', page, limit, status, hideInvalid],
   queryFn: async () => {
@@ -99,6 +106,7 @@ export const useCreateCampaign = () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       if (id) {
         queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+        queryClient.invalidateQueries({ queryKey: ['campaign', id, 'analytics'] });
       }
     },
   });
@@ -123,6 +131,7 @@ export const useSendCampaign = () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id, 'analytics'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id, 'recipients'] });
     },
   });
@@ -136,6 +145,7 @@ export const useStopCampaign = () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id, 'analytics'] });
     },
   });
 };
@@ -148,6 +158,7 @@ export const useResendCampaign = () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id, 'analytics'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
     },
   });

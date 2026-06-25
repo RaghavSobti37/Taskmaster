@@ -434,7 +434,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
              
              <div className="p-6 space-y-4 relative min-h-[200px]">
                 {logsRefetching && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75 backdrop-blur-[1px]">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75">
                     <Spinner size={100} />
                   </div>
                 )}

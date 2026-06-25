@@ -1,7 +1,22 @@
 .env
 .env.local
 .env.*.local
+client/.env.development
+client/.env.auth
+client/.env.landing
+server/data/media-sheets/
+server/data/crm-sheet-import/
+server/data/*.csv
+!server/data/mediaSheetManifest.js
+# WIP ops hub — incomplete, local only until routes ship
+client/src/pages/admin/OpsHubPage.jsx
+client/src/components/opsHub/
+server/models/OpsEntity.js
+server/models/OpsWeeklyCycle.js
+shared/opsTaxonomy.js
 .cursor/production-hosts.local.json
+.cursor/git-promotion.json
+sites/*/vercel.json
 .local/
 !.env.example
 !.env.*.example

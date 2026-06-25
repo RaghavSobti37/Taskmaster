@@ -11,8 +11,17 @@ import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
 import { consumeAuthReturnPath } from '../../lib/authUnauthorized';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+
+const navigateAfterLogin = (navigate, target) => {
+  if (/^https?:\/\//i.test(target)) {
+    window.location.replace(target);
+    return;
+  }
+  navigate(target, { replace: true });
+};
 import { formatLoginError } from '../../utils/loginError';
 import { postLogin } from '../../utils/loginRequest';
+import { capturePostHogEvent } from '../../lib/posthog';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 
@@ -41,7 +50,7 @@ const LoginPage = () => {
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      navigate(resolveReturnPath(), { replace: true });
+      navigateAfterLogin(navigate, resolveReturnPath());
     }
   }, [authLoading, user, navigate, resolveReturnPath]);
 
@@ -83,7 +92,8 @@ const LoginPage = () => {
     try {
       await postLogin(trimmedEmail, password);
       await login();
-      navigate(resolveReturnPath(), { replace: true });
+      capturePostHogEvent('user_logged_in', { method: 'email_password' });
+      navigateAfterLogin(navigate, resolveReturnPath());
     } catch (err) {
       setError(formatLoginError(err).message);
     } finally {
@@ -94,7 +104,7 @@ const LoginPage = () => {
   return (
     <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-x-hidden overflow-y-auto grid place-items-center p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
       <MarketingPageBackground inkClassName="opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20" />
-      <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
         <div className="text-center mb-6">
           <BrandLogo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Coreknot</h1>

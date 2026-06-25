@@ -2,7 +2,7 @@ import axios from 'axios';
 import { apiPath } from './apiBase';
 import { AXIOS_SKIP_TOAST } from '../lib/notifications';
 
-/** Login POST — always same-origin /api so the session cookie lands on the frontend domain. */
+/** Login POST — same-origin /api on mobile/PWA; direct Render on desktop prod. */
 export async function postLogin(email, password) {
   return axios.post(
     apiPath('/api/auth/login'),

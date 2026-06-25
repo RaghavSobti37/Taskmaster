@@ -141,6 +141,7 @@ export default function LeadsPage() {
         .catch(() => setLeadLogs([]));
 
       const heartbeat = window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
         axios.post(`/api/crm/leads/${selectedLead._id}/lock-heartbeat`, null, {
           headers: { 'x-skip-toast': 'true' },
         }).catch(() => {});

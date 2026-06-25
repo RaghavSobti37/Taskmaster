@@ -23,7 +23,6 @@ Import or recreate from [`datadog/monitors-template.json`](./datadog/monitors-te
 | Render service down | Render integration: service unavailable | Slack + email |
 | MongoDB connection | Atlas integration: connection errors | Slack |
 | Redis memory | Key Value memory > 80% | Slack |
-| Keep-warm cron failed | Render cron job failure event | Slack |
 | Rate limit spike | 429 count > 100 in 5 min | Slack (warn) |
 
 ## Datadog Synthetics
@@ -34,10 +33,6 @@ Create two HTTP tests:
 2. **Landing** — `GET https://tsccoreknot.com/` — expect 200, title contains CoreKnot
 
 Frequency: 1 minute. Alert on 2 consecutive failures.
-
-## Render keep-warm
-
-[`render.yaml`](../render.yaml) cron `CoreKnot-keep-warm` pings `/api/health` every 14 minutes. Add Datadog monitor on Render cron exit code ≠ 0.
 
 ## On-call routing
 

@@ -152,7 +152,8 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 
 ## Mobile / API routing
 
-- All devices use same-origin `/api` via Vercel/Vite proxy
-- `displayMode.js` — `shouldUseSameOriginApi()` for mobile + PWA
-- Fallback: `apiProxyHealth.js` + `loginRequest.js` → direct `VITE_API_URL` if proxy 404
+- **Desktop production:** axios → `VITE_API_URL` (Render direct; skips Vercel edge)
+- **Mobile / PWA:** same-origin `/api` via Vercel rewrite (`displayMode.js` → `shouldUseSameOriginApi()`)
+- **Dev:** Vite proxy → `localhost:5000`
+- Socket.io always uses `VITE_API_URL` in production (`apiBase.js`)
 - `AuthContext` — 6 retries on `/me` for Safari cookie races

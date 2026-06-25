@@ -31,7 +31,6 @@ export const useSystemLogs = (filters = {}, enabled = true) => {
     queryKey: ['systemLogs', filters],
     queryFn: () => fetchSystemLogs(filters),
     enabled,
-    refetchInterval: 30000,
     placeholderData: (prev) => prev,
   });
 
@@ -63,7 +62,7 @@ export const useTopPages = (days = 7, enabled = true) => {
     queryKey: ['topPages', days],
     queryFn: () => fetchTopPages(days),
     enabled,
-    refetchInterval: 60000,
+    refetchInterval: 1000 * 60 * 5,
   });
 };
 

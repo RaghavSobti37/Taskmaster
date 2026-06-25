@@ -131,7 +131,13 @@ const useQAProgress = (testRunId) => {
       return data;
     },
     enabled: !!testRunId,
-    refetchInterval: 800,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return false;
+      if (['running', 'pending', 'in-progress'].includes(data.status)) return 800;
+      if (data.phase === 'running') return 800;
+      return false;
+    },
   });
 };
 

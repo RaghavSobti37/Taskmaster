@@ -36,10 +36,9 @@ describe('CI production readiness smoke', () => {
     expect(fs.existsSync(initPath)).toBe(true);
   });
 
-  it('render.yaml defines health check and keep-warm URL', () => {
+  it('render.yaml defines health check', () => {
     const yaml = fs.readFileSync(path.join(repoRoot, 'render.yaml'), 'utf8');
     expect(yaml).toContain('healthCheckPath: /api/health');
-    expect(yaml).toMatch(/YOUR-PRODUCTION-API-HEALTH|YOUR-RENDER-SERVICE\.onrender\.com\/api\/health/);
     expect(yaml).toContain('coreknot-api-staging');
   });
 

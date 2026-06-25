@@ -23,7 +23,7 @@ export const useStatusCounts = (enabled = true) => {
     queryFn: async () => (await axios.get('/api/notifications/status-counts')).data,
     enabled,
     staleTime: 1000 * 15,
-    refetchInterval: 1000 * 30,
+    refetchInterval: 1000 * 60 * 5,
     refetchOnWindowFocus: true,
   });
   const { data: notifData } = useNotifications(enabled && !!user);

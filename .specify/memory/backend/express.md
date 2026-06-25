@@ -89,7 +89,7 @@ Shared contracts: `@coreknot/contracts` (`shared/contracts/`)
 | --- | --- |
 | `30 18 * * *` IST | Attendance checkout reminder |
 | Monday 00:00 IST | XP weekly reset |
-| Render cron | Daily backup, subscription reminders, keep-warm |
+| Render cron | Daily backup, subscription reminders |
 
 ### Webhook ingress (`/api/webhooks`)
 

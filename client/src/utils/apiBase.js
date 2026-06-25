@@ -1,3 +1,5 @@
+import { shouldUseSameOriginApi } from './displayMode';
+
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
@@ -8,20 +10,25 @@ export function isViteProxyDev() {
   return import.meta.env.DEV;
 }
 
-/** Direct API origin — unused for axios routing; kept for absolute URL helpers. */
+/** Direct API origin when not using same-origin proxy. */
 export function getDirectApiBaseUrl() {
-  if (import.meta.env.PROD) return undefined;
   if (isViteProxyDev()) return undefined;
   return getApiBaseUrl() || undefined;
 }
 
-/** Dev + production: relative /api so cookies stay on the page origin (Vite or Vercel proxy). */
-const routeViaSameOriginApi = () => import.meta.env.DEV || import.meta.env.PROD;
+/** Dev + mobile/PWA: Vite/Vercel proxy. Desktop production: Render direct (skips Vercel edge). */
+export function routeViaSameOriginApi() {
+  if (import.meta.env.DEV) return true;
+  if (typeof window !== 'undefined' && shouldUseSameOriginApi()) return true;
+  return false;
+}
 
 /** Axios base URL: undefined = relative paths via Vite/Vercel proxy. */
 export function getAxiosBaseURL() {
   if (routeViaSameOriginApi()) return undefined;
-  return getDirectApiBaseUrl();
+  const apiBase = getApiBaseUrl();
+  if (import.meta.env.PROD && apiBase) return apiBase;
+  return undefined;
 }
 
 /** Socket.io origin — direct Render API in production (Vercel rewrites cannot proxy WebSocket). */
@@ -45,10 +52,10 @@ export function isCrossOriginRealtime() {
   }
 }
 
-/** Build API path — always same-origin /api in production. */
+/** Build API path — relative on proxy routes; absolute Render URL on desktop production. */
 export function apiPath(path) {
   const normalized = path.startsWith('/') ? path : `/${path}`;
   if (routeViaSameOriginApi()) return normalized;
-  const base = getDirectApiBaseUrl();
+  const base = getApiBaseUrl();
   return base ? `${base}${normalized}` : normalized;
 }

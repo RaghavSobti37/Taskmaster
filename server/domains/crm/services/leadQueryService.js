@@ -50,6 +50,10 @@ function buildLeadListQuery(user, queryParams) {
   if (queryParams.callStatus && queryParams.callStatus !== 'all') query.callStatus = queryParams.callStatus;
   if (queryParams.source && queryParams.source !== 'all') query.source = queryParams.source;
 
+  if (queryParams.importSheet && queryParams.importSheet !== 'all') {
+    query.source = queryParams.importSheet;
+  }
+
   if (isWarmPipelineRequest(queryParams)) {
     Object.assign(query, warmPipelineQuery());
   } else if (queryParams.leadStatus && queryParams.leadStatus !== 'all') {
@@ -146,6 +150,7 @@ function buildLeadLookupPipeline(query, queryParams, { extraProjection = {} } = 
   const skip = (page - 1) * limit;
   const sortField = queryParams.sort || 'createdAt';
   const sortOrder = queryParams.order === 'asc' ? 1 : -1;
+  const sortByAssignee = sortField === 'assignedRepName' || sortField === 'assignedRep.name';
 
   const hasFollowupQuery = queryParams.hasFollowup === 'true';
   const followupTab = ['today', 'overdue', 'upcoming'].includes(queryParams.followupTab)
@@ -156,13 +161,7 @@ function buildLeadLookupPipeline(query, queryParams, { extraProjection = {} } = 
     : [];
   const tabMatchStage = hasFollowupQuery && followupTab ? buildFollowupTabMatch(followupTab) : null;
 
-  const pipeline = [
-    { $match: query },
-    ...followupStages,
-    ...(tabMatchStage ? [tabMatchStage] : []),
-    { $sort: { [sortField]: sortOrder, _id: 1 } },
-    { $skip: skip },
-    { $limit: limit },
+  const assigneeLookupStages = [
     {
       $lookup: {
         from: 'users',
@@ -177,6 +176,19 @@ function buildLeadLookupPipeline(query, queryParams, { extraProjection = {} } = 
         preserveNullAndEmptyArrays: true,
       },
     },
+  ];
+
+  const pipeline = [
+    { $match: query },
+    ...followupStages,
+    ...(tabMatchStage ? [tabMatchStage] : []),
+    ...(sortByAssignee ? assigneeLookupStages : []),
+    { $sort: sortByAssignee
+      ? { 'assignedRep.name': sortOrder, _id: 1 }
+      : { [sortField]: sortOrder, _id: 1 } },
+    { $skip: skip },
+    { $limit: limit },
+    ...(sortByAssignee ? [] : assigneeLookupStages),
     {
       $project: { ...LEAD_LIST_PROJECTION, ...extraProjection },
     },

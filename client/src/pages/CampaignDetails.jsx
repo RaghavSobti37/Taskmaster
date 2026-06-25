@@ -439,10 +439,10 @@ export default function CampaignDetails() {
 
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-2">
           <p className="text-[10px] text-[var(--color-text-muted)]">
-            Opens and clicks grouped by each recipient&apos;s CRM city — not IP tracking geo.
+            Opens and clicks grouped by the city resolved from each event&apos;s IP address (exact geo lookup).
           </p>
           <RegisteredLocationBarChart
-            title="Registered location breakdown"
+            title="Location breakdown (IP geo)"
             variant="histogram"
             data={locationData}
             height={256}
@@ -582,7 +582,7 @@ export default function CampaignDetails() {
       </Card>
 
       {showFilteredResendModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <Card className="w-full max-w-2xl p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
@@ -663,7 +663,7 @@ export default function CampaignDetails() {
       )}
 
       {showStopModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <Card className="w-full max-w-md p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-widest text-rose-500 flex items-center gap-2">
@@ -688,7 +688,7 @@ export default function CampaignDetails() {
       )}
 
       {showResendModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <Card className="w-full max-w-lg p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">

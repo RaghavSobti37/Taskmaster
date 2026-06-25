@@ -19,6 +19,13 @@ export const useArtistReps = (enabled = true) => useQuery({
   staleTime: 1000 * 60 * 10,
 });
 
+export const useArtistImportSheets = (enabled = true) => useQuery({
+  queryKey: ['artistImportSheets'],
+  queryFn: async () => (await axios.get('/api/crm/artist/import-sheets')).data?.sheets || [],
+  enabled,
+  staleTime: 1000 * 60 * 30,
+});
+
 export const useUpdateLead = () => {
   const queryClient = useQueryClient();
   return useMutation({

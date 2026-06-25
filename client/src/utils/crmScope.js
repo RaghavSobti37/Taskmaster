@@ -1,9 +1,16 @@
-import { getDepartmentSlug, isAdminUser, ARTIST_SLUG } from './departmentPermissions';
+import { getDepartmentSlug, isAdminUser, isArtistManagerUser, ARTIST_SLUG } from './departmentPermissions';
 
 export const CRM_TYPES = {
   SALES: 'sales',
   ARTIST: 'artist',
 };
+
+/** Artist CRM filters, import UI, and manager list (artist dept, artists-page access, admin). */
+export function isArtistCrmView(user) {
+  if (!user) return false;
+  if (isArtistOnlyCrmUser(user)) return true;
+  return isArtistManagerUser(user);
+}
 
 /** Artist-management dept users (not sales/admin) see artist CRM segment. */
 export function isArtistOnlyCrmUser(user) {

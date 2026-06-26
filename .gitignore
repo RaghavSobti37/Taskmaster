@@ -91,4 +91,3 @@ docs/workspaces_projects.txt
 nestjs-server/generated/
 nestjs-server/dist/
 tscacademy_logo.png
-package-lock.json

@@ -10,13 +10,15 @@ import { Badge, PageHeader, PageContainer, Button, PageSkeleton } from '../../co
 import WorkspaceGoalsPanel from '../../components/project/WorkspaceGoalsPanel';
 import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { suggestProjectRole } from '../../utils/taskText';
-import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
+import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor, normalizeWorkspaceKey } from '../../utils/workspaceColors';
+import { normalizeProjects } from '../../utils/projectUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const WorkspaceSettings = () => {
   const { name: nameParam } = useParams();
   const workspaceName = decodeURIComponent(nameParam || '').trim();
+  const workspaceApiName = normalizeWorkspaceKey(workspaceName) || workspaceName;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -35,7 +37,7 @@ const WorkspaceSettings = () => {
   const [allMembers, setAllMembers] = useState([]);
   const [createdById, setCreatedById] = useState(null);
 
-  const apiPath = `/api/projects/workspaces/${encodeURIComponent(workspaceName)}`;
+  const apiPath = `/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}`;
   const isAdmin = isAdminUser(user);
   const canManageMembers = isAdmin || (createdById && user?._id && String(createdById) === String(user._id));
   const accentColor = normalizeHexColor(workspaceColor) || DEFAULT_WORKSPACE_COLOR;
@@ -66,6 +68,15 @@ const WorkspaceSettings = () => {
       setInitialMembers(cloneSnapshot(defaults));
       setProjects(data.projects || []);
       setAllMembers(data.allMembers || []);
+      const canonicalWorkspace = data.name || workspaceApiName;
+      queryClient.setQueryData(['projects'], (old = []) => {
+        const merged = new Map((old || []).map((p) => [p._id, p]));
+        normalizeProjects(data.projects || []).forEach((p) => {
+          merged.set(p._id, { ...merged.get(p._id), ...p, workspace: p.workspace || canonicalWorkspace });
+        });
+        return [...merged.values()];
+      });
+      queryClient.setQueryData(['workspaces', normalizeWorkspaceKey(canonicalWorkspace)], data);
       const loadedColor = normalizeHexColor(data.color) || DEFAULT_WORKSPACE_COLOR;
       setWorkspaceColor(loadedColor);
       setInitialColor(loadedColor);
@@ -81,7 +92,7 @@ const WorkspaceSettings = () => {
     } finally {
       setLoading(false);
     }
-  }, [apiPath, workspaceName]);
+  }, [apiPath, workspaceName, workspaceApiName, queryClient]);
 
   useEffect(() => {
     loadWorkspace();

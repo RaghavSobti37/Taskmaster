@@ -20,7 +20,7 @@ const { normalizeStoredProjectRole } = require('../../../../shared/projectRoles'
 const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const taskProjectQueryService = require('../../tasks/services/taskProjectQueryService');
 const auditService = require('../../crm/services/auditService');
-const { getTenantId, resolveTenantIdForRequest } = require('../../../utils/tenantContext');
+const { getTenantId, runWithContext, resolveTenantIdForRequest } = require('../../../utils/tenantContext');
 
 function buildTaskCountMap(taskCounts) {
   return taskCounts.reduce((acc, curr) => {
@@ -402,24 +402,34 @@ exports.createProject = async (req, res) => {
 
 exports.getProjects = async (req, res) => {
   try {
-    const filter = isAdminUser(req.user) ? {} : {
-      $or: [
-        { owner: req.user._id },
-        { members: req.user._id }
-      ]
+    const tenantId = await resolveTenantIdForRequest(req);
+    const loadProjects = async () => {
+      const filter = isAdminUser(req.user) ? {} : {
+        $or: [
+          { owner: req.user._id },
+          { members: req.user._id },
+        ],
+      };
+      const projects = await Project.find(filter)
+        .populate('members', 'name avatar teams')
+        .sort({ createdAt: -1 })
+        .lean();
+      return attachAggregatedTaskCounts(projects);
     };
-    const projects = await Project.find(filter)
-    .populate('members', 'name avatar teams')
-    .sort({ createdAt: -1 })
-    .lean();
 
-    const projectsWithProgress = await attachAggregatedTaskCounts(projects);
+    const projectsWithProgress = getTenantId()
+      ? await loadProjects()
+      : await runWithContext({
+        tenantId,
+        userId: req.user._id?.toString?.(),
+        traceId: req.traceId,
+      }, loadProjects);
 
     // Background backfill: assign distinct colors to projects still using the default blue
     const defaultBlue = '#3b82f6';
-    const needsColor = projects.filter(p => !p.color || p.color.toLowerCase() === defaultBlue);
+    const needsColor = projectsWithProgress.filter(p => !p.color || p.color.toLowerCase() === defaultBlue);
     if (needsColor.length > 0) {
-      const usedColors = new Set(projects.filter(p => p.color && p.color.toLowerCase() !== defaultBlue).map(p => p.color.toLowerCase()));
+      const usedColors = new Set(projectsWithProgress.filter(p => p.color && p.color.toLowerCase() !== defaultBlue).map(p => p.color.toLowerCase()));
       let palettePool = [...PALETTE];
       (async () => {
         for (const proj of needsColor) {

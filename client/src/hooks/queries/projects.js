@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import axios from 'axios';
 import { subscribeToChannel } from '../../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../../utils/projectUtils';
+import { normalizeWorkspaceKey } from '../../utils/workspaceColors';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
 
 const fetchProjects = async () => {
@@ -20,6 +21,16 @@ const fetchWorkspaceByName = async (name) => {
   return data;
 };
 
+export const useWorkspace = (name, enabled = true) => {
+  return useQuery({
+    queryKey: ['workspaces', normalizeWorkspaceKey(name)],
+    queryFn: () => fetchWorkspaceByName(name),
+    enabled: enabled && !!name,
+    staleTime: 1000 * 60 * 2,
+    refetchOnMount: 'always',
+  });
+};
+
 const fetchProjectById = async (id) => {
   const { data } = await axios.get(`/api/projects/${id}`);
   return normalizeProject(data);
@@ -31,6 +42,7 @@ export const useProjects = (enabled = true) => {
     if (!enabled) return undefined;
     return subscribeToChannel('projects', 'project_change', () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       invalidateStatusCounts(queryClient);
@@ -42,6 +54,7 @@ export const useProjects = (enabled = true) => {
     queryFn: fetchProjects,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    refetchOnMount: 'always',
     enabled,
   });
 };
@@ -52,16 +65,8 @@ export const useWorkspaces = (enabled = true) => {
     queryFn: fetchWorkspaces,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    refetchOnMount: 'always',
     enabled,
-  });
-};
-
-const useWorkspace = (name) => {
-  return useQuery({
-    queryKey: ['workspaces', name],
-    queryFn: () => fetchWorkspaceByName(name),
-    enabled: !!name,
-    staleTime: 1000 * 60 * 2,
   });
 };
 

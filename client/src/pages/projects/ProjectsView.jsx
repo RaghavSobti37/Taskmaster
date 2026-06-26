@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
-import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS } from '../../utils/workspaceColors';
+import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS, normalizeWorkspaceKey } from '../../utils/workspaceColors';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { countReviewTasksByProject, countTasksByProject } from '../../utils/taskReview';
 import { filterOverdueTasks } from '../../utils/dashboardTasks';
@@ -122,6 +122,12 @@ const ProjectsView = () => {
   const totalReviewCount = reviewTasks.length;
 
   useEffect(() => {
+    if (!user?._id) return;
+    refetchProjects();
+    refetchWorkspaces();
+  }, [user?._id, refetchProjects, refetchWorkspaces]);
+
+  useEffect(() => {
     if (location.state?.openCreateWorkspace) {
       setCreateModalOpen(true);
       navigate('/projects', { replace: true, state: {} });
@@ -185,11 +191,11 @@ const ProjectsView = () => {
     const groups = {};
 
     workspaces.forEach((w) => {
-      groups[w.name.toUpperCase()] = [];
+      groups[normalizeWorkspaceKey(w.name)] = [];
     });
 
     filteredProjects.forEach((project) => {
-      const key = (project.workspace || 'General').toUpperCase();
+      const key = normalizeWorkspaceKey(project.workspace || 'General');
       if (!groups[key]) groups[key] = [];
       groups[key].push(project);
     });
@@ -197,7 +203,7 @@ const ProjectsView = () => {
     const seen = new Set();
     const orderedNames = [];
     workspaces.forEach((w) => {
-      const name = w.name.toUpperCase();
+      const name = normalizeWorkspaceKey(w.name);
       if (!seen.has(name)) {
         seen.add(name);
         orderedNames.push(name);
@@ -212,9 +218,9 @@ const ProjectsView = () => {
 
     return orderedNames
       .map((name) => {
-        const ws = workspaces.find((w) => w.name.toUpperCase() === name);
+        const ws = workspaces.find((w) => normalizeWorkspaceKey(w.name) === name);
         return {
-          name,
+          name: ws?.name || name,
           color: getWorkspaceColor(name),
           projects: groups[name] || [],
           defaultMemberCount: ws?.defaultMembers?.length || 0,
@@ -224,7 +230,7 @@ const ProjectsView = () => {
       .filter((group) => {
         if (isAdmin) return true;
         if (group.projects.length > 0) return true;
-        return workspaces.some((w) => w.name.toUpperCase() === group.name);
+        return workspaces.some((w) => normalizeWorkspaceKey(w.name) === normalizeWorkspaceKey(group.name));
       });
   }, [filteredProjects, workspaces, getWorkspaceColor, isAdmin]);
 

@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import NexusDropdown from '../ui/NexusDropdown';
 import { WorkspaceDot } from './WorkspaceSelect';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useWorkspaces, useWorkspace } from '../../hooks/useTaskmasterQueries';
+import { projectInWorkspace } from './WorkspaceProjectFields';
 
 const ProjectSelect = ({
   projects = [],
@@ -18,11 +19,19 @@ const ProjectSelect = ({
   variant,
 }) => {
   const { data: workspaces = [] } = useWorkspaces();
+  const { data: workspaceDetail } = useWorkspace(workspaceFilter, !!workspaceFilter);
 
   const options = useMemo(() => {
+    const mergedById = new Map();
+    projects.forEach((p) => mergedById.set(p._id, p));
+    (workspaceDetail?.projects || []).forEach((p) => {
+      if (!mergedById.has(p._id)) mergedById.set(p._id, p);
+    });
+
+    const pool = [...mergedById.values()];
     const filtered = workspaceFilter
-      ? projects.filter((p) => String(p.workspace || 'General').toUpperCase() === String(workspaceFilter).toUpperCase())
-      : projects;
+      ? pool.filter((p) => projectInWorkspace(p, workspaceFilter))
+      : pool;
     const mapped = filtered.map((p) => ({
       value: p._id,
       label: p.name,
@@ -30,7 +39,7 @@ const ProjectSelect = ({
     }));
     if (allowEmpty) return [{ value: '', label: emptyLabel }, ...mapped];
     return mapped;
-  }, [projects, workspaceFilter, allowEmpty, emptyLabel]);
+  }, [projects, workspaceFilter, allowEmpty, emptyLabel, workspaceDetail?.projects]);
 
   const renderOption = (option) => {
     if (!option.workspace) return option.label;

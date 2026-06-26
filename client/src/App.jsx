@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
-import { authUrl, landingUrl } from './config/siteUrls';
+import { landingUrl } from './config/siteUrls';
 import ExternalRedirect from './components/ExternalRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
@@ -192,15 +192,8 @@ function App() {
           {isAppSite() && (
             <>
           <Route path="/" element={<AppRootRedirect />} />
-          <Route path="/login" element={<ExternalRedirect to={authUrl('/login')} />} />
-          <Route path="/register" element={<ExternalRedirect to={authUrl('/register')} />} />
-          <Route path="/forgot-password" element={<ExternalRedirect to={authUrl('/forgot-password')} />} />
-          <Route path="/reset-password" element={<ExternalRedirect to={authUrl('/reset-password')} />} />
-          <Route path="/relegends" element={<ExternalRedirect to={authUrl('/relegends')} />} />
-          <Route path="/auth/google/success" element={<ExternalRedirect to={authUrl('/auth/google/success')} />} />
+          {marketingAuthRoutes}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/userdata" element={<UserDataDeletion />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />

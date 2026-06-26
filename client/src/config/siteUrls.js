@@ -5,12 +5,11 @@ const trimSlash = (url) => String(url || '').replace(/\/$/, '');
 export const LANDING_ORIGIN = trimSlash(
   import.meta.env.VITE_LANDING_URL || 'https://landing.tsccoreknot.com',
 );
-export const AUTH_ORIGIN = trimSlash(
-  import.meta.env.VITE_AUTH_URL || 'https://auth.tsccoreknot.com',
-);
 export const APP_ORIGIN = trimSlash(
   import.meta.env.VITE_APP_URL || 'https://tsccoreknot.com',
 );
+/** Auth routes live on the main app host (e.g. /login), not a separate subdomain. */
+export const AUTH_ORIGIN = trimSlash(import.meta.env.VITE_AUTH_URL || APP_ORIGIN);
 
 const joinOrigin = (origin, path = '/') => {
   const clean = path.startsWith('/') ? path : `/${path}`;
@@ -32,24 +31,18 @@ export const resolveAppNavigationTarget = (pathOrUrl) => {
 };
 
 export const marketingLinkTarget = (path) => {
-  if (isLandingSite() && path.startsWith('/login')) return authUrl(path);
-  if (isLandingSite() && path.startsWith('/register')) return authUrl(path);
-  if (isAppSite()) return authUrl(path);
+  if (
+    isLandingSite()
+    && (path.startsWith('/login') || path.startsWith('/register') || path.startsWith('/forgot-password'))
+  ) {
+    return authUrl(path);
+  }
   return path;
 };
 
 export const shouldRedirectMarketingRoute = (pathname) => {
   if (!isAppSite()) return null;
-  const authSlugs = new Set([
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
-    '/relegends',
-    '/auth/google/success',
-  ]);
   if (pathname === '/') return landingUrl('/');
-  if (authSlugs.has(pathname)) return authUrl(pathname);
   return null;
 };
 

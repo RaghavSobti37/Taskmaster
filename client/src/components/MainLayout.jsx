@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import OutletSidebar from './OutletSidebar';
 import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
@@ -13,19 +13,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
 import OnboardingTour from './onboarding/OnboardingTour';
+import { createLazyWithRetry } from '../utils/lazyWithRetry';
 
-const AttendancePromptModal = lazy(() => import('./attendance/AttendancePromptModal'));
+const lazyWithRetry = createLazyWithRetry;
 
-const CommandPalette = lazy(() => import('./CommandPalette'));
-const PwaInstallBanner = lazy(() => import('./PwaInstallBanner'));
-const PageAnalyticsTracker = lazy(() => import('./PageAnalyticsTracker'));
-const NotificationBridge = lazy(() => import('./NotificationBridge'));
-const MobileAppShell = lazy(() => import('./mobile/MobileAppShell'));
-const ProfileCompletionAlerts = lazy(() => import('./ProfileCompletionAlerts'));
-const ForcePasswordChangeGate = lazy(() => import('./auth/ForcePasswordChangeGate'));
-const FlashHighlightListener = lazy(() => import('./ui/FlashHighlight'));
-const KeyboardShortcutsOverlay = lazy(() => import('./KeyboardShortcutsOverlay'));
-const GChordHint = lazy(() => import('./GChordHint'));
+const AttendancePromptModal = lazyWithRetry(() => import('./attendance/AttendancePromptModal'));
+
+const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
+const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
+const PageAnalyticsTracker = lazyWithRetry(() => import('./PageAnalyticsTracker'));
+const NotificationBridge = lazyWithRetry(() => import('./NotificationBridge'));
+const MobileAppShell = lazyWithRetry(() => import('./mobile/MobileAppShell'));
+const ProfileCompletionAlerts = lazyWithRetry(() => import('./ProfileCompletionAlerts'));
+const ForcePasswordChangeGate = lazyWithRetry(() => import('./auth/ForcePasswordChangeGate'));
+const FlashHighlightListener = lazyWithRetry(() => import('./ui/FlashHighlight'));
+const KeyboardShortcutsOverlay = lazyWithRetry(() => import('./KeyboardShortcutsOverlay'));
+const GChordHint = lazyWithRetry(() => import('./GChordHint'));
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();

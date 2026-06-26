@@ -15,6 +15,12 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmProvider } from './contexts/ConfirmProvider';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { registerSW } from 'virtual:pwa-register';
+import {
+  isStaleAssetScript,
+  isStaleChunkError,
+  markChunkRecoveryComplete,
+  recoverFromStaleChunks,
+} from './utils/chunkRecovery';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
@@ -70,21 +76,21 @@ watchDisplayModeFlags();
 purgeExpiredNoteDrafts();
 warnIfDevPointsAtProduction();
 
-const CHUNK_RETRY_KEY = 'chunk-retry';
-
 const reloadOnceForStaleAssets = () => {
-  if (window.sessionStorage.getItem(CHUNK_RETRY_KEY)) return;
-  window.sessionStorage.setItem(CHUNK_RETRY_KEY, 'true');
-  window.location.reload();
+  void recoverFromStaleChunks();
 };
 
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
-    const target = event.target;
-    if (target?.tagName !== 'SCRIPT' || !target.src) return;
-    if (!/\.(js|mjs)(\?|$)/i.test(target.src)) return;
+    if (!isStaleAssetScript(event.target)) return;
     reloadOnceForStaleAssets();
   }, true);
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (!isStaleChunkError(event.reason)) return;
+    event.preventDefault();
+    reloadOnceForStaleAssets();
+  });
 }
 
 const loadAppFont = () => {
@@ -97,7 +103,12 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
 }
 
 const registerDeferredServiceWorker = () => {
-  registerSW({ immediate: true });
+  registerSW({
+    immediate: true,
+    onRegisteredSW() {
+      markChunkRecoveryComplete();
+    },
+  });
 };
 
 if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {

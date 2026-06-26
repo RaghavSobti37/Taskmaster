@@ -46,8 +46,28 @@
       "destination": "https://taskmaster-jfw0.onrender.com/socket.io/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
     }
   ],
   "buildCommand": "npm run vercel-build",

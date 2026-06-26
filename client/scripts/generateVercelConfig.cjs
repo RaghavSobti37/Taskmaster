@@ -195,6 +195,7 @@ const payload = {
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
   ...(template.env ? { env: template.env } : {}),
+  ...(template.headers ? { headers: template.headers } : {}),
 };
 
 const targets = [path.join(REPO_ROOT, 'vercel.json'), path.join(CLIENT_ROOT, 'vercel.json')];

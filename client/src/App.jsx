@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
@@ -9,36 +9,9 @@ import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootFallback from './components/AppBootFallback';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
+import { createLazyWithRetry } from './utils/lazyWithRetry';
 
-// Helper to retry dynamic imports when a redeploy changes chunk hashes
-const CHUNK_RETRY_KEY = 'chunk-retry';
-
-const isStaleChunkError = (error) => {
-  const message = String(error?.message || error || '');
-  return (
-    /Failed to fetch dynamically imported module/i.test(message)
-    || /Importing a module script failed/i.test(message)
-    || /error loading dynamically imported module/i.test(message)
-    || /ChunkLoadError/i.test(message)
-  );
-};
-
-const lazyWithRetry = (componentImport) => 
-  lazy(async () => {
-    const hasRetried = window.sessionStorage.getItem(CHUNK_RETRY_KEY);
-    try {
-      const component = await componentImport();
-      window.sessionStorage.removeItem(CHUNK_RETRY_KEY);
-      return component;
-    } catch (error) {
-      if (!hasRetried && isStaleChunkError(error)) {
-        window.sessionStorage.setItem(CHUNK_RETRY_KEY, 'true');
-        window.location.reload();
-        return new Promise(() => {}); // Keep loading state until reload
-      }
-      throw error;
-    }
-  });
+const lazyWithRetry = createLazyWithRetry;
 
 // Lazy loaded pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));

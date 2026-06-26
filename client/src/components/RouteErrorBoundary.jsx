@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/primitives';
 import { captureException } from '../lib/sentry';
+import { hardReloadApp } from '../utils/chunkRecovery';
 
 export default class RouteErrorBoundary extends React.Component {
   constructor(props) {
@@ -19,8 +20,7 @@ export default class RouteErrorBoundary extends React.Component {
   }
 
   handleReload = () => {
-    window.sessionStorage.removeItem('chunk-retry');
-    window.location.reload();
+    void hardReloadApp();
   };
 
   render() {

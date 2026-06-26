@@ -13,6 +13,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { apiOk, apiError } = require('../utils/apiResponse');
 const { uploadRateLimit } = require('../middleware/rateLimits');
 const { protectUploadthingClient } = require('../middleware/uploadthingAuth');
+const { apiIdempotency } = require('../middleware/apiIdempotency');
 
 /** Domain mount prefixes — used by startup banner. */
 const API_DOMAINS = [
@@ -62,9 +63,11 @@ function registerRoutes(app) {
     return SystemHealthService.middleware(req, res, next);
   });
   app.use(traceMiddleware);
+  app.use('/api', apiIdempotency);
 
   // --- Auth (pre-logger) ---
   app.use('/api/auth', require('../domains/auth/routes'));
+  app.use('/api/v1/sync', require('../routes/syncRoutes'));
   app.use(systemLogger);
 
   // --- Authenticated API ---

@@ -14,11 +14,9 @@ import { queryClient } from './lib/queryClient'
 import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmProvider } from './contexts/ConfirmProvider';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
-import { registerSW } from 'virtual:pwa-register';
 import {
   isStaleAssetScript,
   isStaleChunkError,
-  markChunkRecoveryComplete,
   recoverFromStaleChunks,
 } from './utils/chunkRecovery';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
@@ -27,8 +25,10 @@ import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { initSentry } from './lib/sentry';
 import { initDatadogRum } from './lib/datadog';
 import { initPostHog, getPostHogClient } from './lib/posthog';
+import { initTelemetryCorrelation } from './lib/telemetryCorrelation';
 import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
+import LocalFirstRoot from './components/pwa/LocalFirstRoot';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
 import { Analytics } from '@vercel/analytics/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
@@ -41,6 +41,7 @@ const bootAnalytics = () => {
   initSentry();
   initDatadogRum();
   initPostHog();
+  initTelemetryCorrelation();
 };
 
 bootAnalytics();
@@ -103,12 +104,7 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
 }
 
 const registerDeferredServiceWorker = () => {
-  registerSW({
-    immediate: true,
-    onRegisteredSW() {
-      markChunkRecoveryComplete();
-    },
-  });
+  // Registration handled in LocalFirstRoot for update prompt coordination
 };
 
 if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
@@ -136,7 +132,9 @@ const appTree = (
               <ToastProvider>
                 <ConfirmProvider>
                   <UnsavedChangesProvider>
-                    <App />
+                    <LocalFirstRoot>
+                      <App />
+                    </LocalFirstRoot>
                     <CookieBanner />
                     <Analytics />
                     {AgentationDev ? (

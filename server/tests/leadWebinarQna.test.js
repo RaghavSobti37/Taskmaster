@@ -1,19 +1,17 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
 const { buildWebinarQnaItems, formatQnaText, isYesNoFlag } = require('../../shared/leadWebinarQna.cjs');
 
 describe('leadWebinarQna', () => {
   it('ignores yes/no flags on qnaAnswered', () => {
-    assert.equal(formatQnaText('Yes'), null);
-    assert.equal(isYesNoFlag('Not sure'), true);
-    assert.deepEqual(buildWebinarQnaItems({ qnaAnswered: 'Yes' }), []);
+    expect(formatQnaText('Yes')).toBeNull();
+    expect(isYesNoFlag('Not sure')).toBe(true);
+    expect(buildWebinarQnaItems({ qnaAnswered: 'Yes' })).toEqual([]);
   });
 
   it('returns long-form qnaAnswered text', () => {
     const text = 'Q: What is your goal?\nA: I want to sing professionally.';
     const items = buildWebinarQnaItems({ qnaAnswered: text });
-    assert.equal(items.length, 1);
-    assert.equal(items[0].value, text);
+    expect(items).toHaveLength(1);
+    expect(items[0].value).toBe(text);
   });
 
   it('extracts Q&A from metadata question/answer pairs', () => {
@@ -24,7 +22,7 @@ describe('leadWebinarQna', () => {
         artistType: 'Hobbyist',
       },
     });
-    assert.ok(items.some((i) => i.value.includes('5 years')));
+    expect(items.some((i) => i.value.includes('5 years'))).toBe(true);
   });
 
   it('extracts qna answered metadata column', () => {
@@ -33,6 +31,6 @@ describe('leadWebinarQna', () => {
         'QnA Answered': 'Interested in vocal training and stage performance',
       },
     });
-    assert.equal(items[0].value, 'Interested in vocal training and stage performance');
+    expect(items[0].value).toBe('Interested in vocal training and stage performance');
   });
 });

@@ -1,0 +1,14 @@
+/* @coreknot/design-tokens — compiled from tokens.json */
+:root {
+  --spacing-unit-base: 4px;
+  --spacing-density-comfortable: 16px;
+  --spacing-density-compact: 8px;
+  --spacing-touch-target-min: 44px;
+  --color-brand-primary: #126d5e;
+  --color-brand-cream-wash: #fcf8f2;
+  --color-interactive-focus: #3b82f6;
+  --color-status-error: #ef4444;
+  --color-text-primary: #0f172a;
+  --font-size-body: clamp(0.875rem, 1vw + 0.5rem, 1.125rem);
+  --motion-transition-fast: 0.2s ease-in-out;
+}

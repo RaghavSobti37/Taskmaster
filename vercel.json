@@ -46,7 +46,7 @@
       "destination": "https://taskmaster-jfw0.onrender.com/socket.io/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }
   ],
@@ -54,5 +54,34 @@
   "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd .. && rm -rf node_modules client/node_modules && npx --yes npm@11 install --legacy-peer-deps -w CoreKnot-client",
   "env": {
     "VERCEL_FORCE_NO_BUILD_CACHE": "1"
-  }
+  },
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }

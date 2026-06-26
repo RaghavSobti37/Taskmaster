@@ -1,6 +1,8 @@
 module.exports = {
   testEnvironment: 'node',
   testTimeout: 30000,
+  maxWorkers: 1,
+  forceExit: true,
   setupFilesAfterEnv: ['./tests/setup.js'],
   clearMocks: true,
   collectCoverageFrom: [

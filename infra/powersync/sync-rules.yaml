@@ -1,0 +1,26 @@
+# PowerSync pilot publication — workspace / project / task slice
+# Deploy with PowerSync service; point at Postgres with logical replication enabled.
+
+replication:
+  connections:
+    - type: postgresql
+      uri: ${DATABASE_URL}
+      sslmode: prefer
+
+storage:
+  type: mongodb
+  uri: ${POWERSYNC_MONGO_URI}
+
+# Client sync rules — tenant isolation via JWT parameters
+sync_rules:
+  content: |
+    bucket_definitions:
+      workspace_pilot:
+        parameters:
+          - SELECT request.jwt() ->> 'tenantId' AS tenant_id
+        data:
+          - SELECT * FROM "Workspace" WHERE "tenantId" = bucket.tenant_id
+          - SELECT * FROM "Project" WHERE "tenantId" = bucket.tenant_id
+          - SELECT * FROM "Task" WHERE "tenantId" = bucket.tenant_id
+          - SELECT * FROM "TaskAssignment" WHERE "tenantId" = bucket.tenant_id
+          - SELECT * FROM "TaskActivity" WHERE "tenantId" = bucket.tenant_id

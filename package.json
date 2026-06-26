@@ -8,7 +8,11 @@
     "client",
     "server",
     "nestjs-server",
-    "shared/contracts"
+    "shared/contracts",
+    "packages/design-tokens",
+    "packages/local-database",
+    "packages/sync-client",
+    "packages/ui-components"
   ],
   "scripts": {
     "install:all": "npm install --prefix server && npm install --prefix client",
@@ -24,7 +28,10 @@
     "build": "npm run build --prefix client",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:server-exemplar": "tsc --noEmit -p tsconfig.server-exemplar.json",
-    "ci": "npm run audit:exposure && npm run typecheck && npm test --prefix server -- --coverage && npm run build --workspace=nestjs-server && npm run test:e2e --workspace=nestjs-server && npm test --prefix client -- --coverage && npm run lint --prefix client -- --quiet && npm run build --prefix client",
+    "build:packages": "npm run build --workspace=@coreknot/design-tokens",
+    "test:packages": "npm test --workspace=@coreknot/design-tokens && npm test --workspace=@coreknot/local-database && npm test --workspace=@coreknot/sync-client",
+    "audit:boundaries": "dependency-cruiser client/src packages --config .dependency-cruiser.cjs",
+    "ci": "npm run audit:exposure && npm run build:packages && npm run test:packages && npm run audit:boundaries && npm run typecheck && npm test --prefix server -- --coverage && npm run build --workspace=nestjs-server && npm run test:e2e --workspace=nestjs-server && npm test --prefix client -- --coverage && npm run lint --prefix client -- --quiet && npm run build --prefix client",
     "verify:mobile-proxy": "node scripts/verifyMobileApiProxy.js",
     "prepare": "node scripts/prepare.js",
     "test:e2e": "playwright test --config e2e/playwright.config.cjs",
@@ -59,6 +66,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "concurrently": "^9.1.2",
+    "dependency-cruiser": "^16.10.4",
     "husky": "^9.1.7",
     "typescript": "^5.8.3"
   },

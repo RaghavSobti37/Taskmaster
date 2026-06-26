@@ -1,0 +1,19 @@
+{
+  "name": "@coreknot/local-database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SQLite WASM + OPFS worker for CoreKnot local-first storage",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./worker": "./src/worker.js",
+    "./schema": "./src/schema.js"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  },
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "^3.49.1-build1"
+  }
+}

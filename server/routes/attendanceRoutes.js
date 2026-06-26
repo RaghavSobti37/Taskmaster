@@ -35,6 +35,7 @@ const { mapAttendanceRow } = require('../services/sync/syncPayloadMappers');
 const {
   getAttendanceStatsCache,
   setAttendanceStatsCache,
+  bustAttendanceCacheForUser,
 } = require('../services/hybridCache');
 
 const emitAttendanceEvent = (eventType, doc) => {
@@ -116,8 +117,10 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
     const now = new Date();
     const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const ownAttendanceQuery = { userId: req.user._id, date: today };
 
-    const existing = await Attendance.findOne({ userId: req.user._id, date: today });
+    const existing = await Attendance.findOne(ownAttendanceQuery).setOptions({ bypassTenant: true });
 
     const targetRecord = type === 'in' ? existing?.inTimeRecord : existing?.outTimeRecord;
     if (targetRecord?.isApproved) {
@@ -136,17 +139,18 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
       : { 'outTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, verificationMethod, isApproved: false } };
 
     const attendance = await Attendance.findOneAndUpdate(
-      { userId: req.user._id, date: today },
+      ownAttendanceQuery,
       {
         $set: {
           userId: req.user._id,
           username: req.user.name,
           date: today,
-          ...updateBlock
+          ...(tenantId ? { tenantId } : {}),
+          ...updateBlock,
         },
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+    ).setOptions({ bypassTenant: true });
 
     if (attendance.inTimeRecord?.manualTimestamp && attendance.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(attendance);
@@ -154,6 +158,7 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
 
     const payload = attendance.toObject ? attendance.toObject() : attendance;
     emitAttendanceEvent('attendance.checked', payload);
+    await bustAttendanceCacheForUser(String(req.user._id));
     res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });

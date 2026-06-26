@@ -35,6 +35,13 @@ afterAll(async () => {
     // backgroundQueue may not have loaded in this suite
   }
 
+  try {
+    const { shutdownDomainSync } = require('../services/sync/eventBus');
+    await shutdownDomainSync();
+  } catch {
+    // eventBus may not have loaded in this suite
+  }
+
   if (mongoose.connection.readyState !== 0) {
     mongoose.connection.removeAllListeners();
     await mongoose.disconnect();
@@ -50,6 +57,13 @@ afterEach(async () => {
     await drainMemoryQueue();
   } catch {
     // queueService may not have loaded in this suite
+  }
+
+  try {
+    const { drainDomainSyncMemoryQueue } = require('../services/sync/eventBus');
+    await drainDomainSyncMemoryQueue();
+  } catch {
+    // eventBus may not have loaded in this suite
   }
 
   if (mongoose.connection.readyState !== 0) {

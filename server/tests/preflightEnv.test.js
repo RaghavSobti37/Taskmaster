@@ -5,7 +5,7 @@ describe('preflightEnv retired hosts', () => {
     const { errors } = collectPreflightIssues({
       JWT_SECRET: 'test-secret',
       MONGODB_URI: 'mongodb://localhost:27017/taskmaster_local',
-      TRACKING_BASE_URL: 'https://YOUR-RENDER-SERVICE.onrender.com',
+      TRACKING_BASE_URL: 'https://taskmaster-jfw0.onrender.com',
     });
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some((e) => /retired host/i.test(e))).toBe(true);

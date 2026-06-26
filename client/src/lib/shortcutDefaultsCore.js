@@ -20,7 +20,7 @@ export const NAV_ROUTES = [
   { suffix: 'emails', label: 'Emails', path: '/emails', keys: ['g', 'e'] },
   { suffix: 'schedule', label: 'Schedule', path: '/schedule', keys: ['g', 'r'] },
   { suffix: 'office', label: 'Office', path: '/office', keys: ['g', 'o'] },
-  { suffix: 'users', label: 'Users', path: '/admin/users', keys: ['g', 'u'] },
+  { suffix: 'users', label: 'Users', path: '/admin/users', keys: ['g', 'u'], adminOnly: true },
   { suffix: 'admin-console', label: 'Admin Console', path: '/admin/console', keys: ['g', 'b'] },
 ];
 

@@ -28,6 +28,7 @@ const { resolvePlatformOwnerUser } = require('../../../utils/platformOwner');
 const { formatTimeSpent, MIN_COMPLETION_MINUTES } = require('../../../../shared/timeSpent');
 const { refreshAttendanceMetricsForUserDay } = require('../../../utils/refreshAttendanceMetrics');
 const { clampXpHours } = require('../../../../shared/gamificationRules');
+const syncDualWrite = require('../../../services/syncDualWrite');
 const { queueGamificationEvent } = require('../../../services/backgroundQueue');
 const { buildTaskActionUrl } = require('../../../utils/notificationActionUrl');
 const {
@@ -623,6 +624,7 @@ exports.createTask = async (taskData, user, session) => {
   }));
 
   publishTaskCreated(task);
+  syncDualWrite.upsertTask(task);
 
   return { taskDto: mapTaskDTO(taskObj), pendingNotifications };
 };
@@ -1345,6 +1347,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   publishTaskUpdated(populatedTask);
+  syncDualWrite.upsertTask(populatedTask);
 
   return {
     taskDto: mapTaskDTO(populatedTask),
@@ -1380,6 +1383,7 @@ exports.deleteTask = async (taskId, user, session) => {
     const TaskActivityService = require('./TaskActivityService');
     await TaskActivityService.purgeActivityForTasks([task._id]);
     publishTaskDeleted(task);
+    syncDualWrite.deleteTask(task._id);
   }
 };
 

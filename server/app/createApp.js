@@ -53,6 +53,8 @@ function createApp() {
     contentSecurityPolicy: {
       directives: buildCspDirectives(),
     },
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginEmbedderPolicy: config.isDevelopment ? false : { policy: 'credentialless' },
   }));
   app.use(compression({ threshold: 1024 }));
   applyCors(app);

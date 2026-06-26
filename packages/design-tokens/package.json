@@ -1,0 +1,20 @@
+{
+  "name": "@coreknot/design-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compiled design tokens for CoreKnot enterprise PWA",
+  "type": "module",
+  "main": "./dist/tokens.css",
+  "exports": {
+    ".": "./dist/tokens.css",
+    "./source": "./tokens.json"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test build.test.mjs"
+  },
+  "files": [
+    "dist",
+    "tokens.json"
+  ]
+}

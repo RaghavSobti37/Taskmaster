@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@coreknot/design-tokens";
 @import "./styles/tokens/index.css";
 
 /* Shadow policy: shadows allowed only on floating elements (.tm-floating). Static surfaces use rule dividers. */

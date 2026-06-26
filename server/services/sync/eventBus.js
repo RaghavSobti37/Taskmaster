@@ -82,6 +82,17 @@ async function processMemoryQueue() {
   memoryProcessing = false;
 }
 
+async function drainDomainSyncMemoryQueue(timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (memoryQueue.length > 0 || memoryProcessing) {
+    if (Date.now() > deadline) break;
+    await processMemoryQueue();
+    if (memoryQueue.length > 0 || memoryProcessing) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+}
+
 /**
  * Publish a domain sync event. Idempotent via deterministic jobId.
  */
@@ -168,5 +179,6 @@ module.exports = {
   publishDomainEvent,
   initDomainSyncWorker,
   shutdownDomainSync,
+  drainDomainSyncMemoryQueue,
   isDomainSyncRedisAvailable: () => redisAvailable,
 };

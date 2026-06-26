@@ -10,6 +10,9 @@ const {
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword,
   listSessions, revokeSession, revokeOtherSessions, getRealtimeToken,
 } = require('./controllers/authController');
+const {
+  registerOptions, registerVerify, loginOptions,
+} = require('./controllers/webauthnController');
 const { protect } = require('../../middleware/authMiddleware');
 const { validateBody } = require('../../validation/validateBody');
 const {
@@ -27,7 +30,7 @@ const authLoginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
-  skip: (req) => !config.isProduction && isE2eTestUser(req.body?.email),
+  skip: () => process.env.NODE_ENV === 'test' || (!config.isProduction && isE2eTestUser(req.body?.email)),
   keyGenerator: (req) => {
     const email = req.body?.email;
     if (typeof email === 'string' && email.trim()) {
@@ -65,5 +68,9 @@ router.get('/sessions', protect, listSessions);
 router.delete('/sessions/:jti', protect, revokeSession);
 router.post('/sessions/revoke-others', protect, revokeOtherSessions);
 router.post('/change-required-password', protect, validateBody(changeRequiredPasswordBody), changeRequiredPassword);
+
+router.post('/webauthn/register/options', protect, registerOptions);
+router.post('/webauthn/register/verify', protect, registerVerify);
+router.post('/webauthn/login/options', authLoginLimiter, loginOptions);
 
 module.exports = router;

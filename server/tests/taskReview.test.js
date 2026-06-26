@@ -20,11 +20,12 @@ describe('task review workflow', () => {
   });
 
   beforeEach(async () => {
-    creator = await User.create({ name: 'Creator', email: 'creator-review@test.com' });
-    assignee = await User.create({ name: 'Assignee', email: 'assignee-review@test.com' });
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    creator = await User.create({ name: 'Creator', email: `creator-review-${stamp}@test.com` });
+    assignee = await User.create({ name: 'Assignee', email: `assignee-review-${stamp}@test.com` });
     platformOwner = await User.create({
       name: 'Platform Owner',
-      email: 'platform-owner-review@test.com',
+      email: `platform-owner-review-${stamp}@test.com`,
     });
     process.env.PLATFORM_OWNER_USER_ID = platformOwner._id.toString();
   });

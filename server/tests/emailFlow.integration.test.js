@@ -11,11 +11,11 @@ const MailTemplate = require('../models/MailTemplate');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 const { buildFinalEmailHtml, personalizeEmailContent } = require('../utils/buildFinalEmailHtml');
 
-const TEST_EMAIL = `email-flow-${Date.now()}@coreknot-test.local`;
 const QUILL_INDENT_HTML = '<p class="ql-indent-2" style="padding-left: 3em;">Hello {1}</p>';
 
 describe('Email flow integration', () => {
   let agent;
+  let testEmail;
 
   afterAll(async () => {
     const { drainMemoryQueue } = require('../services/queueService');
@@ -23,6 +23,7 @@ describe('Email flow integration', () => {
   });
 
   beforeEach(async () => {
+    testEmail = `email-flow-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@coreknot-test.local`;
     let adminDept = await Department.findOne({ slug: 'admin' });
     if (!adminDept) {
       adminDept = await Department.create({
@@ -35,12 +36,12 @@ describe('Email flow integration', () => {
 
     const reg = await request(app)
       .post('/api/auth/register')
-      .send({ name: 'Email Flow Tester', email: TEST_EMAIL, password: DEV_DEFAULT_PASSWORD, gender: 'male' });
+      .send({ name: 'Email Flow Tester', email: testEmail, password: DEV_DEFAULT_PASSWORD, gender: 'male' });
     expect(reg.statusCode).toBe(201);
     await User.findByIdAndUpdate(reg.body._id, { departmentId: adminDept._id });
 
     agent = request.agent(app);
-    const login = await agent.post('/api/auth/login').send({ email: TEST_EMAIL, password: DEV_DEFAULT_PASSWORD });
+    const login = await agent.post('/api/auth/login').send({ email: testEmail, password: DEV_DEFAULT_PASSWORD });
     expect(login.statusCode).toBe(200);
   }, 30000);
 

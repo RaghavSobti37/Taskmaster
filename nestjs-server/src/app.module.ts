@@ -13,6 +13,7 @@ import { HealthModule } from './health/health.module';
 import { AttendanceModule } from './domains/attendance/attendance.module';
 import { TasksModule } from './domains/tasks/tasks.module';
 import { MailModule } from './domains/mail/mail.module';
+import { SyncModule } from './domains/sync/sync.module';
 import { TraceMiddleware } from './common/middleware/trace.middleware';
 
 @Module({})
@@ -26,6 +27,7 @@ export class AppModule implements NestModule {
       HealthModule,
       AttendanceModule,
       TasksModule,
+      SyncModule,
     ];
     if (options.enableBullMQ) {
       imports.push(BullMQModule, MailModule);

@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
@@ -77,6 +77,10 @@ export default defineConfig(({ mode }) => {
     },
   },
   server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
     // OneDrive on Windows rewrites mtimes on synced files (public/ and src/) → spurious full reloads.
     watch: {
       // Collapse OneDrive double-touch / sync churn into a single reload per real save.
@@ -146,6 +150,10 @@ export default defineConfig(({ mode }) => {
     },
   },
   preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
     proxy: {
       // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
       '/api/attendance': {

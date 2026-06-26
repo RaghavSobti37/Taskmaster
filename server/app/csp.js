@@ -33,6 +33,8 @@ function buildCspDirectives() {
     styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", 'data:', 'https:'],
     connectSrc,
+    workerSrc: ["'self'", 'blob:'],
+    childSrc: ["'self'", 'blob:'],
   };
 }
 

@@ -1,5 +1,4 @@
 const { AsyncLocalStorage } = require('async_hooks');
-const { resolveDefaultTenantId } = require('./defaultTenant');
 const tenantStorage = new AsyncLocalStorage();
 
 const getTenantId = () => {
@@ -23,6 +22,7 @@ const runWithContext = (context, fn) => tenantStorage.run(context, fn);
 const resolveTenantIdForRequest = async (req) => {
   const direct = getTenantId() || req?.tenantId || req?.user?.tenantId;
   if (direct) return direct;
+  const { resolveDefaultTenantId } = require('./defaultTenant');
   return resolveDefaultTenantId();
 };
 

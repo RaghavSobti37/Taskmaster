@@ -96,7 +96,10 @@ const ProjectCreate = () => {
         name, 
         description: desc, 
         workspace,
-        members: members.map(m => ({ userId: m.userId, role: m.projectRole }))
+        members: members.map((m) => ({
+          userId: String(m.userId?._id || m.userId || ''),
+          role: m.projectRole,
+        })).filter((m) => m.userId),
       });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');

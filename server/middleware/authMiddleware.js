@@ -102,7 +102,7 @@ const protect = async (req, res, next) => {
     touchLastOnline(req.user._id);
 
     req.tenantId = req.user.tenantId;
-    runWithContext(authContext(req, req.user), next);
+    return runWithContext(authContext(req, req.user), next);
   } catch (error) {
     res.status(401).json({ error: 'Not authorized, token failed' });
   }

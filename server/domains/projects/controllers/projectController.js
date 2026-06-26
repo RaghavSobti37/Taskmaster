@@ -20,7 +20,7 @@ const { normalizeStoredProjectRole } = require('../../../../shared/projectRoles'
 const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const taskProjectQueryService = require('../../tasks/services/taskProjectQueryService');
 const auditService = require('../../crm/services/auditService');
-const { getTenantId } = require('../../../utils/tenantContext');
+const { getTenantId, resolveTenantIdForRequest } = require('../../../utils/tenantContext');
 
 function buildTaskCountMap(taskCounts) {
   return taskCounts.reduce((acc, curr) => {
@@ -343,8 +343,9 @@ exports.createProject = async (req, res) => {
     const providedRoles = [];
 
     (members || []).forEach((m) => {
-      if (!m?.userId) return;
-      mergeMemberEntry(providedMembers, providedRoles, m.userId, m.role || 'member');
+      const userId = memberIdStr(m?.userId);
+      if (!userId) return;
+      mergeMemberEntry(providedMembers, providedRoles, userId, m.role || 'member');
     });
 
     const ws = await Workspace.findOne({ name: workspaceName }).lean();
@@ -369,6 +370,7 @@ exports.createProject = async (req, res) => {
     }
 
     const assignedColor = color || '#64748b';
+    const tenantId = await resolveTenantIdForRequest(req);
 
     const project = await Project.create({
       name: formatProjectName(name),
@@ -380,7 +382,8 @@ exports.createProject = async (req, res) => {
       outletId: req.user.currentOutletId || 'main',
       owner: req.user._id,
       members: providedMembers,
-      memberRoles: providedRoles
+      memberRoles: providedRoles,
+      tenantId,
     });
 
     const { queueGamificationEvent } = require('../../../services/backgroundQueue');

@@ -1,5 +1,7 @@
 /** Spotlight tour steps — selectors use data-tour attributes in the shell. */
 
+import { productSummary } from '@shared/marketing-content';
+
 export const TOUR_ATTR_BY_PATH = {
   '/dashboard': 'nav-dashboard',
   '/todo': 'nav-todo',
@@ -32,7 +34,7 @@ export function getOnboardingSteps(isMobile) {
         id: 'welcome',
         target: null,
         title: 'Welcome to CoreKnot',
-        body: 'CoreKnot is TSC\'s work hub — projects, tasks, CRM, attendance, email campaigns, and team ops in one place. This tour walks through every major area.',
+        body: `${productSummary.mobile} This tour walks through every major area.`,
         placement: 'center',
       },
       {
@@ -127,7 +129,7 @@ export function getOnboardingSteps(isMobile) {
       id: 'welcome',
       target: null,
       title: 'Welcome to CoreKnot',
-      body: 'CoreKnot is TSC\'s unified operations platform — project governance, CRM, attendance, finance docs, email campaigns, gamification, and admin tooling. This tour covers the full product map.',
+      body: `${productSummary.desktop} This tour covers the full product map.`,
       placement: 'center',
     },
     {

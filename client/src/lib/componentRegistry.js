@@ -80,7 +80,7 @@ export const isAnalyticsWidget = (componentId) =>
 export const LAYOUT_TEMPLATES = [
   {
     id: 'coreknot',
-    name: 'Coreknot',
+    name: 'CoreKnot',
     description: 'Balanced default with tasks, projects, and team tools',
     target: ['all'],
     elements: [

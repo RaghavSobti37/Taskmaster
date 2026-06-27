@@ -4,6 +4,7 @@ import MarketingPageBackground from '../../components/MarketingPageBackground';
 import MarketingThemeToggle from '../../components/MarketingThemeToggle';
 import { Shield, Lock, Eye, Database, Globe, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { brand, footer, legalCopy } from '../../constants/marketingContent';
 
 export default function PrivacyPolicy() {
   return (
@@ -14,7 +15,7 @@ export default function PrivacyPolicy() {
         <div className="flex items-center gap-3 relative z-10">
           <BrandLogo size={40} />
           <div>
-            <span className="font-bold text-base tracking-tight text-foreground block">Coreknot</span>
+            <span className="font-bold text-base tracking-tight text-foreground block">{brand.name}</span>
             <span className="text-[10px] text-[var(--color-text-secondary)] font-mono">Privacy Specification v2.2</span>
           </div>
         </div>
@@ -33,7 +34,7 @@ export default function PrivacyPolicy() {
           </div>
           <h1 className="text-4xl font-black tracking-tight text-foreground">Privacy Policy & Data Security</h1>
           <p className="w-full text-sm text-[var(--color-text-secondary)] mx-auto" style={{ maxWidth: '600px' }}>
-            Effective Date: June 6, 2026 · Applies to Coreknot Workspace and cross-platform analytics pipelines.
+            Effective Date: June 6, 2026 · {legalCopy.privacyAppliesLine}
           </p>
         </div>
 
@@ -73,7 +74,7 @@ export default function PrivacyPolicy() {
           </h2>
           <div className="space-y-4 text-xs text-[var(--color-text-secondary)] leading-relaxed">
             <p>
-              When you use Coreknot, we collect information required to deliver CRM synchronization, productivity tools, and artist analytics:
+              When you use {legalCopy.productNameInBody}, we collect information required to deliver CRM synchronization, productivity tools, and artist analytics:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong className="text-foreground">Account Credentials:</strong> Name, professional email, encrypted authentication hashes, and workspace role assignments.</li>
@@ -89,7 +90,7 @@ export default function PrivacyPolicy() {
             <span className="w-2 h-2 rounded-full bg-[var(--color-brand-teal)]" /> 2. How We Use Your Data
           </h2>
           <div className="space-y-4 text-xs text-[var(--color-text-secondary)] leading-relaxed">
-            <p>Coreknot processes your data strictly for operational functionality:</p>
+            <p>{legalCopy.productNameInBody} processes your data strictly for operational functionality:</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Aggregating follower and streaming metrics into unified artist dashboards.</li>
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Dispatching scheduled emails and calendar reminders via secure API conduits.</li>
@@ -142,7 +143,7 @@ export default function PrivacyPolicy() {
         </section>
 
         <footer className="pt-8 border-t border-border flex items-center justify-between text-xs text-[var(--color-text-secondary)] flex-wrap gap-4">
-          <span>© 2026 Coreknot / The Shakti Collective. All rights reserved.</span>
+          <span>{footer.copyright()}</span>
           <div className="flex items-center gap-4">
             <Link to="/userdata" className="hover:text-foreground">User Data Deletion</Link>
             <a href="mailto:privacy@theshakticollective.in" className="flex items-center gap-1 hover:text-foreground text-[var(--color-brand-teal)]">

@@ -24,6 +24,7 @@ import { postLogin } from '../../utils/loginRequest';
 import { capturePostHogEvent } from '../../lib/posthog';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
+import { brand, loginCopy } from '../../constants/marketingContent';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -107,9 +108,9 @@ const LoginPage = () => {
       <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
         <div className="text-center mb-6">
           <BrandLogo size={64} className="mx-auto mb-4" />
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Coreknot</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{brand.name}</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
-            A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
+            {loginCopy.subtitle}
           </p>
         </div>
 
@@ -235,7 +236,7 @@ const LoginPage = () => {
             className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--color-brand-teal)]/30 bg-[var(--color-brand-teal)]/5 px-4 py-2.5 text-sm font-semibold text-[var(--color-brand-teal)] hover:bg-[var(--color-brand-teal)]/10 transition-colors touch-manipulation"
           >
             <Smartphone size={16} />
-            {installPlatform.installed ? 'App install guide' : 'Install CoreKnot app'}
+            {installPlatform.installed ? loginCopy.installCtaInstalled : loginCopy.installCta}
           </button>
           <div className="flex items-center justify-center gap-2 text-[var(--color-text-muted)] font-medium">
             <span>New user?</span>

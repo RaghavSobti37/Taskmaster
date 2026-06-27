@@ -39,6 +39,7 @@ import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
 import { TOUR_ATTR_BY_PATH } from '../constants/onboardingSteps';
+import { brand } from '../constants/marketingContent';
 
 const LEGACY_PAGE_PATHS = {
   '/workspace/emails': '/emails',
@@ -376,7 +377,7 @@ const OutletSidebar = () => {
             <BrandLogo size={28} className="shrink-0" />
             {showLabels && (
               <span className="font-semibold text-[13px] tracking-tight text-[var(--color-text-primary)] truncate">
-                Coreknot
+                {brand.name}
               </span>
             )}
           </div>

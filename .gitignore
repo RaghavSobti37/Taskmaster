@@ -15,6 +15,7 @@ server/models/OpsEntity.js
 server/models/OpsWeeklyCycle.js
 shared/opsTaxonomy.js
 .cursor/production-hosts.local.json
+.cursor/render-api.local.env
 .cursor/git-promotion.json
 sites/*/vercel.json
 .local/

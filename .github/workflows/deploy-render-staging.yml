@@ -1,0 +1,36 @@
+name: Deploy Render Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+concurrency:
+  group: render-deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy staging via Render API (Option C)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
+          RENDER_DEPLOY_HOOK_NEST_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_NEST_STAGING }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RENDER_API_KEY:-}" ]; then
+            node scripts/deploy-staging-render.js --wait
+            exit 0
+          fi
+          echo "::warning::RENDER_API_KEY not set — falling back to deploy hooks"
+          for hook in "$RENDER_DEPLOY_HOOK_STAGING" "$RENDER_DEPLOY_HOOK_NEST_STAGING"; do
+            if [ -z "$hook" ]; then
+              echo "::warning::Deploy hook missing — skip one service"
+              continue
+            fi
+            curl -fsSL -X POST "$hook"
+          done

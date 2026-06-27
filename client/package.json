@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "postinstall": "node scripts/generateVercelConfig.cjs",
-    "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs",
+    "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/prebuildIcons.mjs",
     "build": "node scripts/generateVercelConfig.cjs && vite build",
     "prevercel-build": "node scripts/generateVercelConfig.cjs",
     "vercel-build": "npm run build",
@@ -97,5 +97,10 @@
     "workbox-precaching": "^7.4.1",
     "workbox-routing": "^7.4.1",
     "workbox-strategies": "^7.4.1"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.61.1",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.0",
+    "lightningcss-linux-x64-gnu": "1.32.0"
   }
 }

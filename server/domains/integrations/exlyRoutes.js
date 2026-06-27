@@ -9,6 +9,7 @@ const {
   getOfferingAnalytics,
   updateOffering,
   getDashboardStats,
+  getMasterclassFunnel,
   getUnlinkedBookings,
   linkUnlinkedBookings,
 } = require('./controllers/exlyController');
@@ -19,6 +20,7 @@ const exlyAccess = requirePageAccess('admin_exly');
 router.post('/webhook', handleExlyWebhook);
 
 router.get('/dashboard-stats', protect, exlyAccess, getDashboardStats);
+router.get('/masterclass-funnel', protect, exlyAccess, getMasterclassFunnel);
 router.get('/unlinked-bookings', protect, exlyAccess, getUnlinkedBookings);
 router.post('/unlinked-bookings/link', protect, exlyAccess, linkUnlinkedBookings);
 router.get('/offerings', protect, exlyAccess, getOfferings);

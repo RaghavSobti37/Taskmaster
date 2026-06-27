@@ -44,7 +44,7 @@ const MetricBlock = ({ label, value, tone = 'default', title }) => {
   );
 };
 
-const ExlyDataContent = ({ mode = 'campaigns' }) => {
+const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onInitialOfferingOpened }) => {
   const [offerings, setOfferings] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -359,6 +359,15 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       setCohortLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialOfferingId || loading || !offerings.length) return;
+    const offering = offerings.find((o) => o.offeringId === initialOfferingId);
+    if (!offering) return;
+    handleRowClick(offering);
+    onInitialOfferingOpened?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when parent passes offering id
+  }, [initialOfferingId, loading, offerings]);
 
   useEffect(() => {
     if (!workspaceOpen || !selectedOffering?.offeringId) return;
@@ -868,7 +877,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal size={14} className="text-[var(--color-text-muted)]" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Campaigns</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">All Exly records</h3>
               </div>
               
               <div className="flex flex-wrap items-center gap-3">
@@ -877,7 +886,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                   <input
                     type="text"
-                    placeholder="Search campaigns..."
+                    placeholder="Search records..."
                     value={offeringSearch}
                     onChange={(e) => setOfferingSearch(e.target.value)}
                     className="w-full pl-8 pr-2.5 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md focus:border-[var(--color-action-primary)] outline-none text-[11px] font-semibold text-[var(--color-text-primary)] transition-all"
@@ -959,7 +968,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
               </div>
             ) : filteredOfferings.length === 0 ? (
               <div className="p-12 text-center opacity-30">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">No campaigns match search filters</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">No records match search filters</p>
               </div>
             ) : (
               <DataTable 

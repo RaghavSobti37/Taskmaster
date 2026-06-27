@@ -20,7 +20,10 @@ case "$TARGET" in
     npx --yes npm@11.4.2 ci --omit=dev --workspace=coreknot-server
     ;;
   nest)
-    npx --yes npm@11.4.2 ci --workspace=@coreknot/nestjs-server
+    # Nest runtime imports ../server/* (legacy bridge) — install server workspace too.
+    NODE_ENV=development npx --yes npm@11.4.2 ci \
+      --workspace=@coreknot/nestjs-server \
+      --workspace=coreknot-server
     npm run build --workspace=@coreknot/nestjs-server
     ;;
   *)

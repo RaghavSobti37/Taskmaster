@@ -89,8 +89,8 @@ services:
     buildCommand: cd .. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: false
-    branch: main
+    autoDeploy: true
+    branch: staging
     envVars:
       - key: HUSKY
         value: "0"
@@ -131,8 +131,10 @@ services:
         sync: false
       - key: SUPABASE_BACKUP_BUCKET
         value: taskmaster-backups
+      - key: NEST_SYNC_URL
+        value: https://coreknot-nest-staging.onrender.com
 
-  # NestJS staging — Postgres strangler (attendance first); preview Supabase DATABASE_URL
+  # NestJS staging
   - type: web
     name: coreknot-nest-staging
     runtime: node
@@ -142,8 +144,8 @@ services:
     buildCommand: cd .. && bash scripts/render-build.sh nest
     startCommand: npm run start:prod
     healthCheckPath: /api/health
-    autoDeploy: false
-    branch: main
+    autoDeploy: true
+    branch: staging
     envVars:
       - key: HUSKY
         value: "0"

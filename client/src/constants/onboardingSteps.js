@@ -260,7 +260,7 @@ export function getOnboardingSteps(isMobile) {
       id: 'settings',
       target: '[data-tour="sidebar-settings"]',
       title: 'Settings',
-      body: 'Profile, password, avatar, notification preferences, active sessions (revoke devices), navbar customization, and dark/light theme.',
+      body: 'Profile, password, avatar, notification preferences, active sessions (revoke devices), and dark/light theme.',
       placement: 'right',
     },
     {

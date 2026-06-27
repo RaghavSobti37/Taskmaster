@@ -1,4 +1,4 @@
-/** Canonical 3-zone navbar structure (mirrors server NavbarPreference.DEFAULT_NAVBAR_GROUPS). */
+/** Canonical 3-zone navbar structure for the app sidebar. */
 
 export const LEGACY_NAV_GROUP_IDS = new Set(['platform', 'workspace', 'office', 'crm', 'management', 'admin']);
 

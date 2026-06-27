@@ -10,6 +10,23 @@
  */
 const API_BASE = 'https://api.render.com/v1';
 
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+for (const f of ['server/.env', 'server/.env.render', '.cursor/render-api.local.env']) {
+  const p = path.join(ROOT, f);
+  if (!fs.existsSync(p)) continue;
+  for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const eq = t.indexOf('=');
+    if (eq < 0) continue;
+    const k = t.slice(0, eq).trim();
+    if (!process.env[k]) process.env[k] = t.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+  }
+}
+
 const apiKey = (process.env.RENDER_API_KEY || '').trim();
 const shouldDeploy = process.argv.includes('--deploy');
 const clearCache = process.argv.includes('--clear-cache');
@@ -157,7 +174,9 @@ async function main() {
     updated += 1;
     console.log('    patched');
 
-    if (shouldDeploy && /^taskmaster$/i.test(String(service.name))) {
+    if (shouldDeploy && (/^taskmaster$/i.test(String(service.name))
+      || /^coreknot-api-staging$/i.test(String(service.name))
+      || /^coreknot-nest-staging$/i.test(String(service.name)))) {
       await triggerDeploy(service.id);
       console.log(`    deploy triggered${clearCache ? ' (cache cleared)' : ''}`);
     }

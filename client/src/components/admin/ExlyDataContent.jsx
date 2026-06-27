@@ -13,8 +13,10 @@ import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
 import { buildOfferingEditState, offeringEditHasChanges } from '../../utils/exlyOfferingEditState';
 import {
-  shortenOfferingTitle,
-  shortenOfferingTitleCompact,
+  formatOfferingDisplay,
+  mentorFromOfferingTitle,
+} from '../../utils/exlyCourseLabels';
+import {
   formatInr,
   formatPercent,
   computeOfferingTotals
@@ -44,7 +46,7 @@ const MetricBlock = ({ label, value, tone = 'default', title }) => {
   );
 };
 
-const ExlyDataContent = ({ mode = 'campaigns' }) => {
+const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onInitialOfferingOpened }) => {
   const [offerings, setOfferings] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -361,6 +363,15 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   };
 
   useEffect(() => {
+    if (!initialOfferingId || loading || !offerings.length) return;
+    const offering = offerings.find((o) => o.offeringId === initialOfferingId);
+    if (!offering) return;
+    handleRowClick(offering);
+    onInitialOfferingOpened?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when parent passes offering id
+  }, [initialOfferingId, loading, offerings]);
+
+  useEffect(() => {
     if (!workspaceOpen || !selectedOffering?.offeringId) return;
     const timer = setTimeout(() => {
       fetchOfferingDetails(selectedOffering.offeringId, bookingPage, bookingRowsPerPage, bookingPaymentFilter, searchQuery);
@@ -429,18 +440,31 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const columns = [
     {
       header: 'Offering',
-      render: (item) => (
+      render: (item) => {
+        const display = formatOfferingDisplay(item.title, { type: item.type, price: item.price });
+        const mentor = display.mentor || mentorFromOfferingTitle(item.title);
+        return (
         <div className="flex items-center gap-2.5 max-w-[220px]">
           <div className="w-7 h-7 rounded-md bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[9px] shrink-0 text-[var(--color-text-primary)]">
-            {item.title?.substring(0, 2).toUpperCase()}
+            {(display.primary || item.title)?.substring(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <span
-              className="font-semibold text-xs text-[var(--color-text-primary)] truncate block"
-              title={item.title}
-            >
-              {shortenOfferingTitleCompact(item.title)}
-            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {mentor && (
+                <span className="text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]">
+                  {mentor}
+                </span>
+              )}
+              <span
+                className="font-semibold text-xs text-[var(--color-text-primary)] truncate"
+                title={item.title}
+              >
+                {display.primary}
+              </span>
+            </div>
+            {display.secondary && (
+              <p className="text-[9px] font-mono text-[var(--color-text-muted)] mt-0.5">{display.secondary}</p>
+            )}
             <div className="flex items-center gap-1.5 mt-0.5">
               <Badge variant={item.status === 'active' ? 'success' : 'warning'} className="!text-[8px] uppercase tracking-wider shrink-0">
                 {item.status}
@@ -453,7 +477,8 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
             </div>
           </div>
         </div>
-      )
+        );
+      }
     },
     {
       header: 'List Price',
@@ -868,7 +893,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal size={14} className="text-[var(--color-text-muted)]" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Campaigns</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">All Exly records</h3>
               </div>
               
               <div className="flex flex-wrap items-center gap-3">
@@ -877,7 +902,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                   <input
                     type="text"
-                    placeholder="Search campaigns..."
+                    placeholder="Search records..."
                     value={offeringSearch}
                     onChange={(e) => setOfferingSearch(e.target.value)}
                     className="w-full pl-8 pr-2.5 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md focus:border-[var(--color-action-primary)] outline-none text-[11px] font-semibold text-[var(--color-text-primary)] transition-all"
@@ -959,7 +984,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
               </div>
             ) : filteredOfferings.length === 0 ? (
               <div className="p-12 text-center opacity-30">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">No campaigns match search filters</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">No records match search filters</p>
               </div>
             ) : (
               <DataTable 
@@ -993,7 +1018,11 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Offering Purchased:</span>
-                  <p className="text-[var(--color-text-primary)]">{dashboardStats.recentBooking.offeringTitle}</p>
+                  <p className="text-[var(--color-text-primary)]">
+                    {formatOfferingDisplay(dashboardStats.recentBooking.offeringTitle, {
+                      price: dashboardStats.recentBooking.pricePaid,
+                    }).primary}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Price Settled:</span>
@@ -1204,9 +1233,27 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">{item.phone || '—'}</td>
                         <td className="p-3">
-                          <div className="text-xs font-semibold text-[var(--color-text-primary)]" title={item.offeringTitle}>
-                            {shortenOfferingTitle(item.offeringTitle)}
-                          </div>
+                          {(() => {
+                            const d = formatOfferingDisplay(item.offeringTitle, { price: item.pricePaid });
+                            const mentor = d.mentor || mentorFromOfferingTitle(item.offeringTitle);
+                            return (
+                              <>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {mentor && (
+                                    <span className="text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
+                                      {mentor}
+                                    </span>
+                                  )}
+                                  <span className="text-xs font-semibold text-[var(--color-text-primary)]" title={item.offeringTitle}>
+                                    {d.primary}
+                                  </span>
+                                </div>
+                                {d.secondary && (
+                                  <div className="text-[9px] font-mono text-[var(--color-text-muted)]">{d.secondary}</div>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{item.offeringId}</div>
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">

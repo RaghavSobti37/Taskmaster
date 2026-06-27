@@ -95,7 +95,6 @@ const MONGO_ENTITIES = Object.freeze([
   'OutsourcedRecord',
   'MasterclassReview',
   'PlatformSettings',
-  'NavbarPreference',
   'WorkspacePreference',
   'ShortcutPreference',
   'Announcement',

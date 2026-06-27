@@ -1,19 +1,9 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { Suspense, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { canSeeWorkspaceTab, hasArtistPermission } from '../../../utils/artistMemberPermissions';
 import { ARTIST_WORKSPACE_TABS, DEFAULT_WORKSPACE_TAB } from './artistWorkspaceConstants';
-import ArtistWorkspaceHome from './tabs/ArtistWorkspaceHome';
-import ArtistWorkspaceSettings from './tabs/ArtistWorkspaceSettings';
-import ArtistCalendarTab from '../os/ArtistCalendarTab';
-import ArtistFinanceTab from '../os/ArtistFinanceTab';
-import ArtistAnalyticsTab from '../os/ArtistAnalyticsTab';
-import ArtistContentTab from '../os/ArtistContentTab';
-import ArtistDocumentsTab from '../os/ArtistDocumentsTab';
-import ArtistContractsTab from '../os/ArtistContractsTab';
-import ArtistBookingsTab from './ArtistBookingsTab';
-import ArtistReleasesTab from './ArtistReleasesTab';
-import ArtistTeamTab from './ArtistTeamTab';
-import SocialConnectionsCenter from '../../../components/artists/SocialConnectionsCenter';
+import { getLazyArtistWorkspaceTab } from '../artistTabLoaders';
+import PageSkeleton from '../../../components/ui/PageSkeleton';
 
 export default function ArtistWorkspaceLayout({
   artist,
@@ -66,11 +56,15 @@ export default function ArtistWorkspaceLayout({
     addVideoMutation,
   };
 
+  const LazyPanel = useMemo(() => getLazyArtistWorkspaceTab(resolvedTab), [resolvedTab]);
+
   const renderPanel = () => {
+    if (!LazyPanel) return null;
+    const Panel = LazyPanel;
     switch (resolvedTab) {
       case 'home':
         return (
-          <ArtistWorkspaceHome
+          <Panel
             artistId={artistId}
             artist={artist}
             normalized={normalized}
@@ -81,33 +75,33 @@ export default function ArtistWorkspaceLayout({
           />
         );
       case 'analytics':
-        return <ArtistAnalyticsTab {...panelProps} />;
+        return <Panel {...panelProps} />;
       case 'calendar':
-        return <ArtistCalendarTab artistId={artistId} isPreview={false} />;
       case 'bookings':
-        return <ArtistBookingsTab artistId={artistId} isPreview={false} />;
       case 'finance':
-        return <ArtistFinanceTab artistId={artistId} isPreview={false} />;
       case 'content':
-        return <ArtistContentTab artistId={artistId} isPreview={false} />;
+      case 'releases':
+      case 'documents':
+      case 'contracts':
+        return <Panel artistId={artistId} isPreview={false} />;
       case 'connections':
         return (
-          <SocialConnectionsCenter
+          <Panel
             artistId={artistId}
             connections={connections}
             isPreview={false}
           />
         );
-      case 'releases':
-        return <ArtistReleasesTab artistId={artistId} isPreview={false} />;
       case 'team':
-        return <ArtistTeamTab artistId={artistId} membership={membership} canManageTeam={hasArtistPermission(membership, 'team')} />;
-      case 'documents':
-        return <ArtistDocumentsTab artistId={artistId} artistName={artist?.name} isPreview={false} />;
-      case 'contracts':
-        return <ArtistContractsTab artistId={artistId} isPreview={false} />;
+        return (
+          <Panel
+            artistId={artistId}
+            membership={membership}
+            canManageTeam={hasArtistPermission(membership, 'team')}
+          />
+        );
       case 'settings':
-        return <ArtistWorkspaceSettings artistId={artistId} artist={artist} />;
+        return <Panel artistId={artistId} artist={artist} />;
       default:
         return null;
     }
@@ -150,7 +144,11 @@ export default function ArtistWorkspaceLayout({
           })}
         </div>
       )}
-      <div role="tabpanel">{renderPanel()}</div>
+      <div role="tabpanel">
+        <Suspense fallback={<PageSkeleton />} key={resolvedTab}>
+          {renderPanel()}
+        </Suspense>
+      </div>
     </div>
   );
 }

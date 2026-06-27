@@ -5,6 +5,7 @@ import { Settings2 } from 'lucide-react';
 import { Button, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
 import PlatformSettingsUserField from '../../components/admin/PlatformSettingsUserField';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useToast } from '../../contexts/ToastContext';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
 
@@ -24,8 +25,9 @@ const toPayload = (settings, fields) => {
 const AdminPlatformSettings = () => {
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const [loading, setLoading] = useState(true);
+  const deferUsers = useDeferredQueryEnabled(!loading);
+  const { data: users = [], isLoading: usersLoading } = useUserDirectory(deferUsers);
   const [saving, setSaving] = useState(false);
   const [fields, setFields] = useState([]);
   const [sections, setSections] = useState([]);

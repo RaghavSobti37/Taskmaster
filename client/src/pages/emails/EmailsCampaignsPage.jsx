@@ -4,12 +4,14 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui';
 import MailCampaignList from '../../components/emails/MailCampaignList';
 import { useMailProfiles, useScanBounces } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function EmailsCampaignsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { data: profiles = [] } = useMailProfiles();
+  const deferProfiles = useDeferredQueryEnabled(true, { tier: 0 });
+  const { data: profiles = [] } = useMailProfiles(deferProfiles);
   const scanBouncesMutation = useScanBounces();
 
   return (

@@ -24,6 +24,7 @@ const {
   roundMoney
 } = require('../../../utils/exlyMetrics');
 const { recalculateOfferingMetrics } = require('../../../services/exlyOfferingMetrics');
+const { buildMasterclassFunnelReport } = require('../../../services/masterclassFunnelReport');
 const { getCache, setCache } = require('../../../services/cacheService');
 const {
   scheduleExlyOfferingMigrationIfNeeded,
@@ -594,6 +595,23 @@ exports.updateOffering = async (req, res) => {
   } catch (err) {
     logger.error('Exly', 'updateOffering error', { error: err.message });
     res.status(500).json({ error: 'Failed to update Exly offering.' });
+  }
+};
+
+exports.getMasterclassFunnel = async (req, res) => {
+  try {
+    const cacheKey = 'exly:masterclass-funnel:v1';
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const report = await buildMasterclassFunnelReport();
+    await setCache(cacheKey, report, 120);
+    res.json(report);
+  } catch (err) {
+    logger.error('Exly', 'getMasterclassFunnel error', { error: err.message });
+    res.status(500).json({ error: 'Failed to build masterclass funnel report.' });
   }
 };
 

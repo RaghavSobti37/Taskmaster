@@ -1,18 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ARTIST_OS_TABS } from './os/artistOsConstants';
-import ArtistCommandCenter from './os/ArtistCommandCenter';
-import ArtistCalendarTab from './os/ArtistCalendarTab';
-import ArtistInquiriesTab from './os/ArtistInquiriesTab';
-import ArtistGigsTab from './os/ArtistGigsTab';
-import ArtistFinanceTab from './os/ArtistFinanceTab';
-import ArtistAnalyticsTab from './os/ArtistAnalyticsTab';
-import ArtistContentTab from './os/ArtistContentTab';
-import ArtistReleasesTab from './workspace/ArtistReleasesTab';
-import ArtistNotesTab from './os/ArtistNotesTab';
-import ArtistDocumentsTab from './os/ArtistDocumentsTab';
-import ArtistContractsTab from './os/ArtistContractsTab';
-import ArtistTeamTab from './workspace/ArtistTeamTab';
+import { getLazyArtistOsTab } from './artistTabLoaders';
+import PageSkeleton from '../../components/ui/PageSkeleton';
 
 export default function ArtistOSLayout({
   artist,
@@ -30,7 +20,7 @@ export default function ArtistOSLayout({
   const tabParam = searchParams.get('tab') || 'overview';
   const resolvedTab = ARTIST_OS_TABS.some((t) => t.id === tabParam) ? tabParam : 'overview';
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (tabParam !== resolvedTab) {
       setSearchParams({ tab: resolvedTab }, { replace: true });
     }
@@ -51,32 +41,28 @@ export default function ArtistOSLayout({
     addVideoMutation,
   };
 
+  const LazyPanel = useMemo(() => getLazyArtistOsTab(resolvedTab), [resolvedTab]);
+
   const renderPanel = () => {
+    if (!LazyPanel) return null;
+    const Panel = LazyPanel;
     switch (resolvedTab) {
       case 'overview':
-        return <ArtistCommandCenter {...panelProps} />;
+        return <Panel {...panelProps} />;
       case 'calendar':
-        return <ArtistCalendarTab artistId={artistId} isPreview={isPreview} />;
       case 'inquiries':
-        return <ArtistInquiriesTab artistId={artistId} isPreview={isPreview} />;
       case 'gigs':
-        return <ArtistGigsTab artistId={artistId} isPreview={isPreview} />;
       case 'finance':
-        return <ArtistFinanceTab artistId={artistId} isPreview={isPreview} />;
-      case 'analytics':
-        return <ArtistAnalyticsTab {...panelProps} />;
       case 'content':
-        return <ArtistContentTab artistId={artistId} isPreview={isPreview} />;
       case 'releases':
-        return <ArtistReleasesTab artistId={artistId} isPreview={isPreview} />;
       case 'notes':
-        return <ArtistNotesTab artistId={artistId} isPreview={isPreview} />;
       case 'documents':
-        return <ArtistDocumentsTab artistId={artistId} artistName={artist?.name} isPreview={isPreview} />;
       case 'contracts':
-        return <ArtistContractsTab artistId={artistId} isPreview={isPreview} />;
+        return <Panel artistId={artistId} isPreview={isPreview} />;
+      case 'analytics':
+        return <Panel {...panelProps} />;
       case 'team':
-        return <ArtistTeamTab artistId={artistId} canManageTeam={!isPreview} />;
+        return <Panel artistId={artistId} canManageTeam={!isPreview} />;
       default:
         return null;
     }
@@ -109,7 +95,11 @@ export default function ArtistOSLayout({
           );
         })}
       </div>
-      <div role="tabpanel">{renderPanel()}</div>
+      <div role="tabpanel">
+        <Suspense fallback={<PageSkeleton />} key={resolvedTab}>
+          {renderPanel()}
+        </Suspense>
+      </div>
     </div>
   );
 }

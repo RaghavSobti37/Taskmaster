@@ -4,5 +4,4 @@
  */
 export * from './queries';
 export { useStatusCounts } from './useStatusCounts';
-export { useNavbarPreferences } from './useNavbarPreferences';
 export { useShortcutPreferences, SHORTCUT_PREFERENCES_QUERY_KEY } from './useShortcutPreferences';

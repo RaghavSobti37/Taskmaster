@@ -21,6 +21,7 @@ import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
   useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { resolveTaskId } from '../../utils/taskCompletion';
 import WorkspaceProjectFields, {
   resolveWorkspaceFromProjectName,
@@ -92,16 +93,18 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     error: logsErr,
     refetch: refetchLogs,
   } = useLogs(targetUserId, { limit: 500, action: 'DAILY_LOG', ...logDateRange }, Boolean(targetUserId));
-  const { data: projects = [] } = useProjects();
-  const { data: workspaces = [] } = useWorkspaces();
-  const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
-  const { data: userDirectory = [] } = useUserDirectory();
+  const deferLogSecondary = useDeferredQueryEnabled(!logsLoading && Boolean(targetUserId));
+  const deferLogTertiary = useDeferredQueryEnabled(!logsLoading && Boolean(targetUserId), { tier: 1 });
+  const { data: projects = [] } = useProjects(deferLogSecondary);
+  const { data: workspaces = [] } = useWorkspaces(deferLogSecondary);
+  const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true }, deferLogSecondary);
+  const { data: userDirectory = [] } = useUserDirectory(deferLogSecondary);
   const {
     data: activityGrid = [],
     isError: activityGridError,
     error: activityGridErr,
     refetch: refetchActivityGrid,
-  } = useActivityGrid();
+  } = useActivityGrid(deferLogTertiary);
 
   const loading = logsLoading;
   const logsRefetching = logsFetching && !logsLoading;

@@ -45,6 +45,7 @@ import { formatHoursMinutes } from '../../utils/formatHours';
 import { isOpsUser } from '../../utils/departmentPermissions';
 import { computeTaskIndicators } from '../../utils/taskIndicators';
 import { countReviewTasksByProject } from '../../utils/taskReview';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const ProjectDetail = () => {
   const { user } = useAuth();
@@ -53,7 +54,8 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: project, isLoading: projectLoading, isError: projectError, error: projectErr, refetch: refetchProject, isFetched: projectFetched } = useProject(id);
-  const { data: workspaces = [] } = useWorkspaces();
+  const deferProjectSecondary = useDeferredQueryEnabled(!projectLoading && !!project);
+  const { data: workspaces = [] } = useWorkspaces(deferProjectSecondary);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const includeOldCompleted = filterStatus === 'done' || searchTerm.trim().length > 0;
@@ -74,7 +76,7 @@ const ProjectDetail = () => {
   const completedTotalPages = includeOldCompleted
     ? 1
     : (projectTasksData?.completedPages ?? Math.max(1, Math.ceil(completedTotal / completedPageSize)));
-  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
+  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id && deferProjectSecondary);
   const projectReviewCount = useMemo(
     () => countReviewTasksByProject(reviewTasks)[String(id)] || 0,
     [reviewTasks, id]
@@ -102,7 +104,7 @@ const ProjectDetail = () => {
     projectId: id
   }, activeTab === 'schedule');
   const { data: hoursSummary } = useProjectHoursSummary(id, activeTab === 'schedule' || activeTab === 'finance');
-  const { data: users = [] } = useUserDirectory();
+  const { data: users = [] } = useUserDirectory(deferProjectSecondary);
   const loading = projectLoading || tasksLoading;
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);

@@ -38,14 +38,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/attendance",
-      "destination": "https://coreknot-nest-staging.onrender.com/api/attendance"
-    },
-    {
-      "source": "/api/attendance/:path*",
-      "destination": "https://coreknot-nest-staging.onrender.com/api/attendance/:path*"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
     },

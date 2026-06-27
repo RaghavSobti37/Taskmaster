@@ -1,0 +1,81 @@
+{
+  "slug": "prod-console-heal",
+  "goal": "Fix prod console: socket to Render, attendance 401, sync token, landing path",
+  "createdAt": "2026-06-27T00:00:00.000Z",
+  "phase": "workers",
+  "slices": [
+    {
+      "sliceId": "vercel-socket-attendance",
+      "goal": "Socket direct to Render via VITE_API_URL; remove Nest attendance strangler from prod vercel.json",
+      "ownsFiles": [
+        "coreknot/Taskmaster/client/scripts/generateVercelConfig.cjs",
+        "coreknot/Taskmaster/vercel.json",
+        "coreknot/Taskmaster/client/vercel.json",
+        "coreknot/Taskmaster/client/src/utils/apiBase.js",
+        "coreknot/Taskmaster/client/src/lib/realtime.js"
+      ],
+      "forbiddenFiles": [
+        "coreknot/Taskmaster/client/src/App.jsx",
+        "coreknot/Taskmaster/server/routes/syncRoutes.js"
+      ],
+      "verifyCommands": [
+        "npm run test --prefix client -- apiBase realtime",
+        "node client/scripts/generateVercelConfig.cjs"
+      ],
+      "status": "in_progress",
+      "workerAgentId": null,
+      "evidence": "",
+      "blockedReason": ""
+    },
+    {
+      "sliceId": "landing-routes",
+      "goal": "Path-based /landing on app host; siteUrls default to APP_ORIGIN/landing",
+      "ownsFiles": [
+        "coreknot/Taskmaster/client/src/App.jsx",
+        "coreknot/Taskmaster/client/src/config/siteUrls.js",
+        "coreknot/Taskmaster/sites/landing/vercel.json"
+      ],
+      "forbiddenFiles": [
+        "coreknot/Taskmaster/client/vercel.json"
+      ],
+      "verifyCommands": [
+        "npm run build --prefix client"
+      ],
+      "status": "in_progress",
+      "workerAgentId": null,
+      "evidence": "",
+      "blockedReason": ""
+    },
+    {
+      "sliceId": "sync-token-auth",
+      "goal": "Sync token fetch uses same api base as axios on desktop production (Render + credentials)",
+      "ownsFiles": [
+        "coreknot/Taskmaster/client/src/lib/localFirstBootstrap.js",
+        "coreknot/Taskmaster/packages/sync-client/src/connector.js"
+      ],
+      "forbiddenFiles": [
+        "coreknot/Taskmaster/client/src/utils/apiBase.js"
+      ],
+      "verifyCommands": [
+        "npm run test --prefix client -- apiBase"
+      ],
+      "status": "in_progress",
+      "workerAgentId": null,
+      "evidence": "",
+      "blockedReason": ""
+    }
+  ],
+  "integrationSlice": {
+    "sliceId": "integration-ship",
+    "ownsFiles": [
+      "coreknot/Taskmaster/.cursor/multiagent/prod-console-heal-ledger.json"
+    ],
+    "runsAfter": ["vercel-socket-attendance", "landing-routes", "sync-token-auth"],
+    "status": "pending"
+  },
+  "testAgent": {
+    "status": "pending",
+    "commandsRun": [],
+    "lastFailure": ""
+  }
+}

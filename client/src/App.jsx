@@ -2,8 +2,6 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
-import { landingUrl } from './config/siteUrls';
-import ExternalRedirect from './components/ExternalRedirect';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
@@ -116,7 +114,7 @@ function AppRootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <AppBootFallback />;
   if (user) return <Navigate to="/dashboard" replace />;
-  return <ExternalRedirect to={landingUrl('/')} />;
+  return <Navigate to="/landing" replace />;
 }
 
 const marketingAuthRoutes = (
@@ -165,6 +163,7 @@ function App() {
           {isAppSite() && (
             <>
           <Route path="/" element={<AppRootRedirect />} />
+          <Route path="/landing" element={<LandingPage />} />
           {marketingAuthRoutes}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />

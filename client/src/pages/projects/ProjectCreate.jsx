@@ -5,16 +5,20 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase } from 'lucide-react';
-import { Badge, PageHeader, PageContainer } from "../../components/ui";
+import { Badge, PageHeader, PageContainer, Button } from "../../components/ui";
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
+import { useToast } from '../../contexts/ToastContext';
 import WorkspaceSelect from '../../components/forms/WorkspaceSelect';
 import { suggestProjectRole } from '../../utils/taskText';
 import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPermissions';
 
 const ProjectCreate = () => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [users, setUsers] = useState([]);
+  const [usersFetchError, setUsersFetchError] = useState(null);
   const [members, setMembers] = useState([]);
   const [workspace, setWorkspace] = useState('GENERAL');
   const [loading, setLoading] = useState(false);
@@ -24,10 +28,11 @@ const ProjectCreate = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        setUsersFetchError(null);
         const res = await axios.get('/api/users/team');
         setUsers(res.data.team || []);
       } catch (err) {
-        console.error('Error fetching users:', err);
+        setUsersFetchError(err);
       }
     };
     fetchUsers();
@@ -104,7 +109,7 @@ const ProjectCreate = () => {
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');
     } catch (err) {
-      console.error('Project creation error:', err);
+      toast.error(err.response?.data?.error || 'Failed to create project');
     } finally {
       setLoading(false);
     }
@@ -132,6 +137,20 @@ const ProjectCreate = () => {
         title="Create New Project"
         icon={Briefcase}
       />
+
+      {usersFetchError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(usersFetchError, 'Could not load team members')}
+          onRetry={() => {
+            axios.get('/api/users/team')
+              .then((res) => {
+                setUsers(res.data.team || []);
+                setUsersFetchError(null);
+              })
+              .catch((err) => setUsersFetchError(err));
+          }}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="py-8 space-y-6 border-b border-[var(--color-bg-border)]">

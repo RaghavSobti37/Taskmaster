@@ -1,0 +1,36 @@
+name: Deploy Render Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+concurrency:
+  group: render-deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging Express API
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_STAGING not set — skip"
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK"
+          echo "Staging Express deploy triggered"
+
+      - name: Deploy staging Nest API
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_NEST_STAGING }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_NEST_STAGING not set — skip"
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK"
+          echo "Staging Nest deploy triggered"

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "postinstall": "node scripts/generateVercelConfig.cjs",
-    "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs",
+    "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/prebuildIcons.mjs",
     "build": "node scripts/generateVercelConfig.cjs && vite build",
     "prevercel-build": "node scripts/generateVercelConfig.cjs",
     "vercel-build": "npm run build",

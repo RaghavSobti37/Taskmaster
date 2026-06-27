@@ -87,6 +87,7 @@ import ArtistPathPage from './pages/admin/ArtistPathPage';
 const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPlatformSettings'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));
+const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
@@ -304,6 +305,9 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_gamification" />}>
                 <Route path="/admin/gamification" element={<AdminGamification />} />
+              </Route>
+              <Route element={<PageRoute page="admin_ops_hub" />}>
+                <Route path="/admin/ops-hub" element={<OpsHubPage />} />
               </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />

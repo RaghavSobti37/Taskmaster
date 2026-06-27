@@ -8,12 +8,7 @@ server/data/media-sheets/
 server/data/crm-sheet-import/
 server/data/*.csv
 !server/data/mediaSheetManifest.js
-# WIP ops hub — incomplete, local only until routes ship
-client/src/pages/admin/OpsHubPage.jsx
-client/src/components/opsHub/
-server/models/OpsEntity.js
-server/models/OpsWeeklyCycle.js
-shared/opsTaxonomy.js
+# Ops Hub shipped — see shared/opsTaxonomy.js + /api/ops-hub
 .cursor/production-hosts.local.json
 .cursor/render-api.local.env
 .cursor/git-promotion.json

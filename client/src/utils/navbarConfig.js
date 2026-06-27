@@ -92,6 +92,7 @@ const HUB_CHILD_PATHS = new Set([
   '/admin/scripts',
   '/admin/gamification',
   '/admin/project-analytics',
+  '/admin/ops-hub',
   '/admin/qa',
 ]);
 
@@ -192,6 +193,96 @@ const LEGACY_PATH_ZONE = {
 
 function isLegacyNavbarGroups(groups) {
   return (groups || []).some((g) => LEGACY_NAV_GROUP_IDS.has(g.id));
+}
+
+/** Map sidebar paths to permission page keys — keep in sync with pagePermissions. */
+const PATH_TO_PAGE_KEY = {
+  '/dashboard': 'dashboard',
+  '/projects': 'projects',
+  '/todo': 'todo',
+  '/inbox': 'inbox',
+  '/attendance': 'attendance',
+  '/calendar': 'calendar',
+  '/logs': 'logs',
+  '/notes': 'notes',
+  '/assets': 'assets',
+  '/schedule': 'schedule',
+  '/emails': 'emails',
+  '/settings': 'settings',
+  '/office-assets': 'office_assets',
+  '/features': 'features',
+  '/workflows': 'workflows',
+};
+
+const HUB_TAB_PATHS = {
+  leads: '/leads',
+  followups: '/followups',
+  bookings: '/bookings',
+  equipment: '/equipment',
+  contacts: '/contacts',
+  subscriptions: '/subscriptions',
+  finance: '/finance',
+  announcements: '/announcements',
+  ops_logs: '/ops-logs',
+  artists: '/artists',
+};
+
+function pagesFromPaths(paths) {
+  return paths.map((p) => ({
+    key: PATH_TO_PAGE_KEY[p.path],
+    label: p.label,
+    path: p.path,
+  })).filter((p) => p.key);
+}
+
+function pagesFromHub(hubPath) {
+  const hub = HUB_CONFIG[hubPath];
+  if (!hub?.tabs) return [];
+  return hub.tabs.map((tab) => ({
+    key: tab.key,
+    label: tab.label,
+    path: HUB_TAB_PATHS[tab.key] || `${hubPath}?tab=${tab.id}`,
+  }));
+}
+
+function pagesFromAdminConsole() {
+  const hub = HUB_CONFIG['/admin/console'];
+  const tiles = hub?.tiles || [];
+  const pages = tiles.map((tile) => ({
+    key: tile.key,
+    label: tile.label,
+    path: tile.path,
+  }));
+  pages.push(
+    { key: 'ops_hub_academy', label: 'Ops Hub — Academy', path: '/admin/ops-hub' },
+    { key: 'ops_hub_media', label: 'Ops Hub — Media', path: '/admin/ops-hub' },
+    { key: 'ops_hub_show_booking', label: 'Ops Hub — Show Booking', path: '/admin/ops-hub' },
+    { key: 'ops_hub_influencers', label: 'Ops Hub — Influencers', path: '/admin/ops-hub' },
+    { key: 'campaigns', label: 'Campaign Details', path: '/campaign' },
+  );
+  return pages;
+}
+
+/** Permission UI groups aligned with 3-zone sidebar + hub tabs. */
+export function buildPagePermissionGroups() {
+  return [
+    { id: 'primary', label: 'Primary', pages: pagesFromPaths(PRIMARY_PATHS) },
+    { id: 'tools', label: 'Tools', pages: pagesFromPaths(TOOLS_PATHS) },
+    { id: 'crm', label: HUB_CONFIG['/crm'].label, pages: pagesFromHub('/crm') },
+    { id: 'office', label: HUB_CONFIG['/office'].label, pages: pagesFromHub('/office') },
+    { id: 'management', label: HUB_CONFIG['/management'].label, pages: pagesFromHub('/management') },
+    {
+      id: 'app_tools',
+      label: 'App Tools',
+      pages: [
+        { key: 'settings', label: 'Settings', path: '/settings' },
+        { key: 'office_assets', label: 'Office Assets', path: '/office-assets' },
+        { key: 'features', label: 'Features', path: '/features' },
+        { key: 'workflows', label: 'Workflows', path: '/workflows' },
+      ],
+    },
+    { id: 'admin', label: 'Admin', pages: pagesFromAdminConsole() },
+  ];
 }
 
 function getHubPathForChildPath(path) {

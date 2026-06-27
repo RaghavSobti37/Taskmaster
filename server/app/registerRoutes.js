@@ -142,6 +142,7 @@ function registerRoutes(app) {
   app.use('/api/finance', require('../routes/financeRoutes'));
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));
+  app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
 
   // --- Admin ---
   app.use('/api/admin/media-contacts', require('../routes/mediaContactRoutes'));

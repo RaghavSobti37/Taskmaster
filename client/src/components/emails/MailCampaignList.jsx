@@ -10,6 +10,7 @@ import {
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 export default function MailCampaignList({ limit }) {
   const navigate = useNavigate();
@@ -24,7 +25,8 @@ export default function MailCampaignList({ limit }) {
     error: campaignsErr,
     refetch: refetchCampaigns,
   } = useMailCampaigns();
-  const { isLoading: profilesLoading } = useMailProfiles();
+  const deferProfiles = useDeferredQueryEnabled(!campaignsLoading);
+  const { isLoading: profilesLoading } = useMailProfiles(deferProfiles);
   const sendCampaignMutation = useSendCampaign();
   const deleteCampaignMutation = useDeleteCampaign();
   const [dispatchingId, setDispatchingId] = React.useState(null);

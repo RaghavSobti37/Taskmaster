@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
 import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const formatMs = (ms = 0) => {
   if (ms < 1000) return `${ms}ms`;
@@ -42,10 +43,12 @@ const AdminScriptsPage = () => {
     queryFn: async () => (await axios.get('/api/admin/scripts')).data?.data || [],
   });
 
+  const deferQueues = useDeferredQueryEnabled(!isLoading);
   const { data: queueStatus, isFetching: queuesFetching, refetch: refetchQueues } = useQuery({
     queryKey: ['admin-queues'],
     queryFn: async () => (await axios.get('/api/admin/queues/status')).data,
     refetchInterval: 120_000,
+    enabled: deferQueues,
   });
 
   const filtered = useMemo(() => {

@@ -13,8 +13,10 @@ import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
 import { buildOfferingEditState, offeringEditHasChanges } from '../../utils/exlyOfferingEditState';
 import {
-  shortenOfferingTitle,
-  shortenOfferingTitleCompact,
+  formatOfferingDisplay,
+  mentorFromOfferingTitle,
+} from '../../utils/exlyCourseLabels';
+import {
   formatInr,
   formatPercent,
   computeOfferingTotals
@@ -438,18 +440,31 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
   const columns = [
     {
       header: 'Offering',
-      render: (item) => (
+      render: (item) => {
+        const display = formatOfferingDisplay(item.title, { type: item.type, price: item.price });
+        const mentor = display.mentor || mentorFromOfferingTitle(item.title);
+        return (
         <div className="flex items-center gap-2.5 max-w-[220px]">
           <div className="w-7 h-7 rounded-md bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[9px] shrink-0 text-[var(--color-text-primary)]">
-            {item.title?.substring(0, 2).toUpperCase()}
+            {(display.primary || item.title)?.substring(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <span
-              className="font-semibold text-xs text-[var(--color-text-primary)] truncate block"
-              title={item.title}
-            >
-              {shortenOfferingTitleCompact(item.title)}
-            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {mentor && (
+                <span className="text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]">
+                  {mentor}
+                </span>
+              )}
+              <span
+                className="font-semibold text-xs text-[var(--color-text-primary)] truncate"
+                title={item.title}
+              >
+                {display.primary}
+              </span>
+            </div>
+            {display.secondary && (
+              <p className="text-[9px] font-mono text-[var(--color-text-muted)] mt-0.5">{display.secondary}</p>
+            )}
             <div className="flex items-center gap-1.5 mt-0.5">
               <Badge variant={item.status === 'active' ? 'success' : 'warning'} className="!text-[8px] uppercase tracking-wider shrink-0">
                 {item.status}
@@ -462,7 +477,8 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
             </div>
           </div>
         </div>
-      )
+        );
+      }
     },
     {
       header: 'List Price',
@@ -1002,7 +1018,11 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Offering Purchased:</span>
-                  <p className="text-[var(--color-text-primary)]">{dashboardStats.recentBooking.offeringTitle}</p>
+                  <p className="text-[var(--color-text-primary)]">
+                    {formatOfferingDisplay(dashboardStats.recentBooking.offeringTitle, {
+                      price: dashboardStats.recentBooking.pricePaid,
+                    }).primary}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Price Settled:</span>
@@ -1213,9 +1233,27 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">{item.phone || '—'}</td>
                         <td className="p-3">
-                          <div className="text-xs font-semibold text-[var(--color-text-primary)]" title={item.offeringTitle}>
-                            {shortenOfferingTitle(item.offeringTitle)}
-                          </div>
+                          {(() => {
+                            const d = formatOfferingDisplay(item.offeringTitle, { price: item.pricePaid });
+                            const mentor = d.mentor || mentorFromOfferingTitle(item.offeringTitle);
+                            return (
+                              <>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {mentor && (
+                                    <span className="text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
+                                      {mentor}
+                                    </span>
+                                  )}
+                                  <span className="text-xs font-semibold text-[var(--color-text-primary)]" title={item.offeringTitle}>
+                                    {d.primary}
+                                  </span>
+                                </div>
+                                {d.secondary && (
+                                  <div className="text-[9px] font-mono text-[var(--color-text-muted)]">{d.secondary}</div>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{item.offeringId}</div>
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">

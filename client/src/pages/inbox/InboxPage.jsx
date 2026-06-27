@@ -18,6 +18,7 @@ import {
   useClearAllNotifications,
   useStatusCounts,
 } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -63,7 +64,8 @@ const InboxPage = () => {
     savePageFilters(INBOX_FILTERS_KEY, { filter });
   }, [filter]);
   const { data, isLoading, isError, error, refetch } = useNotifications();
-  const { data: statusCounts } = useStatusCounts(!!user);
+  const deferInboxSecondary = useDeferredQueryEnabled(!isLoading);
+  const { data: statusCounts } = useStatusCounts(!!user && deferInboxSecondary);
   const { confirm } = useConfirm();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();

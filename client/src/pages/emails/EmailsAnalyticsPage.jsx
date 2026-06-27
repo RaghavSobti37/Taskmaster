@@ -3,6 +3,7 @@ import MailStatsSummary from '../../components/admin/MailStatsSummary';
 import MailCumulativeAnalyticsPanel from '../../components/admin/MailCumulativeAnalyticsPanel';
 import MailLocationLeadsModal from '../../components/admin/MailLocationLeadsModal';
 import { useMailStats, useCumulativeAnalytics } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 
 export default function EmailsAnalyticsPage() {
@@ -13,12 +14,13 @@ export default function EmailsAnalyticsPage() {
     error: statsErr,
     refetch: refetchStats,
   } = useMailStats();
+  const deferCumulative = useDeferredQueryEnabled(true, { tier: 0 });
   const {
     data: cumulativeAnalytics,
     isError: cumulativeError,
     error: cumulativeErr,
     refetch: refetchCumulative,
-  } = useCumulativeAnalytics(true);
+  } = useCumulativeAnalytics(deferCumulative);
 
   return (
     <div className="space-y-6">

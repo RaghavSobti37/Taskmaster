@@ -11,6 +11,7 @@ import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import ScheduleDayViewControl from '../../components/schedule/ScheduleDayViewControl';
 import { useSchedule, useWorkspaces, useProjects, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { useStatusCounts } from '../../hooks/useStatusCounts';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useDashboardTaskActions } from '../../hooks/useDashboardTaskActions';
 
 const TaskDetailModal = lazy(() => import('../../components/TaskDetailModal'));
@@ -37,11 +38,12 @@ const SchedulePage = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const today = getTodayDateKey();
   const scheduleEnd = addDaysToDateKey(today, MAX_SCHEDULE_DAYS - 1);
-  const { data: workspaces = [] } = useWorkspaces();
-  const { data: projects = [] } = useProjects();
-  const { data: users = [] } = useUserDirectory();
   const { data: scheduleData, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
-  const { data: statusCounts } = useStatusCounts(!!user);
+  const deferScheduleFilters = useDeferredQueryEnabled(!isPending);
+  const { data: workspaces = [] } = useWorkspaces(deferScheduleFilters);
+  const { data: projects = [] } = useProjects(deferScheduleFilters);
+  const { data: users = [] } = useUserDirectory(deferScheduleFilters);
+  const { data: statusCounts } = useStatusCounts(!!user && deferScheduleFilters);
   const {
     taskToComplete,
     setTaskToComplete,

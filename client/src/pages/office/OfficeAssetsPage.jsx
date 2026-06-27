@@ -8,6 +8,7 @@ import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const OfficeAssetsPage = () => {
   const { confirm } = useConfirm();
@@ -24,17 +25,19 @@ const OfficeAssetsPage = () => {
   const [search, setSearch] = useState('');
   
   const queryClient = useQueryClient();
-  const { data: users = [] } = useUserDirectory();
 
-  // Queries
   const { data: assets = [], isLoading: assetsLoading } = useQuery({
     queryKey: ['office-assets'],
     queryFn: async () => (await axios.get('/api/office-assets')).data
   });
 
+  const deferOfficeSecondary = useDeferredQueryEnabled(!assetsLoading);
+  const { data: users = [] } = useUserDirectory(deferOfficeSecondary);
+
   const { data: contacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['contacts'],
-    queryFn: async () => (await axios.get('/api/contacts')).data
+    queryFn: async () => (await axios.get('/api/contacts')).data,
+    enabled: deferOfficeSecondary,
   });
 
   // Esc key binding for instant closure

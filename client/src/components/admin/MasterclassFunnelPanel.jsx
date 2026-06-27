@@ -2,16 +2,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   AlertCircle,
-  ArrowRight,
   ChevronDown,
   ChevronRight,
   GraduationCap,
-  Info,
   RefreshCw,
   Users,
 } from 'lucide-react';
 import { Button, Skeleton } from '../ui';
 import { formatInr, formatPercent } from '../../utils/exlyFormatters';
+import { shortMentorName } from '../../utils/exlyCourseLabels';
 
 const MetricBlock = ({ label, value, sub, tone = 'default' }) => {
   const toneClass = {
@@ -52,6 +51,21 @@ const ConvBadge = ({ rate, enrollments }) => {
   );
 };
 
+const MENTOR_BADGE = {
+  Sandesh: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)]',
+  Prasad: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)]',
+};
+
+const MentorBadge = ({ mentorShort }) => {
+  if (!mentorShort || mentorShort === 'TSC') return null;
+  const cls = MENTOR_BADGE[mentorShort] || 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]';
+  return (
+    <span className={`inline-flex text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${cls}`}>
+      {mentorShort}
+    </span>
+  );
+};
+
 const CoursePills = ({ courses }) => {
   if (!courses?.length) {
     return <span className="text-[10px] text-[var(--color-text-muted)] italic">No course enrollments yet</span>;
@@ -60,13 +74,14 @@ const CoursePills = ({ courses }) => {
     <div className="flex flex-wrap gap-1.5">
       {courses.map((c) => (
         <span
-          key={c.course}
+          key={`${c.shortName}-${c.priceLabel}`}
           className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)]"
-          title={c.course}
+          title={`${c.shortName} at ${c.priceLabel}`}
         >
           <span className="font-black font-mono text-[var(--color-pastel-mint-text)]">{c.count}</span>
-          <ArrowRight size={10} className="text-[var(--color-text-muted)] shrink-0" />
-          <span className="truncate max-w-[180px]">{c.course}</span>
+          <span className="font-bold">{c.shortName}</span>
+          <span className="text-[var(--color-text-muted)]">·</span>
+          <span className="font-mono text-[var(--color-text-muted)]">{c.priceLabel}</span>
         </span>
       ))}
     </div>
@@ -86,10 +101,12 @@ const SessionRow = ({ session, expanded, onToggle, onOpenSession }) => (
           <ChevronRight size={14} className="text-[var(--color-text-muted)]" />
         )}
       </td>
-      <td className="py-2.5 px-3 align-top min-w-[200px]">
-        <p className="text-xs font-bold text-[var(--color-text-primary)] leading-snug">{session.masterclass}</p>
+      <td className="py-2.5 px-3 align-top min-w-[160px]">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <MentorBadge mentorShort={session.mentorShort || shortMentorName(session.mentor)} />
+          <p className="text-xs font-bold text-[var(--color-text-primary)] leading-snug">{session.masterclass}</p>
+        </div>
         <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-0.5">{session.sessionLabel}</p>
-        <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">{session.mentor}</p>
       </td>
       <td className="py-2.5 px-3 align-top text-right">
         <span className="text-sm font-black font-mono text-[var(--color-text-primary)]">
@@ -147,9 +164,11 @@ const SessionRow = ({ session, expanded, onToggle, onOpenSession }) => (
                   >
                     <span className="font-bold text-[var(--color-text-primary)]">{s.name || '—'}</span>
                     <span className="text-[var(--color-text-muted)]"> → </span>
-                    <span className="text-[var(--color-pastel-mint-text)]">{s.course}</span>
-                    {s.plan && (
-                      <span className="block text-[9px] text-[var(--color-text-muted)] font-mono">{s.plan}</span>
+                    <span className="font-bold text-[var(--color-pastel-mint-text)]">{s.shortName || s.course}</span>
+                    {(s.priceLabel || s.plan) && (
+                      <span className="block text-[9px] text-[var(--color-text-muted)] font-mono">
+                        {s.priceLabel || s.plan}
+                      </span>
                     )}
                   </div>
                 ))}
@@ -171,7 +190,6 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
   const [error, setError] = useState('');
   const [view, setView] = useState('sessions');
   const [expandedId, setExpandedId] = useState(null);
-  const [legendOpen, setLegendOpen] = useState(false);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -230,23 +248,6 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
         <div className="py-2 px-3 border border-[#C5221F]/20 bg-[#FCE8E6] text-[#C5221F] flex items-center gap-2 text-[10px] font-bold rounded">
           <AlertCircle size={14} />
           <span>{error}</span>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setLegendOpen((v) => !v)}
-        className="flex items-center gap-2 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-      >
-        <Info size={12} />
-        What this data means
-        {legendOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-      </button>
-      {legendOpen && report?.dataLegend && (
-        <div className="text-[10px] space-y-1.5 px-3 py-2 rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-          <p><strong>Registrations</strong> — {report.dataLegend.registrations}</p>
-          <p><strong>→ Course</strong> — {report.dataLegend.courseEnrollments}</p>
-          <p><strong>Course name</strong> — {report.dataLegend.courseName}</p>
         </div>
       )}
 
@@ -312,7 +313,6 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
                     <th className="py-2 px-3 text-center">→ Course</th>
                     <th className="py-2 px-3 text-center">Conv %</th>
                     <th className="py-2 px-3 text-center">Sessions</th>
-                    <th className="py-2 px-3">Mentor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -321,7 +321,12 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
                       key={t.masterclass}
                       className="border-b border-[var(--color-bg-border)]/60 hover:bg-[var(--color-bg-secondary)]/40"
                     >
-                      <td className="py-2.5 px-3 text-xs font-bold text-[var(--color-text-primary)]">{t.masterclass}</td>
+                      <td className="py-2.5 px-3 text-xs font-bold text-[var(--color-text-primary)]">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <MentorBadge mentorShort={shortMentorName(t.mentor)} />
+                          <span>{t.masterclass}</span>
+                        </div>
+                      </td>
                       <td className="py-2.5 px-3 text-right font-mono font-black text-sm">{t.registrations.toLocaleString('en-IN')}</td>
                       <td className="py-2.5 px-3 text-center font-mono font-black text-sm text-[var(--color-pastel-mint-text)]">
                         {t.courseEnrollments.toLocaleString('en-IN')}
@@ -330,7 +335,6 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
                         <ConvBadge rate={t.conversionRate} enrollments={t.courseEnrollments} />
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-xs">{t.sessions}</td>
-                      <td className="py-2.5 px-3 text-[10px] text-[var(--color-text-muted)]">{t.mentor}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -342,11 +346,11 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
                 <thead>
                   <tr className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
                     <th className="py-2 px-3 w-8" aria-label="Expand" />
-                    <th className="py-2 px-3">Masterclass session</th>
+                    <th className="py-2 px-3">Masterclass</th>
                     <th className="py-2 px-3 text-right">Regs</th>
                     <th className="py-2 px-3 text-center">→ Course</th>
                     <th className="py-2 px-3 text-center">Conv %</th>
-                    <th className="py-2 px-3 hidden lg:table-cell">Courses enrolled</th>
+                    <th className="py-2 px-3 hidden lg:table-cell">Course · price</th>
                     <th className="py-2 px-3 text-right" />
                   </tr>
                 </thead>

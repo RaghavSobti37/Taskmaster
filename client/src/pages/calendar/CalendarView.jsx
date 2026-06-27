@@ -12,6 +12,7 @@ import {
   getQueryErrorMessage,
 } from '../../components/ui';
 import { useCalendarEvents, fetchCalendarHolidays, useStatusCounts } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -35,7 +36,8 @@ const CalendarView = () => {
     refetch: refetchAllEvents,
     googleSyncWarning,
   } = useCalendarEvents(calendarRange);
-  const { data: statusCounts } = useStatusCounts(!!user);
+  const deferCalendarSecondary = useDeferredQueryEnabled(!eventsLoading);
+  const { data: statusCounts } = useStatusCounts(!!user && deferCalendarSecondary);
   const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
   const [holidaysLoading, setHolidaysLoading] = useState(false);
@@ -97,8 +99,9 @@ const CalendarView = () => {
   };
 
   useEffect(() => {
+    if (!deferCalendarSecondary) return;
     loadHolidays();
-  }, [loadHolidays]);
+  }, [loadHolidays, deferCalendarSecondary]);
 
   const parseLocalDate = (dateStr) => {
     if (!dateStr) return null;

@@ -17,6 +17,7 @@ import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant }
 import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTodoTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
@@ -126,9 +127,10 @@ const TodoPage = () => {
   const totalPages = data?.pages || 1;
   const totalItems = data?.total || 0;
 
-  const { data: projects = [] } = useProjects();
-  const { data: workspaces = [] } = useWorkspaces();
-  const { data: users = [] } = useUserDirectory();
+  const deferTodoFilters = useDeferredQueryEnabled(!isLoading);
+  const { data: projects = [] } = useProjects(deferTodoFilters);
+  const { data: workspaces = [] } = useWorkspaces(deferTodoFilters);
+  const { data: users = [] } = useUserDirectory(deferTodoFilters);
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);

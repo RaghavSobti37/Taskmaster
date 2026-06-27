@@ -20,7 +20,8 @@ case "$TARGET" in
     npx --yes npm@11.4.2 ci --omit=dev --workspace=coreknot-server
     ;;
   nest)
-    npx --yes npm@11.4.2 ci --workspace=@coreknot/nestjs-server
+    # Include devDependencies — Nest `nest build` needs @types/* (omitted when NODE_ENV=production).
+    NODE_ENV=development npx --yes npm@11.4.2 ci --workspace=@coreknot/nestjs-server
     npm run build --workspace=@coreknot/nestjs-server
     ;;
   *)

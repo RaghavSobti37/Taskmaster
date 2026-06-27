@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, LayoutTemplate, LayoutDashboard, Clock, Target, CalendarDays,
+  User, LayoutDashboard, Clock, Target, CalendarDays,
   Receipt, LogOut, ArrowLeft, Shield, Keyboard
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -10,7 +10,6 @@ import { globalConfirm } from '../../contexts/confirmContext';
 
 // Import sub-pages
 import ProfileTab from './tabs/ProfileTab';
-import SidebarCustomizationTab from './tabs/SidebarCustomizationTab';
 import DashboardCustomizationTab from './tabs/DashboardCustomizationTab';
 import AttendanceTab from './tabs/AttendanceTab';
 import ProgressTab from './tabs/ProgressTab';
@@ -29,7 +28,6 @@ const SettingsPage = () => {
     { id: 'Profile', icon: User, label: 'Profile' },
     { id: 'Security', icon: Shield, label: 'Security' },
     { id: 'Keyboard', icon: Keyboard, label: 'Shortcuts' },
-    { id: 'Sidebar', icon: LayoutTemplate, label: 'Sidebar Layout' },
     { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard Layout' },
     { id: 'Attendance', icon: Clock, label: 'Attendance' },
     { id: 'Progress', icon: Target, label: 'Progress' },
@@ -66,7 +64,6 @@ const SettingsPage = () => {
       case 'Profile': return <ProfileTab />;
       case 'Security': return <SessionsTab />;
       case 'Keyboard': return <KeyboardShortcutsTab />;
-      case 'Sidebar': return <SidebarCustomizationTab />;
       case 'Dashboard': return <DashboardCustomizationTab />;
       case 'Attendance': return <AttendanceTab />;
       case 'Progress': return <ProgressTab />;

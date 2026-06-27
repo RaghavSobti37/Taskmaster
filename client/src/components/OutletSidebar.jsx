@@ -29,7 +29,6 @@ import {
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../utils/departmentPermissions';
-import { useNavbarPreferences } from '../hooks/useNavbarPreferences';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
@@ -244,7 +243,6 @@ const OutletSidebar = () => {
   }, []);
 
   const shellQueriesEnabled = shellQueriesReady && !!user;
-  const { data: navbarPreferences } = useNavbarPreferences(shellQueriesEnabled);
   const { data: statusCounts = {
     tasks: { overdue: 0, today: 0, inReview: 0 },
     followups: { overdue: 0, today: 0 },
@@ -290,11 +288,7 @@ const OutletSidebar = () => {
   }, [isMobileOpen, isMobile, closeMobileSidebar]);
 
   const navGroups = useMemo(() => {
-    const rawGroups = navbarPreferences?.groups?.length
-      ? navbarPreferences.groups
-      : DEFAULT_NAVBAR_GROUPS;
-
-    return rawGroups
+    return DEFAULT_NAVBAR_GROUPS
       .map((group) => {
         const seen = new Set();
         const pages = (group.pages || [])
@@ -311,7 +305,7 @@ const OutletSidebar = () => {
       })
       .filter((group) => group.visible !== false)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
-  }, [navbarPreferences]);
+  }, []);
 
   const showLabels = isMobile ? isMobileOpen : isOpen;
 

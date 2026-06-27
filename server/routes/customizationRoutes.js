@@ -54,34 +54,6 @@ router.patch('/dashboard/element/visibility', customizationController.updateElem
  */
 router.put('/dashboard/reorder', customizationController.reorderDashboardElements);
 
-// ============ NAVBAR ROUTES ============
-
-/**
- * @GET /api/customization/navbar
- * Get user's navbar preferences
- */
-router.get('/navbar', customizationController.getNavbarPreferences);
-
-/**
- * @POST /api/customization/navbar
- * Save navbar preferences (reorder pages)
- * Body: { pageOrder: [{path, label, visible}] }
- */
-router.post('/navbar', customizationController.saveNavbarPreferences);
-
-/**
- * @POST /api/customization/navbar/reset
- * Reset navbar to default order
- */
-router.post('/navbar/reset', customizationController.resetNavbarToDefaults);
-
-/**
- * @PATCH /api/customization/navbar/page-visibility
- * Toggle visibility of a page
- * Body: { path, visible }
- */
-router.patch('/navbar/page-visibility', customizationController.togglePageVisibility);
-
 // ============ SHORTCUT ROUTES ============
 
 router.get('/shortcuts', customizationController.getShortcutPreferences);

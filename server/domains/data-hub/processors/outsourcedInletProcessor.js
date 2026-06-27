@@ -1,5 +1,6 @@
 const OutsourcedRecord = require('../../../models/OutsourcedRecord');
 const ContactService = require('../../../services/ContactService');
+const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const { isCommunityText } = require('../../../../shared/dataInlets');
 const { CONTACT_BYPASS } = require('../folderCache');
 
@@ -38,10 +39,10 @@ function appendOutsourcedTimeline(outsourced) {
 
 async function buildOutsourcedAnalytics(result, { total, HubModel }) {
   const [topCampaigns, topSources, roles, emailBreakdown, outTotal, withEmail, withPhone, crmLinked] = await Promise.all([
-    OutsourcedRecord.aggregate([{ $group: { _id: '$campaign', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-    OutsourcedRecord.aggregate([{ $group: { _id: '$originSource', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-    OutsourcedRecord.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-    OutsourcedRecord.aggregate([{ $group: { _id: '$emailStatus', count: { $sum: 1 } } }]),
+    aggregateWithTenant(OutsourcedRecord, [{ $group: { _id: '$campaign', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+    aggregateWithTenant(OutsourcedRecord, [{ $group: { _id: '$originSource', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+    aggregateWithTenant(OutsourcedRecord, [{ $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+    aggregateWithTenant(OutsourcedRecord, [{ $group: { _id: '$emailStatus', count: { $sum: 1 } } }]),
     OutsourcedRecord.countDocuments({}),
     OutsourcedRecord.countDocuments({ email: { $nin: [null, ''] } }),
     OutsourcedRecord.countDocuments({ phone: { $nin: [null, ''] } }),

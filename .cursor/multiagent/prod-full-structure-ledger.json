@@ -109,9 +109,13 @@
       "serverDomains": ["server/domains/mail/**"],
       "status": "verified",
       "evidence": "Prod /api/mail/campaigns → 401 not 404"
+    },
+    {
+      "sliceId": "page-admin",
       "routes": ["/admin/*"],
       "goal": "Admin users, teams, roles, scripts, QA, platform settings",
       "ownsFiles": ["client/src/pages/admin/**"],
+      "serverDomains": ["server/domains/admin/**"],
       "status": "verified",
       "evidence": "Prod /api/admin/system-health → 401 not 404"
     },

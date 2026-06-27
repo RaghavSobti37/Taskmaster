@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Shield, Users, Layers, Pencil, Trash2, Plus, Lock } from 'lucide-react';
-import { ListPageLayout, PageSkeleton, Button, Badge, Input } from '../../components/ui';
+import { ListPageLayout, PageSkeleton, Button, Badge, Input, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
 import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
 import {
@@ -29,7 +29,7 @@ const pageLabel = (key) => {
 const AdminRolesPage = () => {
   const { confirm } = useConfirm();
   const { toast } = useToast();
-  const { data, isLoading } = useAdminRoles();
+  const { data, isLoading, isError, error, refetch } = useAdminRoles();
   const createMutation = useCreateOrgRole();
   const updateMutation = useUpdateOrgRole();
   const deleteMutation = useDeleteOrgRole();
@@ -170,6 +170,13 @@ const AdminRolesPage = () => {
         icon={Shield}
         overview={{ stats }}
       >
+        {isError && (
+          <QueryErrorBanner
+            className="mb-4"
+            message={getQueryErrorMessage(error, 'Failed to load roles')}
+            onRetry={() => refetch()}
+          />
+        )}
         <div className="space-y-8">
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">

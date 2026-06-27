@@ -1,13 +1,25 @@
 import React from 'react';
 import { Building2, Users } from 'lucide-react';
-import { ListPageLayout, PageSkeleton } from '../../components/ui';
+import { ListPageLayout, PageSkeleton, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
 import { useUserDirectory, useDepartments } from '../../hooks/useTaskmasterQueries';
 import { distributionFromField } from '../../utils/buildChartSeries';
 
 const AdminTeamsPage = () => {
-  const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
-  const { data: departments = [], isLoading: departmentsLoading, isError: deptError, error: deptErr } = useDepartments();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    isError: usersError,
+    error: usersErr,
+    refetch: refetchUsers,
+  } = useUserDirectory();
+  const {
+    data: departments = [],
+    isLoading: departmentsLoading,
+    isError: deptError,
+    error: deptErr,
+    refetch: refetchDepartments,
+  } = useDepartments();
   const loadError = usersError ? usersErr : deptError ? deptErr : null;
 
   const deptChart = React.useMemo(
@@ -58,9 +70,14 @@ const AdminTeamsPage = () => {
       }}
     >
       {loadError && (
-        <p className="text-sm text-rose-500 mb-4">
-          {loadError?.response?.data?.error || loadError?.message || 'Failed to load teams data.'}
-        </p>
+        <QueryErrorBanner
+          className="mb-4"
+          message={getQueryErrorMessage(loadError, 'Failed to load teams data')}
+          onRetry={() => {
+            if (usersError) refetchUsers();
+            if (deptError) refetchDepartments();
+          }}
+        />
       )}
       {!loadError && (
       <div className="max-w-2xl">

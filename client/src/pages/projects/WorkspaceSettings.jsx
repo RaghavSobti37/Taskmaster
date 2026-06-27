@@ -7,6 +7,7 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { Badge, PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
+import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import WorkspaceGoalsPanel from '../../components/project/WorkspaceGoalsPanel';
 import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { suggestProjectRole } from '../../utils/taskText';

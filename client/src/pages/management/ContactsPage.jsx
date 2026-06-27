@@ -188,6 +188,8 @@ const ContactsPage = () => {
         onRowClick={openContactEditor}
         getRowId={(row) => row._id}
         fitWidth
+        rowEstimateSize={52}
+        tableMaxHeight="70vh"
         emptyTitle="No contacts found"
         emptyDescription="Try a different search or add a new contact."
       />

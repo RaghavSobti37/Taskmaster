@@ -11,6 +11,8 @@ import {
   PageHeader,
   StatCard,
   DesktopRecommendedBanner,
+  QueryErrorBanner,
+  getQueryErrorMessage,
 } from '../../components/ui';
 import ProjectReportRangeControls from '../../components/project/ProjectReportRangeControls';
 import ProjectAnalyticsContent from '../../components/project/ProjectAnalyticsContent';
@@ -27,12 +29,26 @@ const AdminProjectAnalyticsPage = () => {
   const rangeState = useProjectReportRangeState();
   const { queryParams, queryEnabled, rangeSubtitle } = rangeState;
 
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsErr,
+    refetch: refetchProjects,
+  } = useProjects();
   const deferSummary = useDeferredQueryEnabled(!projectsLoading);
-  const { data: summary, isLoading: summaryLoading, isFetching: summaryFetching, error: summaryError } = useProjectsAnalyticsSummary(
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isFetching: summaryFetching,
+    isError: summaryIsError,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useProjectsAnalyticsSummary(
     queryParams,
     queryEnabled && deferSummary
   );
+  const listLoadError = projectsError ? projectsErr : summaryIsError ? summaryError : null;
 
   const summaryByProjectId = useMemo(() => {
     const map = new Map();
@@ -211,10 +227,14 @@ const AdminProjectAnalyticsPage = () => {
             {(summaryLoading && !summary) || (projectsLoading && !projects.length) ? (
               <DataLoading />
             ) : null}
-            {summaryError && !summary && (
-              <p className="text-sm text-red-500">
-                {summaryError.response?.data?.error || summaryError.message || 'Failed to load summary.'}
-              </p>
+            {listLoadError && (
+              <QueryErrorBanner
+                message={getQueryErrorMessage(listLoadError, 'Failed to load project analytics')}
+                onRetry={() => {
+                  if (projectsError) refetchProjects();
+                  if (summaryIsError) refetchSummary();
+                }}
+              />
             )}
             {!summaryLoading && !projectsLoading && (
               <div className={summaryFetching ? 'opacity-70 transition-opacity' : 'transition-opacity'}>

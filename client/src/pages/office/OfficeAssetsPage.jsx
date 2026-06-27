@@ -26,7 +26,7 @@ const OfficeAssetsPage = () => {
   
   const queryClient = useQueryClient();
 
-  const { data: assets = [], isLoading: assetsLoading } = useQuery({
+  const { data: assets = [], isLoading: assetsLoading, isError: assetsError, error: assetsErr, refetch: refetchAssets } = useQuery({
     queryKey: ['office-assets'],
     queryFn: async () => (await axios.get('/api/office-assets')).data
   });
@@ -34,7 +34,7 @@ const OfficeAssetsPage = () => {
   const deferOfficeSecondary = useDeferredQueryEnabled(!assetsLoading);
   const { data: users = [] } = useUserDirectory(deferOfficeSecondary);
 
-  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
+  const { data: contacts = [], isLoading: contactsLoading, isError: contactsError, error: contactsErr, refetch: refetchContacts } = useQuery({
     queryKey: ['contacts'],
     queryFn: async () => (await axios.get('/api/contacts')).data,
     enabled: deferOfficeSecondary,
@@ -221,6 +221,9 @@ const OfficeAssetsPage = () => {
   );
 
   const listLoading = activeTab === 'assets' ? assetsLoading : contactsLoading;
+  const listIsError = activeTab === 'assets' ? assetsError : contactsError;
+  const listError = activeTab === 'assets' ? assetsErr : contactsErr;
+  const refetchList = () => (activeTab === 'assets' ? refetchAssets() : refetchContacts());
   const openAddAsset = () => {
     setEditingAsset(null);
     setAssetFormBaseline(null);
@@ -236,8 +239,18 @@ const OfficeAssetsPage = () => {
   };
 
   return (
-    <PageLoadGuard loading={listLoading && !(activeTab === 'assets' ? assets.length : contacts.length)} skeleton={PageSkeleton}>
+    <PageLoadGuard
+      loading={listLoading && !(activeTab === 'assets' ? assets.length : contacts.length)}
+      isError={listIsError}
+      error={listError}
+      onRetry={refetchList}
+      queryErrorFallback="Failed to load office data"
+      skeleton={PageSkeleton}
+    >
     <ListPageLayout
+      queryError={listIsError ? listError : null}
+      onQueryRetry={refetchList}
+      queryErrorFallback="Failed to load office data"
       containerClassName="!py-4"
       overview={{
         stats: [

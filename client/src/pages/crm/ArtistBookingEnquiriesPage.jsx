@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE } from '../../components/ui';
+import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
 import { useLiveLeads } from '../../hooks/useTaskmasterQueries';
 import { crmQueryParamsForUser } from '../../utils/crmScope';
@@ -24,7 +24,7 @@ export default function ArtistBookingEnquiriesPage() {
     order: 'desc',
   }), [user, page, pageSize, debouncedSearch]);
 
-  const { data, isLoading } = useLiveLeads(params);
+  const { data, isLoading, isError, error, refetch } = useLiveLeads(params);
   const leads = data?.leads || [];
 
   const columns = [
@@ -89,6 +89,13 @@ export default function ArtistBookingEnquiriesPage() {
           />
         )}
       >
+        {isError && (
+          <QueryErrorBanner
+            className="mb-4"
+            message={getQueryErrorMessage(error, 'Failed to load booking enquiries')}
+            onRetry={() => refetch()}
+          />
+        )}
         {isLoading ? (
           <PageSkeleton rows={6} />
         ) : (

@@ -161,7 +161,7 @@ const OrgAccountsPage = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [formBaseline, setFormBaseline] = useState(EMPTY_FORM);
 
-  const { data: accounts = [], isLoading } = useQuery({
+  const { data: accounts = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['org-accounts'],
     queryFn: async () => (await axios.get('/api/org-accounts')).data,
   });
@@ -478,8 +478,19 @@ const OrgAccountsPage = () => {
   }, [isModalOpen]);
 
   return (
-    <PageLoadGuard loading={isLoading && !accounts.length} skeleton={PageSkeleton} className="!py-0">
+    <PageLoadGuard
+      loading={isLoading && !accounts.length}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      queryErrorFallback="Failed to load organization accounts"
+      skeleton={PageSkeleton}
+      className="!py-0"
+    >
       <ListPageLayout
+        queryError={isError ? error : null}
+        onQueryRetry={() => refetch()}
+        queryErrorFallback="Failed to load organization accounts"
         containerClassName="!py-0"
         overview={{ stats: overviewStats }}
         toolbar={

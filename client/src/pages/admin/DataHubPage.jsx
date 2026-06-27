@@ -43,7 +43,7 @@ const loadDataHubFilters = () => {
     activeFolder: 'all',
     pageSize: 10,
     emailStatusFilter: 'all',
-    showAnalytics: false,
+    showAnalytics: true,
     sortField: 'lastActivity',
     sortOrder: 'desc',
   };
@@ -347,8 +347,13 @@ export function DataHubContent() {
       ),
     },
     {
-      header: 'Updated',
-      render: (item) => <DataHubTemporalColumn value={item.updatedAt} label="Updated" />,
+      header: 'Last activity',
+      render: (item) => (
+        <DataHubTemporalColumn
+          value={item.lastActivityAt || item.updatedAt}
+          label="Last activity"
+        />
+      ),
     },
   ];
 

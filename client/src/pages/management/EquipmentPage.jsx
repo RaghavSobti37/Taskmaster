@@ -231,6 +231,8 @@ const EquipmentPage = () => {
         data={filteredAssets}
         onRowClick={openAssetEditor}
         getRowId={(row) => row._id}
+        rowEstimateSize={52}
+        tableMaxHeight="70vh"
         emptyTitle="No equipment found"
         emptyDescription="Try a different search or add a new asset."
       />

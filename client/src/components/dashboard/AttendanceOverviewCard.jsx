@@ -96,22 +96,21 @@ const AttendanceOverviewCard = React.memo(function AttendanceOverviewCard() {
   return (
     <DashboardWidgetShell
       className="h-full overflow-hidden"
-      bodyClassName="p-4 flex flex-col flex-1 min-h-0"
+      bodyClassName="p-4 flex flex-col flex-1 min-h-0 gap-3"
       title={titleContent}
       icon={Users}
       actions={<TimeframeFilter value={timeframe} onChange={setTimeframe} />}
     >
-      {!isLoading && markedMetric && hasData && (
+      {!isLoading && markedMetric && (
         <MetricCard
           label="Marked (latest day)"
           value={markedMetric.latest}
           delta={markedMetric.delta}
           deltaPercent={markedMetric.deltaPercent}
           trend={markedMetric.trend}
-          periodLabel={formatTimeframeLabel(timeframe)}
           variant="mint"
           sparkline={<MarkedSparkline points={markedMetric.markedSeries} />}
-          className="mb-3 shrink-0"
+          className="shrink-0"
         />
       )}
       <ChartSurface className="flex-1" height={200}>

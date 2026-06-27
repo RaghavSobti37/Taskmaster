@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Vercel install: fresh monorepo install + explicit linux native bindings.
+ * Vercel install: client workspace + explicit linux native bindings at repo root.
  * ponytail: npm optional-deps bug on cross-platform CI — pin natives after install
  */
 const { spawnSync } = require('child_process');
@@ -9,15 +9,18 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const NPM = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
-const run = (args) => {
-  const result = spawnSync(NPM, args, { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32' });
+const run = (args, cwd = ROOT) => {
+  const result = spawnSync(NPM, args, { cwd, stdio: 'inherit', shell: process.platform === 'win32' });
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-const rm = spawnSync(process.platform === 'win32' ? 'cmd' : 'rm', process.platform === 'win32' ? ['/c', 'rmdir /s /q node_modules & rmdir /s /q client\\node_modules'] : ['-rf', 'node_modules', 'client/node_modules'], { cwd: ROOT, stdio: 'inherit', shell: true });
-if (rm.status !== 0 && process.env.VERCEL) process.exit(rm.status ?? 1);
+if (process.platform === 'win32') {
+  spawnSync('cmd', ['/c', 'if exist node_modules rmdir /s /q node_modules & if exist client\\node_modules rmdir /s /q client\\node_modules'], { cwd: ROOT, stdio: 'inherit' });
+} else {
+  spawnSync('rm', ['-rf', 'node_modules', 'client/node_modules'], { cwd: ROOT, stdio: 'inherit' });
+}
 
-run(['--yes', 'npm@11', 'install', '--legacy-peer-deps', '--include=optional']);
+run(['--yes', 'npm@11', 'install', '--legacy-peer-deps', '--include=optional', '-w', 'CoreKnot-client']);
 run([
   '--yes', 'npm@11', 'install', '--include=optional',
   '@tailwindcss/oxide-linux-x64-gnu@4.3.0',

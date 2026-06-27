@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Megaphone, Mail, Radio } from 'lucide-react';
 import { ListPageLayout, Input, Button, DataLoading } from '../../components/ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
@@ -8,7 +9,7 @@ import { useConfirm } from '../../contexts/confirmContext';
 
 const AnnouncementsPage = () => {
   const { confirm } = useConfirm();
-  const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements(true, 4000, true);
+  const { data: announcements = [], isLoading: announcementsLoading, isError: announcementsError, error: announcementsQueryError, refetch: refetchAnnouncements } = useAnnouncements(true, 4000, true);
   const deferTargets = useDeferredQueryEnabled(!announcementsLoading);
   const { data: targets, isLoading: targetsLoading } = useAnnouncementTargets(deferTargets);
   const createAnnouncement = useCreateAnnouncement();
@@ -100,6 +101,12 @@ const AnnouncementsPage = () => {
         ],
       }}
     >
+      {announcementsError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(announcementsQueryError, 'Failed to load announcements')}
+          onRetry={() => refetchAnnouncements()}
+        />
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section className="lg:col-span-8 p-5 space-y-4 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)] lg:pr-6">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />

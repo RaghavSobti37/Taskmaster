@@ -40,6 +40,7 @@ export default function MetricCard({
   sparkline,
   className = '',
   onClick,
+  fill = false,
 }) {
   const deltaText = formatDelta(delta);
   const pctText = formatDeltaPercent(deltaPercent);
@@ -49,7 +50,7 @@ export default function MetricCard({
   return (
     <div
       onClick={onClick}
-      className={`p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${ACCENT[variant] || ACCENT.slate} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} h-full ${className}`}
+      className={`p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${ACCENT[variant] || ACCENT.slate} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} ${fill ? 'h-full' : ''} ${className}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="tm-widget-label leading-none truncate">{label}</span>
@@ -60,7 +61,7 @@ export default function MetricCard({
         )}
       </div>
 
-      <div className="flex items-end justify-between gap-2 mt-auto min-h-[2.5rem]">
+      <div className={`flex items-end justify-between gap-2 ${fill ? 'mt-auto min-h-[2.5rem]' : ''}`}>
         <div className="flex flex-col gap-1 min-w-0">
           <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">
             {typeof value === 'number' ? value.toLocaleString() : value}

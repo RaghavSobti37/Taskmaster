@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ScrollText, Search, AlertTriangle, AlertCircle, Activity } from 'lucide-react';
-import { ListPageLayout, Input } from '../../components/ui';
+import { ListPageLayout, Input, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { SystemLogsContent } from './SystemLogsPanel';
 import { SEVERITY_VALUES, SEVERITY } from '../../lib/systemLogContract';
 import { useSystemLogs } from '../../hooks/useSystemLogs';
@@ -8,7 +8,7 @@ import { useSystemLogs } from '../../hooks/useSystemLogs';
 const SystemLogsPage = () => {
   const [severityFilter, setSeverityFilter] = useState('');
   const [search, setSearch] = useState('');
-  const { data: logData } = useSystemLogs({ limit: 200, excludePageViews: true });
+  const { data: logData, isError, error, refetch } = useSystemLogs({ limit: 200, excludePageViews: true });
 
   const logStats = useMemo(() => {
     const logs = logData?.logs || [];
@@ -74,6 +74,13 @@ const SystemLogsPage = () => {
         </>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          className="mb-4"
+          message={getQueryErrorMessage(error, 'Failed to load system logs')}
+          onRetry={() => refetch()}
+        />
+      )}
       <SystemLogsContent severityFilter={severityFilter} search={search} />
     </ListPageLayout>
   );

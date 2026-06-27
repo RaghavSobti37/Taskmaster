@@ -122,7 +122,7 @@ const SubscriptionsPage = () => {
     });
   }, [isModalOpen, usdInrRate]);
 
-  const { data: subscriptions = [], isLoading } = useQuery({
+  const { data: subscriptions = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['subscriptions'],
     queryFn: async () => (await axios.get('/api/subscriptions')).data,
   });
@@ -252,8 +252,19 @@ const SubscriptionsPage = () => {
   ];
 
   return (
-    <PageLoadGuard loading={isLoading && !subscriptions.length} skeleton={PageSkeleton} className="!py-4">
+    <PageLoadGuard
+      loading={isLoading && !subscriptions.length}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      queryErrorFallback="Failed to load subscriptions"
+      skeleton={PageSkeleton}
+      className="!py-4"
+    >
     <ListPageLayout
+      queryError={isError ? error : null}
+      onQueryRetry={() => refetch()}
+      queryErrorFallback="Failed to load subscriptions"
       containerClassName="!py-4"
       overview={{
         stats: [

@@ -11,6 +11,7 @@ import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
 import { DesktopRecommendedBanner, LoadingState } from '../../../components/ui';
+import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
 import { useIsMobile } from '../../../hooks/useBreakpoint';
 
 const GRID_COLS = 4;
@@ -137,7 +138,13 @@ export default function DashboardCustomizationTab() {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [originalElements, setOriginalElements] = useState([]);
-  const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
+  const {
+    data: dashboardPreset,
+    isLoading: presetLoading,
+    isError: presetError,
+    error: presetErr,
+    refetch: refetchPreset,
+  } = useDashboardPreset();
   const [dashboardElements, setDashboardElements] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('custom');
   const [nameModalOpen, setNameModalOpen] = useState(false);
@@ -605,6 +612,13 @@ export default function DashboardCustomizationTab() {
     <div className="flex h-full overflow-hidden relative">
       <div className="flex-1 flex flex-col overflow-y-auto px-4 md:px-8 custom-scrollbar pt-6 pb-24">
         <DesktopRecommendedBanner className="mb-4" message="Drag-and-drop dashboard layout editing requires a desktop screen." />
+        <QueryErrorSlot
+          isError={presetError}
+          error={presetErr}
+          onRetry={() => refetchPreset()}
+          fallback="Failed to load dashboard layout"
+          className="mb-4"
+        />
         <div className={`mb-4 flex items-center justify-between ${isMobile ? 'pointer-events-none opacity-50' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             <LayoutDashboard size={18} className="text-blue-500" /> Grid Layout

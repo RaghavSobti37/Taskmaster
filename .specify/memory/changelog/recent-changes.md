@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-06-27 — Attendance overview metric card layout
+
+- **What:** `MetricCard` no longer stretches to full height by default (`fill` prop for grid use); attendance widget drops redundant period label and keeps metric + chart compact.
+- **Why:** Dashboard attendance widget had huge empty gap — value pinned to bottom, chart clipped.
+- **Files:** `client/src/components/ui/MetricCard.jsx`, `client/src/components/dashboard/AttendanceOverviewCard.jsx`
+- **Branch:** `main` · **Commit:** `9d3ac3b8`
+
+---
+
 ## 2026-06-25 — Vercel Web Analytics on all CoreKnot frontends
 
 - **What:** `@vercel/analytics` + `<Analytics />` in `client/src/main.jsx` — covers `tsccoreknot.com`, `landing.tsccoreknot.com`, and `auth.tsccoreknot.com` (shared client bundle per `VITE_SITE_MODE`).

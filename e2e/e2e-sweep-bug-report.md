@@ -8,7 +8,7 @@ Last verified: 2026-06-10 (prod fix loop)
 | BUG-T6 | high | Viewer role can mutate tasks | **fixed** | `userIsProjectViewer` in `shared/projectRoles.js`; read-only gate in `TaskService.updateTask` |
 | BUG-T12 | medium | Viewer can create project tasks | **fixed** | Viewer gate in `TaskService.createTask` + delete |
 | BUG-T13 | high | Rollback wrong status → 500 not 400 | **fixed** | `taskController.updateTask` maps rollback/approve status errors → 400 |
-| BUG-T11 | low | Assign notification not in GET /api/notifications | open | Architectural — realtime/localStorage only; not blocking prod |
+| BUG-T11 | low | Assign notification not in GET /api/notifications | **fixed** | `createNotification` persists to `Notification` model; GET/PATCH/DELETE `/api/notifications` serve DB; client hook syncs API + localStorage |
 
 ## Verification
 

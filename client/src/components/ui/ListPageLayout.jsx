@@ -2,6 +2,7 @@ import React from 'react';
 import { PageContainer } from './primitives';
 import DataOverviewSection from './DataOverviewSection';
 import PageToolbar from './PageToolbar';
+import QueryErrorSlot from './QueryErrorSlot';
 
 /**
  * UDIF 2.1 list page: overview → toolbar → workspace (table).
@@ -22,6 +23,9 @@ export default function ListPageLayout({
   filterSheetTitle,
   toolbarFill = false,
   overviewSectionClassName = '',
+  queryError,
+  queryErrorFallback = 'Failed to load data',
+  onQueryRetry,
 }) {
   const hasOverview =
     overview &&
@@ -31,6 +35,12 @@ export default function ListPageLayout({
   return (
     <PageContainer className={containerClassName} maxWidth={maxWidth}>
       <div className={`space-y-3 ${className}`}>
+        <QueryErrorSlot
+          isError={Boolean(queryError)}
+          error={queryError}
+          onRetry={onQueryRetry}
+          fallback={queryErrorFallback}
+        />
         {hasOverview && (
           <DataOverviewSection
             stats={overview.stats}

@@ -78,6 +78,10 @@ services:
         value: https://YOUR-PRODUCTION-FRONTEND
       - key: CLIENT_URL
         value: https://YOUR-PRODUCTION-FRONTEND
+      - key: UPLOADTHING_TOKEN
+        sync: false
+      - key: UPLOADTHING_SECRET
+        sync: false
 
   # Staging API — PR/preview testing; never points at production DB
   - type: web
@@ -133,6 +137,10 @@ services:
         value: taskmaster-backups
       - key: NEST_SYNC_URL
         value: https://coreknot-nest-staging.onrender.com
+      - key: UPLOADTHING_TOKEN
+        sync: false
+      - key: UPLOADTHING_SECRET
+        sync: false
 
   # NestJS staging
   - type: web

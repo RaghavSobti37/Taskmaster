@@ -89,6 +89,7 @@ function mapHubRow(c) {
     isMultiInlet: c.isMultiInlet ?? inlets.length >= 2,
     inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
     updatedAt: c.updatedAt || c.lastActivityAt,
+    lastActivityAt: c.lastActivityAt || c.updatedAt,
     createdAt: c.firstSeenAt || c.createdAt,
   };
 }

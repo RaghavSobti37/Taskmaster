@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Newspaper, Link2, Sparkles } from 'lucide-react';
 import { ListPageLayout, DesktopRecommendedBanner, Button, Badge } from '../../components/ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import NewsletterLinkForm from '../../components/newsletter/NewsletterLinkForm';
 import NewsletterWeekBoard from '../../components/newsletter/NewsletterWeekBoard';
 import {
@@ -16,7 +17,7 @@ const NewsletterPage = () => {
   const { user } = useAuth();
   const admin = isAdminUser(user);
   const { data: categories = [] } = useNewsletterCategories();
-  const { data, isLoading, refetch } = useCurrentNewsletterIssue();
+  const { data, isLoading, isError, error, refetch } = useCurrentNewsletterIssue();
 
   const issue = data?.issue;
   const articles = data?.articles || [];
@@ -54,6 +55,13 @@ const NewsletterPage = () => {
       }}
     >
       <DesktopRecommendedBanner message="Newsletter curation and send are optimized for desktop." />
+
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load newsletter issue')}
+          onRetry={() => refetch()}
+        />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>

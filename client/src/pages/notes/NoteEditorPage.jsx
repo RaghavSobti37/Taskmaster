@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 import { Button, LoadingState } from '../../components/ui';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import NoteRichEditor from '../../components/notes/NoteRichEditor';
 import SaveNoteDialog from '../../components/notes/SaveNoteDialog';
 import { useIsMobile } from '../../hooks/useBreakpoint';
@@ -37,7 +38,7 @@ export default function NoteEditorPage() {
   const toast = useToast();
   const { user } = useAuth();
 
-  const { data: note, isLoading } = useNote(id, !isNew);
+  const { data: note, isLoading, isError, error, refetch } = useNote(id, !isNew);
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
 
@@ -204,6 +205,20 @@ export default function NoteEditorPage() {
   const saving = updateNote.isPending;
 
   if (isNew) return null;
+
+  if (isError) {
+    return (
+      <div className="px-4 py-8 max-w-lg mx-auto">
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Could not load this note')}
+          onRetry={() => refetch()}
+        />
+        <Button size="sm" variant="secondary" onClick={() => navigate('/notes')} className="mt-4">
+          <ArrowLeft size={14} /> Back to notes
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

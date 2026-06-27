@@ -3,6 +3,7 @@ import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState,
 import '@xyflow/react/dist/style.css';
 import { Play, Plus, Zap, Filter, Send, Settings, RefreshCw, Layers } from 'lucide-react';
 import { PageContainer, PageHeader, Button, Badge } from '../../components/ui';
+import QueryErrorBanner from '../../components/ui/QueryErrorBanner';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const initialNodes = [
@@ -86,11 +87,16 @@ const WorkflowCanvas = () => {
         title="Workflow Builder"
         actions={
           <div className="flex items-center gap-2">
-            <Button size="xs" variant="primary" onClick={handleRunPipeline} disabled={running}>
-              {running ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Play size={12} className="mr-1" />} Execute Workflow
+            <Button size="xs" variant="primary" onClick={handleRunPipeline} disabled title="Workflow execution is not connected to the server yet">
+              <Play size={12} className="mr-1" /> Execute Workflow
             </Button>
           </div>
         }
+      />
+
+      <QueryErrorBanner
+        message="Preview mode — workflow automation is not connected to the server yet. Canvas changes stay in this browser session only."
+        className="!mb-0 border-amber-500/30 bg-amber-500/10 [&_span]:text-amber-800 dark:[&_span]:text-amber-200"
       />
 
       <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
@@ -124,12 +130,12 @@ const WorkflowCanvas = () => {
         </ReactFlow>
 
         <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-[var(--color-bg-surface)]/95 border border-[var(--color-bg-border)] px-3 py-1.5 rounded-[var(--radius-md)] text-[10px] font-mono text-[var(--color-text-muted)]">
-          <Badge variant="slate" className="text-[9px]">Active Canvas</Badge>
+          <Badge variant="slate" className="text-[9px]">Local preview</Badge>
           <span>Nodes: {nodes.length}</span>
           <span>•</span>
           <span>Edges: {edges.length}</span>
           <span>•</span>
-          <span className="text-[var(--color-pastel-mint-text)] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-action-primary)] animate-pulse" /> Realtime Active</span>
+          <span className="text-[var(--color-text-muted)] flex items-center gap-1">Local canvas only</span>
         </div>
       </div>
     </PageContainer>

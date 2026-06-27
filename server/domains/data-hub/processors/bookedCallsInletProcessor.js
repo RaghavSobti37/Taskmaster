@@ -1,6 +1,7 @@
 const Lead = require('../../../models/Lead');
 const BookedCall = require('../../../models/BookedCall');
 const ContactService = require('../../../services/ContactService');
+const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const { isBookedCallSource, BOOKED_CALL_SOURCE_RE } = require('../../../../shared/dataInlets');
 
 async function reconcileBookedCallRows(bookedCallRecords, { primaryName, email, phone, contact: initialContact }) {
@@ -50,8 +51,8 @@ function filterBookedCallLeads(leads) {
 async function buildBookedCallsAnalytics(result, { weekAgo }) {
   const bookedMatch = { source: { $regex: BOOKED_CALL_SOURCE_RE } };
   const [funnel, callStatus, newWeek, connected, totalBooked] = await Promise.all([
-    Lead.aggregate([{ $match: bookedMatch }, { $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-    Lead.aggregate([{ $match: bookedMatch }, { $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    aggregateWithTenant(Lead, [{ $match: bookedMatch }, { $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    aggregateWithTenant(Lead, [{ $match: bookedMatch }, { $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
     Lead.countDocuments({ ...bookedMatch, createdAt: { $gte: weekAgo } }),
     Lead.countDocuments({ ...bookedMatch, meaningfulConnect: 'YES' }),
     Lead.countDocuments(bookedMatch),

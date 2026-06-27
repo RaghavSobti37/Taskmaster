@@ -1,0 +1,169 @@
+{
+  "slug": "prod-full-structure",
+  "goal": "Production app host — every page backend on Express prod API (RENDER_API_PROXY_URL), Vercel proxy + direct socket; no Nest strangler on prod",
+  "createdAt": "2026-06-27T18:15:00.000Z",
+  "phase": "workers",
+  "platformSlices": [
+    {
+      "sliceId": "platform-vercel-proxy",
+      "goal": "Vercel rewrites → Express prod; VITE_API_URL baked; socket to Render",
+      "ownsFiles": [
+        "client/scripts/generateVercelConfig.cjs",
+        "scripts/vercelInstall.js",
+        "vercel.json",
+        "client/vercel.json",
+        "client/vercel.json.example",
+        "client/src/utils/apiBase.js",
+        "client/src/lib/realtime.js"
+      ],
+      "status": "done",
+      "verifyCommands": ["npm test --prefix client -- apiBase realtime", "npm run build --prefix client"]
+    },
+    {
+      "sliceId": "platform-landing",
+      "goal": "/landing on main host; subdomain redirects",
+      "ownsFiles": [
+        "client/src/App.jsx",
+        "client/src/config/siteUrls.js",
+        "sites/landing/vercel.json",
+        "client/public/sitemap.xml"
+      ],
+      "status": "done",
+      "verifyCommands": ["npm run build --prefix client"]
+    },
+    {
+      "sliceId": "platform-sync-auth",
+      "goal": "Sync token + axios same API base on prod",
+      "ownsFiles": [
+        "client/src/lib/localFirstBootstrap.js",
+        "packages/sync-client/src/connector.js"
+      ],
+      "status": "done",
+      "verifyCommands": ["npm test --prefix client -- apiBase"]
+    }
+  ],
+  "pageSlices": [
+    {
+      "sliceId": "page-landing-auth",
+      "routes": ["/landing", "/login", "/register", "/forgot-password", "/reset-password"],
+      "goal": "Public + auth pages load; /api/auth/* on Express prod",
+      "ownsFiles": ["client/src/pages/LandingPage.jsx", "client/src/pages/auth/**"],
+      "serverDomains": ["server/domains/auth/**", "server/routes/auth*"],
+      "status": "pending",
+      "verifyCommands": ["curl -fsS $APP_ORIGIN/api/health"]
+    },
+    {
+      "sliceId": "page-dashboard",
+      "routes": ["/dashboard"],
+      "goal": "Dashboard widgets API — summary, tasks, logs, mail stats",
+      "ownsFiles": ["client/src/pages/Dashboard.jsx", "client/src/components/dashboard/**"],
+      "serverDomains": ["server/domains/dashboard/**"],
+      "status": "pending",
+      "verifyCommands": ["curl -fsS $RENDER_API_PROXY_URL/api/health"]
+    },
+    {
+      "sliceId": "page-attendance",
+      "routes": ["/attendance", "/attendance/all"],
+      "goal": "Attendance API on Express prod (not Nest staging); 401 only when logged out",
+      "ownsFiles": ["client/src/pages/management/AttendancePage.jsx", "client/src/components/attendance/**"],
+      "serverDomains": ["server/domains/attendance/**", "server/routes/attendance*"],
+      "status": "pending",
+      "verifyCommands": ["curl -fsS -o NUL -w \"%{http_code}\" $APP_ORIGIN/api/attendance"]
+    },
+    {
+      "sliceId": "page-exly-campaigns",
+      "routes": ["/admin/exly-campaigns"],
+      "goal": "GET /api/exly/masterclass-funnel + offerings on prod Render",
+      "ownsFiles": [
+        "client/src/pages/admin/ExlyCampaignsPage.jsx",
+        "client/src/components/admin/MasterclassFunnelPanel.jsx",
+        "client/src/components/admin/ExlyDataContent.jsx"
+      ],
+      "serverDomains": ["server/domains/integrations/**", "server/services/masterclassFunnelReport.js"],
+      "status": "pending",
+      "verifyCommands": ["curl -fsS -o NUL -w \"%{http_code}\" $APP_ORIGIN/api/exly/masterclass-funnel"]
+    },
+    {
+      "sliceId": "page-crm",
+      "routes": ["/crm", "/leads", "/followups", "/bookings"],
+      "goal": "CRM leads, stats, followups on Express prod",
+      "ownsFiles": ["client/src/pages/crm/**", "client/src/pages/hubs/CrmHub.jsx"],
+      "serverDomains": ["server/domains/crm/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-projects",
+      "routes": ["/projects", "/projects/:id", "/workspaces/:name"],
+      "goal": "Projects, tasks, workspaces API",
+      "ownsFiles": ["client/src/pages/projects/**"],
+      "serverDomains": ["server/domains/projects/**", "server/domains/tasks/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-emails",
+      "routes": ["/emails", "/emails/*", "/campaign/:id"],
+      "goal": "Mail campaigns, templates, stats",
+      "ownsFiles": ["client/src/pages/emails/**", "client/src/pages/workspace/CreateCampaignPage.jsx"],
+      "serverDomains": ["server/domains/mail/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-admin",
+      "routes": ["/admin/*"],
+      "goal": "Admin users, teams, roles, scripts, QA, platform settings",
+      "ownsFiles": ["client/src/pages/admin/**"],
+      "serverDomains": ["server/domains/admin/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-office-management",
+      "routes": ["/office", "/management", "/finance", "/announcements"],
+      "goal": "Office hub tabs — equipment, contacts, finance, ops",
+      "ownsFiles": ["client/src/pages/hubs/OfficeHub.jsx", "client/src/pages/hubs/ManagementHub.jsx", "client/src/pages/finance/**", "client/src/pages/management/**"],
+      "serverDomains": ["server/domains/finance/**", "server/domains/office/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-calendar-schedule",
+      "routes": ["/calendar", "/schedule"],
+      "goal": "Calendar + schedule API",
+      "ownsFiles": ["client/src/pages/calendar/**", "client/src/pages/schedule/**"],
+      "serverDomains": ["server/domains/calendar/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-notes-todo-inbox",
+      "routes": ["/notes", "/todo", "/inbox", "/logs"],
+      "goal": "Notes, todos, inbox, daily logs",
+      "ownsFiles": ["client/src/pages/notes/**", "client/src/pages/todo/**", "client/src/pages/inbox/**", "client/src/pages/productivity/**"],
+      "serverDomains": ["server/domains/notes/**", "server/domains/inbox/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-artists-assets",
+      "routes": ["/artists", "/assets", "/artist/:slug"],
+      "goal": "Artists portfolio, assets, public profiles",
+      "ownsFiles": ["client/src/pages/artists/**", "client/src/pages/assets/**"],
+      "serverDomains": ["server/domains/artists/**", "server/domains/assets/**"],
+      "status": "pending"
+    },
+    {
+      "sliceId": "page-settings",
+      "routes": ["/settings"],
+      "goal": "User settings, customization, shortcuts API",
+      "ownsFiles": ["client/src/pages/settings/**"],
+      "serverDomains": ["server/domains/customization/**", "server/domains/users/**"],
+      "status": "pending"
+    }
+  ],
+  "integrationSlice": {
+    "sliceId": "integration-ship",
+    "runsAfter": ["platform-vercel-proxy", "platform-landing", "platform-sync-auth"],
+    "status": "in_progress"
+  },
+  "testAgent": { "status": "pending", "commandsRun": [], "lastFailure": "" },
+  "healLoop": {
+    "command": "node ~/.cursor/skills/autonomous-healing-loop/heal.mjs",
+    "status": "pending"
+  }
+}

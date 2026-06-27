@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
 import {
@@ -9,9 +10,23 @@ import {
   clearAllNotifications,
   loadNotifications,
   addNotification,
+  saveNotifications,
 } from '../../utils/localNotificationStore';
 
 const notificationsQueryKey = (userId) => ['notifications', userId];
+
+function mergeNotificationLists(serverRows = [], localRows = []) {
+  const byId = new Map();
+  for (const row of serverRows) {
+    if (row?._id) byId.set(row._id, row);
+  }
+  for (const row of localRows) {
+    if (row?._id && !byId.has(row._id)) byId.set(row._id, row);
+  }
+  return [...byId.values()]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 50);
+}
 
 export const useNotifications = (enabled = true) => {
   const { user } = useAuth();
@@ -20,10 +35,19 @@ export const useNotifications = (enabled = true) => {
 
   const query = useQuery({
     queryKey: notificationsQueryKey(userId),
-    queryFn: () => getNotificationsPayload(userId, user?.departmentSlug || ''),
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get('/api/notifications');
+        const merged = mergeNotificationLists(data.notifications, loadNotifications(userId));
+        saveNotifications(userId, merged);
+        return { ...data, notifications: merged, localOnly: false };
+      } catch {
+        return getNotificationsPayload(userId, user?.departmentSlug || '');
+      }
+    },
     enabled: enabled && !!userId,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
@@ -47,9 +71,14 @@ export const useMarkNotificationRead = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => {
+    mutationFn: async (id) => {
       markNotificationRead(user._id, id);
-      return Promise.resolve({ _id: id, read: true });
+      try {
+        await axios.patch(`/api/notifications/${id}/read`);
+      } catch {
+        /* local cache updated */
+      }
+      return { _id: id, read: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationsQueryKey(user._id) });
@@ -62,9 +91,14 @@ export const useMarkAllNotificationsRead = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       markAllNotificationsRead(user._id);
-      return Promise.resolve({ ok: true });
+      try {
+        await axios.patch('/api/notifications/read-all');
+      } catch {
+        /* local cache updated */
+      }
+      return { ok: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationsQueryKey(user._id) });
@@ -77,9 +111,14 @@ export const useClearAllNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       clearAllNotifications(user._id);
-      return Promise.resolve({ ok: true });
+      try {
+        await axios.delete('/api/notifications');
+      } catch {
+        /* local cache updated */
+      }
+      return { ok: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationsQueryKey(user._id) });

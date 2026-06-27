@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const { sendPushToUser } = require('./pushNotificationService');
 const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
@@ -107,11 +108,35 @@ const createNotification = async ({
   const { broadcastRealtimeEvent } = require('../config/realtime');
   broadcastRealtimeEvent(`user-${recipientId}`, 'notification', notification);
 
+  try {
+    await Notification.create({
+      _id: notificationId,
+      recipient: recipientId,
+      title,
+      message,
+      type,
+      category,
+      relatedLeadId: relatedLeadId || undefined,
+      relatedTaskId: relatedTaskId || undefined,
+      relatedProjectId: relatedProjectId || undefined,
+      actionUrl: actionUrl || '',
+      actorId: actorId || undefined,
+      iconType: resolvedIconType,
+      read: false,
+      emailSent: false,
+    });
+  } catch (err) {
+    logger.error('Notification', 'Persist failed', { error: err.message, recipientId });
+  }
+
   if (sendEmail) {
     const user = await User.findById(recipientId).select('name email');
     if (user) {
       const sent = await sendNotificationEmail(user, { title, message, category, actionUrl });
-      if (sent) notification.emailSent = true;
+      if (sent) {
+        notification.emailSent = true;
+        Notification.updateOne({ _id: notificationId }, { emailSent: true }).catch(() => {});
+      }
     }
   }
 

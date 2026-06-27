@@ -4,6 +4,13 @@ import {
   localQuery,
 } from '@coreknot/local-database';
 import { fetchSyncCredentialsFromApi } from '@coreknot/sync-client';
+import { getApiBaseUrl, routeViaSameOriginApi } from '../utils/apiBase';
+
+/** Match axios: same-origin on mobile/PWA; Render direct on desktop production. */
+function getSyncApiBase() {
+  if (routeViaSameOriginApi()) return '';
+  return getApiBaseUrl() || '';
+}
 
 export async function bootstrapLocalFirst() {
   const ping = await initLocalDatabase();
@@ -18,7 +25,7 @@ export async function bootstrapLocalFirst() {
 
 export async function connectSyncEngine() {
   try {
-    return await fetchSyncCredentialsFromApi('');
+    return await fetchSyncCredentialsFromApi(getSyncApiBase());
   } catch (err) {
     if (import.meta.env.DEV) {
       console.warn('[local-first] sync credentials unavailable', err?.message);

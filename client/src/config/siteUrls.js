@@ -2,11 +2,12 @@ import { isAppSite, isAuthSite, isLandingSite } from './siteMode';
 
 const trimSlash = (url) => String(url || '').replace(/\/$/, '');
 
-export const LANDING_ORIGIN = trimSlash(
-  import.meta.env.VITE_LANDING_URL || 'https://landing.tsccoreknot.com',
-);
 export const APP_ORIGIN = trimSlash(
   import.meta.env.VITE_APP_URL || 'https://tsccoreknot.com',
+);
+/** Path-based landing on main app host (override with VITE_LANDING_URL for legacy subdomain). */
+export const LANDING_ORIGIN = trimSlash(
+  import.meta.env.VITE_LANDING_URL || `${APP_ORIGIN}/landing`,
 );
 /** Auth routes live on the main app host (e.g. /login), not a separate subdomain. */
 export const AUTH_ORIGIN = trimSlash(import.meta.env.VITE_AUTH_URL || APP_ORIGIN);

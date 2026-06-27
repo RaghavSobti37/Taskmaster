@@ -35,6 +35,7 @@ const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage')
 
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
 const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
+const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
 const AssetsHubLayout = lazyWithRetry(() => import('./pages/assets/AssetsHubLayout'));
 const OrgAccountsPage = lazyWithRetry(() => import('./pages/assets/OrgAccountsPage'));

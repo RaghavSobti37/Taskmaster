@@ -16,6 +16,7 @@ import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS, no
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { countReviewTasksByProject, countTasksByProject } from '../../utils/taskReview';
 import { filterOverdueTasks } from '../../utils/dashboardTasks';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { projectCardAccentClass, ProjectCardStatusOverlay } from '../../components/project/ProjectStatusPing';
 
 const ProjectPreview = ({
@@ -102,9 +103,10 @@ const ProjectsView = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { data: projects = [], isLoading: loadingProjects, isError: projectsError, error: projectsErr, refetch: refetchProjects } = useProjects();
-  const { data: workspaces = [], isLoading: loadingWorkspaces, isError: workspacesError, error: workspacesErr, refetch: refetchWorkspaces } = useWorkspaces();
-  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
-  const { data: dashboardTasks = [] } = useDashboardTasks(user?._id, !!user?._id);
+  const deferProjectsSecondary = useDeferredQueryEnabled(!loadingProjects);
+  const { data: workspaces = [], isLoading: loadingWorkspaces, isError: workspacesError, error: workspacesErr, refetch: refetchWorkspaces } = useWorkspaces(deferProjectsSecondary);
+  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id && deferProjectsSecondary);
+  const { data: dashboardTasks = [] } = useDashboardTasks(user?._id, !!user?._id && deferProjectsSecondary);
 
   const navigateToProject = useCallback((projectId, tab) => {
     if (tab === 'analytics') {

@@ -7,20 +7,13 @@ import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Badge, DataTable } from '../../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const MediaListPage = () => {
   const [search, setSearch] = useState('');
   const [sheetFilter, setSheetFilter] = useState('');
   const [publicationFilter, setPublicationFilter] = useState('');
   const [nicheFilter, setNicheFilter] = useState('');
-
-  const { data: filterOptions } = useQuery({
-    queryKey: ['media-contacts-filters', sheetFilter],
-    queryFn: async () => {
-      const params = sheetFilter ? { sourceSheet: sheetFilter } : {};
-      return (await axios.get('/api/admin/media-contacts/filters', { params })).data;
-    },
-  });
 
   const {
     data: contacts = [],
@@ -38,6 +31,16 @@ const MediaListPage = () => {
       if (search.trim()) params.q = search.trim();
       return (await axios.get('/api/admin/media-contacts', { params })).data;
     },
+  });
+
+  const deferFilterOptions = useDeferredQueryEnabled(!isLoading);
+  const { data: filterOptions } = useQuery({
+    queryKey: ['media-contacts-filters', sheetFilter],
+    queryFn: async () => {
+      const params = sheetFilter ? { sourceSheet: sheetFilter } : {};
+      return (await axios.get('/api/admin/media-contacts/filters', { params })).data;
+    },
+    enabled: deferFilterOptions,
   });
 
   const activeSheetLabel = sheetFilter || 'All sheets';

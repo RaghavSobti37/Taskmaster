@@ -7,6 +7,7 @@ import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import {
   formatLighthouseReportPlain,
@@ -286,6 +287,7 @@ const QATestingPage = () => {
   const [selectedLighthousePaths, setSelectedLighthousePaths] = useState(() => new Set());
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const deferQASecondary = useDeferredQueryEnabled(!projectsLoading);
 
   const { data: lighthouseRoutesData } = useQuery({
     queryKey: ['qa-lighthouse-routes'],
@@ -294,6 +296,7 @@ const QATestingPage = () => {
       return data;
     },
     staleTime: 10 * 60 * 1000,
+    enabled: deferQASecondary,
   });
 
   const allLighthouseRoutes = lighthouseRoutesData?.all || [];
@@ -315,7 +318,8 @@ const QATestingPage = () => {
     queryFn: async () => {
       const { data } = await axios.get(`/api/qa/history`);
       return data;
-    }
+    },
+    enabled: deferQASecondary,
   });
 
   const activeRun = historyData?.testRuns?.find(r => ['running', 'pending', 'in-progress'].includes(r.status));

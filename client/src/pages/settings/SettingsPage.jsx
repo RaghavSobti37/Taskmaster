@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, LayoutDashboard, Clock, Target, CalendarDays,
@@ -7,16 +7,29 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { globalConfirm } from '../../contexts/confirmContext';
+import { createLazyWithRetry } from '../../utils/lazyWithRetry';
+import PageSkeleton from '../../components/ui/PageSkeleton';
 
-// Import sub-pages
-import ProfileTab from './tabs/ProfileTab';
-import DashboardCustomizationTab from './tabs/DashboardCustomizationTab';
-import AttendanceTab from './tabs/AttendanceTab';
-import ProgressTab from './tabs/ProgressTab';
-import LeaveTab from './tabs/LeaveTab';
-import InvoiceTab from './tabs/InvoiceTab';
-import SessionsTab from './tabs/SessionsTab';
-import KeyboardShortcutsTab from './tabs/KeyboardShortcutsTab';
+const lazyWithRetry = createLazyWithRetry;
+
+const SETTINGS_TAB_LOADERS = {
+  Profile: () => lazyWithRetry(() => import('./tabs/ProfileTab')),
+  Security: () => lazyWithRetry(() => import('./tabs/SessionsTab')),
+  Keyboard: () => lazyWithRetry(() => import('./tabs/KeyboardShortcutsTab')),
+  Dashboard: () => lazyWithRetry(() => import('./tabs/DashboardCustomizationTab')),
+  Attendance: () => lazyWithRetry(() => import('./tabs/AttendanceTab')),
+  Progress: () => lazyWithRetry(() => import('./tabs/ProgressTab')),
+  Leave: () => lazyWithRetry(() => import('./tabs/LeaveTab')),
+  Invoice: () => lazyWithRetry(() => import('./tabs/InvoiceTab')),
+};
+
+const settingsTabCache = new Map();
+function getLazySettingsTab(tabId) {
+  const loader = SETTINGS_TAB_LOADERS[tabId];
+  if (!loader) return null;
+  if (!settingsTabCache.has(tabId)) settingsTabCache.set(tabId, loader());
+  return settingsTabCache.get(tabId);
+}
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -60,17 +73,10 @@ const SettingsPage = () => {
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'Profile': return <ProfileTab />;
-      case 'Security': return <SessionsTab />;
-      case 'Keyboard': return <KeyboardShortcutsTab />;
-      case 'Dashboard': return <DashboardCustomizationTab />;
-      case 'Attendance': return <AttendanceTab />;
-      case 'Progress': return <ProgressTab />;
-      case 'Leave': return <LeaveTab />;
-      case 'Invoice': return <InvoiceTab />;
-      default: return <ProfileTab />;
-    }
+    const LazyTab = getLazySettingsTab(activeTab) || getLazySettingsTab('Profile');
+    if (!LazyTab) return null;
+    const Tab = LazyTab;
+    return <Tab />;
   };
 
   return (
@@ -154,7 +160,9 @@ const SettingsPage = () => {
             transition={{ duration: 0.2 }}
             className="h-full min-w-0"
           >
-            {renderTabContent()}
+            <Suspense fallback={<PageSkeleton />}>
+              {renderTabContent()}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

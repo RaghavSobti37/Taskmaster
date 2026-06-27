@@ -11,6 +11,7 @@ import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/Quer
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const ASSET_CATEGORIES = ['Hardware', 'Furniture', 'Software', 'Misc'];
 const ASSET_STATUSES = ['Available', 'In Use', 'Maintenance', 'Lost', 'Damaged'];
@@ -61,7 +62,6 @@ const EquipmentPage = () => {
   const [assetFormData, setAssetFormData] = useState(EMPTY_ASSET_FORM);
   const [assetFormBaseline, setAssetFormBaseline] = useState(EMPTY_ASSET_FORM);
   const queryClient = useQueryClient();
-  const { data: users = [] } = useUserDirectory();
 
   const {
     data: assets = [],
@@ -73,6 +73,8 @@ const EquipmentPage = () => {
     queryKey: ['office-assets'],
     queryFn: async () => (await axios.get('/api/office-assets')).data,
   });
+  const deferEquipmentSecondary = useDeferredQueryEnabled(!isLoading);
+  const { data: users = [] } = useUserDirectory(deferEquipmentSecondary);
 
   const saveAssetMutation = useMutation({
     mutationFn: async (data) =>

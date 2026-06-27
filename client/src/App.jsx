@@ -83,7 +83,6 @@ const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const NotesPage = lazyWithRetry(() => import('./pages/notes/NotesPage'));
 const NoteEditorPage = lazyWithRetry(() => import('./pages/notes/NoteEditorPage'));
 import ArtistPathPage from './pages/admin/ArtistPathPage';
-const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPlatformSettings'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));

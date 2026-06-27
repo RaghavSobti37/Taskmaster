@@ -25,6 +25,7 @@ import { useConfirm } from '../../contexts/confirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import {
   buildFinanceEditForm,
@@ -122,9 +123,12 @@ const FinancePage = () => {
   const { data: rateData } = useUsdInrRate({ enabled: !!selectedDoc });
   const usdInrRate = rateData?.rate;
 
+  const deferFinanceFilters = useDeferredQueryEnabled(true, { tier: 0 });
+
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => normalizeProjects((await axios.get('/api/projects')).data),
+    enabled: deferFinanceFilters,
   });
 
   useEffect(() => {
@@ -191,7 +195,7 @@ const FinancePage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentFolderId, selectedDoc, searchParams]);
 
-  const { data: workspaces = [] } = useWorkspaces();
+  const { data: workspaces = [] } = useWorkspaces(deferFinanceFilters);
 
   const filteredProjects = useMemo(
     () => filterProjectsByWorkspace(projects, selectedWorkspace || 'all'),
@@ -440,9 +444,12 @@ const FinancePage = () => {
     },
   });
 
+  const deferFinancePending = useDeferredQueryEnabled(true, { tier: 1 });
+
   const { data: pendingRes } = useQuery({
     queryKey: ['finance-pending-invoices'],
     queryFn: async () => (await axios.get('/api/finance/pending')).data,
+    enabled: deferFinancePending,
   });
   const pendingInvoices = pendingRes?.data || [];
 

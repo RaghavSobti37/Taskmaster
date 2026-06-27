@@ -3,12 +3,14 @@ import { Megaphone, Mail, Radio } from 'lucide-react';
 import { ListPageLayout, Input, Button, DataLoading } from '../../components/ui';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useConfirm } from '../../contexts/confirmContext';
 
 const AnnouncementsPage = () => {
   const { confirm } = useConfirm();
   const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements(true, 4000, true);
-  const { data: targets, isLoading: targetsLoading } = useAnnouncementTargets(true);
+  const deferTargets = useDeferredQueryEnabled(!announcementsLoading);
+  const { data: targets, isLoading: targetsLoading } = useAnnouncementTargets(deferTargets);
   const createAnnouncement = useCreateAnnouncement();
   const deleteAnnouncement = useDeleteAnnouncement();
 

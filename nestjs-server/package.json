@@ -47,19 +47,19 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.23",
-    "@nestjs/testing": "^11.1.26",
+    "@nestjs/testing": "^11.1.27",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.14.1",
     "@types/supertest": "^6.0.3",
-    "jest": "^29.7.0",
-    "prisma": "^6.19.3",
+    "jest": "^30.4.2",
+    "prisma": "^7.8.0",
     "supertest": "^7.1.0",
     "ts-jest": "^29.3.2",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

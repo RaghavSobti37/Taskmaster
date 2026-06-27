@@ -6,6 +6,7 @@ import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/Quer
 import MailStatsSummary from '../../components/admin/MailStatsSummary';
 import MailCampaignList from '../../components/emails/MailCampaignList';
 import { useMailStats, useMailCampaigns } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 export default function EmailsOverviewPage() {
   const navigate = useNavigate();
@@ -15,7 +16,8 @@ export default function EmailsOverviewPage() {
     error: statsErr,
     refetch: refetchStats,
   } = useMailStats();
-  const { data: campaigns = [] } = useMailCampaigns();
+  const deferMailSecondary = useDeferredQueryEnabled(true, { tier: 0 });
+  const { data: campaigns = [] } = useMailCampaigns(deferMailSecondary);
   const sending = campaigns.filter((c) => c.status === 'Sending').length;
 
   return (

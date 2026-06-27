@@ -3,6 +3,12 @@ const ExlyBooking = require('../models/ExlyBooking');
 const Lead = require('../models/Lead');
 const { parseOfferingTitle } = require('../utils/exlyUtils');
 const { computeBookingBreakdown } = require('../utils/exlyMetrics');
+const {
+  shortCourseName,
+  shortMentorName,
+  mapLeadToCourseEnrollment,
+  aggregateCourseEnrollments,
+} = require('../utils/exlyCourseLabels');
 
 const MASTERCLASS_RE = /masterclass|master class|webinar|workshop|live session|jamming|artist path/i;
 const COURSE_RE = /course|core tribe|program|academy|comprehensive/i;
@@ -43,15 +49,14 @@ function sessionWhen(off, dateStr, timeStr) {
 }
 
 function courseLabel(lead) {
-  const t = (lead.exlyOfferingTitle || lead.source || 'TSC Program').trim();
-  return t.replace(/\s*-\s*TOKEN\s*$/i, '').replace(/\s*\|\s*.*$/, '').trim();
+  return shortCourseName(lead.exlyOfferingTitle || lead.source || 'TSC Program');
 }
 
 function bookingKey(email, phone) {
   return `${(email || '').toLowerCase()}|${phone || ''}`;
 }
 
-async function convertedFromCohort(offeringId, title, bookings) {
+async function convertedFromCohort(offeringId, title, bookings, sessionMentor) {
   const keys = new Set(bookings.map((b) => bookingKey(b.email, b.phone)));
 
   const leads = await Lead.find({
@@ -63,26 +68,16 @@ async function convertedFromCohort(offeringId, title, bookings) {
       { 'exlyOfferings.offeringId': offeringId },
     ],
   })
-    .select('name email phone planOption exlyOfferingTitle source')
+    .select('name email phone planOption exlyOfferingTitle source metadata')
     .lean();
 
   const matched = leads.filter((l) => keys.has(bookingKey(l.email, l.phone)));
-  const courseCounts = new Map();
-  for (const l of matched) {
-    const c = courseLabel(l);
-    courseCounts.set(c, (courseCounts.get(c) || 0) + 1);
-  }
+  const students = matched.map((l) => mapLeadToCourseEnrollment(l, sessionMentor));
 
   return {
     count: matched.length,
-    students: matched.map((l) => ({
-      name: l.name || '',
-      course: courseLabel(l),
-      plan: l.planOption || '',
-    })),
-    courses: [...courseCounts.entries()]
-      .map(([course, count]) => ({ course, count }))
-      .sort((a, b) => b.count - a.count),
+    students,
+    courses: aggregateCourseEnrollments(students),
   };
 }
 
@@ -104,9 +99,9 @@ async function buildMasterclassFunnelReport() {
     if (!bookings.length) continue;
 
     const breakdown = computeBookingBreakdown(bookings);
-    const conv = await convertedFromCohort(off.offeringId, off.title, bookings);
     const { dateStr, timeStr } = parseOfferingTitle(off.title);
     const mentor = mentorFromTitle(off.title) || mentorFromTitle(sample?.offeringTitle || '');
+    const conv = await convertedFromCohort(off.offeringId, off.title, bookings, mentor);
 
     sessions.push({
       masterclass: masterclassName(off.title),
@@ -114,6 +109,7 @@ async function buildMasterclassFunnelReport() {
       sessionDate: off.eventDate || dateStr || '',
       sessionTime: off.eventTime || timeStr || '',
       mentor: mentor || 'TSC Faculty',
+      mentorShort: shortMentorName(mentor) || 'TSC',
       registrations: breakdown.totalBookings,
       paidRegistrations: breakdown.paidBookings,
       freeRegistrations: breakdown.freeBookings,
@@ -176,9 +172,11 @@ async function buildMasterclassFunnelReport() {
   return {
     generatedAt: new Date().toISOString(),
     dataLegend: {
-      registrations: 'Exly booking for this live masterclass session',
-      courseEnrollments: 'Same person (email/phone) marked Converted in CRM',
-      courseName: 'exlyOfferingTitle on the converted lead — the program they bought',
+      registrations: 'Exly sign-ups for this live masterclass (Sandesh or Prasad session)',
+      courseEnrollments: 'Same person marked Converted in CRM — matched by email/phone',
+      courseName: 'Short program name (e.g. Core Tribe) — not the full Exly offering title',
+      price: 'Deal value or plan at conversion (₹ amount they paid)',
+      mentor: 'Faculty who hosted this masterclass — maps to course funnel cohort',
     },
     summary: {
       masterclassSessions: sessions.length,
@@ -202,4 +200,5 @@ module.exports = {
   isMasterclassOffering,
   masterclassName,
   mentorFromTitle,
+  courseLabel,
 };

@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const useTeams = () => useQuery({
+export const useTeams = (enabled = true) => useQuery({
   queryKey: ['teams'],
   queryFn: async () => (await axios.get('/api/teams')).data,
   staleTime: 1000 * 60 * 10,
+  enabled,
 });
 
 export const useUpdateUser = () => {
@@ -53,10 +54,11 @@ export const useDeleteTeam = () => {
   });
 };
 
-export const usePlatformExclusions = () => useQuery({
+export const usePlatformExclusions = (enabled = true) => useQuery({
   queryKey: ['platform-exclusions'],
   queryFn: async () => (await axios.get('/api/admin/platform-settings/exclusions')).data,
   staleTime: 1000 * 60 * 5,
+  enabled,
 });
 
 const useUpdateUserDepartment = () => {

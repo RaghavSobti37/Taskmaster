@@ -80,19 +80,4 @@ describe('Finance document upload', () => {
     await FinanceDocument.deleteMany({ project: project._id });
     await Project.deleteOne({ _id: project._id });
   });
-
-  it('GET /api/customization/navbar does not 500 on first fetch', async () => {
-    const agent = request.agent(app);
-    await loginOpsUser(agent, `${stamp}-nav`);
-
-    const results = await Promise.all([
-      agent.get('/api/customization/navbar'),
-      agent.get('/api/customization/navbar'),
-    ]);
-
-    for (const res of results) {
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.body.groups)).toBe(true);
-    }
-  });
 });

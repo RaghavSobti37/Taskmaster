@@ -20,6 +20,7 @@ import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 import LeadLockIndicator from '../../components/crm/LeadLockIndicator';
 import LeadRowActions from '../../components/crm/LeadRowActions';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { applyFlashHighlight } from '../../utils/navigationHighlight';
 import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmView, isArtistCrmContext } from '../../utils/crmScope';
@@ -343,11 +344,14 @@ export default function LeadsPage() {
 
 
   const { data, isLoading, isError, error, refetch } = useLiveLeads(queryParams);
+  const primaryLeadsReady = !isLoading;
+  const deferCrmSecondary = useDeferredQueryEnabled(primaryLeadsReady, { tier: 0 });
+  const deferCrmTertiary = useDeferredQueryEnabled(primaryLeadsReady, { tier: 1 });
   const statsParams = useMemo(() => (artistMode ? { crmType: 'artist' } : {}), [artistMode]);
-  const { data: statsData } = useCRMStats(true, { queryParams: statsParams });
-  const { data: salesTeam = [] } = useSalesReps(true);
-  const { data: artistTeam = [] } = useArtistReps(true);
-  const { data: artistImportSheets = [] } = useArtistImportSheets(artistCrmView);
+  const { data: statsData } = useCRMStats(deferCrmSecondary, { queryParams: statsParams });
+  const { data: salesTeam = [] } = useSalesReps(deferCrmSecondary);
+  const { data: artistTeam = [] } = useArtistReps(deferCrmSecondary);
+  const { data: artistImportSheets = [] } = useArtistImportSheets(artistCrmView && deferCrmTertiary);
   const filterTeam = useMemo(() => {
     if (artistMode) return artistTeam;
     const byId = new Map();
@@ -358,7 +362,7 @@ export default function LeadsPage() {
       String(a.name || '').localeCompare(String(b.name || '')));
   }, [artistMode, salesTeam, artistTeam]);
   const assignTeam = artistRepContext || artistMode ? artistTeam : filterTeam;
-  const { data: crmConfig } = useCRMConfig();
+  const { data: crmConfig } = useCRMConfig(deferCrmSecondary);
 
   const leads = data?.leads || [];
   const totalLeads = data?.total || 0;

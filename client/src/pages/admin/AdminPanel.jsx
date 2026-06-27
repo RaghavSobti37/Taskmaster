@@ -36,6 +36,7 @@ import {
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
@@ -58,11 +59,12 @@ const AdminPanel = () => {
   }, [setSearchParams]);
   
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
-  const { data: teams = [] } = useTeams();
-  const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
-  const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
-  const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
-  const { data: platformExclusions = {} } = usePlatformExclusions();
+  const deferAdminRibbon = useDeferredQueryEnabled(!usersLoading);
+  const { data: teams = [] } = useTeams(deferAdminRibbon);
+  const { data: crmStats } = useCRMStats(deferAdminRibbon, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: mailStats } = useMailStats(deferAdminRibbon, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: folderData } = useDataHubFolders({ ...ADMIN_DATA_HUB_FOLDER_OPTS, enabled: deferAdminRibbon });
+  const { data: platformExclusions = {} } = usePlatformExclusions(deferAdminRibbon);
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();

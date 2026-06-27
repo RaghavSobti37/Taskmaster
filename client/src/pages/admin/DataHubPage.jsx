@@ -20,6 +20,7 @@ import {
   DATA_HUB_REFRESH_MS,
 } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useDebounce } from '../../hooks/useDebounce';
 import DataHubInletCluster from '../../components/dataHub/DataHubInletCluster';
 import DataHubTemporalColumn from '../../components/dataHub/DataHubTemporalColumn';
@@ -119,12 +120,13 @@ export function DataHubContent() {
   const { confirm } = useConfirm();
   const toast = useToast();
   const { data: folderData, isError: foldersError, error: foldersErr } = useDataHubFolders();
+  const deferDataHubSecondary = useDeferredQueryEnabled(folderData !== undefined);
   const reconcileMutation = useDataHubReconcile();
   const backupMutation = useDataHubProductionBackup();
-  const { data: syncStatus } = useDataHubSyncStatus();
+  const { data: syncStatus } = useDataHubSyncStatus({ enabled: deferDataHubSecondary });
   const reconcileEnabled = syncStatus?.reconcileEnabled !== false;
   const localDevMode = Boolean(syncStatus?.localDevMode);
-  const { data: backupStatus } = useDataHubBackups();
+  const { data: backupStatus } = useDataHubBackups({ enabled: deferDataHubSecondary });
   const autoSyncInFlight = useRef(false);
   const [userSyncActive, setUserSyncActive] = useState(false);
   const reconcileRef = useRef(reconcileMutation);

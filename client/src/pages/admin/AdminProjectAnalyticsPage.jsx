@@ -16,6 +16,7 @@ import ProjectReportRangeControls from '../../components/project/ProjectReportRa
 import ProjectAnalyticsContent from '../../components/project/ProjectAnalyticsContent';
 import { useProjects, useProjectsAnalyticsSummary } from '../../hooks/useTaskmasterQueries';
 import { useProjectReportRangeState } from '../../hooks/useProjectReportRangeState';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const AdminProjectAnalyticsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,11 +27,12 @@ const AdminProjectAnalyticsPage = () => {
   const rangeState = useProjectReportRangeState();
   const { queryParams, queryEnabled, rangeSubtitle } = rangeState;
 
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const deferSummary = useDeferredQueryEnabled(!projectsLoading);
   const { data: summary, isLoading: summaryLoading, isFetching: summaryFetching, error: summaryError } = useProjectsAnalyticsSummary(
     queryParams,
-    queryEnabled
+    queryEnabled && deferSummary
   );
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
   const summaryByProjectId = useMemo(() => {
     const map = new Map();

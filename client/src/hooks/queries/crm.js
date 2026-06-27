@@ -79,10 +79,11 @@ const useCRMImports = (enabled = true, params = {}) => useQuery({
   staleTime: 1000 * 60 * 5,
 });
 
-export const useCRMConfig = () => useQuery({
+export const useCRMConfig = (enabled = true) => useQuery({
   queryKey: ['crm', 'config'],
   queryFn: async () => (await axios.get('/api/crm/config')).data,
   staleTime: 1000 * 60 * 10,
+  enabled,
 });
 
 export const useCRMStats = (enabled = true, options = {}) => useQuery({

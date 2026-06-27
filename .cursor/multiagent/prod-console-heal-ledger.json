@@ -2,7 +2,7 @@
   "slug": "prod-console-heal",
   "goal": "Fix prod console: socket to Render, attendance 401, sync token, landing path",
   "createdAt": "2026-06-27T00:00:00.000Z",
-  "phase": "workers",
+  "phase": "complete",
   "slices": [
     {
       "sliceId": "vercel-socket-attendance",
@@ -22,9 +22,9 @@
         "npm run test --prefix client -- apiBase realtime",
         "node client/scripts/generateVercelConfig.cjs"
       ],
-      "status": "in_progress",
+      "status": "done",
       "workerAgentId": null,
-      "evidence": "",
+      "evidence": "Removed Nest /api/attendance strangler from vercel.json; generateVercelConfig writes VITE_API_URL + preview-only Nest strangler; tests 7/7 pass",
       "blockedReason": ""
     },
     {
@@ -41,9 +41,9 @@
       "verifyCommands": [
         "npm run build --prefix client"
       ],
-      "status": "in_progress",
+      "status": "done",
       "workerAgentId": null,
-      "evidence": "",
+      "evidence": "App.jsx /landing route + Navigate; siteUrls LANDING_ORIGIN defaults to APP_ORIGIN/landing; client build exit 0",
       "blockedReason": ""
     },
     {
@@ -59,9 +59,9 @@
       "verifyCommands": [
         "npm run test --prefix client -- apiBase"
       ],
-      "status": "in_progress",
+      "status": "done",
       "workerAgentId": null,
-      "evidence": "",
+      "evidence": "connectSyncEngine uses getSyncApiBase() — Render direct on desktop prod, same-origin on mobile/PWA",
       "blockedReason": ""
     }
   ],
@@ -71,11 +71,16 @@
       "coreknot/Taskmaster/.cursor/multiagent/prod-console-heal-ledger.json"
     ],
     "runsAfter": ["vercel-socket-attendance", "landing-routes", "sync-token-auth"],
-    "status": "pending"
+    "status": "done"
   },
   "testAgent": {
-    "status": "pending",
-    "commandsRun": [],
+    "status": "pass",
+    "commandsRun": [
+      "npm run test --prefix client -- apiBase realtime (7/7)",
+      "npm run build --prefix client (exit 0)",
+      "curl $RENDER_API_PROXY_URL/api/health (200)",
+      "local dist embeds VITE_API_URL from RENDER_API_PROXY_URL"
+    ],
     "lastFailure": ""
   }
 }

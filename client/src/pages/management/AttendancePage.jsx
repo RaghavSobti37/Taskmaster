@@ -21,6 +21,7 @@ import { resolveRowEntry } from '../../utils/attendanceRosterVisibility';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import {
   isAttendanceHoliday,
@@ -186,6 +187,7 @@ const AttendancePage = () => {
     : format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
 
   const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit && showTeamOverview);
+  const deferTeamSecondary = useDeferredQueryEnabled(!isLoading);
   const rosterParams = useMemo(() => ({
     viewMode,
     ...(viewMode === VIEW_MODES.MONTH
@@ -197,11 +199,11 @@ const AttendancePage = () => {
   }), [viewMode, monthView]);
   const { data: visibleUsers = [], isLoading: usersLoading } = useAttendanceRosterUsers(
     rosterParams,
-    canEdit && showTeamOverview
+    canEdit && showTeamOverview && deferTeamSecondary
   );
   const { data: approvedLeaves = [] } = useLeaveRequests(
     { status: 'approved' },
-    canEdit && showTeamOverview
+    canEdit && showTeamOverview && deferTeamSecondary
   );
   const {
     data: selfMonthRows = [],
@@ -216,7 +218,8 @@ const AttendancePage = () => {
   const { data: selfTodayRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const selfTodayEntry = selfTodayRows[0];
 
-  const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit);
+  const deferPendingLeaves = useDeferredQueryEnabled(!isLoading);
+  const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit && deferPendingLeaves);
   
   const upsertAttendance = useUpsertAttendance();
   const approveAttendance = useApproveAttendance();

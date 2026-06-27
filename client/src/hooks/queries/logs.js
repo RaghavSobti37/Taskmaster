@@ -43,10 +43,11 @@ export const useUserDirectory = (enabled = true) => useQuery({
   refetchOnWindowFocus: false,
 });
 
-export const useActivityGrid = () => useQuery({
+export const useActivityGrid = (enabled = true) => useQuery({
   queryKey: ['logs', 'activityGrid'],
   queryFn: async () => (await axios.get('/api/logs/activity-grid')).data,
   staleTime: 1000 * 60 * 10,
+  enabled,
 });
 
 export const useCreateLog = () => {

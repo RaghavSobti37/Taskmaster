@@ -18,6 +18,7 @@ import {
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { formatLastActivity } from '../../utils/formatLastActivity';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import {
   useUserDirectory, useCRMStats, useMailStats, useDataHubFolders,
   useUpdateUser, useDeleteUser, useCreateUser,
@@ -55,11 +56,12 @@ const AdminUsers = () => {
   const [showCreateUser, setShowCreateUser] = useState(false);
 
   const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
-  const { data: departments = [] } = useDepartments();
-  const { data: platformExclusions = {} } = usePlatformExclusions();
-  const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
-  const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
-  const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
+  const deferAdminRibbon = useDeferredQueryEnabled(!usersLoading);
+  const { data: departments = [] } = useDepartments(false, deferAdminRibbon);
+  const { data: platformExclusions = {} } = usePlatformExclusions(deferAdminRibbon);
+  const { data: crmStats } = useCRMStats(deferAdminRibbon, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: mailStats } = useMailStats(deferAdminRibbon, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: folderData } = useDataHubFolders({ ...ADMIN_DATA_HUB_FOLDER_OPTS, enabled: deferAdminRibbon });
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();

@@ -29,6 +29,7 @@ export const useDataHubFolders = (options = {}) => {
     refetchInterval,
     refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
     refetchOnMount: options.refetchOnMount,
+    enabled: options.enabled !== false,
   });
 };
 
@@ -62,11 +63,12 @@ export const useDataHubAnalytics = (folder = 'all', options = {}) => useQuery({
   refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
 });
 
-export const useDataHubSyncStatus = () => useQuery({
+export const useDataHubSyncStatus = (options = {}) => useQuery({
   queryKey: ['dataHub', 'syncStatus'],
   queryFn: async () => (await axios.get('/api/data-hub/sync-status')).data,
   staleTime: DATA_HUB_REFRESH_MS,
   refetchInterval: DATA_HUB_REFRESH_MS,
+  enabled: options.enabled !== false,
 });
 
 export const useDataHubReconcile = () => {

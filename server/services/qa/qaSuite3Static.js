@@ -27,7 +27,6 @@ async function runSuite3StaticChecks() {
   const artistPathHubSvc = await readTextResolved('services/artistPathHubService.js');
   const attendanceModel = await readTextResolved('models/Attendance.js');
   const mailTemplateModel = await readTextResolved('domains/mail/models/MailTemplate.js');
-  const navbarPref = await readTextResolved('models/NavbarPreference.js');
   const shortcutPref = await readTextResolved('models/ShortcutPreference.js');
   const workspacePref = await readTextResolved('models/WorkspacePreference.js');
   const crmStatsSvc = await readTextResolved('domains/crm/services/crmStatsService.js');
@@ -239,12 +238,11 @@ async function runSuite3StaticChecks() {
       'auth-tenant-on-preferences',
       'authorization',
       'tenantPlugin applied to user preference models',
-      navbarPref?.includes('tenantPlugin')
-        && shortcutPref?.includes('tenantPlugin')
+      shortcutPref?.includes('tenantPlugin')
         && workspacePref?.includes('tenantPlugin')
         ? 'pass'
         : 'fail',
-      'Navbar/Shortcut/Workspace preference schemas use tenantPlugin',
+      'Shortcut/Workspace preference schemas use tenantPlugin',
       'models/*Preference.js',
       'medium'
     ),

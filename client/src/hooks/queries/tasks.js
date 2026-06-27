@@ -49,12 +49,13 @@ export const filterTasksForUser = (tasks, userId) => {
   return filtered;
 };
 
-export const useTasks = (userId, { includeOldCompleted = false } = {}) => {
+export const useTasks = (userId, { includeOldCompleted = false } = {}, enabled = true) => {
   return useQuery({
     queryKey: includeOldCompleted ? ['tasks', 'all-completed'] : ['tasks'],
     queryFn: () => fetchTasks({ includeOldCompleted }),
     placeholderData: keepPreviousData,
     select: (tasks) => filterTasksForUser(tasks, userId),
+    enabled: enabled && !!userId,
   });
 };
 

@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { crmQueryParamsForUser } from '../../utils/crmScope';
 import { useLiveLeads, useSalesReps, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { format, isPast, isToday, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -74,8 +75,9 @@ export default function FollowupsPage() {
 
   const leads = data?.leads || [];
   const followupPages = data?.pages || 1;
-  const { data: team = [] } = useSalesReps();
-  const { data: crmConfig } = useCRMConfig();
+  const deferFollowupSecondary = useDeferredQueryEnabled(!isLoading);
+  const { data: team = [] } = useSalesReps(deferFollowupSecondary);
+  const { data: crmConfig } = useCRMConfig(deferFollowupSecondary);
 
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];

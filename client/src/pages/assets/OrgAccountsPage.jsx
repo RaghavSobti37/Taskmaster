@@ -15,6 +15,7 @@ import { NexusModal, ModalFooter } from '../../components/ui/modals';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const CATEGORIES = [
   { value: 'email', label: 'Email' },
@@ -165,9 +166,11 @@ const OrgAccountsPage = () => {
     queryFn: async () => (await axios.get('/api/org-accounts')).data,
   });
 
+  const deferOrgProjects = useDeferredQueryEnabled(!isLoading);
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => (await axios.get('/api/projects')).data,
+    enabled: deferOrgProjects,
   });
 
   const saveMutation = useMutation({

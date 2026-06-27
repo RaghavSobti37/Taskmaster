@@ -37,6 +37,7 @@ import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
 import MentionTextarea from '../../components/mentions/MentionTextarea';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const EMPTY_ASSET_FORM = { projectIds: [], name: '', link: '', type: 'other', notes: '' };
 
@@ -50,7 +51,6 @@ const openAssetLink = (link) => {
 const AssetsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: workspaces = [] } = useWorkspaces();
   const {
     data: assets = [],
     isLoading: loadingAssets,
@@ -58,14 +58,16 @@ const AssetsPage = () => {
     error: assetsErr,
     refetch: refetchAssets,
   } = useAssets();
+  const deferAssetsSecondary = useDeferredQueryEnabled(!loadingAssets);
+  const { data: workspaces = [] } = useWorkspaces(deferAssetsSecondary);
   const {
     data: projects = [],
     isLoading: loadingProjects,
     isError: projectsError,
     error: projectsErr,
     refetch: refetchProjects,
-  } = useProjects();
-  const { data: googleAccounts = [] } = useGoogleAccounts();
+  } = useProjects(deferAssetsSecondary);
+  const { data: googleAccounts = [] } = useGoogleAccounts(deferAssetsSecondary);
   const createAsset = useCreateAsset();
   const updateAsset = useUpdateAsset();
   const deleteAsset = useDeleteAsset();

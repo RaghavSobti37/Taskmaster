@@ -30,6 +30,9 @@ import {
   getSectionGridStyle,
   getWidgetMinHeightClass,
   sortSectionWidgets,
+  getElementSection,
+  packSectionElements,
+  repackDashboardElements,
 } from '../../../lib/dashboardSections';
 import { DesktopRecommendedBanner, LoadingState, Button } from '../../../components/ui';
 import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
@@ -47,77 +50,7 @@ const SECTION_PREVIEW_HINTS = {
 
 const GRID_COLS = 4;
 
-const getElementSection = (el) => el.section || getWidgetSection(el.componentId);
-
-/** Pack widgets inside one section grid (respects size / col / row). */
-const packSectionElements = (sectionElements, maxCols) => {
-  const visibleEls = sectionElements.filter((e) => e.visible !== false);
-  const hiddenEls = sectionElements.filter((e) => e.visible === false);
-
-  const reqPos = [...visibleEls].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.row - b.row) || (a.col - b.col)
-  );
-
-  const grid = [];
-  const isOccupied = (r, c, size) => {
-    for (let i = 0; i < size; i++) {
-      if (grid[r] && grid[r][c + i]) return true;
-    }
-    return false;
-  };
-  const markOccupied = (r, c, size) => {
-    if (!grid[r]) grid[r] = [];
-    for (let i = 0; i < size; i++) grid[r][c + i] = true;
-  };
-
-  const placed = [];
-  for (const el of reqPos) {
-    const sizeNum = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
-    let placedRow = 1;
-    let placedCol = 1;
-    let found = false;
-
-    for (let r = 1; r < 100; r++) {
-      for (let c = 1; c <= maxCols - sizeNum + 1; c++) {
-        if (!isOccupied(r, c, sizeNum)) {
-          placedRow = r;
-          placedCol = c;
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
-    }
-
-    markOccupied(placedRow, placedCol, sizeNum);
-    placed.push({ ...el, row: placedRow, col: placedCol, size: String(sizeNum) });
-  }
-
-  return [...placed, ...hiddenEls];
-};
-
-const repackAllSections = (elements) => {
-  const hidden = elements.filter((e) => e.visible === false);
-  const packed = [];
-
-  for (const section of DASHBOARD_SECTIONS) {
-    const sectionEls = elements.filter(
-      (e) => e.visible !== false && getElementSection(e) === section.id
-    );
-    if (sectionEls.length) {
-      packed.push(...packSectionElements(sectionEls, sectionMaxCols(section.id)));
-    }
-  }
-
-  const packedIds = new Set(packed.map((e) => e.componentId));
-  elements
-    .filter((e) => e.visible !== false && !packedIds.has(e.componentId))
-    .forEach((e) => packed.push(e));
-
-  return [...packed, ...hidden];
-};
-
-const resolveCollisions = (elements) => repackAllSections(elements);
+const resolveCollisions = (elements) => repackDashboardElements(elements);
 
 const mergeSectionPacked = (allElements, sectionId, orderedSectionEls) => {
   const packed = packSectionElements(orderedSectionEls, sectionMaxCols(sectionId));
@@ -326,7 +259,7 @@ export default function DashboardCustomizationTab() {
   const toggleVisibility = (componentId, e) => {
     if (e) e.stopPropagation();
     setDashboardElements((prev) =>
-      repackAllSections(
+      repackDashboardElements(
         prev.map((el) =>
           el.componentId === componentId ? { ...el, visible: !el.visible } : el
         )
@@ -344,7 +277,7 @@ export default function DashboardCustomizationTab() {
       const current = Math.min(parseInt(target.size, 10) || 1, maxCols);
       const next = Math.min(maxCols, Math.max(1, current + delta));
       if (next === current) return prev;
-      return repackAllSections(
+      return repackDashboardElements(
         prev.map((e) =>
           e.componentId === componentId ? { ...e, size: String(next) } : e
         )
@@ -424,7 +357,7 @@ export default function DashboardCustomizationTab() {
           },
         ];
       }
-      return repackAllSections(next);
+      return repackDashboardElements(next);
     });
     setSelectedTemplate('custom');
 

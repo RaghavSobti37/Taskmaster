@@ -231,7 +231,7 @@ export function groupElementsBySection(elements, permissionPreset) {
   });
 
   Object.keys(groups).forEach((sectionId) => {
-    groups[sectionId].sort((a, b) => a.order - b.order);
+    groups[sectionId] = sortSectionWidgets(groups[sectionId]);
   });
 
   return groups;
@@ -242,6 +242,74 @@ export function resolveSectionState(presetSectionState) {
     ...DEFAULT_SECTION_STATE,
     ...(presetSectionState || {}),
   };
+}
+
+export function sectionMaxCols(sectionId) {
+  if (sectionId === 'more') return 3;
+  return 4;
+}
+
+export function sortSectionWidgets(widgets) {
+  return [...widgets].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.row - b.row) || (a.col - b.col)
+  );
+}
+
+export function getWidgetGridStyle(el, sectionId) {
+  const maxCols = sectionMaxCols(sectionId);
+  const size = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
+  return { gridColumn: `span ${size}` };
+}
+
+export function getSectionGridStyle(sectionId) {
+  const cols = sectionMaxCols(sectionId);
+  const minRow = sectionId === 'status-strip' ? 120 : sectionId === 'analytics' ? 140 : 150;
+  return {
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridAutoRows: `minmax(${minRow}px, auto)`,
+    gridAutoFlow: 'row dense',
+  };
+}
+
+export function getWidgetMinHeightClass(sectionId) {
+  if (sectionId === 'status-strip') return 'min-h-[120px]';
+  if (sectionId === 'analytics') return 'min-h-[140px]';
+  if (sectionId === 'team-context') return 'min-h-[200px]';
+  return 'min-h-[160px]';
+}
+
+const TASK_WIDGET_IDS = new Set(['todos-today', 'todos-overdue']);
+
+/** Daily row: collapse today + overdue into my-tasks while keeping saved widths/order */
+export function prepareDailyActionRenderList(sectionElements) {
+  const sorted = sortSectionWidgets(sectionElements);
+  const ids = new Set(sectionElements.map((e) => e.componentId));
+  const hasTasks = ids.has('todos-today') || ids.has('todos-overdue');
+  const today = sorted.find((e) => e.componentId === 'todos-today');
+  const overdue = sorted.find((e) => e.componentId === 'todos-overdue');
+  const result = [];
+  let tasksMerged = false;
+
+  for (const el of sorted) {
+    if (TASK_WIDGET_IDS.has(el.componentId)) {
+      if (!tasksMerged && hasTasks) {
+        tasksMerged = true;
+        result.push({
+          componentId: 'my-tasks',
+          section: 'daily-actions',
+          order: Math.min(today?.order ?? overdue?.order ?? 0, overdue?.order ?? today?.order ?? 0),
+          row: Math.min(today?.row ?? overdue?.row ?? 1, overdue?.row ?? today?.row ?? 1),
+          col: today?.col ?? overdue?.col ?? 1,
+          size: today?.size || overdue?.size || '2',
+          visible: true,
+        });
+      }
+      continue;
+    }
+    result.push(el);
+  }
+
+  return sortSectionWidgets(result);
 }
 
 /** Daily row: merge today + overdue into one slot; order follows saved grid order */

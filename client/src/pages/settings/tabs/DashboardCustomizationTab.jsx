@@ -25,6 +25,11 @@ import {
   getWidgetSection,
   normalizeDashboardElements,
   resolveSectionState,
+  sectionMaxCols,
+  getWidgetGridStyle,
+  getSectionGridStyle,
+  getWidgetMinHeightClass,
+  sortSectionWidgets,
 } from '../../../lib/dashboardSections';
 import { DesktopRecommendedBanner, LoadingState, Button } from '../../../components/ui';
 import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
@@ -39,11 +44,6 @@ const SECTION_PREVIEW_HINTS = {
   analytics: 'CRM stats, campaigns, department metrics, PostHog',
   more: 'Notes, pin board, composer, daily missions',
 };
-
-function sectionMaxCols(sectionId) {
-  if (sectionId === 'more') return 3;
-  return 4;
-}
 
 const GRID_COLS = 4;
 
@@ -164,28 +164,6 @@ const buildSavePayload = (elements) => {
 
   return payload;
 };
-
-function widgetGridStyle(el, sectionId) {
-  const maxCols = sectionMaxCols(sectionId);
-  const size = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
-  return { gridColumn: `span ${size}` };
-}
-
-function sectionGridStyle(sectionId) {
-  const cols = sectionMaxCols(sectionId);
-  const minRow = sectionId === 'status-strip' ? 120 : sectionId === 'analytics' ? 140 : 150;
-  return {
-    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-    gridAutoRows: `minmax(${minRow}px, auto)`,
-    gridAutoFlow: 'row dense',
-  };
-}
-
-function widgetCardMinHeight(sectionId) {
-  if (sectionId === 'status-strip') return 'min-h-[120px]';
-  if (sectionId === 'analytics') return 'min-h-[140px]';
-  return 'min-h-[150px]';
-}
 
 export default function DashboardCustomizationTab() {
   const { user } = useAuth();
@@ -684,8 +662,8 @@ export default function DashboardCustomizationTab() {
         }}
         onDragLeave={() => setDropTargetId(null)}
         onDrop={handleDropOnWidget(el.componentId, sectionId)}
-        style={widgetGridStyle(el, sectionId)}
-        className={`${widgetCardMinHeight(sectionId)} w-full min-h-0 self-stretch overflow-hidden bg-[var(--color-bg-primary)] rounded-[var(--radius-atomic)] flex flex-col pt-3 pb-2 px-3 relative group box-border transition-[box-shadow,opacity] ${
+        style={getWidgetGridStyle(el, sectionId)}
+        className={`${getWidgetMinHeightClass(sectionId)} w-full min-h-0 self-stretch overflow-hidden bg-[var(--color-bg-primary)] rounded-[var(--radius-atomic)] flex flex-col pt-3 pb-2 px-3 relative group box-border transition-[box-shadow,opacity] ${
           isDragging ? 'opacity-40' : ''
         } ${isDropTarget ? 'ring-2 ring-blue-500' : ''}`}
       >
@@ -758,7 +736,7 @@ export default function DashboardCustomizationTab() {
     <div
       data-section-grid={sectionId}
       className="grid w-full gap-3 items-stretch"
-      style={sectionGridStyle(sectionId)}
+      style={getSectionGridStyle(sectionId)}
       onDragOver={(e) => e.preventDefault()}
     >
       {widgets.map((el) => renderEditorWidgetCard(el, sectionId))}

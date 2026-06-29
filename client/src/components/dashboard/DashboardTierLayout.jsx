@@ -4,8 +4,12 @@ import MyTasksDashboardCard from './MyTasksDashboardCard';
 import {
   DASHBOARD_SECTIONS,
   groupElementsBySection,
-  resolveDailyActionSlots,
   resolveSectionState,
+  prepareDailyActionRenderList,
+  sortSectionWidgets,
+  getWidgetGridStyle,
+  getSectionGridStyle,
+  getWidgetMinHeightClass,
 } from '../../lib/dashboardSections';
 
 const DAILY_COMPACT = new Set(['mark-attendance', 'schedule', 'review-queue']);
@@ -39,16 +43,20 @@ export default function DashboardTierLayout({
     setSectionCollapsed((prev) => ({ ...prev, [sectionId]: collapsed }));
   }, []);
 
-  const dailySlots = useMemo(
-    () => resolveDailyActionSlots(groups['daily-actions'] || []),
+  const dailyWidgets = useMemo(
+    () => prepareDailyActionRenderList(groups['daily-actions'] || []),
     [groups]
   );
 
-  const renderDailySlot = (slot) => {
-    if (slot.type === 'my-tasks') {
+  const teamWidgets = useMemo(
+    () => sortSectionWidgets(groups['team-context'] || []),
+    [groups]
+  );
+
+  const renderLayoutWidget = (el, sectionId, widgetProps = {}) => {
+    if (el.componentId === 'my-tasks') {
       return (
         <MyTasksDashboardCard
-          key="my-tasks"
           tasks={tasks}
           projects={projects}
           workspaces={workspaces}
@@ -58,71 +66,37 @@ export default function DashboardTierLayout({
         />
       );
     }
-    return (
-      <div key={slot.componentId} className="min-h-[160px] h-full">
-        {renderWidget(slot.componentId, { compact: DAILY_COMPACT.has(slot.componentId) })}
-      </div>
-    );
+
+    const compact = widgetProps.compact ?? DAILY_COMPACT.has(el.componentId);
+    return renderWidget(el.componentId, { ...widgetProps, compact });
   };
 
-  const renderSectionGrid = (sectionId, className) => {
-    const widgets = groups[sectionId] || [];
+  const renderSectionGrid = (sectionId, widgets, widgetProps = {}) => {
     if (!widgets.length) return null;
+    const minH = getWidgetMinHeightClass(sectionId);
 
-    if (sectionId === 'status-strip') {
-      return (
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
-          {widgets.map((el) => (
-            <div key={el.componentId} className="min-h-[120px]">
-              {renderWidget(el.componentId, { compact: true, maxItems: 3 })}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (sectionId === 'analytics') {
-      return (
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
-          {widgets.map((el) => (
-            <div key={el.componentId} className="min-h-[140px]">
-              {renderWidget(el.componentId, { compact: true, maxItems: 4 })}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (sectionId === 'more') {
-      return (
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${className}`}>
-          {widgets.map((el) => (
-            <div key={el.componentId} className="min-h-[160px]">
-              {renderWidget(el.componentId, { compact: true })}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const teamWidgets = groups['team-context'] || [];
-  const sortedTeam = useMemo(
-    () => [...teamWidgets].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [teamWidgets]
-  );
-
-  const renderTeamWidget = (el) => {
-    const spanClass =
-      el.componentId === 'leaderboard' ? 'lg:col-span-2' : '';
     return (
-      <div key={el.componentId} className={`min-h-[200px] ${spanClass}`}>
-        {renderWidget(el.componentId, { compact: true, maxItems: el.componentId === 'leaderboard' ? 5 : 4 })}
+      <div
+        className="grid w-full gap-3 items-stretch"
+        style={getSectionGridStyle(sectionId)}
+      >
+        {widgets.map((el) => (
+          <div
+            key={el.componentId}
+            className={`${minH} h-full`}
+            style={getWidgetGridStyle(el, sectionId)}
+          >
+            {renderLayoutWidget(el, sectionId, {
+              ...widgetProps,
+              maxItems: el.componentId === 'leaderboard' ? 5 : widgetProps.maxItems,
+            })}
+          </div>
+        ))}
       </div>
     );
   };
+
+  const teamSection = DASHBOARD_SECTIONS.find((s) => s.id === 'team-context');
 
   return (
     <div className="space-y-5">
@@ -135,24 +109,28 @@ export default function DashboardTierLayout({
           onCollapsedChange={(v) => setSection('status-strip', v)}
           strip
         >
-          {renderSectionGrid('status-strip')}
+          {renderSectionGrid('status-strip', sortSectionWidgets(groups['status-strip']), {
+            compact: true,
+            maxItems: 3,
+          })}
         </DashboardCollapsibleSection>
       )}
 
-      {dailySlots.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          {dailySlots.map((slot) => renderDailySlot(slot))}
+      {dailyWidgets.length > 0 && (
+        <div>
+          {renderSectionGrid('daily-actions', dailyWidgets)}
         </div>
       )}
 
-      {(sortedTeam.length > 0) && (
+      {teamWidgets.length > 0 && (
         <div className="space-y-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-0.5">
-            TEAM AND WORK CONTEXT
+            {teamSection?.sectionLabel || 'TEAM AND WORK CONTEXT'}
           </p>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-            {sortedTeam.map((el) => renderTeamWidget(el))}
-          </div>
+          {renderSectionGrid('team-context', teamWidgets, {
+            compact: true,
+            maxItems: 4,
+          })}
         </div>
       )}
 
@@ -165,7 +143,10 @@ export default function DashboardTierLayout({
           collapsed={sectionCollapsed.analytics}
           onCollapsedChange={(v) => setSection('analytics', v)}
         >
-          {renderSectionGrid('analytics')}
+          {renderSectionGrid('analytics', sortSectionWidgets(groups.analytics), {
+            compact: true,
+            maxItems: 4,
+          })}
         </DashboardCollapsibleSection>
       )}
 
@@ -177,7 +158,7 @@ export default function DashboardTierLayout({
           collapsed={sectionCollapsed.more}
           onCollapsedChange={(v) => setSection('more', v)}
         >
-          {renderSectionGrid('more')}
+          {renderSectionGrid('more', sortSectionWidgets(groups.more), { compact: true })}
         </DashboardCollapsibleSection>
       )}
     </div>

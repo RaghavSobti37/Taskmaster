@@ -15,7 +15,6 @@ import {
   UserPlus,
   Building2,
   CircleDollarSign,
-  Shield,
   Sun,
   Moon,
   LayoutGrid,
@@ -38,7 +37,7 @@ const MENU_SECTIONS = [
       { path: '/settings', label: 'Settings & profile', icon: Settings },
       { path: '/projects', label: 'Projects', icon: Briefcase },
       { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
-      { path: '/admin/console', label: 'Admin', icon: Shield, adminOnly: true },
+      { action: 'fullNav', label: 'Browse all navigation', icon: LayoutGrid },
     ],
   },
   {
@@ -95,8 +94,8 @@ export default function MobileProfileMenu({ open, onClose }) {
     return MENU_SECTIONS.map((section) => ({
       ...section,
       items: section.items.filter((item) => {
+        if (item.action) return true;
         if (BOTTOM_NAV_PATHS.has(item.path)) return false;
-        if (item.adminOnly && !canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess)) return false;
         if (isNavDesktopOnly(item.path)) return false;
         return canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess);
       }),
@@ -179,10 +178,10 @@ export default function MobileProfileMenu({ open, onClose }) {
                   <div className="flex flex-col gap-0.5">
                     {section.items.map((item) => (
                       <MenuRow
-                        key={item.path}
+                        key={item.path || item.action}
                         icon={item.icon}
                         label={item.label}
-                        onClick={() => goTo(item.path)}
+                        onClick={() => (item.action === 'fullNav' ? openFullNav() : goTo(item.path))}
                       />
                     ))}
                   </div>
@@ -199,7 +198,6 @@ export default function MobileProfileMenu({ open, onClose }) {
                     label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                     onClick={toggleTheme}
                   />
-                  <MenuRow icon={LayoutGrid} label="Browse all navigation" onClick={openFullNav} />
                   <MenuRow icon={LogOut} label="Log out" onClick={handleLogout} />
                 </div>
               </div>

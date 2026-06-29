@@ -3,6 +3,7 @@ import {
   getWidgetGridStyle,
   prepareDailyActionRenderList,
   repackDashboardElements,
+  sortWidgetsForMobileStack,
 } from './dashboardSections';
 
 describe('dashboardSections grid layout', () => {
@@ -28,5 +29,23 @@ describe('dashboardSections grid layout', () => {
     const reviewMerged = merged.find((e) => e.componentId === 'review-queue');
     expect(reviewMerged?.col).toBe(3);
     expect(getWidgetGridStyle(reviewMerged, 'daily-actions').gridColumn).toBe('3 / span 2');
+  });
+
+  it('stacks widgets full width on mobile', () => {
+    expect(getWidgetGridStyle({ size: '2', col: 3, row: 2 }, 'daily-actions', { mobile: true }))
+      .toEqual({ gridColumn: '1 / -1' });
+  });
+
+  it('orders mobile stack with action widgets first', () => {
+    const ordered = sortWidgetsForMobileStack([
+      { componentId: 'review-queue', order: 5 },
+      { componentId: 'mark-attendance', order: 3 },
+      { componentId: 'my-tasks', order: 1 },
+    ]);
+    expect(ordered.map((w) => w.componentId)).toEqual([
+      'mark-attendance',
+      'my-tasks',
+      'review-queue',
+    ]);
   });
 });

@@ -4,6 +4,7 @@ import { HUB_CONFIG } from './navbarConfig';
 export const MOBILE_PAGE_LEVEL = {
   FULL: 'full',
   LIMITED: 'limited',
+  /** @deprecated Never returned — kept for imports; use LIMITED + banner instead */
   DESKTOP: 'desktop',
 };
 
@@ -13,57 +14,57 @@ const DEFAULT_ALTERNATIVES = [
   { label: 'Inbox', path: '/inbox' },
 ];
 
-const DESKTOP_ROUTE_RULES = [
+/** Routes that work on mobile but benefit from a soft desktop banner */
+const LIMITED_ROUTE_RULES = [
   {
-    match: (pathname) => /^\/admin(\/|$)/.test(pathname),
+    match: (pathname) => /^\/admin\//.test(pathname) && pathname !== '/admin/console',
     title: 'Admin Tools',
     description:
-      'Data Hub, script runner, QA scans, and system configuration need a large screen and keyboard. Open CoreKnot on your computer to use these tools.',
+      'Admin tables and config are usable on mobile; complex edits are easier on a large screen.',
   },
   {
     match: (pathname) => /^\/emails(\/|$)/.test(pathname),
     title: 'Email Campaigns',
     description:
-      'Campaign editor, template studio, and delivery analytics are built for desktop workflows. Review summaries and activity from a laptop or monitor.',
+      'Campaign editor and analytics work on mobile; template studio is easier on desktop.',
+    autoBanner: false,
   },
   {
     match: (pathname) => pathname === '/workflows' || pathname.startsWith('/workflows/'),
     title: 'Workflow Canvas',
     description:
-      'Visual workflow editing uses drag-and-drop on a wide canvas. Open this page on desktop for the full editor experience.',
+      'Workflow canvas scrolls on mobile; drag-and-drop editing is easier on a wide screen.',
   },
   {
     match: (pathname) => pathname === '/components',
     title: 'Component Showcase',
-    description: 'Internal design-system gallery is intended for desktop QA and development review.',
+    description: 'Design-system gallery is readable on mobile; QA review is easier on desktop.',
   },
   {
     match: (pathname) => /^\/campaign\//.test(pathname),
     title: 'Campaign Analytics',
-    description:
-      'Campaign drill-down charts and geo breakdowns are optimized for desktop. Open the campaign on a larger screen for full detail.',
+    description: 'Charts stack on mobile; open on desktop for multi-column analytics.',
   },
   {
     match: (pathname) => /\/analytics$/.test(pathname),
     title: 'Project Analytics',
-    description:
-      'Analytics dashboards use multi-column charts and dense tables. View them on desktop for the complete picture.',
+    description: 'Analytics dashboards stack on mobile; desktop shows full chart grid.',
+    autoBanner: false,
   },
   {
     match: (pathname) => pathname === '/office-assets' || pathname.startsWith('/office-assets/'),
     title: 'Office Assets',
-    description: 'Asset inventory management works best with desktop layout and keyboard shortcuts.',
+    description: 'Asset inventory is browsable on mobile; bulk edits are easier on desktop.',
   },
   {
     match: (pathname) => pathname === '/features',
     title: 'Features',
-    description: 'Marketing feature overview is formatted for wide screens.',
+    description: 'Marketing overview reflows on mobile; wide layout on desktop.',
   },
   {
     match: (pathname) => pathname === '/projects/new',
     title: 'Create Project',
-    description:
-      'Project setup includes multi-step forms and member pickers that are easier on desktop. You can still browse projects on mobile.',
+    description: 'Project setup forms stack on mobile; member pickers are easier on desktop.',
     alternatives: [
       { label: 'Projects', path: '/projects' },
       { label: 'Tasks', path: '/todo' },
@@ -72,14 +73,19 @@ const DESKTOP_ROUTE_RULES = [
   {
     match: (pathname) => /^\/workspaces\//.test(pathname),
     title: 'Workspace Settings',
-    description:
-      'Workspace configuration and permissions are easier to manage on a desktop screen.',
+    description: 'Workspace settings are editable on mobile; permissions UI is easier on desktop.',
     alternatives: [{ label: 'Projects', path: '/projects' }],
+  },
+  {
+    match: (pathname) => pathname === '/schedule',
+    title: 'Schedule',
+    description: 'Day-grouped task list on mobile; department grid on desktop.',
+    autoBanner: false,
   },
 ];
 
-/** Hub tabs that require desktop on mobile */
-const HUB_DESKTOP_TABS = {
+/** Hub tabs with limited mobile UX (still accessible) */
+const HUB_LIMITED_TABS = {
   '/management': ['finance'],
 };
 
@@ -87,19 +93,18 @@ const HUB_TAB_COPY = {
   finance: {
     title: 'Finance',
     description:
-      'Document folders, OCR review, and reimbursement workflows need desktop screen space. Open Finance on your computer.',
-    alternatives: [{ label: 'Announcements', path: '/management?tab=announcements' }],
+      'Browse folders on mobile; OCR review and split-pane preview work best on desktop.',
+    autoBanner: false,
   },
 };
 
-const NAV_DESKTOP_ONLY_PATHS = new Set(['/emails', '/admin/console']);
-
-function buildDesktopMeta(title, description, alternatives) {
+function buildLimitedMeta(title, description, alternatives, autoBanner = true) {
   return {
-    level: MOBILE_PAGE_LEVEL.DESKTOP,
+    level: MOBILE_PAGE_LEVEL.LIMITED,
     title,
     description,
     alternatives: alternatives || DEFAULT_ALTERNATIVES,
+    autoBanner,
   };
 }
 
@@ -112,59 +117,68 @@ export function getMobilePageSupport(pathname, search = '') {
   const normalizedSearch = search.startsWith('?') ? search.slice(1) : search;
   const params = new URLSearchParams(normalizedSearch);
 
-  for (const [hubPath, desktopTabs] of Object.entries(HUB_DESKTOP_TABS)) {
+  for (const [hubPath, limitedTabs] of Object.entries(HUB_LIMITED_TABS)) {
     if (pathname !== hubPath && !pathname.startsWith(`${hubPath}/`)) continue;
     const tab = params.get('tab');
     if (!tab) continue;
-    if (desktopTabs.includes(tab)) {
+    if (limitedTabs.includes(tab)) {
       const copy = HUB_TAB_COPY[tab];
       const hub = HUB_CONFIG[hubPath];
       const tabLabel = hub?.tabs?.find((t) => t.id === tab)?.label || copy?.title || tab;
-      return buildDesktopMeta(
+      return buildLimitedMeta(
         copy?.title || tabLabel,
-        copy?.description || `${tabLabel} is optimized for desktop.`,
-        copy?.alternatives
+        copy?.description || `${tabLabel} is easier to manage on desktop but available here.`,
+        copy?.alternatives,
+        copy?.autoBanner !== false
       );
     }
   }
 
-  for (const rule of DESKTOP_ROUTE_RULES) {
+  for (const rule of LIMITED_ROUTE_RULES) {
     if (rule.match(pathname)) {
-      return buildDesktopMeta(rule.title, rule.description, rule.alternatives);
+      return buildLimitedMeta(
+        rule.title,
+        rule.description,
+        rule.alternatives,
+        rule.autoBanner !== false
+      );
     }
   }
 
   if (/^\/artists\/[^/]+/.test(pathname)) {
-    return {
-      level: MOBILE_PAGE_LEVEL.LIMITED,
-      title: 'Artist Profile',
-      description: 'Artist analytics charts are easier to read on desktop. Core details remain available here.',
-    };
+    return buildLimitedMeta(
+      'Artist Profile',
+      'Artist analytics charts stack on mobile; core profile data remains available.'
+    );
   }
 
   if (/^\/projects\/[^/]+$/.test(pathname) && pathname !== '/projects/new') {
-    return {
-      level: MOBILE_PAGE_LEVEL.LIMITED,
-      title: 'Project Detail',
-      description: 'Kanban boards and task modals work on mobile with some layout constraints.',
-    };
+    return buildLimitedMeta(
+      'Project Detail',
+      'Kanban and task modals work on mobile; dense boards are easier on desktop.'
+    );
   }
 
-  return { level: MOBILE_PAGE_LEVEL.FULL };
+  return { level: MOBILE_PAGE_LEVEL.FULL, autoBanner: false };
 }
 
-/** Whether mobile should hard-block this route (desktop-only gate). */
-function isDesktopRequiredOnMobile(pathname, search = '') {
-  return getMobilePageSupport(pathname, search).level === MOBILE_PAGE_LEVEL.DESKTOP;
+/** Whether route should show auto-injected mobile banner */
+export function shouldShowMobileBanner(pathname, search = '') {
+  const support = getMobilePageSupport(pathname, search);
+  return (
+    support.level === MOBILE_PAGE_LEVEL.LIMITED &&
+    Boolean(support.description) &&
+    support.autoBanner !== false
+  );
 }
 
-/** Sidebar hint: fully desktop-only nav entry on mobile */
-export function isNavDesktopOnly(path) {
-  return NAV_DESKTOP_ONLY_PATHS.has(path);
+/** Sidebar: all nav entries reachable on mobile */
+export function isNavDesktopOnly(_path) {
+  return false;
 }
 
 /** Mobile-friendly pages for bottom nav / quick links */
-const MOBILE_PRIMARY_PATHS = [
+export const MOBILE_PRIMARY_PATHS = [
   '/dashboard',
   '/todo',
   '/projects',

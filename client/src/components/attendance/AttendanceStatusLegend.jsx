@@ -22,6 +22,10 @@ const AttendanceStatusLegend = ({ className = '' }) => (
       <span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" />
       No input
     </span>
+    <span className="flex items-center gap-1.5">
+      <span className="w-3 h-3 rounded-sm ring-2 ring-inset ring-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10" />
+      Today
+    </span>
   </div>
 );
 

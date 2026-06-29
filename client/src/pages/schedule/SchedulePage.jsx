@@ -7,6 +7,7 @@ import ListPageLayout from '../../components/ui/ListPageLayout';
 import EmptyState from '../../components/ui/EmptyState';
 import { DesktopRecommendedBanner } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
+import ScheduleMobileList from '../../components/schedule/ScheduleMobileList';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import ScheduleDayViewControl from '../../components/schedule/ScheduleDayViewControl';
 import { useSchedule, useWorkspaces, useProjects, useUserDirectory } from '../../hooks/useTaskmasterQueries';
@@ -109,7 +110,33 @@ const SchedulePage = () => {
         ],
       }}
     >
-      <DesktopRecommendedBanner message="Team schedule grid is desktop-only. Open this page on a laptop for the full department timeline." />
+      <DesktopRecommendedBanner message="Day-grouped list below on mobile; full department grid on desktop." />
+
+      <div className="lg:hidden space-y-3">
+        <ScheduleDayViewControl
+          dayCount={dayCount}
+          onDayCountChange={setDayCount}
+          rangeStartKey={today}
+          maxDays={MAX_SCHEDULE_DAYS}
+        />
+        {isError ? (
+          <EmptyState title="Could not load schedule" description={error?.message || 'Try refreshing the page.'} variant="subtle" />
+        ) : showInitialSkeleton ? (
+          <ScheduleSkeleton dayCount={dayCount} />
+        ) : !scheduleData?.departments?.length ? (
+          <EmptyState
+            title="No scheduled tasks"
+            description={`No active tasks are scheduled for the next ${dayLabel}.`}
+            variant="subtle"
+          />
+        ) : (
+          <ScheduleMobileList
+            data={scheduleData}
+            visibleDayCount={dayCount}
+            onTaskClick={setSelectedTask}
+          />
+        )}
+      </div>
 
       <div className="hidden lg:block space-y-3">
         <ScheduleDayViewControl

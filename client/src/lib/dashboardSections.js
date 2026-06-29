@@ -5,6 +5,7 @@ import {
   COMPONENT_REGISTRY,
   getAccessibleComponents,
   canAccessComponent,
+  getMobileWidgetOrder,
 } from './componentRegistry';
 
 export const DASHBOARD_LAYOUT_VERSION = 2;
@@ -255,7 +256,24 @@ export function sortSectionWidgets(widgets) {
   );
 }
 
-export function getWidgetGridStyle(el, sectionId) {
+/** Mobile stack: action widgets first, then saved order as tiebreaker. */
+export function sortWidgetsForMobileStack(widgets) {
+  const mobileOrderKey = (componentId) => {
+    if (componentId === 'my-tasks') return getMobileWidgetOrder('todos-today');
+    return getMobileWidgetOrder(componentId);
+  };
+
+  return [...widgets].sort(
+    (a, b) =>
+      mobileOrderKey(a.componentId) - mobileOrderKey(b.componentId)
+      || (a.order ?? 0) - (b.order ?? 0)
+  );
+}
+
+export function getWidgetGridStyle(el, sectionId, { mobile = false } = {}) {
+  if (mobile) {
+    return { gridColumn: '1 / -1' };
+  }
   const maxCols = sectionMaxCols(sectionId);
   const size = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
   const col = Math.min(
@@ -270,7 +288,15 @@ export function getWidgetGridStyle(el, sectionId) {
   };
 }
 
-export function getSectionGridStyle(sectionId) {
+export function getSectionGridStyle(sectionId, { mobile = false } = {}) {
+  if (mobile) {
+    return {
+      gridTemplateColumns: 'minmax(0, 1fr)',
+      gridAutoRows: 'auto',
+      gridAutoFlow: 'row',
+    };
+  }
+
   const cols = sectionMaxCols(sectionId);
   const minRow = sectionId === 'status-strip' ? 120 : sectionId === 'analytics' ? 140 : 150;
   return {
@@ -281,10 +307,10 @@ export function getSectionGridStyle(sectionId) {
 }
 
 export function getWidgetMinHeightClass(sectionId) {
-  if (sectionId === 'status-strip') return 'min-h-[120px]';
-  if (sectionId === 'analytics') return 'min-h-[140px]';
-  if (sectionId === 'team-context') return 'min-h-[200px]';
-  return 'min-h-[160px]';
+  if (sectionId === 'status-strip') return 'min-h-[100px] lg:min-h-[120px]';
+  if (sectionId === 'analytics') return 'min-h-[120px] lg:min-h-[140px]';
+  if (sectionId === 'team-context') return 'min-h-[140px] lg:min-h-[200px]';
+  return 'min-h-[120px] lg:min-h-[160px]';
 }
 
 export function getElementSection(el) {

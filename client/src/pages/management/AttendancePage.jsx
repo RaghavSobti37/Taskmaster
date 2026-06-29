@@ -255,7 +255,7 @@ const AttendancePage = () => {
   const selfRowMap = useMemo(() => {
     const map = new Map();
     selfMonthRows.forEach((entry) => {
-      map.set(`${String(entry.userId)}_${format(new Date(entry.date), 'yyyy-MM-dd')}`, entry);
+      map.set(`${String(entry.userId)}_${formatDateKeyIST(new Date(entry.date))}`, entry);
     });
     return map;
   }, [selfMonthRows]);

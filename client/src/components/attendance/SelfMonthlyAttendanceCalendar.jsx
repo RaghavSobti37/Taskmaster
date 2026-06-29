@@ -1,9 +1,10 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui';
 import { getHolidayLabel } from '../../utils/officeHolidays';
+import { formatDateKeyIST } from '../../utils/attendanceUtils';
 import AttendanceStatusLegend from './AttendanceStatusLegend';
 
 const SQUARE_COLORS = {
@@ -62,6 +63,7 @@ const SelfMonthlyAttendanceCalendar = ({
   }, [month]);
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const todayKey = formatDateKeyIST();
 
   // Split days into weeks
   const weeks = [];
@@ -101,16 +103,26 @@ const SelfMonthlyAttendanceCalendar = ({
             {weeks.map((week, idx) => (
               <tr key={idx} className="border-b last:border-b-0 border-[var(--color-bg-border)]">
                 {week.map(date => {
-                  const dateKey = format(date, 'yyyy-MM-dd');
+                  const dateKey = formatDateKeyIST(date);
                   const mapKey = `${userId}_${dateKey}`;
                   const entry = rowMap.get(mapKey);
                   const status = resolveStatus(entry, date);
-                  const isCurrentMonth = date.getMonth() === month.getMonth();
+                  const isCurrentMonth = format(date, 'yyyy-MM') === format(month, 'yyyy-MM');
+                  const isToday = dateKey === todayKey;
 
                   return (
-                    <td key={dateKey} className={`relative h-24 border-r last:border-r-0 border-[var(--color-bg-border)] p-2 align-top transition-colors hover:bg-[var(--color-bg-secondary)]/30 ${!isCurrentMonth ? 'opacity-40 bg-[var(--color-bg-secondary)]/50' : ''}`} title={buildTooltip(date, entry, status)}>
+                    <td
+                      key={dateKey}
+                      className={`relative h-24 border-r last:border-r-0 border-[var(--color-bg-border)] p-2 align-top transition-colors hover:bg-[var(--color-bg-secondary)]/30 ${!isCurrentMonth ? 'opacity-40 bg-[var(--color-bg-secondary)]/50' : ''} ${isToday ? 'ring-2 ring-inset ring-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5' : ''}`}
+                      title={buildTooltip(date, entry, status)}
+                      aria-current={isToday ? 'date' : undefined}
+                    >
                       <div className="flex flex-col items-center justify-center h-full gap-2">
-                        <span className="text-xs font-bold text-[var(--color-text-muted)] absolute top-2 left-2">{format(date, 'd')}</span>
+                        <span
+                          className={`text-xs font-bold absolute top-2 left-2 min-w-[1.5rem] h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-[var(--color-action-primary)] text-white' : 'text-[var(--color-text-muted)]'}`}
+                        >
+                          {format(date, 'd')}
+                        </span>
                         <div className={`w-8 h-8 rounded-lg border ${getSquareColor(status, entry)}`} />
                       </div>
                     </td>

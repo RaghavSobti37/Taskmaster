@@ -38,6 +38,7 @@ const MENU_SECTIONS = [
       { path: '/settings', label: 'Settings & profile', icon: Settings },
       { path: '/projects', label: 'Projects', icon: Briefcase },
       { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
+      { path: '/admin/console', label: 'Admin', icon: Shield, adminOnly: true },
     ],
   },
   {
@@ -57,7 +58,6 @@ const MENU_SECTIONS = [
       { path: '/crm', label: 'CRM', icon: UserPlus },
       { path: '/office', label: 'Office', icon: Building2 },
       { path: '/management', label: 'Management', icon: CircleDollarSign },
-      { path: '/admin/console', label: 'Admin', icon: Shield },
     ],
   },
 ];
@@ -96,6 +96,7 @@ export default function MobileProfileMenu({ open, onClose }) {
       ...section,
       items: section.items.filter((item) => {
         if (BOTTOM_NAV_PATHS.has(item.path)) return false;
+        if (item.adminOnly && !canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess)) return false;
         if (isNavDesktopOnly(item.path)) return false;
         return canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess);
       }),

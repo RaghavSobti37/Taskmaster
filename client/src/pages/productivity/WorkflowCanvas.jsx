@@ -99,7 +99,7 @@ const WorkflowCanvas = () => {
         className="!mb-0 border-amber-500/30 bg-amber-500/10 [&_span]:text-amber-800 dark:[&_span]:text-amber-200"
       />
 
-      <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
+      <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] overflow-x-auto custom-scrollbar">
         <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-wider px-2 flex items-center gap-1.5">
           <Layers size={14} className="text-[var(--color-action-primary)]" /> Toolbox:
         </span>
@@ -114,7 +114,7 @@ const WorkflowCanvas = () => {
         </Button>
       </div>
 
-      <div className="flex-1 w-full bg-[var(--color-bg-secondary)]/30 rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] overflow-hidden relative">
+      <div className="flex-1 w-full min-h-[min(70dvh,640px)] lg:min-h-[600px] bg-[var(--color-bg-secondary)]/30 rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] overflow-hidden relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}

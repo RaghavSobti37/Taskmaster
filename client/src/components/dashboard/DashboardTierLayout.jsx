@@ -7,6 +7,7 @@ import {
   resolveSectionState,
   prepareDailyActionRenderList,
   sortSectionWidgets,
+  sortWidgetsForMobileStack,
   getWidgetGridStyle,
   getSectionGridStyle,
   getWidgetMinHeightClass,
@@ -71,35 +72,55 @@ export default function DashboardTierLayout({
     return renderWidget(el.componentId, { ...widgetProps, compact });
   };
 
+  const renderWidgetCell = (el, sectionId, widgetProps, minH) => (
+    <div key={el.componentId} className={`${minH} min-w-0 w-full h-full`}>
+      {renderLayoutWidget(el, sectionId, {
+        ...widgetProps,
+        maxItems: el.componentId === 'leaderboard' ? 5 : widgetProps.maxItems,
+      })}
+    </div>
+  );
+
   const renderSectionGrid = (sectionId, widgets, widgetProps = {}) => {
     if (!widgets.length) return null;
+
     const minH = getWidgetMinHeightClass(sectionId);
+    const desktopWidgets = sortSectionWidgets(widgets);
+    const mobileWidgets = sortWidgetsForMobileStack(widgets);
 
     return (
-      <div
-        className="grid w-full gap-3 items-stretch"
-        style={getSectionGridStyle(sectionId)}
-      >
-        {widgets.map((el) => (
-          <div
-            key={el.componentId}
-            className={`${minH} h-full`}
-            style={getWidgetGridStyle(el, sectionId)}
-          >
-            {renderLayoutWidget(el, sectionId, {
-              ...widgetProps,
-              maxItems: el.componentId === 'leaderboard' ? 5 : widgetProps.maxItems,
-            })}
-          </div>
-        ))}
-      </div>
+      <>
+        <div
+          className="grid w-full min-w-0 gap-3 lg:hidden"
+          style={getSectionGridStyle(sectionId, { mobile: true })}
+        >
+          {mobileWidgets.map((el) => renderWidgetCell(el, sectionId, widgetProps, minH))}
+        </div>
+        <div
+          className="hidden w-full min-w-0 gap-3 items-stretch lg:grid"
+          style={getSectionGridStyle(sectionId)}
+        >
+          {desktopWidgets.map((el) => (
+            <div
+              key={el.componentId}
+              className={`${minH} min-w-0 h-full`}
+              style={getWidgetGridStyle(el, sectionId)}
+            >
+              {renderLayoutWidget(el, sectionId, {
+                ...widgetProps,
+                maxItems: el.componentId === 'leaderboard' ? 5 : widgetProps.maxItems,
+              })}
+            </div>
+          ))}
+        </div>
+      </>
     );
   };
 
   const teamSection = DASHBOARD_SECTIONS.find((s) => s.id === 'team-context');
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 min-w-0 lg:space-y-5">
       {(groups['status-strip']?.length ?? 0) > 0 && (
         <DashboardCollapsibleSection
           title="Status strip"
@@ -109,7 +130,7 @@ export default function DashboardTierLayout({
           onCollapsedChange={(v) => setSection('status-strip', v)}
           strip
         >
-          {renderSectionGrid('status-strip', sortSectionWidgets(groups['status-strip']), {
+          {renderSectionGrid('status-strip', groups['status-strip'], {
             compact: true,
             maxItems: 3,
           })}
@@ -117,13 +138,13 @@ export default function DashboardTierLayout({
       )}
 
       {dailyWidgets.length > 0 && (
-        <div>
+        <div className="min-w-0">
           {renderSectionGrid('daily-actions', dailyWidgets)}
         </div>
       )}
 
       {teamWidgets.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-0.5">
             {teamSection?.sectionLabel || 'TEAM AND WORK CONTEXT'}
           </p>
@@ -143,7 +164,7 @@ export default function DashboardTierLayout({
           collapsed={sectionCollapsed.analytics}
           onCollapsedChange={(v) => setSection('analytics', v)}
         >
-          {renderSectionGrid('analytics', sortSectionWidgets(groups.analytics), {
+          {renderSectionGrid('analytics', groups.analytics, {
             compact: true,
             maxItems: 4,
           })}
@@ -158,7 +179,7 @@ export default function DashboardTierLayout({
           collapsed={sectionCollapsed.more}
           onCollapsedChange={(v) => setSection('more', v)}
         >
-          {renderSectionGrid('more', sortSectionWidgets(groups.more), { compact: true })}
+          {renderSectionGrid('more', groups.more, { compact: true })}
         </DashboardCollapsibleSection>
       )}
     </div>

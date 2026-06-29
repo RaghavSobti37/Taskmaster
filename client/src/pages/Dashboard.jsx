@@ -294,7 +294,7 @@ const Dashboard = () => {
           aria-label="Customize dashboard layout"
         >
           <SlidersHorizontal size={14} />
-          Customize
+          <span className="hidden sm:inline">Customize</span>
         </Button>
       </div>
       <PinBoardProvider>

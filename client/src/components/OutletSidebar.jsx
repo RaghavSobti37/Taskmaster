@@ -20,7 +20,6 @@ import {
   Moon,
   Sun,
   Settings,
-  Monitor,
   UserPlus,
   Building2,
   CircleDollarSign,
@@ -34,7 +33,6 @@ import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
-import { isNavDesktopOnly } from '../utils/mobilePageSupport';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
@@ -121,7 +119,7 @@ const NAV_ICON_TONES = {
   '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, desktopOnly, iconTone, tourId }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
@@ -174,14 +172,6 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
               pulse={pillVariant === 'rose'}
               className="!border-[var(--color-bg-surface)]"
             />
-          )}
-          {desktopOnly && (
-            <span
-              className="shrink-0 flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400"
-              title="Best on desktop"
-            >
-              <Monitor size={11} strokeWidth={2.5} />
-            </span>
           )}
         </>
       )}
@@ -337,7 +327,6 @@ const OutletSidebar = () => {
           badgeVariant={navCounts.badgeVariant}
           onClick={isMobile ? closeMobileSidebar : undefined}
           onMouseEnter={() => prefetchNavPage(page.path)}
-          desktopOnly={isMobile && isNavDesktopOnly(page.path)}
           tourId={TOUR_ATTR_BY_PATH[page.path]}
         />
       );

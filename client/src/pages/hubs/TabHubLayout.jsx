@@ -4,13 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { HUB_CONFIG } from '../../utils/navbarConfig';
 import { HUB_NAV_META, withHubTabIcons } from '../../utils/hubSubnavConfig';
-import { useIsMobile } from '../../hooks/useBreakpoint';
-import { getMobilePageSupport, MOBILE_PAGE_LEVEL } from '../../utils/mobilePageSupport';
 import ModuleSubnav from '../../components/ui/ModuleSubnav';
 
 export default function TabHubLayout({ hubPath, panels }) {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const hub = HUB_CONFIG[hubPath];
   const shell = HUB_NAV_META[hubPath];
@@ -20,20 +17,10 @@ export default function TabHubLayout({ hubPath, panels }) {
     [hub, user]
   );
 
-  const mobileTabs = useMemo(
-    () => visibleTabs.filter((tab) => {
-      if (!isMobile) return true;
-      const support = getMobilePageSupport(hubPath, `?tab=${tab.id}`);
-      return support.level !== MOBILE_PAGE_LEVEL.DESKTOP;
-    }),
-    [visibleTabs, isMobile, hubPath]
-  );
-
   const tabParam = searchParams.get('tab');
-  const tabPool = isMobile ? mobileTabs : visibleTabs;
-  const resolvedTab = tabPool.find((tab) => tab.id === tabParam)?.id
-    || tabPool.find((tab) => tab.id === hub.defaultTab)?.id
-    || tabPool[0]?.id;
+  const resolvedTab = visibleTabs.find((tab) => tab.id === tabParam)?.id
+    || visibleTabs.find((tab) => tab.id === hub.defaultTab)?.id
+    || visibleTabs[0]?.id;
 
   useEffect(() => {
     if (!resolvedTab) return;
@@ -51,7 +38,7 @@ export default function TabHubLayout({ hubPath, panels }) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const subnavItems = withHubTabIcons(isMobile ? mobileTabs : visibleTabs).map((tab) => ({
+  const subnavItems = withHubTabIcons(visibleTabs).map((tab) => ({
     id: tab.id,
     label: tab.label,
     icon: tab.icon,

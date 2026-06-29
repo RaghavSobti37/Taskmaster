@@ -1,4 +1,3 @@
-const { PDFParse } = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const { getOcrMaxBytes, shouldRunImageOcr } = require('./financeOcrLimits');
 
@@ -46,11 +45,20 @@ function parseDateValue(raw) {
 /**
  * Extracts raw text from a PDF file buffer.
  */
+// ponytail: lazy require — pdf-parse v2 pulls pdfjs + canvas and crashes Render boot
+let pdfParseFn;
+function getPdfParse() {
+  if (!pdfParseFn) {
+    pdfParseFn = require('pdf-parse');
+  }
+  return pdfParseFn;
+}
+
 async function extractTextFromPDF(buffer) {
   try {
-    const parser = new PDFParse(new Uint8Array(buffer));
-    const result = await parser.getText();
-    return result.text || '';
+    const pdfParse = getPdfParse();
+    const result = await pdfParse(buffer);
+    return result?.text || '';
   } catch (error) {
     console.error('PDFParse error:', error);
     return '';

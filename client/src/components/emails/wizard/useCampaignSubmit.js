@@ -84,7 +84,16 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
     const campaignId = campaign?.campaignId || campaign?._id;
 
     if (!silent) {
-      toast.success(action === 'dispatch' ? 'Campaign dispatch started.' : 'Campaign saved as draft.');
+      const queued = campaign?.dispatch?.queuedCount;
+      if (action === 'dispatch') {
+        toast.success(
+          queued != null
+            ? `Dispatch started — ${queued} email(s) queue in background. Track progress on the campaign page.`
+            : 'Dispatch started — emails send in the background. Track progress on the campaign page.',
+        );
+      } else {
+        toast.success('Campaign saved as draft.');
+      }
     }
     if (!stayOnPage) {
       audience.resetAudience();

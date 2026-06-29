@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { Search, ListTodo, AlertCircle, Clock, ClipboardCheck, Layers } from 'lucide-react';
 import axios from 'axios';
@@ -399,7 +400,7 @@ const TodoPage = () => {
           {overdue && dueRaw ? (
             <div className="flex flex-col items-start gap-1">
               <Badge variant="overdue">Overdue</Badge>
-              <span className="text-xs text-[var(--color-text-muted)]">{format(startOfDay(new Date(dueRaw)), 'MMM d')}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">{formatDisplayDateShort(startOfDay(new Date(dueRaw)))}</span>
             </div>
           ) : (
             <span className="text-xs">{formatDueDate(dueRaw)}</span>

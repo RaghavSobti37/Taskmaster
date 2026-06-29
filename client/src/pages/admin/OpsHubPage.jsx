@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BarChart3, Plus, Layers } from 'lucide-react';
@@ -8,6 +9,7 @@ import SearchInput from '../../components/ui/SearchInput';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import PageToolbar from '../../components/ui/PageToolbar';
+import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import {
   useOpsHubTaxonomy,
   useOpsHubEntities,
@@ -152,7 +154,7 @@ export default function OpsHubPage() {
       header: 'Updated',
       render: (row) => (
         <span className="text-[10px] text-[var(--color-text-muted)]">
-          {row.lastWeeklyTouchAt ? new Date(row.lastWeeklyTouchAt).toLocaleDateString() : '—'}
+          {row.lastWeeklyTouchAt ? formatDisplayDate(new Date(row.lastWeeklyTouchAt)) : '—'}
         </span>
       ),
     },
@@ -166,6 +168,7 @@ export default function OpsHubPage() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
+            <AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />
             <div className="flex items-center justify-center w-10 h-10 rounded-[var(--radius-atomic)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]">
               <Layers size={18} />
             </div>

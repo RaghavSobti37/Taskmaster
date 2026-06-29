@@ -1,4 +1,4 @@
-import { Global, Module, OnModuleInit } from '@nestjs/common';
+import { Global, Logger, Module, OnModuleInit } from '@nestjs/common';
 import mongoose from 'mongoose';
 import { AppConfigModule } from '../../config/config.module';
 import { AppConfigService } from '../../config/config.service';
@@ -12,6 +12,8 @@ import { AppConfigService } from '../../config/config.service';
   imports: [AppConfigModule],
 })
 export class DatabaseModule implements OnModuleInit {
+  private readonly log = new Logger(DatabaseModule.name);
+
   constructor(private readonly config: AppConfigService) {}
 
   async onModuleInit() {
@@ -21,15 +23,13 @@ export class DatabaseModule implements OnModuleInit {
       '';
 
     if (!uri) {
-      console.warn(
-        '[DatabaseModule] MONGODB_URI unset — mail processors will fail DB writes',
-      );
+      this.log.warn('MONGODB_URI unset — mail processors will fail DB writes');
       return;
     }
 
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(uri);
-      console.log('[DatabaseModule] Mongo connected');
+      this.log.log('Mongo connected');
     }
   }
 }

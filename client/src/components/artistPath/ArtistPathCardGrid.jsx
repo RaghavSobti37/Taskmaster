@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { Music, Mail, MapPin, Calendar } from 'lucide-react';
 import { Badge, Card } from '../ui/primitives';
@@ -6,7 +7,7 @@ import { displayRespondentName, displayStageBadge } from '../../utils/artistPath
 function formatDate(d) {
   if (!d) return '—';
   try {
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDisplayDate(new Date(d));
   } catch {
     return String(d);
   }

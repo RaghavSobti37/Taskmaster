@@ -61,7 +61,9 @@ async function refreshAttendanceMetricsForUserDay(userId, dateInput) {
 
 async function refreshAttendanceMetricsFromLog(log) {
   if (!log || log.action !== 'DAILY_LOG') return null;
-  return refreshAttendanceMetricsForUserDay(log.userId, log.createdAt);
+  const { getLogWorkDateKey } = require('../../shared/dailyLogDetails');
+  const dateKey = getLogWorkDateKey(log);
+  return refreshAttendanceMetricsForUserDay(log.userId, dateKey);
 }
 
 module.exports = {

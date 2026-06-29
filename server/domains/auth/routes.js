@@ -30,7 +30,7 @@ const authLoginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
-  skip: () => process.env.NODE_ENV === 'test' || (!config.isProduction && isE2eTestUser(req.body?.email)),
+  skip: (req) => process.env.NODE_ENV === 'test' || (!config.isProduction && isE2eTestUser(req.body?.email)),
   keyGenerator: (req) => {
     const email = req.body?.email;
     if (typeof email === 'string' && email.trim()) {

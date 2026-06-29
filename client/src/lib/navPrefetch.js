@@ -70,12 +70,19 @@ export function prefetchNavRoute(path, userId, user = null) {
   }
 
   if (path === '/dashboard') {
-    prefetchOnce('dashboard-summary', ['dashboard', 'summary'], async () => (await axios.get('/api/dashboard/summary')).data);
+    prefetchOnce(
+      'dashboard-summary-calendar',
+      ['dashboard', 'summary', 'calendar'],
+      async () => (await axios.get('/api/dashboard/summary?fields=calendar')).data,
+    );
     if (userId) {
       prefetchOnce(
-        `logs-${userId}-default`,
-        ['logs', userId, 200, undefined, undefined],
-        async () => (await axios.get(`/api/logs?userId=${userId}&limit=200`)).data,
+        `dashboard-tasks-${userId}`,
+        ['tasks', 'dashboard', userId],
+        async () => {
+          const { data } = await axios.get('/api/tasks', { params: { scope: 'dashboard' } });
+          return data;
+        },
       );
     }
     return;

@@ -2,6 +2,8 @@
  * Build small chart series for DataOverviewSection (client-side aggregation).
  */
 
+import { formatDisplayDateShort } from './dateDisplay';
+
 const DEFAULT_TOP_N = 8;
 
 export function distributionFromField(rows, field, { topN = DEFAULT_TOP_N, labelFn } = {}) {
@@ -21,6 +23,37 @@ export function distributionFromField(rows, field, { topN = DEFAULT_TOP_N, label
   return [...head, { label: 'Other', value: rest }];
 }
 
+export function timeSeriesFromRows(rows, dateKey, { days = 7, valueKey, aggregate = 'count' } = {}) {
+  if (!Array.isArray(rows) || !dateKey) return [];
+  const now = new Date();
+  const buckets = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    buckets.push({
+      date: formatDisplayDateShort(d, { emptyLabel: '' }),
+      label: formatDisplayDateShort(d, { emptyLabel: '' }),
+      value: 0,
+      _key: key,
+    });
+  }
+  const keyToIdx = Object.fromEntries(buckets.map((b, i) => [b._key, i]));
+  for (const row of rows) {
+    const raw = row?.[dateKey];
+    if (!raw) continue;
+    const key = new Date(raw).toISOString().slice(0, 10);
+    const idx = keyToIdx[key];
+    if (idx == null) continue;
+    if (aggregate === 'sum' && valueKey) {
+      buckets[idx].value += Number(row[valueKey]) || 0;
+    } else {
+      buckets[idx].value += 1;
+    }
+  }
+  return buckets.map(({ date, label, value }) => ({ date, label, value }));
+}
+
 function timeBucketsFromDate(rows, dateKey, { days = 7 } = {}) {
   if (!Array.isArray(rows) || !dateKey) return [];
   const now = new Date();
@@ -30,7 +63,7 @@ function timeBucketsFromDate(rows, dateKey, { days = 7 } = {}) {
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
     buckets.push({
-      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      label: formatDisplayDateShort(d, { emptyLabel: '' }),
       value: 0,
       _key: key,
     });
@@ -45,6 +78,8 @@ function timeBucketsFromDate(rows, dateKey, { days = 7 } = {}) {
   }
   return buckets.map(({ label, value }) => ({ label, value }));
 }
+
+export { timeBucketsFromDate };
 
 export function mapKpisToStats(kpis, iconMap = {}) {
   if (!Array.isArray(kpis)) return [];

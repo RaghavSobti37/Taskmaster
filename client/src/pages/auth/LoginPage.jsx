@@ -21,7 +21,6 @@ const navigateAfterLogin = (navigate, target) => {
 };
 import { formatLoginError } from '../../utils/loginError';
 import { postLogin } from '../../utils/loginRequest';
-import { capturePostHogEvent } from '../../lib/posthog';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 import { brand, loginCopy } from '../../constants/marketingContent';
@@ -93,7 +92,6 @@ const LoginPage = () => {
     try {
       await postLogin(trimmedEmail, password);
       await login();
-      capturePostHogEvent('user_logged_in', { method: 'email_password' });
       navigateAfterLogin(navigate, resolveReturnPath());
     } catch (err) {
       setError(formatLoginError(err).message);

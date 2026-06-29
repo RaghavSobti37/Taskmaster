@@ -1,9 +1,11 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { FolderArchive } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { canAccessOrgAccounts } from '../../utils/pagePermissions';
-import AssetsHubSidebar from '../../components/assets/AssetsHubSidebar';
+import { ModuleSubnav } from '../../components/ui';
+import { ASSETS_SUBNAV_ITEMS, HUB_NAV_META } from '../../utils/hubSubnavConfig';
+
+const meta = HUB_NAV_META['/assets'];
 
 export default function AssetsHubLayout() {
   const { user } = useAuth();
@@ -15,15 +17,15 @@ export default function AssetsHubLayout() {
 
   return (
     <div className="py-4 space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <FolderArchive size={18} className="text-[#22d3ee]" />
-        <h1 className="text-lg font-bold tracking-tight">Assets</h1>
-      </div>
-      <div className="flex flex-col lg:flex-row gap-6 min-h-0">
-        <AssetsHubSidebar />
-        <div className="flex-1 min-w-0">
-          <Outlet />
-        </div>
+      <ModuleSubnav
+        title={meta.label}
+        titleIcon={meta.icon}
+        items={ASSETS_SUBNAV_ITEMS}
+        mode="route"
+        ariaLabel="Assets hub sections"
+      />
+      <div className="min-w-0">
+        <Outlet />
       </div>
     </div>
   );

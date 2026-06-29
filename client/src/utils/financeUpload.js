@@ -101,3 +101,15 @@ export async function fetchNextFinanceReferences(projectId, count = 1) {
   });
   return res.data?.data?.references || [];
 }
+
+/**
+ * Run OCR on an uploaded file before save (upload wizard step 2 background parse).
+ */
+export async function parseFinanceDocumentPreview({ fileUrl, fileKey, fileName, fileSize, fileType }) {
+  const res = await axios.post(
+    '/api/finance/parse-preview',
+    { fileUrl, fileKey, fileName, fileSize, fileType },
+    { headers: { 'x-skip-toast': 'true' }, withCredentials: true },
+  );
+  return res.data?.data || { metadata: {}, extractedText: '' };
+}

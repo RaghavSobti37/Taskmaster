@@ -12,9 +12,9 @@ const {
   lookupGeoForClick,
   normalizeIp,
 } = require('../utils/geoLookup');
-const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
+const { claimEmailLogOpen, claimEmailLogClick } = require('../utils/trackingClaim');
 
 
 
@@ -97,12 +97,8 @@ router.get('/open/:pixelId.gif', async (req, res) => {
           ? await buildEventLocation(req, userAgent, { skipProxyGeo: true })
           : await buildEventLocation(req, userAgent, { enrich: true });
 
-        // Query log record using the unique pixel token
-        const log = await EmailLog.findOne({ pixelId });
-        if (!log || log.opened) return;
-
-        // Mark EmailLog as opened
-        await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
+        const log = await claimEmailLogOpen(pixelId);
+        if (!log) return;
 
         const MailCampaign = require('../models/MailCampaign');
         const MailEvent = require('../models/MailEvent');
@@ -214,10 +210,8 @@ router.get('/click/:clickId', async (req, res) => {
 
         const location = await buildEventLocation(req, userAgent, { enrich: true, clickGeo: true });
 
-        const log = await EmailLog.findOne({ clickId });
-        if (!log || log.clicked) return;
-
-        await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
+        const log = await claimEmailLogClick(clickId);
+        if (!log) return;
 
         const MailCampaign = require('../models/MailCampaign');
         const MailEvent = require('../models/MailEvent');

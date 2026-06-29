@@ -37,3 +37,63 @@ describe('documentParser memory guards', () => {
     expect(shouldRunOcr(max + 1)).toBe(false);
   });
 });
+
+describe('documentParser metadata extraction', () => {
+  const {
+    parseMetadataFromText,
+    parseIndianNumber,
+    extractAmountFromText,
+    extractVendorFromText,
+  } = require('../utils/documentParser');
+
+  it('parseIndianNumber handles lakh-style grouping', () => {
+    expect(parseIndianNumber('3,12,000')).toBe(312000);
+    expect(parseIndianNumber('12,000')).toBe(12000);
+    expect(parseIndianNumber('1,23,456.78')).toBe(123456.78);
+  });
+
+  it('prefers total line amount over unrelated numbers', () => {
+    const text = `
+      Mukund Jethwa
+      INVOICE
+      Bill To: Shakti Collective LLP
+      Phone: 9876543210
+      Line items
+      Sub Total: 10,000
+      GST: 2,000
+      Grand Total: 12,000
+    `;
+    expect(extractAmountFromText(text)).toBe(12000);
+  });
+
+  it('extracts vendor from header, not Bill To', () => {
+    const text = `
+      Mukund Jethwa
+      Freelance Consultant
+      TAX INVOICE
+      Bill To: Shakti Collective LLP
+      Grand Total: 12,000
+    `;
+    const vendor = extractVendorFromText(text);
+    expect(vendor.toLowerCase()).toContain('mukund');
+    expect(vendor.toLowerCase()).not.toContain('shakti');
+  });
+
+  it('parseMetadataFromText end-to-end for Indian invoice', () => {
+    const meta = parseMetadataFromText(`
+      Mukund Jethwa
+      TAX INVOICE
+      Bill To: Shakti Collective LLP
+      Grand Total Rs. 12,000
+      Date: 15/03/2024
+    `);
+    expect(meta.amount).toBe(12000);
+    expect(meta.vendor.toLowerCase()).toContain('mukund');
+    expect(meta.detectedCategory).toBe('invoice');
+  });
+
+  it('does not treat entrepreneur substring as EUR', () => {
+    const meta = parseMetadataFromText('blog topics for online music entrepreneur academy 2026');
+    expect(meta.currency).toBe('INR');
+  });
+});

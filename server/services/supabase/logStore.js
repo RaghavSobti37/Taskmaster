@@ -18,10 +18,6 @@ async function insertAppLog(doc) {
   return insertMappedDoc('app_logs', doc);
 }
 
-async function insertSystemLog(doc) {
-  return insertMappedDoc('system_logs', doc);
-}
-
 async function insertCrmAudit(doc) {
   return insertMappedDoc('crm_audits', doc);
 }
@@ -44,7 +40,6 @@ function mirrorAsync(fn, doc) {
 
 module.exports = {
   insertAppLog,
-  insertSystemLog,
   insertCrmAudit,
   insertXpAuditLog,
   insertQaTestRun,

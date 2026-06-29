@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -22,7 +23,7 @@ const getSquareColor = (status, entry) => {
 };
 
 const buildTooltip = (date, entry, status) => {
-  const lines = [format(date, 'EEEE, MMM d, yyyy')];
+  const lines = [formatWeekdayDateLong(date)];
   if (status === 'holiday') {
     lines.push(`Holiday: ${getHolidayLabel(date)}`);
     if (entry?.inTimeRecord?.manualTimestamp || entry?.outTimeRecord?.manualTimestamp) {

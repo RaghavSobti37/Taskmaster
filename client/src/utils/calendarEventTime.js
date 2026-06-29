@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatDateKeyForDisplay } from './dateDisplay';
 
 /** Default calendar wall time (IST) for date-only tasks and events without an explicit time. */
 export const DEFAULT_EVENT_TIME = '09:00';
@@ -64,8 +65,8 @@ export function formatEventRangeLabel(startRaw, endRaw) {
     return `${formatTimeFromParts(start.time)} – ${formatTimeFromParts(end.time)}`;
   }
 
-  const startDateLabel = format(new Date(`${start.date}T12:00:00`), 'MMM d');
-  const endDateLabel = format(new Date(`${end.date}T12:00:00`), 'MMM d');
+  const startDateLabel = formatDateKeyForDisplay(start.date);
+  const endDateLabel = formatDateKeyForDisplay(end.date);
   return `${startDateLabel} ${formatTimeFromParts(start.time)} – ${endDateLabel} ${formatTimeFromParts(end.time)}`;
 }
 

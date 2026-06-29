@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -691,7 +692,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               <div>
                 <span className="font-bold text-sm block">{t.name}</span>
                 <span className="text-[10px] text-[var(--color-text-muted)]">
-                  {format(new Date(t.createdAt), 'MMM dd, yyyy')} ·{' '}
+                  {formatDisplayDate(new Date(t.createdAt))} ·{' '}
                   <Badge variant={t.status === 'approved' ? 'success' : t.status === 'rejected' ? 'danger' : 'warning'}>
                     {STATUS_LABELS[t.status] || t.status}
                   </Badge>
@@ -735,7 +736,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
               <div>
                 <span className="font-bold text-sm">{t.name}</span>
                 <span className="text-[10px] text-[var(--color-text-muted)] block">
-                  By {t.createdBy?.name || 'Unknown'} · {t.submittedAt ? format(new Date(t.submittedAt), 'MMM dd HH:mm') : '—'}
+                  By {t.createdBy?.name || 'Unknown'} · {t.submittedAt ? formatDisplayDateTime(new Date(t.submittedAt)) : '—'}
                 </span>
               </div>
               <Button size="sm" onClick={() => { loadTemplate(t); setReviewingId(t._id); }}>Review</Button>

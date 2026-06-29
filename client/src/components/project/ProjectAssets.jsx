@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -168,7 +169,7 @@ const ProjectAssets = ({ projectId }) => {
                       )}
                     </td>
                     <td className="px-4 py-2 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest tabular-nums">
-                      {format(new Date(asset.createdAt), 'MMM dd, yyyy')}
+                      {formatDisplayDate(new Date(asset.createdAt))}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <button

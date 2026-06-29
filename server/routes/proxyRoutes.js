@@ -4,7 +4,7 @@ const router = express.Router();
 const { protect, requireAnyPageAccess } = require('../middleware/authMiddleware');
 const { handleProxyRequest } = require('../controllers/proxyController');
 
-const proxyAccess = requireAnyPageAccess('finance', 'announcements', 'ops_logs', 'admin_data');
+const proxyAccess = requireAnyPageAccess('finance', 'announcements', 'admin_data');
 
 const proxyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

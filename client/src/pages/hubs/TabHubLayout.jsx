@@ -3,14 +3,17 @@ import { useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { HUB_CONFIG } from '../../utils/navbarConfig';
+import { HUB_NAV_META, withHubTabIcons } from '../../utils/hubSubnavConfig';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import { getMobilePageSupport, MOBILE_PAGE_LEVEL } from '../../utils/mobilePageSupport';
+import ModuleSubnav from '../../components/ui/ModuleSubnav';
 
 export default function TabHubLayout({ hubPath, panels }) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const hub = HUB_CONFIG[hubPath];
+  const shell = HUB_NAV_META[hubPath];
 
   const visibleTabs = useMemo(
     () => (hub?.tabs || []).filter((tab) => hasPageAccess(user, tab.key)),
@@ -48,35 +51,23 @@ export default function TabHubLayout({ hubPath, panels }) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const subnavItems = withHubTabIcons(isMobile ? mobileTabs : visibleTabs).map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    icon: tab.icon,
+  }));
+
   return (
     <div className="flex flex-col min-h-0 lg:h-full gap-3">
-      <div
-        role="tablist"
-        aria-label={`${hub.label} sections`}
-        className="flex flex-wrap gap-1 border-b border-[var(--color-bg-border)] pb-2"
-      >
-        {(isMobile ? mobileTabs : visibleTabs).map((tab) => {
-          const active = tab.id === resolvedTab;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              aria-controls={`hub-panel-${tab.id}`}
-              id={`hub-tab-${tab.id}`}
-              onClick={() => setSearchParams({ tab: tab.id })}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                active
-                  ? 'bg-[var(--token-surface-2)] text-[var(--color-text-primary)] border border-[var(--color-action-primary)]/30'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--token-surface-2)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <ModuleSubnav
+        title={shell?.label || hub.label}
+        titleIcon={shell?.icon}
+        items={subnavItems}
+        mode="tabs"
+        activeId={resolvedTab}
+        onTabChange={(id) => setSearchParams({ tab: id })}
+        ariaLabel={`${hub.label} sections`}
+      />
       <div
         role="tabpanel"
         id={`hub-panel-${resolvedTab}`}

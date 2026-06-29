@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy, Lock, Globe, Gauge, FileWarning, ScrollText, RotateCcw, GitBranch } from 'lucide-react';
 import { PageContainer, PageHeader, Button, Badge, LoadingState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -1133,6 +1134,7 @@ const QATestingPage = () => {
       <PageHeader
         title="Omni-Security & React Doctor Engine"
         icon={ShieldAlert}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={
           <div className="flex flex-wrap items-center gap-2 justify-end">
             {latestResults && !isRunning && (

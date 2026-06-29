@@ -63,15 +63,6 @@ const PLATFORM_ROLE_FIELDS = [
 
 const NOTIFICATION_ROUTING_FIELDS = [
   {
-    key: 'crmDigestRecipientUserIds',
-    section: 'notifications',
-    label: 'CRM daily digest recipients',
-    description:
-      'Receive the daily call-stats email (artist + sales sections). Replaces CRM_REACH_OUT_DIGEST_EMAIL.',
-    multiple: true,
-    envFallback: 'CRM_REACH_OUT_DIGEST_EMAIL',
-  },
-  {
     key: 'backupNotifyUserIds',
     section: 'notifications',
     label: 'Backup alert recipients',
@@ -106,7 +97,7 @@ const CRM_ROUTING_FIELDS = [
     section: 'crm',
     label: 'Artist call rep',
     description:
-      'Artist bookings + artist CRM section in daily digest. Replaces PRIMARY_CALL_ASSIGNEE_ID.',
+      'Artist bookings + artist CRM section on Admin → CRM Daily Stats. Replaces PRIMARY_CALL_ASSIGNEE_ID.',
     multiple: false,
     envFallback: 'PRIMARY_CALL_ASSIGNEE_ID',
   },
@@ -115,7 +106,7 @@ const CRM_ROUTING_FIELDS = [
     section: 'crm',
     label: 'Sales call rep (legacy)',
     description:
-      'Optional digest-only override. Website book-a-call uses round-robin across all users in the Sales department.',
+      'Legacy optional override. Website book-a-call uses round-robin across all users in the Sales department.',
     multiple: false,
     envFallback: 'BOOKED_CALL_SALES_REP_ID',
   },

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState } from 'react';
 import { Clock, ChevronDown, Check, XCircle, Eye } from 'lucide-react';
 import { Button } from '../ui';
@@ -64,7 +65,7 @@ export default function NeedsAttentionAccordion({
                       {inv.metadata?.amount ? `₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                      {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      {inv.createdAt ? formatDisplayDate(new Date(inv.createdAt)) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">

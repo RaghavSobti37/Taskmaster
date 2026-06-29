@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
@@ -454,7 +455,7 @@ const AssetsPage = () => {
                    }
                    trailing={
                      <span className="text-[10px] font-bold text-[var(--color-text-muted)] tabular-nums">
-                       {format(new Date(asset.createdAt), 'MMM d')}
+                       {formatDisplayDateShort(new Date(asset.createdAt))}
                      </span>
                    }
                    meta={renderProjectCell(asset.projectIds)}
@@ -529,7 +530,7 @@ const AssetsPage = () => {
                             </td>
                          </tr>
                        ) : paginatedAssets.map((asset) => {
-                         const formattedDate = format(new Date(asset.createdAt), 'MMM d, yy');
+                         const formattedDate = formatDisplayDate(new Date(asset.createdAt));
                          const hasLink = Boolean(asset.link?.trim());
                          return (
                            <tr 
@@ -552,7 +553,7 @@ const AssetsPage = () => {
                               <td className="px-1.5 sm:px-2 py-2 max-w-0 whitespace-nowrap align-middle">
                                  <span
                                    className="text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] truncate block tabular-nums"
-                                   title={format(new Date(asset.createdAt), 'MMM dd, yyyy')}
+                                   title={formatDisplayDate(new Date(asset.createdAt))}
                                  >
                                    {formattedDate}
                                  </span>

@@ -6,7 +6,7 @@ import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Refresh
 import { Card, Button, Badge, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
 import { useCampaignDetails, useCampaignAnalytics, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
-import { formatTimestampWithTz } from '../utils/displayLabels';
+import { formatDisplayDate, formatDisplayDateTimeSeconds } from '../utils/dateDisplay';
 import { format } from 'date-fns';
 import axios from 'axios';
 import ResendFromEmailPicker from '../components/emails/ResendFromEmailPicker';
@@ -378,7 +378,7 @@ export default function CampaignDetails() {
         </div>
         <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate max-w-[40%] hidden sm:block">
           {summaryReady ? (
-            <>{currentSenderLabel} · {formatTimestampWithTz(campaign.createdAt, 'MMM dd, yyyy')}</>
+            <>{currentSenderLabel} · {formatDisplayDate(campaign.createdAt)}</>
           ) : (
             <span className="inline-block h-3 w-40 animate-pulse rounded bg-[var(--color-bg-secondary)]" />
           )}
@@ -598,7 +598,7 @@ export default function CampaignDetails() {
               header: 'Timestamp',
               render: (r) => (
                 <span className="text-[11px] text-[var(--color-text-muted)]">
-                  {r.sentAt ? formatTimestampWithTz(r.sentAt, 'MMM dd, HH:mm:ss') : '—'}
+                  {r.sentAt ? formatDisplayDateTimeSeconds(r.sentAt) : '—'}
                 </span>
               ),
             },

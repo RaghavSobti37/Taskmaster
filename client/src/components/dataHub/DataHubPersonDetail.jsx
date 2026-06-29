@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import {
   User, Mail, Phone, MapPin, Star, Clock, ShoppingBag, Database,
   MessageSquare, Activity, GitCommit, Copy, Check,
@@ -40,7 +40,7 @@ const TABS = [
 
 function formatDate(d) {
   if (!d) return '—';
-  try { return format(new Date(d), 'MMM dd, yyyy · HH:mm'); } catch { return String(d); }
+  try { return formatDisplayDateTime(d); } catch { return String(d); }
 }
 
 const INLET_LABELS = {

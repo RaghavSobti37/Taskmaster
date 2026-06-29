@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { useCallback, useMemo } from 'react';
 import {
   SEVERITY,
@@ -20,37 +19,8 @@ export function startClientTrace() {
   return currentTraceId;
 }
 
-function shouldPersistClientLog({ severity, userVisible }) {
-  if (severity === SEVERITY.ERROR || severity === SEVERITY.WARN) return true;
-  if (userVisible && (severity === SEVERITY.SUCCESS || severity === SEVERITY.INFO)) return true;
-  return false;
-}
-
-function persistClientLog(entry) {
-  axios
-    .post(
-      '/api/system-logs',
-      {
-        severity: entry.severity,
-        module: entry.module,
-        message: entry.message,
-        userVisible: entry.userVisible,
-        payload: entry.payload,
-        relatedEntities: entry.relatedEntities,
-        traceId: entry.traceId,
-        contextId: entry.contextId,
-        route: entry.route || (typeof window !== 'undefined' ? window.location.pathname : undefined),
-        errorCode: entry.errorCode,
-      },
-      {
-        headers: { 'X-Trace-Id': entry.traceId },
-      }
-    )
-    .catch(() => {});
-}
-
 /**
- * Single emit surface for system events — toast + optional DB persistence.
+ * Single emit surface for system events — toast UI only (no server persistence).
  */
 export function emitSystemEvent(rawEntry = {}) {
   const entry = normalizeSystemEventEntry(rawEntry);
@@ -77,21 +47,6 @@ export function emitSystemEvent(rawEntry = {}) {
       timestamp: entry.timestamp,
       duration,
       customRender: entry.customRender,
-    });
-  }
-
-  if (shouldPersistClientLog({ severity: entry.severity, userVisible: entry.userVisible })) {
-    persistClientLog({
-      severity: entry.severity,
-      module: entry.module,
-      message: entry.message,
-      userVisible: entry.userVisible,
-      payload: entry.payload,
-      relatedEntities: entry.relatedEntities,
-      traceId,
-      contextId: entry.contextId,
-      route: entry.route,
-      errorCode: entry.errorCode,
     });
   }
 

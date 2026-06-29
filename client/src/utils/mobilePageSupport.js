@@ -80,7 +80,7 @@ const DESKTOP_ROUTE_RULES = [
 
 /** Hub tabs that require desktop on mobile */
 const HUB_DESKTOP_TABS = {
-  '/management': ['finance', 'ops-logs'],
+  '/management': ['finance'],
 };
 
 const HUB_TAB_COPY = {
@@ -88,12 +88,6 @@ const HUB_TAB_COPY = {
     title: 'Finance',
     description:
       'Document folders, OCR review, and reimbursement workflows need desktop screen space. Open Finance on your computer.',
-    alternatives: [{ label: 'Announcements', path: '/management?tab=announcements' }],
-  },
-  'ops-logs': {
-    title: 'Ops Logs',
-    description:
-      'System log terminal and live diagnostics are built for wide monitors. Use desktop for full log streaming and filters.',
     alternatives: [{ label: 'Announcements', path: '/management?tab=announcements' }],
   },
 };

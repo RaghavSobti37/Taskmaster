@@ -6,6 +6,8 @@ import {
 import { fetchSyncCredentialsFromApi } from '@coreknot/sync-client';
 import { getApiBaseUrl, routeViaSameOriginApi } from '../utils/apiBase';
 
+export const isLocalFirstEnabled = () => import.meta.env.VITE_LOCAL_FIRST === 'true';
+
 /** Match axios: same-origin on mobile/PWA; Render direct on desktop production. */
 function getSyncApiBase() {
   if (routeViaSameOriginApi()) return '';
@@ -13,6 +15,10 @@ function getSyncApiBase() {
 }
 
 export async function bootstrapLocalFirst() {
+  if (!isLocalFirstEnabled()) {
+    return { skipped: true };
+  }
+
   const ping = await initLocalDatabase();
   const quota = await estimateStorageQuota();
 
@@ -24,6 +30,10 @@ export async function bootstrapLocalFirst() {
 }
 
 export async function connectSyncEngine() {
+  if (!isLocalFirstEnabled()) {
+    return null;
+  }
+
   try {
     return await fetchSyncCredentialsFromApi(getSyncApiBase());
   } catch (err) {

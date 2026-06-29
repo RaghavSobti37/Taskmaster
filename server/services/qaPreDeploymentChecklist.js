@@ -422,7 +422,6 @@ async function runDatabaseIndexChecks() {
 async function runLoggingChecks() {
   const checks = [];
   const logger = await readText('utils/logger.js');
-  const sysLog = await readText('services/systemLogService.js');
   const traceMw = await readText('middleware/traceMiddleware.js');
 
   checks.push(
@@ -430,21 +429,9 @@ async function runLoggingChecks() {
       'log-structured-logger',
       'logging-monitoring',
       'Structured logger utility exists',
-      logger && logger.includes('formatMessage') ? 'pass' : 'fail',
-      'Tagged logger with levels',
+      logger && logger.includes('pino') ? 'pass' : 'fail',
+      'Pino JSON logger for Render stdout',
       'utils/logger.js',
-      'medium'
-    )
-  );
-
-  checks.push(
-    makeCheck(
-      'log-system-persist',
-      'logging-monitoring',
-      'System log persistence service',
-      sysLog && /writeSystemLog|logFromError/.test(sysLog) ? 'pass' : 'warn',
-      'Errors can persist to SystemLog collection',
-      'services/systemLogService.js',
       'medium'
     )
   );

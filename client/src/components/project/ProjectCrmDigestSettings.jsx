@@ -46,10 +46,10 @@ export default function ProjectCrmDigestSettings({ projectId, project }) {
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
             <Target size={16} className="text-[var(--color-brand-teal)]" />
-            CRM daily digest settings
+            CRM stats settings
           </div>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            {segment.label} · used in the 7 PM manager email
+            {segment.label} · used in Admin → CRM Stats
             {isAcademy ? ' (sales conversions + plan values)' : ' (artist conversions)'}
           </p>
         </div>

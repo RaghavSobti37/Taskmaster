@@ -6,9 +6,7 @@ const { uploadRouter } = require('../config/uploadthing');
 const { config } = require('../config');
 const SystemHealthService = require('../services/SystemHealthService');
 const traceMiddleware = require('../middleware/traceMiddleware');
-const systemLogger = require('../middleware/loggerMiddleware');
 const errorHandler = require('../middleware/errorMiddleware');
-const { setupSentryExpress } = require('../utils/sentry');
 const asyncHandler = require('../middleware/asyncHandler');
 const { apiOk, apiError } = require('../utils/apiResponse');
 const { uploadRateLimit } = require('../middleware/rateLimits');
@@ -17,7 +15,7 @@ const { apiIdempotency } = require('../middleware/apiIdempotency');
 
 /** Domain mount prefixes — used by startup banner. */
 const API_DOMAINS = [
-  'auth', 'projects', 'tasks', 'users', 'logs', 'system-logs', 'teams', 'artists',
+  'auth', 'projects', 'tasks', 'users', 'logs', 'teams', 'artists',
   'gamification', 'gamification-admin', 'qa', 'customization', 'crm', 'assets',
   'google', 'proxy', 'dashboard', 'calendar', 'departments', 'schedule',
   'notifications', 'notes', 'search', 'pinboard', 'mail', 'ses', 'tsc',
@@ -68,14 +66,12 @@ function registerRoutes(app) {
   // --- Auth (pre-logger) ---
   app.use('/api/auth', require('../domains/auth/routes'));
   app.use('/api/v1/sync', require('../routes/syncRoutes'));
-  app.use(systemLogger);
 
   // --- Authenticated API ---
   app.use('/api/projects', require('../domains/projects/routes'));
   app.use('/api/tasks', require('../domains/tasks/routes'));
   app.use('/api/users', require('../domains/auth/userRoutes'));
   app.use('/api/logs', require('../routes/logRoutes'));
-  app.use('/api/system-logs', require('../routes/systemLogRoutes'));
   app.use('/api/teams', require('../routes/teamRoutes'));
   app.use('/api/artists', require('../domains/artists/routes'));
   app.use('/api/auth', require('../domains/artists/connectRoutes'));
@@ -149,7 +145,7 @@ function registerRoutes(app) {
   app.use('/api/admin/platform-settings', require('../routes/platformSettingsRoutes'));
   app.use('/api/admin/roles', require('../routes/adminRolesRoutes'));
   app.use('/api/admin/scripts', require('../routes/adminScriptsRoutes'));
-  app.use('/api/admin/crm-reach-out-digest', require('../routes/crmReachOutDigestRoutes'));
+  app.use('/api/admin/crm-stats', require('../routes/crmStatsRoutes'));
   app.use('/api/admin/supabase', require('../routes/supabaseAdminRoutes'));
   app.use('/api/admin/queues', require('../routes/queueAdminRoutes'));
   app.use('/api/admin/system-health', require('../routes/systemHealthAdminRoutes'));
@@ -194,7 +190,6 @@ function registerRoutes(app) {
     app.get('/', (req, res) => res.send('CoreKnot API Active (Development Mode)'));
   }
 
-  setupSentryExpress(app);
   app.use(errorHandler);
 }
 

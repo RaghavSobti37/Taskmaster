@@ -18,7 +18,6 @@ const {
 } = require('../utils/mongoColdArchiveTtl');
 
 const MODEL_LOADERS = {
-  SystemLog: () => require('../models/SystemLog'),
   Log: () => require('../models/Log'),
   CRMAudit: () => require('../models/CRMAudit'),
   MailEvent: () => require('../models/MailEvent'),

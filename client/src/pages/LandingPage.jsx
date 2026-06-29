@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   Briefcase,
   Mail,
@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MarketingPageBackground from '../components/MarketingPageBackground';
 import MarketingThemeToggle from '../components/MarketingThemeToggle';
 import BrandLogo from '../components/brand/BrandLogo';
-import { authUrl, appUrl, isAuthSite } from '../config/siteUrls';
+import { authUrl, appUrl, hasSameOriginAuthRoutes } from '../config/siteUrls';
 import {
   brand,
   footer,
@@ -24,7 +24,7 @@ import {
 const FEATURE_ICONS = { Briefcase, Mail, Users, Calendar };
 
 function AuthLink({ to, className, children, ...props }) {
-  if (isAuthSite()) {
+  if (hasSameOriginAuthRoutes()) {
     return (
       <Link to={to} className={className} {...props}>
         {children}
@@ -42,6 +42,9 @@ export default function LandingPage() {
   const { user } = useAuth();
 
   if (user) {
+    if (hasSameOriginAuthRoutes()) {
+      return <Navigate to="/dashboard" replace />;
+    }
     window.location.replace(appUrl('/dashboard'));
     return null;
   }

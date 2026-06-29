@@ -1,8 +1,8 @@
 import React, { useMemo, Suspense, useState, useEffect, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer } from '../components/ui/primitives';
+import { SlidersHorizontal } from 'lucide-react';
+import { PageContainer, Button } from '../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../components/ui/QueryErrorBanner';
-import MobileCollapsibleSection from '../components/ui/MobileCollapsibleSection';
 import DashboardWidgetSkeleton from '../components/ui/DashboardWidgetSkeleton';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -16,14 +16,23 @@ import {
 } from '../hooks/useTaskmasterQueries';
 import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
+import DashboardTierLayout from '../components/dashboard/DashboardTierLayout';
+import { RenderLogTargetCard } from '../components/dashboard/RenderLogsCard';
 const TaskCompletionModal = lazy(() => import('../components/TaskCompletionModal'));
 const MobileAttendanceBar = lazy(() => import('../components/mobile/MobileAttendanceBar'));
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
-import { LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
+import {
+  getDefaultLayoutElements,
+  canAccessComponent,
+  isAnalyticsWidget,
+  DASHBOARD_SETTINGS_PATH,
+} from '../lib/componentRegistry';
+import {
+  normalizeDashboardElements,
+} from '../lib/dashboardSections';
 import { getLazyDashboardWidget } from '../lib/dashboardWidgetLoaders';
 import { isAdminUser } from '../utils/departmentPermissions';
-import { useIsMobile } from '../hooks/useBreakpoint';
 
 const renderLazyWidget = (componentId, props = {}) => {
   const LazyComp = getLazyDashboardWidget(componentId);
@@ -54,8 +63,7 @@ const Dashboard = () => {
     return dept?.permissionPreset || dept?.slug || 'standard';
   }, [user]);
 
-  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErr, refetch: refetchSummary } = useDashboardSummary(queriesEnabled);
-  const deferSecondaryQueries = queriesEnabled && !summaryLoading;
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErr, refetch: refetchSummary } = useDashboardSummary(queriesEnabled, { fields: 'calendar' });
   const {
     data: tasks = [],
     isLoading: tasksLoading,
@@ -69,17 +77,17 @@ const Dashboard = () => {
     isError: reviewError,
     error: reviewErr,
     refetch: refetchReview,
-  } = useReviewTasks(deferSecondaryQueries);
+  } = useReviewTasks(queriesEnabled);
   const {
     data: projects = [],
     isLoading: projectsLoading,
     isError: projectsError,
     error: projectsErr,
     refetch: refetchProjects,
-  } = useProjects(deferSecondaryQueries);
-  const { data: workspaces = [] } = useWorkspaces(deferSecondaryQueries);
+  } = useProjects(queriesEnabled);
+  const { data: workspaces = [] } = useWorkspaces(queriesEnabled);
   const { data: dashboardPreset } = useDashboardPreset(queriesEnabled);
-  const { data: users = [] } = useUserDirectory(deferSecondaryQueries);
+  const { data: users = [] } = useUserDirectory(queriesEnabled);
 
   const {
     taskToComplete,
@@ -115,44 +123,12 @@ const Dashboard = () => {
 
   const calendar = useMemo(() => summary?.calendar || [], [summary]);
 
-  const defaultElements = LAYOUT_TEMPLATES.find((t) => t.id === 'coreknot')?.elements || [];
-  const elementsToRender = useMemo(
-    () =>
-      (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
-        (el) => el.visible !== false && canAccessComponent(el.componentId, permissionPreset)
-      ),
-    [dashboardPreset?.elements, defaultElements, permissionPreset]
-  );
-  const maxGridRow = useMemo(
-    () => elementsToRender.reduce((max, el) => Math.max(max, el.row || 1), 1),
-    [elementsToRender]
-  );
-
-  const isMobile = useIsMobile();
-
-  const sortedElements = useMemo(() => {
-    if (isMobile) {
-      return [...elementsToRender].sort(
-        (a, b) => getMobileWidgetOrder(a.componentId) - getMobileWidgetOrder(b.componentId)
-      );
-    }
-    return [...elementsToRender].sort((a, b) => a.row - b.row || a.col - b.col);
-  }, [elementsToRender, isMobile]);
-
-  const primaryElements = useMemo(
-    () =>
-      isMobile
-        ? sortedElements.filter(
-            (el) => !isAnalyticsWidget(el.componentId) && el.componentId !== 'mark-attendance'
-          )
-        : sortedElements,
-    [sortedElements, isMobile]
-  );
-
-  const analyticsElements = useMemo(
-    () => (isMobile ? sortedElements.filter((el) => isAnalyticsWidget(el.componentId)) : []),
-    [sortedElements, isMobile]
-  );
+  const layoutElements = useMemo(() => {
+    const raw = dashboardPreset?.elements?.length
+      ? dashboardPreset.elements
+      : getDefaultLayoutElements(permissionPreset);
+    return normalizeDashboardElements(raw, permissionPreset);
+  }, [dashboardPreset?.elements, permissionPreset]);
 
   const [secondaryWidgetsReady, setSecondaryWidgetsReady] = useState(false);
   const [heavyWidgetsReady, setHeavyWidgetsReady] = useState(false);
@@ -160,35 +136,22 @@ const Dashboard = () => {
     const enableSecondary = () => setSecondaryWidgetsReady(true);
     const enableHeavy = () => setHeavyWidgetsReady(true);
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      const secondaryId = window.requestIdleCallback(enableSecondary, { timeout: 1500 });
-      const heavyId = window.requestIdleCallback(enableHeavy, { timeout: 3500 });
+      const secondaryId = window.requestIdleCallback(enableSecondary, { timeout: 800 });
+      const heavyId = window.requestIdleCallback(enableHeavy, { timeout: 2000 });
       return () => {
         window.cancelIdleCallback(secondaryId);
         window.cancelIdleCallback(heavyId);
       };
     }
-    const secondaryTimer = window.setTimeout(enableSecondary, 300);
-    const heavyTimer = window.setTimeout(enableHeavy, 800);
+    const secondaryTimer = window.setTimeout(enableSecondary, 200);
+    const heavyTimer = window.setTimeout(enableHeavy, 500);
     return () => {
       window.clearTimeout(secondaryTimer);
       window.clearTimeout(heavyTimer);
     };
   }, []);
 
-  const renderWidget = (el) => {
-    const span = parseInt(el.size, 10) || 1;
-    return (
-      <div
-        key={el.componentId}
-        className="flex flex-col min-h-0 dashboard-grid-item max-lg:min-h-0"
-        style={{ '--lg-col': el.col, '--lg-row': el.row, '--lg-span': span }}
-      >
-        {renderComponent(el.componentId)}
-      </div>
-    );
-  };
-
-  const renderComponent = (componentId) => {
+  const renderComponent = (componentId, _options = {}) => {
     if (!secondaryWidgetsReady && !PRIORITY_WIDGET_IDS.has(componentId) && !isAnalyticsWidget(componentId)) {
       return <DashboardWidgetSkeleton />;
     }
@@ -264,7 +227,15 @@ const Dashboard = () => {
       case 'campaign-metrics':
       case 'system-health':
       case 'artist-calendar':
-        return renderLazyWidget(componentId, { componentId });
+        return renderLazyWidget(componentId, { componentId, tasks });
+      case 'render-logs':
+        return renderLazyWidget('render-logs');
+      case 'render-logs-production':
+        return <RenderLogTargetCard targetId="production-api" />;
+      case 'render-logs-staging-api':
+        return <RenderLogTargetCard targetId="staging-api" />;
+      case 'render-logs-staging-nest':
+        return <RenderLogTargetCard targetId="staging-nest" />;
       case 'attendance-overview':
         return renderLazyWidget('attendance-overview');
       case 'last-backup':
@@ -309,20 +280,35 @@ const Dashboard = () => {
       <Suspense fallback={null}>
         <MobileAttendanceBar />
       </Suspense>
-      <PinBoardProvider>
-        <div
-          className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-0 gap-3 grid-flow-row-dense auto-rows-max"
-          style={{ '--grid-rows': maxGridRow }}
+      <div className="flex items-center justify-between gap-3 mb-3 -mt-1">
+        <h1 className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight truncate">
+          Welcome, {user?.name || 'there'}
+        </h1>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(DASHBOARD_SETTINGS_PATH)}
+          className="gap-1.5 shrink-0"
+          aria-label="Customize dashboard layout"
         >
-          {primaryElements.map(renderWidget)}
-          {isMobile && analyticsElements.length > 0 && (
-            <MobileCollapsibleSection title="Insights" className="col-span-1">
-              <div className="space-y-3">
-                {analyticsElements.map(renderWidget)}
-              </div>
-            </MobileCollapsibleSection>
-          )}
-        </div>
+          <SlidersHorizontal size={14} />
+          Customize
+        </Button>
+      </div>
+      <PinBoardProvider>
+        <DashboardTierLayout
+          elements={layoutElements}
+          permissionPreset={permissionPreset}
+          sectionState={dashboardPreset?.sectionState}
+          renderWidget={renderComponent}
+          workspaces={workspaces}
+          tasks={tasks}
+          projects={projects}
+          tasksLoading={tasksLoading}
+          onComplete={handleCompleteRequest}
+          completingTaskId={completingTaskId}
+        />
       </PinBoardProvider>
 
       <Suspense fallback={null}>

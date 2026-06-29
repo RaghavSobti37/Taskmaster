@@ -55,7 +55,7 @@ const MENU_SECTIONS = [
     title: 'Modules',
     items: [
       { path: '/crm', label: 'CRM', icon: UserPlus },
-      { path: '/office', label: 'People & Office', icon: Building2 },
+      { path: '/office', label: 'Office', icon: Building2 },
       { path: '/management', label: 'Management', icon: CircleDollarSign },
       { path: '/admin/console', label: 'Admin', icon: Shield },
     ],

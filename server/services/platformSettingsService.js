@@ -24,7 +24,6 @@ const ENV_KEY_BY_FIELD = {
   mailTemplateApproverUserIds: 'MAIL_TEMPLATE_APPROVER_USER_IDS',
   autoProjectMemberUserIds: 'AUTO_PROJECT_MEMBER_USER_IDS',
   qaAdminUserId: 'QA_ADMIN_USER_ID',
-  crmDigestRecipientUserIds: 'CRM_REACH_OUT_DIGEST_EMAIL',
   backupNotifyUserIds: 'BACKUP_NOTIFY_EMAIL',
   subscriptionReminderFallbackUserIds: 'SUBSCRIPTION_REMINDERS_EMAIL',
   passwordResetCcUserIds: 'ADMIN_EMAIL',

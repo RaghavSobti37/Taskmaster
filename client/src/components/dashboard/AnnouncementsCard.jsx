@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { Megaphone } from 'lucide-react';
 import { DashboardWidgetShell, DataListRow, Button, DataLoading } from '../ui';
@@ -29,7 +30,7 @@ const AnnouncementsCard = () => {
         const author = item.createdBy?.name || 'Team';
         const avatar = item.createdBy?.avatar;
         const dateLabel = item.createdAt
-          ? format(new Date(item.createdAt), 'MMM d, yyyy')
+          ? formatDisplayDate(new Date(item.createdAt))
           : '';
 
         return (

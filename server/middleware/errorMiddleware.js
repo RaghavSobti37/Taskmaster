@@ -1,6 +1,4 @@
-const { logFromError } = require('../services/systemLogService');
-const { captureException } = require('../utils/sentry');
-const { captureException: capturePostHogException } = require('../utils/posthog');
+const logger = require('../utils/logger');
 
 const errorHandler = (err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -21,41 +19,21 @@ const errorHandler = (err, req, res, next) => {
     message = 'Request entity too large. Reduce HTML size, remove inline images, or upload attachments separately.';
   }
 
-  const errorLog = {
-    timestamp: new Date().toISOString(),
+  const logMeta = {
     route: req.originalUrl,
     method: req.method,
-    userId: req.user ? req.user._id : 'unauthenticated',
+    userId: req.user ? String(req.user._id) : 'unauthenticated',
+    statusCode,
+    traceId: req.traceId,
     error: message,
     errors,
-    status: statusCode,
-    traceId: req.traceId,
   };
 
   if (statusCode >= 500) {
-    errorLog.stack = err.stack;
-    console.error('[ERROR_MIDDLEWARE] Server Error:', JSON.stringify(errorLog, null, 2));
-    captureException(err, {
-      route: req.originalUrl,
-      method: req.method,
-      userId: req.user ? String(req.user._id) : 'unauthenticated',
-      statusCode,
-      traceId: req.traceId,
-    });
-    capturePostHogException(err, req, {
-      route: req.originalUrl,
-      method: req.method,
-      statusCode,
-      traceId: req.traceId,
-    });
+    logger.error('errorMiddleware', message, { ...logMeta, stack: err.stack });
   } else {
-    console.log(`[CLIENT_ERROR] Route: ${req.method} ${req.originalUrl} | Status: ${statusCode} | Message: ${message}`);
+    logger.warn('errorMiddleware', message, logMeta);
   }
-
-  logFromError(req, err, {
-    statusCode,
-    userVisible: true,
-  });
 
   res.status(statusCode).json({
     success: false,

@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const router = express.Router();
 const Log = require('../models/Log');
@@ -7,13 +8,53 @@ const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const GamificationService = require('../services/gamificationService');
 const { broadcastRealtimeEvent } = require('../config/realtime');
-const { parseTimeSpentToMinutes, parseTimeSpentToHours } = require('../../shared/timeSpent');
+const { parseTimeSpentToHours } = require('../../shared/timeSpent');
+const {
+  normalizeDailyLogDetails,
+  normalizeWorkDate,
+  buildDailyLogDateRangeFilter,
+  isLogEditable,
+  getLogWorkDateKey,
+} = require('../../shared/dailyLogDetails');
 const { refreshAttendanceMetricsFromLog } = require('../utils/refreshAttendanceMetrics');
 
 const refreshAttendanceAfterLog = (log) => {
   refreshAttendanceMetricsFromLog(log).catch((err) => {
     logger.error('Attendance', 'Failed to refresh metrics after log change', { error: err.message });
   });
+};
+
+const awardManualDailyLogXp = (userId, log, details) => {
+  if (log.action !== 'DAILY_LOG' || ['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) return;
+  const { clampXpHours } = require('../../shared/gamificationRules');
+  const rawHours = parseTimeSpentToHours(details?.timeSpent);
+  const hours = clampXpHours(rawHours);
+  GamificationService.awardActionXp(userId, 'DAILY_LOG', {
+    logId: log._id,
+    hours,
+    timeSpent: details?.timeSpent,
+    manualDailyLog: true,
+  })
+    .then(() => GamificationService.progressMission(userId, 'DAILY_LOG', 1))
+    .catch((err) => {
+      logger.error('Log', 'Daily log XP award failed', { error: err.message });
+    });
+};
+
+const createLogRecord = async ({ userId, actorId, action, targetType, targetId, details }) => {
+  const log = await Log.create({
+    userId,
+    actorId: String(actorId),
+    origin: 'HUMAN_USER',
+    action,
+    targetType,
+    targetId,
+    details,
+  });
+  const populated = await Log.findById(log._id).populate('userId', 'name avatar role');
+  broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
+  if (action === 'DAILY_LOG') refreshAttendanceAfterLog(log);
+  return populated;
 };
 
 const logsPage = requirePageAccess('logs');
@@ -137,9 +178,15 @@ router.get('/', async (req, res) => {
     }
 
     if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
+      const dateFilter = buildDailyLogDateRangeFilter(startDate, endDate);
+      if (filter.$and) {
+        filter.$and.push(dateFilter);
+      } else if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, dateFilter];
+        delete filter.$or;
+      } else {
+        Object.assign(filter, dateFilter);
+      }
     }
     
     const logs = await Log.find(filter)
@@ -156,40 +203,62 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { action, targetType, targetId, details } = req.body;
-    const log = await Log.create({
+    const { action, targetType, targetId, details: rawDetails } = req.body;
+    const normalized = normalizeDailyLogDetails(rawDetails || {});
+    const memberIds = (normalized.memberIds || [])
+      .map(String)
+      .filter((id) => id && id !== req.user._id.toString());
+    delete normalized.memberIds;
+
+    const todayKey = normalizeWorkDate(new Date());
+    if (normalized.workDate && normalized.workDate > todayKey) {
+      return res.status(400).json({ error: 'Cannot log work for a future date.' });
+    }
+    if (!normalized.workDate) {
+      normalized.workDate = todayKey;
+    }
+
+    const groupId = memberIds.length ? crypto.randomUUID() : null;
+    if (groupId) {
+      normalized.sharedLogGroupId = groupId;
+      normalized.sharedMemberIds = memberIds;
+      normalized.sharedByName = req.user.name || 'Team member';
+    }
+
+    const primary = await createLogRecord({
       userId: req.user._id,
-      actorId: req.user._id.toString(),
-      origin: 'HUMAN_USER',
+      actorId: req.user._id,
       action,
       targetType,
       targetId,
-      details,
+      details: normalized,
     });
-    const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
-    broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
-    if (action === 'DAILY_LOG') {
-      refreshAttendanceAfterLog(log);
-    }
+    awardManualDailyLogXp(req.user._id, primary, normalized);
 
-    if (action === 'DAILY_LOG' && !['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) {
-      const { clampXpHours } = require('../../shared/gamificationRules');
-      const rawHours = parseTimeSpentToHours(details?.timeSpent);
-      const hours = clampXpHours(rawHours);
-      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', {
-        logId: log._id,
-        hours,
-        timeSpent: details?.timeSpent,
-        manualDailyLog: true,
-      })
-        .then(() => GamificationService.progressMission(req.user._id, 'DAILY_LOG', 1))
-        .catch((err) => {
-        logger.error('Log', 'Daily log XP award failed', { error: err.message });
+    for (const memberId of memberIds) {
+      const oid = toObjectId(memberId);
+      if (!oid) continue;
+      const copyDetails = {
+        ...normalized,
+        sharedLogGroupId: groupId,
+        sharedByUserId: req.user._id.toString(),
+        sharedByName: req.user.name || 'Team member',
+        isSharedCopy: true,
+      };
+      delete copyDetails.sharedMemberIds;
+      const copy = await createLogRecord({
+        userId: oid,
+        actorId: req.user._id,
+        action,
+        targetType,
+        targetId,
+        details: copyDetails,
       });
+      refreshAttendanceAfterLog(copy);
     }
 
-    res.status(201).json(populatedLog);
+    res.status(201).json(primary);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -213,23 +282,23 @@ router.put('/:id', async (req, res) => {
   try {
     const log = await Log.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
-    
-    const now = new Date();
-    const logDate = new Date(log.createdAt);
-    const isSameDay = logDate.getFullYear() === now.getFullYear() && 
-                      logDate.getMonth() === now.getMonth() && 
-                      logDate.getDate() === now.getDate();
-                      
-    if (!isSameDay && !isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Logs are only editable on the day they were created.' });
+
+    if (!isLogEditable(log, { isAdmin: isAdminUser(req.user) })) {
+      return res.status(403).json({ error: 'This log is outside the editable window.' });
     }
 
     if (log.userId.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Unauthorized to edit this log.' });
     }
 
-    const { details } = req.body;
-    log.details = { ...log.details, ...details };
+    const { details: rawDetails } = req.body;
+    const normalized = normalizeDailyLogDetails({ ...log.details, ...rawDetails });
+    const todayKey = normalizeWorkDate(new Date());
+    if (normalized.workDate && normalized.workDate > todayKey) {
+      return res.status(400).json({ error: 'Cannot set work date in the future.' });
+    }
+    delete normalized.memberIds;
+    log.details = normalized;
     await log.save();
     if (log.action === 'DAILY_LOG') refreshAttendanceAfterLog(log);
     res.json(log);
@@ -243,14 +312,8 @@ router.delete('/:id', async (req, res) => {
     const log = await Log.findById(req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found' });
 
-    const now = new Date();
-    const logDate = new Date(log.createdAt);
-    const isSameDay = logDate.getFullYear() === now.getFullYear() && 
-                      logDate.getMonth() === now.getMonth() && 
-                      logDate.getDate() === now.getDate();
-                      
-    if (!isSameDay && !isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Logs can only be deleted on the day they were created.' });
+    if (!isLogEditable(log, { isAdmin: isAdminUser(req.user) })) {
+      return res.status(403).json({ error: 'This log is outside the editable window.' });
     }
 
     if (log.userId.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
@@ -274,10 +337,12 @@ router.get('/activity-grid', async (req, res) => {
 
     const byDay = new Map();
     logs.forEach((log) => {
-      const day = log.createdAt.toISOString().split('T')[0];
+      const day = getLogWorkDateKey(log);
+      if (!day) return;
       const existing = byDay.get(day) || { count: 0, totalMinutes: 0 };
       existing.count += 1;
-      existing.totalMinutes += parseTimeSpentToMinutes(log.details?.timeSpent);
+      const { readLogTimeSpentMinutes } = require('../../shared/dailyLogDetails');
+      existing.totalMinutes += readLogTimeSpentMinutes(log);
       byDay.set(day, existing);
     });
 

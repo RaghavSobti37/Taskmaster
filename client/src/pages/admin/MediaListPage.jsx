@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Layers, Mail, MapPin, Newspaper, Phone, Users } from 'lucide-react';
 import ListPageLayout from '../../components/ui/ListPageLayout';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Badge, DataTable } from '../../components/ui/primitives';
@@ -152,6 +153,9 @@ const MediaListPage = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
+      title="Media List"
+      icon={Newspaper}
+      backTo={ADMIN_CONSOLE_PATH}
       overview={{
         stats: [
           {

@@ -3,6 +3,7 @@ import { RefreshCw, Music } from 'lucide-react';
 import { PageContainer, Button } from '../../components/ui/primitives';
 import SearchInput from '../../components/ui/SearchInput';
 import PageToolbar from '../../components/ui/PageToolbar';
+import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ArtistPathCardGrid from '../../components/artistPath/ArtistPathCardGrid';
 import { useArtistPathPeople, useArtistPathSync } from '../../hooks/queries/artistPath';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -42,6 +43,7 @@ export default function ArtistPathPage() {
       <PageToolbar
         icon={Music}
         title="Artist Path"
+        leading={<AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />}
         actions={(
           <Button
             variant="secondary"

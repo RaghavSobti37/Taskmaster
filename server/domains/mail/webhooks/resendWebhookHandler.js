@@ -15,6 +15,12 @@ const {
   normalizeIp,
 } = require('../../../utils/geoLookup');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
+const {
+  isOpenMetricSatisfied,
+  isClickMetricSatisfied,
+  hasCustomOpenForRecipient,
+} = require('../../../utils/trackingClaim');
+const logger = require('../../../utils/logger');
 
 const WEBHOOK_BYPASS = bypassOptions('RESEND_WEBHOOK');
 
@@ -152,7 +158,7 @@ async function handleTrackResendWebhook(req, res) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    console.log(`⚡ [Resend Webhook] Processing event: ${eventType} for ${cleanEmail} (Email ID: ${emailId || 'N/A'})`);
+    logger.debug('resendWebhook', 'Processing event', { eventType, email: cleanEmail, emailId });
 
     let camp = null;
     let isCore = true;
@@ -297,18 +303,32 @@ async function handleTrackResendWebhook(req, res) {
     } else if (eventType === 'email.opened') {
       if (isWebhookBot) return res.status(200).send('Ignored bot open');
 
-      if (recipient) {
-        if (!['Clicked', 'Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
-          recipient.status = 'Opened';
+      const priorStatus = recipient?.status;
+      const countOpenMetric = recipient
+        && !isOpenMetricSatisfied(priorStatus)
+        && !['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)
+        && !(camp && await hasCustomOpenForRecipient(camp._id, cleanEmail));
 
-          if (isCore) {
-            camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-            camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
-          } else {
-            camp.stats.opened = (camp.stats.opened || 0) + 1;
+      if (recipient) {
+        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)) {
+          if (!isOpenMetricSatisfied(priorStatus)) {
+            recipient.status = 'Opened';
+          }
+
+          if (countOpenMetric) {
+            if (isCore) {
+              camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+              camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+            } else {
+              camp.stats.opened = (camp.stats.opened || 0) + 1;
+            }
           }
           await saveCampaignDoc(camp, cleanEmail);
         }
+      }
+
+      if (!countOpenMetric) {
+        return res.status(200).send('Duplicate open ignored');
       }
 
       await Lead.updateOne(
@@ -330,30 +350,43 @@ async function handleTrackResendWebhook(req, res) {
     } else if (eventType === 'email.clicked') {
       if (isWebhookBot) return res.status(200).send('Ignored bot click');
 
-      if (recipient) {
-        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
-          recipient.status = 'Clicked';
+      const priorStatus = recipient?.status;
+      const countClickMetric = recipient
+        && !isClickMetricSatisfied(priorStatus)
+        && !['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus);
 
-          if (isCore) {
-            camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-            const city = locationObj?.city;
-            if (isValidDisplayCity(city)) {
-              if (!camp.locationBreakdown) {
-                camp.locationBreakdown = new Map();
+      if (recipient) {
+        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)) {
+          if (!isClickMetricSatisfied(priorStatus)) {
+            recipient.status = 'Clicked';
+          }
+
+          if (countClickMetric) {
+            if (isCore) {
+              camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+              const city = locationObj?.city;
+              if (isValidDisplayCity(city)) {
+                if (!camp.locationBreakdown) {
+                  camp.locationBreakdown = new Map();
+                }
+                const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+                camp.locationBreakdown.set(city, {
+                  opens: locData.opens || 0,
+                  clicks: (locData.clicks || 0) + 1,
+                });
+                camp.markModified('locationBreakdown');
               }
-              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-              camp.locationBreakdown.set(city, {
-                opens: locData.opens || 0,
-                clicks: (locData.clicks || 0) + 1,
-              });
-              camp.markModified('locationBreakdown');
+              camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
+            } else {
+              camp.stats.clicked = (camp.stats.clicked || 0) + 1;
             }
-            camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
-          } else {
-            camp.stats.clicked = (camp.stats.clicked || 0) + 1;
           }
           await saveCampaignDoc(camp, cleanEmail);
         }
+      }
+
+      if (!countClickMetric) {
+        return res.status(200).send('Duplicate click ignored');
       }
 
       await Lead.updateOne(
@@ -441,7 +474,7 @@ async function handleApiResendWebhook(req, res) {
     const cleanEmail = email.toLowerCase().trim();
     const geoip = require('geoip-lite');
 
-    console.log(`⚡ [Resend Webhook API] Processing event: ${eventType} for ${cleanEmail} (Email ID: ${emailId || 'N/A'})`);
+    logger.debug('resendWebhook', 'Processing event (API)', { eventType, email: cleanEmail, emailId });
 
     let camp = null;
     let isCore = true;
@@ -526,6 +559,7 @@ async function handleApiResendWebhook(req, res) {
     }
 
     const mailEventTenantId = await resolveMailEventTenantId(camp, cleanEmail);
+    const apiWebhookBot = isEmailLinkScanner(locationObj.userAgent || '');
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       if (recipient) {
@@ -588,28 +622,44 @@ async function handleApiResendWebhook(req, res) {
         },
       }, mailEventTenantId);
     } else if (eventType === 'email.opened') {
-      if (recipient) {
-        if (!['Clicked', 'Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
-          recipient.status = 'Opened';
+      if (apiWebhookBot) return res.status(200).send('Ignored bot open');
 
-          if (isCore) {
-            camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-            const city = locationObj.city || 'Unknown City';
-            if (!camp.locationBreakdown) {
-              camp.locationBreakdown = new Map();
+      const priorStatus = recipient?.status;
+      const countOpenMetric = recipient
+        && !isOpenMetricSatisfied(priorStatus)
+        && !['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)
+        && !(camp && await hasCustomOpenForRecipient(camp._id, cleanEmail));
+
+      if (recipient) {
+        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)) {
+          if (!isOpenMetricSatisfied(priorStatus)) {
+            recipient.status = 'Opened';
+          }
+
+          if (countOpenMetric) {
+            if (isCore) {
+              camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+              const city = locationObj.city || 'Unknown City';
+              if (!camp.locationBreakdown) {
+                camp.locationBreakdown = new Map();
+              }
+              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+              camp.locationBreakdown.set(city, {
+                opens: (locData.opens || 0) + 1,
+                clicks: locData.clicks || 0,
+              });
+              camp.markModified('locationBreakdown');
+              camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+            } else {
+              camp.stats.opened = (camp.stats.opened || 0) + 1;
             }
-            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            camp.locationBreakdown.set(city, {
-              opens: (locData.opens || 0) + 1,
-              clicks: locData.clicks || 0,
-            });
-            camp.markModified('locationBreakdown');
-            camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
-          } else {
-            camp.stats.opened = (camp.stats.opened || 0) + 1;
           }
           await saveCampaignDoc(camp, cleanEmail);
         }
+      }
+
+      if (!countOpenMetric) {
+        return res.status(200).send('Duplicate open ignored');
       }
 
       await Lead.updateOne(
@@ -634,28 +684,43 @@ async function handleApiResendWebhook(req, res) {
         },
       }, mailEventTenantId);
     } else if (eventType === 'email.clicked') {
-      if (recipient) {
-        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
-          recipient.status = 'Clicked';
+      if (apiWebhookBot) return res.status(200).send('Ignored bot click');
 
-          if (isCore) {
-            camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-            const city = locationObj.city || 'Unknown City';
-            if (!camp.locationBreakdown) {
-              camp.locationBreakdown = new Map();
+      const priorStatus = recipient?.status;
+      const countClickMetric = recipient
+        && !isClickMetricSatisfied(priorStatus)
+        && !['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus);
+
+      if (recipient) {
+        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(priorStatus)) {
+          if (!isClickMetricSatisfied(priorStatus)) {
+            recipient.status = 'Clicked';
+          }
+
+          if (countClickMetric) {
+            if (isCore) {
+              camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+              const city = locationObj.city || 'Unknown City';
+              if (!camp.locationBreakdown) {
+                camp.locationBreakdown = new Map();
+              }
+              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+              camp.locationBreakdown.set(city, {
+                opens: locData.opens || 0,
+                clicks: (locData.clicks || 0) + 1,
+              });
+              camp.markModified('locationBreakdown');
+              camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
+            } else {
+              camp.stats.clicked = (camp.stats.clicked || 0) + 1;
             }
-            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            camp.locationBreakdown.set(city, {
-              opens: locData.opens || 0,
-              clicks: (locData.clicks || 0) + 1,
-            });
-            camp.markModified('locationBreakdown');
-            camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
-          } else {
-            camp.stats.clicked = (camp.stats.clicked || 0) + 1;
           }
           await saveCampaignDoc(camp, cleanEmail);
         }
+      }
+
+      if (!countClickMetric) {
+        return res.status(200).send('Duplicate click ignored');
       }
 
       await Lead.updateOne(

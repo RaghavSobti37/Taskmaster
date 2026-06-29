@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
@@ -233,7 +234,7 @@ const CalendarView = () => {
     <div className="p-3 border border-[var(--color-bg-border)]">
       <div className="grid grid-cols-2 gap-2 items-center mb-2 pb-2 border-b border-[var(--color-bg-border)]">
         <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">
-          {selectedDay ? format(selectedDay, 'EEEE, MMM d') : 'Select a day'}
+          {selectedDay ? formatWeekdayDateLong(selectedDay) : 'Select a day'}
         </h4>
         {selectedDay && (
           <Badge variant="slate" className="justify-self-end shrink-0">{selectedDayEvents.length} EVENTS</Badge>

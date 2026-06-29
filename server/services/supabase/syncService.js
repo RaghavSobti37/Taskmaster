@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const Log = require('../../models/Log');
-const SystemLog = require('../../models/SystemLog');
 const CRMAudit = require('../../models/CRMAudit');
 const XPAuditLog = require('../../models/XPAuditLog');
 const QATestRun = require('../../models/QATestRun');
@@ -93,7 +92,6 @@ async function backfillLogsAndAudits() {
 
   const results = [];
   results.push(await backfillCollection({ stream: 'app_logs', model: Log, table: 'app_logs' }));
-  results.push(await backfillCollection({ stream: 'system_logs', model: SystemLog, table: 'system_logs' }));
   results.push(await backfillCollection({ stream: 'crm_audits', model: CRMAudit, table: 'crm_audits' }));
   results.push(await backfillCollection({ stream: 'xp_audit_logs', model: XPAuditLog, table: 'xp_audit_logs' }));
   results.push(await backfillCollection({ stream: 'qa_test_runs', model: QATestRun, table: 'qa_test_runs' }));

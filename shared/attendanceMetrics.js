@@ -1,29 +1,17 @@
-const { parseTimeSpentToMinutes } = require('./timeSpent');
-const { toDateKey } = require('./dateValidation');
+const { getLogWorkDateKey, readLogTimeSpentMinutes: readDailyLogMinutes } = require('./dailyLogDetails');
 
 const LUNCH_BREAK_MINUTES = 60;
 const UNLOGGED_THRESHOLD_MINUTES = 30;
 
-/** Read minutes from a daily log row (manual, task completion, or review). */
+/** Read minutes from a daily log row (interval, timeSpent string, or legacy hours). */
 function readLogTimeSpentMinutes(log) {
-  const details = log?.details || {};
-  const payload = log?.payload || {};
-  const raw = details.timeSpent ?? details.time ?? payload.timeSpent ?? payload.time;
-  if (raw == null || raw === '') {
-    const hours = Number(details.hours);
-    if (Number.isFinite(hours) && hours > 0) return Math.round(hours * 60);
-    return 0;
-  }
-  if (typeof raw === 'number') {
-    return raw > 24 ? Math.round(raw) : Math.round(raw * 60);
-  }
-  return parseTimeSpentToMinutes(raw);
+  return readDailyLogMinutes(log);
 }
 
-/** Keep logs whose createdAt falls on the same app calendar day (IST) as dateKey. */
+/** Keep logs whose work date (or legacy createdAt) matches dateKey. */
 function filterLogsForDateKey(logs = [], dateKey) {
   if (!dateKey) return [];
-  return logs.filter((log) => toDateKey(log.createdAt) === dateKey);
+  return logs.filter((log) => getLogWorkDateKey(log) === dateKey);
 }
 
 function parseClockToMinutes(timeStr) {

@@ -75,6 +75,95 @@ async function extractTextFromImage(buffer) {
 }
 
 /**
+ * Parse amount strings with Indian (3,12,000) or Western (12,000.00) grouping.
+ */
+function parseIndianNumber(raw) {
+  if (raw === undefined || raw === null) return NaN;
+  const cleaned = String(raw).trim().replace(/[₹$€£\s]/gi, '');
+  if (!cleaned) return NaN;
+
+  const [intPart, fracPart] = cleaned.split('.');
+  const digitsOnly = intPart.replace(/,/g, '');
+  if (!/^\d+$/.test(digitsOnly)) return NaN;
+
+  const value = Number(`${digitsOnly}${fracPart !== undefined ? `.${fracPart}` : ''}`);
+  return Number.isFinite(value) ? value : NaN;
+}
+
+function scoreAmountLine(line) {
+  const lower = line.toLowerCase();
+  if (/(?:grand\s+)?total|net\s+payable|amount\s+due|total\s+amount|balance\s+due|total\s+paid/i.test(lower)) {
+    return 100;
+  }
+  if (/sub\s*total|subtotal/i.test(lower)) return 25;
+  if (/(?:^|\s)(?:total|amount)(?:\s|$)/i.test(lower)) return 60;
+  return 10;
+}
+
+function extractAmountFromText(text) {
+  const lines = text.split('\n');
+  const scored = [];
+
+  for (const line of lines) {
+    const lineScore = scoreAmountLine(line);
+    const amountRegex = /(?:₹|rs\.?|inr|\$)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
+    let match;
+    while ((match = amountRegex.exec(line)) !== null) {
+      const val = parseIndianNumber(match[1]);
+      if (!Number.isFinite(val) || val <= 0 || val >= 100000000) continue;
+
+      let score = lineScore;
+      const digitsInLine = line.replace(/[^\d]/g, '');
+      if (digitsInLine.length >= 10 && !/(?:total|amount|payable|due|paid)/i.test(line)) {
+        score -= 40;
+      }
+      if (/(?:phone|mobile|tel|gstin|pan|account|ifsc|invoice\s*no|bill\s*no)/i.test(line)) {
+        score -= 30;
+      }
+      scored.push({ val, score });
+    }
+  }
+
+  if (!scored.length) return 0;
+  scored.sort((a, b) => b.score - a.score || b.val - a.val);
+  return scored[0].val;
+}
+
+function extractVendorFromText(text) {
+  if (!text) return '';
+
+  const lowerText = text.toLowerCase();
+  const billToMatch = lowerText.match(/\b(?:bill\s*to|billed\s*to|ship\s*to|consignee)\b/i);
+  const headerText = billToMatch
+    ? text.slice(0, billToMatch.index)
+    : text;
+
+  const fromMatch = headerText.match(
+    /\b(?:from|seller|vendor|supplier|issued\s+by|service\s+provider)\s*[:\-]?\s*([^\n]+)/i,
+  );
+  if (fromMatch?.[1]) {
+    const candidate = fromMatch[1].trim();
+    if (candidate.length > 3 && !/invoice|tax|receipt/i.test(candidate)) {
+      return candidate.substring(0, 100);
+    }
+  }
+
+  const lines = headerText
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(
+      (l) => l.length > 3
+        && !/invoice|tax|bill|receipt|page|date|tel|phone|email|website|address|total|payment|balance|gstin|pan|cin|amount|rupees/i.test(l),
+    );
+
+  if (lines.length > 0) {
+    return lines[0].substring(0, 100);
+  }
+
+  return '';
+}
+
+/**
  * Regular expression parsing to extract receipt/invoice metadata from text.
  */
 function parseMetadataFromText(text) {
@@ -107,44 +196,19 @@ function parseMetadataFromText(text) {
     metadata.detectedCategory = 'report';
   }
 
-  // 2. Extract Currency
-  if (lowerText.includes('$') || lowerText.includes('usd')) {
+  // 2. Extract Currency — word/symbol boundaries only (avoid "entrepreneur" → EUR)
+  if (/\$|\bUSD\b/i.test(text)) {
     metadata.currency = 'USD';
-  } else if (lowerText.includes('€') || lowerText.includes('eur')) {
+  } else if (/€|\bEUR\b/i.test(text)) {
     metadata.currency = 'EUR';
-  } else if (lowerText.includes('£') || lowerText.includes('gbp')) {
+  } else if (/£|\bGBP\b/i.test(text)) {
     metadata.currency = 'GBP';
+  } else if (/₹|\bINR\b/i.test(text)) {
+    metadata.currency = 'INR';
   }
 
-  // 3. Extract Amount
-  // Look for total/grand total/amount patterns. We'll search for matches, clean commas, and choose a reasonable total.
-  // We want to avoid matching phone numbers or invoice numbers, so we target lines containing amount indicators.
-  const amountPatterns = [
-    /(?:total|due|payable|amount|net|grand total|total amount|inr|rs\.?|\$)\s*(?:[^\w\n\r]*)\s*([\d,]+(?:\.\d{2})?)/gi,
-    /(?:net payable|total payable|total paid|paid amount|amount paid)\s*(?:[^\w\n\r]*)\s*([\d,]+(?:\.\d{2})?)/gi
-  ];
-
-  let potentialAmounts = [];
-  for (const pattern of amountPatterns) {
-    let match;
-    // Reset regex state
-    pattern.lastIndex = 0;
-    while ((match = pattern.exec(text)) !== null) {
-      if (match[1]) {
-        // Strip commas and parse
-        const amtStr = match[1].replace(/,/g, '');
-        const val = parseFloat(amtStr);
-        if (!isNaN(val) && val > 0 && val < 100000000) { // Limit to reasonable invoice amounts
-          potentialAmounts.push(val);
-        }
-      }
-    }
-  }
-
-  // If we found amounts, try to grab the largest one (usually the grand total), or the last one in the document
-  if (potentialAmounts.length > 0) {
-    metadata.amount = Math.max(...potentialAmounts);
-  }
+  // 3. Extract Amount — prefer total-line matches; handle Indian comma grouping
+  metadata.amount = extractAmountFromText(text);
 
   // 4. Extract Tax
   const taxPatterns = [
@@ -156,7 +220,7 @@ function parseMetadataFromText(text) {
     pattern.lastIndex = 0;
     while ((match = pattern.exec(text)) !== null) {
       if (match[1]) {
-        const taxVal = parseFloat(match[1].replace(/,/g, ''));
+        const taxVal = parseIndianNumber(match[1]);
         if (!isNaN(taxVal) && taxVal > 0) {
           potentialTaxes.push(taxVal);
         }
@@ -190,22 +254,21 @@ function parseMetadataFromText(text) {
     }
   }
 
-  // 6. Extract Vendor Name
-  // Heuristic: First few lines of the text usually contain the vendor name.
-  // We can look at the first non-empty lines, excluding things like "INVOICE", "TAX INVOICE", date etc.
-  const lines = text.split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 3 && !/invoice|tax|bill|receipt|page|date|tel|phone|email|website|address|total|payment|balance/i.test(l));
+  // 6. Extract Vendor — header / From block only; exclude Bill To section
+  metadata.vendor = extractVendorFromText(text);
 
-  if (lines.length > 0) {
-    // Take the first line as potential vendor
-    metadata.vendor = lines[0].substring(0, 100);
-  }
+  // Known vendor normalizations (only when not clearly Bill To)
+  const billToIdx = lowerText.search(/\b(?:bill\s*to|billed\s*to)\b/i);
+  const billToSection = billToIdx >= 0 ? lowerText.slice(billToIdx) : '';
+  const shaktiInBillTo = billToSection && /shakti collective/i.test(billToSection);
 
-  // Special vendor checks (common vendors in workspace)
   if (lowerText.includes('karma travels')) {
     metadata.vendor = 'Karma Travels';
-  } else if (lowerText.includes('shakti collective llp') || lowerText.includes('shakti collective llc')) {
+  } else if (
+    !shaktiInBillTo
+    && (lowerText.includes('shakti collective llp') || lowerText.includes('shakti collective llc'))
+    && !metadata.vendor
+  ) {
     metadata.vendor = 'Shakti Collective';
   } else if (lowerText.includes('sage university')) {
     metadata.vendor = 'Sage University';
@@ -265,4 +328,8 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
 
 module.exports = {
   parseDocument,
+  parseMetadataFromText,
+  parseIndianNumber,
+  extractAmountFromText,
+  extractVendorFromText,
 };

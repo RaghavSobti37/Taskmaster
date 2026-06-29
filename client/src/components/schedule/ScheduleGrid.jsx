@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, eachDayOfInterval, parseISO } from 'date-fns';
 import { getTodayDateKey } from '../../utils/dateValidation';
@@ -107,7 +108,7 @@ const ScheduleGrid = ({
     let label = format(parsed, 'EEE');
     if (key === todayKey) label = 'Today';
     else if (index === 1 && dateKeys[0] === todayKey) label = 'Tomorrow';
-    return { key, label, sub: format(parsed, 'EEE, MMM d') };
+    return { key, label, sub: formatWeekdayDate(parsed) };
   });
 
   const slotHeaders = dateKeys.flatMap((key) => [

@@ -81,7 +81,6 @@ const DEPARTMENT_PRESETS = {
     { id: 'todo', label: 'Todo', icon: 'ListTodo', path: '/todo', type: 'nav', shortcut: 'G T' },
     { id: 'logs', label: 'Daily Logs', icon: 'NotebookPen', path: '/logs', type: 'nav' },
     { id: 'management', label: 'Management Hub', icon: 'CircleDollarSign', path: '/management', type: 'nav', shortcut: 'G M' },
-    { id: 'ops-logs', label: 'Ops Logs', icon: 'Activity', path: '/management?tab=ops-logs', type: 'nav' },
     { id: 'attendance', label: 'Attendance', icon: 'ClipboardCheck', path: '/attendance', type: 'nav', shortcut: 'G A' },
     { id: 'dash', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', type: 'nav', shortcut: 'G D' },
   ],

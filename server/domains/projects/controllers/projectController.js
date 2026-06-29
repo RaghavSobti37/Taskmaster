@@ -498,12 +498,18 @@ exports.updateProject = async (req, res) => {
       if (req.body.workspace === undefined) {
         return res.status(403).json({ error: 'Not authorized to update this project' });
       }
+      // P2-5: validate workspace exists before member-level workspace move
+      const targetWsName = req.body.workspace.toUpperCase().trim();
+      const targetWs = await Workspace.findOne({ name: targetWsName }).lean();
+      if (!targetWs) {
+        return res.status(400).json({ error: `Workspace "${targetWsName}" does not exist` });
+      }
       const expectedVersion =
         typeof req.body.__v === 'number' ? req.body.__v : project.__v;
       const updated = await Project.findOneAndUpdate(
         { _id: req.params.id, __v: expectedVersion },
         {
-          $set: { workspace: req.body.workspace.toUpperCase().trim() },
+          $set: { workspace: targetWsName },
           $inc: { __v: 1 },
         },
         { new: true, runValidators: true }
@@ -513,6 +519,15 @@ exports.updateProject = async (req, res) => {
       }
       broadcastRealtimeEvent('projects', 'project_change', { projectId: updated._id, action: 'update' });
       return res.json(updated);
+    }
+
+    // P2-5: validate workspace exists if being changed (admin/owner path)
+    if (req.body.workspace !== undefined) {
+      const targetWsName = req.body.workspace.toUpperCase().trim();
+      const targetWs = await Workspace.findOne({ name: targetWsName }).lean();
+      if (!targetWs) {
+        return res.status(400).json({ error: `Workspace "${targetWsName}" does not exist` });
+      }
     }
 
     // SECURITY: Whitelist allowed update fields (prevent owner/member injection)

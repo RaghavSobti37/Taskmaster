@@ -20,7 +20,7 @@ const SERVICE_ALLOWLIST = new Set([
   'PersonIdentityService.js',
   'UnifiedSearchService.js',
   'subscriptionReminderService.js',
-  'crmReachOutDigestService.js',
+  'crmDailyStatsService.js',
   'crmDigestSettingsService.js',
   'leadWriteService.js',
   'leadDuplicateService.js',

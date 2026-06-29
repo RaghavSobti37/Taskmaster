@@ -21,7 +21,6 @@ const AttendancePromptModal = lazyWithRetry(() => import('./attendance/Attendanc
 
 const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
 const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
-const PageAnalyticsTracker = lazyWithRetry(() => import('./PageAnalyticsTracker'));
 const NotificationBridge = lazyWithRetry(() => import('./NotificationBridge'));
 const MobileAppShell = lazyWithRetry(() => import('./mobile/MobileAppShell'));
 const ProfileCompletionAlerts = lazyWithRetry(() => import('./ProfileCompletionAlerts'));
@@ -66,7 +65,6 @@ const MainLayout = () => {
         <MobileAppShell />
         <CommandPalette />
         <NotificationBridge />
-        <PageAnalyticsTracker />
         <PwaInstallBanner />
         <QuickAddMenu />
         <BottomNavigation />

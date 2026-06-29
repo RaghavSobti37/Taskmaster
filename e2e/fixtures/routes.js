@@ -17,7 +17,7 @@ export const PERMISSION_ROUTES = {
 
 const CRM_PERMS = ['leads', 'followups', 'bookings'];
 const OFFICE_PERMS = ['equipment', 'contacts', 'subscriptions'];
-const MGMT_PERMS = ['finance', 'announcements', 'ops_logs', 'artists'];
+const MGMT_PERMS = ['finance', 'announcements', 'artists'];
 const ADMIN_PERMS = [
   'admin_users',
   'admin_teams',
@@ -43,7 +43,7 @@ export const LEGACY_ROUTES_BY_ARCHETYPE = [
   { path: '/schedule', label: 'Schedule', archetypes: ['admin', 'user', 'sales', 'ops'] },
   { path: '/emails', label: 'Emails', archetypes: ['admin', 'user', 'ops'] },
   { path: '/crm', label: 'CRM', archetypes: ['admin', 'sales', 'user'] },
-  { path: '/office', label: 'People & Office', archetypes: ['admin', 'user', 'ops'] },
+  { path: '/office', label: 'Office', archetypes: ['admin', 'user', 'ops'] },
   { path: '/management', label: 'Management', archetypes: ['admin', 'ops'] },
   { path: '/admin/console', label: 'Admin Console', archetypes: ['admin'] },
   { path: '/settings', label: 'Settings', archetypes: ['admin', 'user', 'sales', 'ops'] },
@@ -68,7 +68,7 @@ export function routesForUser(user) {
       routes.set('/crm', { path: '/crm', label: 'CRM' });
     }
     if (perms.some((perm) => OFFICE_PERMS.includes(perm))) {
-      routes.set('/office', { path: '/office', label: 'People & Office' });
+      routes.set('/office', { path: '/office', label: 'Office' });
     }
     if (perms.some((perm) => MGMT_PERMS.includes(perm))) {
       routes.set('/management', { path: '/management', label: 'Management' });

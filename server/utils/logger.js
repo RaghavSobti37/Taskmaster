@@ -1,67 +1,34 @@
 /**
- * Centralized structured logger for production code.
- * Replaces raw console.* calls with tagged, level-aware logging.
- * Optional meta.persist writes to SystemLog collection when PERSIST_SYSTEM_LOGS=true.
+ * Structured JSON logger (Pino) — stdout only for Render log capture.
  */
-const { SEVERITY, MODULE } = require('../../shared/systemLogContract');
+const pino = require('pino');
 
-const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL || 'info'] ?? LOG_LEVELS.info;
+const level = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'warn' : 'info');
 
-const formatMessage = (level, tag, message, meta) => {
-  const timestamp = new Date().toISOString();
-  const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
-  return `${timestamp} [${level.toUpperCase()}] [${tag}] ${message}${metaStr}`;
-};
+const root = pino({
+  level,
+  base: {
+    service: process.env.SERVICE_NAME || 'coreknot-api',
+    env: process.env.NODE_ENV || 'development',
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+});
 
-const severityFromLevel = {
-  error: SEVERITY.ERROR,
-  warn: SEVERITY.WARN,
-  info: SEVERITY.INFO,
-  debug: SEVERITY.INFO,
-};
-
-function maybePersist(level, tag, message, meta) {
-  if (!meta?.persist) return;
-  if (String(process.env.PERSIST_SYSTEM_LOGS || 'false').toLowerCase() !== 'true') return;
-  const { writeSystemLog } = require('../services/systemLogService');
-  const severity = meta.severity || severityFromLevel[level] || SEVERITY.INFO;
-  writeSystemLog({
-    severity,
-    module: meta.module || MODULE.SYSTEM,
-    message: typeof message === 'string' ? message : tag,
-    userVisible: Boolean(meta.userVisible),
-    payload: meta.payload || (meta && Object.keys(meta).length ? meta : undefined),
-    route: meta.route,
-    errorCode: meta.errorCode,
-    relatedEntities: meta.relatedEntities,
-  });
+function mergeMeta(tag, message, meta) {
+  const out = { tag, msg: typeof message === 'string' ? message : String(message) };
+  if (meta && typeof meta === 'object') Object.assign(out, meta);
+  return out;
 }
 
 const logger = {
-  error: (tag, message, meta) => {
-    if (currentLevel >= LOG_LEVELS.error) {
-      console.error(formatMessage('error', tag, message, meta));
-    }
-    maybePersist('error', tag, message, meta);
-  },
-  warn: (tag, message, meta) => {
-    if (currentLevel >= LOG_LEVELS.warn) {
-      console.warn(formatMessage('warn', tag, message, meta));
-    }
-    maybePersist('warn', tag, message, meta);
-  },
-  info: (tag, message, meta) => {
-    if (currentLevel >= LOG_LEVELS.info) {
-      console.log(formatMessage('info', tag, message, meta));
-    }
-    maybePersist('info', tag, message, meta);
-  },
-  debug: (tag, message, meta) => {
-    if (currentLevel >= LOG_LEVELS.debug) {
-      console.log(formatMessage('debug', tag, message, meta));
-    }
-  },
+  error: (tag, message, meta) => root.error(mergeMeta(tag, message, meta)),
+  warn: (tag, message, meta) => root.warn(mergeMeta(tag, message, meta)),
+  info: (tag, message, meta) => root.info(mergeMeta(tag, message, meta)),
+  debug: (tag, message, meta) => root.debug(mergeMeta(tag, message, meta)),
+  child: (bindings) => root.child(bindings),
 };
 
 module.exports = logger;

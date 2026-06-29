@@ -401,6 +401,9 @@ const processEmailJobInner = async ({
     tags: sanitizeResendTags([
       { name: 'campaign_id', value: campaignTag },
       { name: 'recipient_email', value: cleanEmail },
+      ...(recipient?._id
+        ? [{ name: 'recipient_id', value: recipient._id.toString() }]
+        : []),
     ]),
   };
   if (attachmentRows.length) {

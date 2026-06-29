@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react';
 import { Button, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import PlatformSettingsUserField from '../../components/admin/PlatformSettingsUserField';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
@@ -103,6 +104,7 @@ const AdminPlatformSettings = () => {
         title="Platform settings"
         subtitle="Assign users for system emails, alerts, CRM routing, and protected roles — no env edits needed."
         icon={Settings2}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={(
           <div className="flex items-center gap-2">
             <Button

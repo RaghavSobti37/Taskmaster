@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
 import { Badge, DataTable, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
@@ -21,7 +22,7 @@ export default function ArtistGigsTab({ artistId, isPreview }) {
     { header: 'Location', render: (row) => <span className="text-xs">{row.location || '—'}</span> },
     {
       header: 'Date',
-      render: (row) => <span className="text-xs">{new Date(row.gigDate).toLocaleDateString('en-IN')}</span>,
+      render: (row) => <span className="text-xs">{formatDisplayDate(new Date(row.gigDate))}</span>,
     },
     { header: 'Rate', render: (row) => <span className="text-xs font-bold">{formatInr(row.rate)}</span> },
     { header: 'Expense', render: (row) => <span className="text-xs">{formatInr(row.expense)}</span> },

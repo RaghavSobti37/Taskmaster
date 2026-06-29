@@ -90,7 +90,7 @@ export function getOnboardingSteps(isMobile) {
         id: 'more-pages',
         target: null,
         title: 'Projects, CRM & more',
-        body: 'Tap You → full menu for Projects, Attendance, Calendar, Daily Logs, Notes, Assets, Emails, CRM (leads & bookings), People & Office, and Management hubs. Items match your department access.',
+        body: 'Tap You → full menu for Projects, Attendance, Calendar, Daily Logs, Notes, Assets, Emails, CRM (leads & bookings), Office, and Management hubs. Items match your department access.',
         placement: 'center',
       },
       {
@@ -226,7 +226,7 @@ export function getOnboardingSteps(isMobile) {
     {
       id: 'office',
       target: '[data-tour="nav-office"]',
-      title: 'People & Office',
+      title: 'Office',
       body: 'Equipment inventory, office contacts, and subscription renewals — operational stuff for studio and admin teams.',
       placement: 'right',
     },
@@ -234,7 +234,7 @@ export function getOnboardingSteps(isMobile) {
       id: 'management',
       target: '[data-tour="nav-management"]',
       title: 'Management',
-      body: 'Finance document OCR uploads, team announcements, ops logs, and artist analytics (Spotify, YouTube, Meta OAuth). Leadership and finance workflows live here.',
+      body: 'Finance document OCR uploads, team announcements, and artist analytics (Spotify, YouTube, Meta OAuth).',
       placement: 'right',
     },
     {

@@ -10,7 +10,7 @@ export const BASE_PAGE_KEYS = [
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
-const OPS_EXTRA_PAGES = ['finance', 'announcements', 'ops_logs', 'office_assets'];
+const OPS_EXTRA_PAGES = ['finance', 'announcements', 'office_assets'];
 const CREATIVE_EXTRA_PAGES = ['assets', 'features', 'workflows', 'office_assets'];
 
 export const PRESET_PAGES = {
@@ -29,11 +29,11 @@ const ADMIN_PAGE_KEYS = new Set(
 );
 
 export const CRM_PAGE_KEYS = ['leads', 'followups', 'bookings'];
-const OPS_PAGE_KEYS = ['finance', 'announcements', 'ops_logs'];
+const OPS_PAGE_KEYS = ['finance', 'announcements'];
 
 export const PERMISSION_PRESET_OPTIONS = [
   { value: 'admin', label: 'Admin (all pages)', description: 'Full access to every page' },
-  { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, ops logs, office assets' },
+  { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, office assets' },
   { value: 'sales', label: 'Sales', description: 'Base workspace + CRM pages' },
   { value: 'artist-management', label: 'Artist Management', description: 'Base workspace + artists + artist CRM' },
   { value: 'artist-business', label: 'Artist Business', description: 'Artist bookings CRM + TSC Films project access' },

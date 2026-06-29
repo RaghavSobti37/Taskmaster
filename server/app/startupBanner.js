@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { config } = require('../config');
+const logger = require('../utils/logger');
 const { getApiDomainManifest } = require('./registerRoutes');
 const { CRON_JOBS, QUEUE_WORKERS } = require('../jobs/registry');
 const { isRedisAvailable } = require('../services/backgroundQueue');
@@ -37,43 +38,44 @@ function printStartupBanner({ jobsStarted = [], jobsSkipped = 0 } = {}) {
   const registryTotal = CRON_JOBS.length + QUEUE_WORKERS.length;
   const startedCount = jobsStarted.length;
 
-  console.log('[BOOT] ── CoreKnot Express modular monolith ──');
-  console.log(`[BOOT] ${config.NODE_ENV} · port ${config.PORT}`);
-  console.log(`[BOOT] Domains: ${domains.length} mounted — ${formatDomainList(domains)}`);
-  console.log(`[BOOT] MongoDB: ${mongoStatus()}`);
-  console.log(`[BOOT] Redis: ${redisStatus()}`);
-  console.log(
-    `[BOOT] Jobs: ${startedCount}/${registryTotal} started` +
+  logger.info('BOOT', '── CoreKnot Express modular monolith ──');
+  logger.info('BOOT', `${config.NODE_ENV} · port ${config.PORT}`);
+  logger.info('BOOT', `Domains: ${domains.length} mounted — ${formatDomainList(domains)}`);
+  logger.info('BOOT', `MongoDB: ${mongoStatus()}`);
+  logger.info('BOOT', `Redis: ${redisStatus()}`);
+  logger.info(
+    'BOOT',
+    `Jobs: ${startedCount}/${registryTotal} started` +
       ` (${CRON_JOBS.length} cron + ${QUEUE_WORKERS.length} workers` +
       (jobsSkipped ? `, ${jobsSkipped} deduped` : '') +
       ')',
   );
 
   const trackingBase = resolveTrackingApiBaseUrl();
-  console.log(`[BOOT] Mail tracking base: ${trackingBase}`);
+  logger.info('BOOT', `Mail tracking base: ${trackingBase}`);
   const trackingWarn = getTrackingDbMismatchWarning();
   if (trackingWarn && !trackingWarnShown) {
     trackingWarnShown = true;
-    console.warn('[MAIL] ⚠ ' + trackingWarn);
+    logger.warn('MAIL', trackingWarn);
   }
 
   if (isSupabaseEnabled()) {
     const sb = getSupabaseConfig();
-    console.log(`[BOOT] Supabase: enabled — ${sb.url}`);
+    logger.info('BOOT', `Supabase: enabled — ${sb.url}`);
   } else {
-    console.log('[BOOT] Supabase: disabled');
+    logger.info('BOOT', 'Supabase: disabled');
   }
 
   if (config.isDevelopment) {
     const nestPort = process.env.NESTJS_PORT || '5001';
-    console.log(`[BOOT] Strangler: attendance → NestJS :${nestPort} (vite proxy)`);
+    logger.info('BOOT', `Strangler: attendance → NestJS :${nestPort} (vite proxy)`);
   }
 
   const uploadCreds = validateUploadthingCredentials();
   if (!uploadCreds.ok) {
-    console.warn(`[BOOT] UploadThing: misconfigured — ${uploadCreds.message}`);
+    logger.warn('BOOT', `UploadThing: misconfigured — ${uploadCreds.message}`);
   } else {
-    console.log(`[BOOT] UploadThing: ready${uploadCreds.appId ? ` — ${uploadCreds.appId}` : ''}`);
+    logger.info('BOOT', `UploadThing: ready${uploadCreds.appId ? ` — ${uploadCreds.appId}` : ''}`);
   }
 }
 

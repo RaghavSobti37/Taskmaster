@@ -6,7 +6,7 @@ import {
   TRACKING_JOB_CLICK,
   TRACKING_JOB_OPEN,
 } from '../../../bullmq/queue.constants';
-import { legacyModels } from '../../../shared/email-engine/legacy-bridge';
+import { legacyModels, trackingClaim } from '../../../shared/email-engine/legacy-bridge';
 import {
   buildEventLocation,
   buildTrackingRequestLike,
@@ -54,10 +54,8 @@ export class TrackingProcessor extends WorkerHost {
         ? await buildEventLocation(req, userAgent, { skipProxyGeo: true })
         : await buildEventLocation(req, userAgent, { enrich: true });
 
-      const log = await EmailLog.findOne({ pixelId });
-      if (!log || log.opened) return;
-
-      await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
+      const log = await trackingClaim.claimEmailLogOpen(pixelId);
+      if (!log) return;
 
       const camp = await this.resolveCampaign(log.campaignId);
       if (!camp) return;
@@ -138,10 +136,8 @@ export class TrackingProcessor extends WorkerHost {
         clickGeo: true,
       });
 
-      const log = await EmailLog.findOne({ clickId });
-      if (!log || log.clicked) return;
-
-      await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
+      const log = await trackingClaim.claimEmailLogClick(clickId);
+      if (!log) return;
 
       const camp = await this.resolveCampaign(log.campaignId);
       if (!camp) return;

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
 import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
@@ -117,6 +118,7 @@ const AdminScriptsPage = () => {
       <PageHeader
         title="Admin Script Runner"
         icon={Brackets}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={
           <div className="flex items-center gap-2">
             <Input

@@ -24,7 +24,6 @@ const ProjectAnalyticsPage = lazyWithRetry(() => import('./pages/projects/Projec
 const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
 const WorkspaceSettings = lazyWithRetry(() => import('./pages/projects/WorkspaceSettings'));
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
-const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminTeamsPage = lazyWithRetry(() => import('./pages/admin/AdminTeamsPage'));
 const AdminRolesPage = lazyWithRetry(() => import('./pages/admin/AdminRolesPage'));
@@ -87,6 +86,8 @@ import ArtistPathPage from './pages/admin/ArtistPathPage';
 const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPlatformSettings'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));
+const LeadAuditsPage = lazyWithRetry(() => import('./pages/admin/LeadAuditsPage'));
+const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
@@ -240,7 +241,7 @@ function App() {
               <Route element={<PageRoute pages={['equipment', 'contacts', 'subscriptions']} />}>
                 <Route path="/office" element={<OfficeHub />} />
               </Route>
-              <Route element={<PageRoute pages={['finance', 'announcements', 'ops_logs', 'artists']} />}>
+              <Route element={<PageRoute pages={['finance', 'announcements', 'artists']} />}>
                 <Route path="/management" element={<ManagementHub />} />
               </Route>
               <Route element={<PageRoute pages={['admin_users', 'admin_teams', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics', 'admin_roles']} />}>
@@ -254,8 +255,6 @@ function App() {
               <Route path="/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
               <Route path="/finance" element={<Navigate to="/management?tab=finance" replace />} />
               <Route path="/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
-              <Route path="/ops-logs" element={<Navigate to="/management?tab=ops-logs" replace />} />
-              <Route path="/management/ops-logs" element={<Navigate to="/management?tab=ops-logs" replace />} />
               <Route path="/management/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
               <Route path="/artists" element={<Navigate to="/management?tab=artists" replace />} />
 
@@ -285,7 +284,9 @@ function App() {
                 <Route path="/admin/control" element={<AdminPanel />} />
                 <Route path="/admin/qa" element={<QATestingPage />} />
                 <Route path="/admin/media-list" element={<MediaListPage />} />
-                <Route path="/admin/audits" element={<Navigate to="/logs?view=lead-audits" replace />} />
+                <Route path="/admin/lead-audits" element={<LeadAuditsPage />} />
+                <Route path="/admin/crm-stats" element={<CrmStatsPage />} />
+                <Route path="/admin/audits" element={<Navigate to="/admin/lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />

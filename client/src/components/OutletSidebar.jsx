@@ -48,7 +48,6 @@ const LEGACY_PAGE_PATHS = {
   '/management/contacts': '/contacts',
   '/office/subscriptions': '/subscriptions',
   '/management/announcements': '/announcements',
-  '/management/ops-logs': '/ops-logs',
   '/management/attendance': '/attendance',
   '/projects/workspaces': '/workspaces',
 };
@@ -81,7 +80,7 @@ const PAGE_CONFIG = {
   },
   '/office': {
     icon: Building2,
-    label: 'People & Office',
+    label: 'Office',
     accessKey: 'office_hub',
     matchPaths: ['/office', '/equipment', '/contacts', '/subscriptions'],
   },
@@ -89,13 +88,13 @@ const PAGE_CONFIG = {
     icon: CircleDollarSign,
     label: 'Management',
     accessKey: 'management_hub',
-    matchPaths: ['/management', '/finance', '/announcements', '/ops-logs', '/artists'],
+    matchPaths: ['/management', '/finance', '/announcements', '/artists'],
   },
   '/admin/console': {
     icon: Shield,
     label: 'Admin',
     accessKey: 'admin_console',
-    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
+    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control', '/admin/media-list', '/admin/lead-audits', '/admin/crm-stats'],
     end: true,
   },
 };

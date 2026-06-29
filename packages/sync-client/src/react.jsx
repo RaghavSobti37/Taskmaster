@@ -1,20 +1,25 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createSyncLifecycle, getSyncStatus, subscribeSyncStatus } from './lifecycle.js';
 
 const SyncContext = createContext({ status: 'idle', lifecycle: null });
 
 export function SyncProvider({ children, connect }) {
-  const [status, setStatus] = useState(getSyncStatus());
-  const [lifecycle] = useState(() => createSyncLifecycle({ connect }));
+  const [status, setStatus] = useState(() => getSyncStatus());
+  const lifecycleRef = useRef(null);
 
   useEffect(() => {
-    return subscribeSyncStatus(setStatus);
-  }, []);
+    const lifecycle = createSyncLifecycle({ connect });
+    lifecycleRef.current = lifecycle;
+    return () => {
+      lifecycle.dispose();
+      lifecycleRef.current = null;
+    };
+  }, [connect]);
 
-  useEffect(() => () => lifecycle.dispose(), [lifecycle]);
+  useEffect(() => subscribeSyncStatus(setStatus), []);
 
   return (
-    <SyncContext.Provider value={{ status, lifecycle }}>
+    <SyncContext.Provider value={{ status, lifecycle: lifecycleRef.current }}>
       {children}
     </SyncContext.Provider>
   );

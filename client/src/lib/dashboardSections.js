@@ -258,7 +258,16 @@ export function sortSectionWidgets(widgets) {
 export function getWidgetGridStyle(el, sectionId) {
   const maxCols = sectionMaxCols(sectionId);
   const size = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
-  return { gridColumn: `span ${size}` };
+  const col = Math.min(
+    Math.max(parseInt(el.col, 10) || 1, 1),
+    Math.max(1, maxCols - size + 1)
+  );
+  const row = Math.max(parseInt(el.row, 10) || 1, 1);
+
+  return {
+    gridColumn: `${col} / span ${size}`,
+    gridRow: row,
+  };
 }
 
 export function getSectionGridStyle(sectionId) {
@@ -276,6 +285,77 @@ export function getWidgetMinHeightClass(sectionId) {
   if (sectionId === 'analytics') return 'min-h-[140px]';
   if (sectionId === 'team-context') return 'min-h-[200px]';
   return 'min-h-[160px]';
+}
+
+export function getElementSection(el) {
+  return el.section || getWidgetSection(el.componentId);
+}
+
+/** Pack widgets inside one section grid (respects size / order). */
+export function packSectionElements(sectionElements, maxCols) {
+  const visibleEls = sectionElements.filter((e) => e.visible !== false);
+  const hiddenEls = sectionElements.filter((e) => e.visible === false);
+
+  const reqPos = sortSectionWidgets(visibleEls);
+
+  const grid = [];
+  const isOccupied = (r, c, size) => {
+    for (let i = 0; i < size; i++) {
+      if (grid[r] && grid[r][c + i]) return true;
+    }
+    return false;
+  };
+  const markOccupied = (r, c, size) => {
+    if (!grid[r]) grid[r] = [];
+    for (let i = 0; i < size; i++) grid[r][c + i] = true;
+  };
+
+  const placed = [];
+  for (const el of reqPos) {
+    const sizeNum = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
+    let placedRow = 1;
+    let placedCol = 1;
+    let found = false;
+
+    for (let r = 1; r < 100; r++) {
+      for (let c = 1; c <= maxCols - sizeNum + 1; c++) {
+        if (!isOccupied(r, c, sizeNum)) {
+          placedRow = r;
+          placedCol = c;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+
+    markOccupied(placedRow, placedCol, sizeNum);
+    placed.push({ ...el, row: placedRow, col: placedCol, size: String(sizeNum) });
+  }
+
+  return [...placed, ...hiddenEls];
+}
+
+/** Recompute col/row for every visible section from order + size. */
+export function repackDashboardElements(elements) {
+  const hidden = elements.filter((e) => e.visible === false);
+  const packed = [];
+
+  for (const section of DASHBOARD_SECTIONS) {
+    const sectionEls = elements.filter(
+      (e) => e.visible !== false && getElementSection(e) === section.id
+    );
+    if (sectionEls.length) {
+      packed.push(...packSectionElements(sectionEls, sectionMaxCols(section.id)));
+    }
+  }
+
+  const packedIds = new Set(packed.map((e) => e.componentId));
+  elements
+    .filter((e) => e.visible !== false && !packedIds.has(e.componentId))
+    .forEach((e) => packed.push(e));
+
+  return [...packed, ...hidden];
 }
 
 const TASK_WIDGET_IDS = new Set(['todos-today', 'todos-overdue']);

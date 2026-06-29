@@ -30,6 +30,7 @@ import {
 } from '../lib/componentRegistry';
 import {
   normalizeDashboardElements,
+  repackDashboardElements,
 } from '../lib/dashboardSections';
 import { getLazyDashboardWidget } from '../lib/dashboardWidgetLoaders';
 import { isAdminUser } from '../utils/departmentPermissions';
@@ -127,7 +128,7 @@ const Dashboard = () => {
     const raw = dashboardPreset?.elements?.length
       ? dashboardPreset.elements
       : getDefaultLayoutElements(permissionPreset);
-    return normalizeDashboardElements(raw, permissionPreset);
+    return repackDashboardElements(normalizeDashboardElements(raw, permissionPreset));
   }, [dashboardPreset?.elements, permissionPreset]);
 
   const [secondaryWidgetsReady, setSecondaryWidgetsReady] = useState(false);

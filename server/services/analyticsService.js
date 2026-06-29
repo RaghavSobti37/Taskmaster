@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { getSpotifyAccessToken } = require('../domains/artists/services/spotifyTokenManager');
+const logger = require('../utils/logger');
 
 const fetchLiveAnalytics = async (artist) => {
   // ── Resolve IDs — NO hardcoded fallbacks ──────────────────────────────────
@@ -15,7 +16,7 @@ const fetchLiveAnalytics = async (artist) => {
     // ─── 1. SPOTIFY ──────────────────────────────────────────────────────────
     (async () => {
       if (!spotifyArtistId) {
-        console.log(`⚠️ [Spotify] No artist ID configured for ${artist.name} — skipping`);
+        logger.warn('spotify', `No artist ID configured for ${artist.name} — skipping`);
         return null;
       }
 
@@ -32,12 +33,12 @@ const fetchLiveAnalytics = async (artist) => {
         artistInfo = r.data;
         // Log what we actually got back
         const hasFullData = artistInfo.followers != null;
-        console.log(`✅ [Spotify] Artist: ${artistInfo.name} | Full profile data: ${hasFullData ? 'yes' : 'NO (quota extension needed)'}`);
+        logger.debug('spotify', `Artist: ${artistInfo.name} | Full profile data: ${hasFullData ? 'yes' : 'NO (quota extension needed)'}`);
         if (hasFullData) {
-          console.log(`   Followers: ${artistInfo.followers?.total} | Popularity: ${artistInfo.popularity} | Genres: [${(artistInfo.genres || []).join(', ')}]`);
+          logger.debug('spotify', `Followers: ${artistInfo.followers?.total} | Popularity: ${artistInfo.popularity} | Genres: [${(artistInfo.genres || []).join(', ')}]`);
         }
       } catch (err) {
-        console.error('❌ [Spotify] Artist profile error:', err.response?.data?.error?.message || err.message);
+        logger.error('spotify', 'Artist profile error', { err: err.response?.data?.error?.message || err.message });
       }
 
       // 1b. Discography (albums endpoint — works without quota extension)
@@ -49,7 +50,7 @@ const fetchLiveAnalytics = async (artist) => {
           { headers, timeout: 10000 }
         );
         albums = r.data?.items || [];
-        console.log(`✅ [Spotify] Discography: ${albums.length} releases`);
+        logger.debug('spotify', `Discography: ${albums.length} releases`);
 
         // 1c. Pull tracks from each release (since top-tracks is quota-blocked)
         const albumsToScan = albums.slice(0, 10);
@@ -114,13 +115,13 @@ const fetchLiveAnalytics = async (artist) => {
               }
               fetchedDetailsSuccessfully = true;
             } catch (ftErr) {
-              console.error('❌ [Spotify] Full tracks fetch error:', ftErr.message);
+              logger.error('spotify', 'Full tracks fetch error', { err: ftErr.message });
             }
           }
         }
 
         if (!fetchedDetailsSuccessfully || liveTracks.length === 0) {
-          console.log('⚠️ [Spotify] Falling back to basic track metadata due to query block/403...');
+          logger.warn('spotify', 'Falling back to basic track metadata due to query block/403');
           for (const [trackId, entry] of albumMap.entries()) {
             const { alb, track } = entry;
             liveTracks.push({
@@ -146,9 +147,9 @@ const fetchLiveAnalytics = async (artist) => {
             });
           }
         }
-        console.log(`✅ [Spotify] Tracks with popularity/basic metadata pulled from discography: ${liveTracks.length}`);
+        logger.debug('spotify', `Tracks with popularity/basic metadata pulled from discography: ${liveTracks.length}`);
       } catch (err) {
-        console.error('❌ [Spotify] Discography error:', err.response?.data?.error?.message || err.message);
+        logger.error('spotify', 'Discography error', { err: err.response?.data?.error?.message || err.message });
       }
 
       // 1d. Related artists (may also be quota-blocked — handled gracefully)
@@ -165,9 +166,9 @@ const fetchLiveAnalytics = async (artist) => {
           image: a.images?.[0]?.url || null,
           url: a.external_urls?.spotify || null
         }));
-        console.log(`✅ [Spotify] Related artists: ${relatedArtists.length}`);
+        logger.debug('spotify', `Related artists: ${relatedArtists.length}`);
       } catch (err) {
-        console.log(`⚠️ [Spotify] Related artists blocked (quota extension needed): ${err.response?.data?.error?.message || err.message}`);
+        logger.warn('spotify', `Related artists blocked (quota extension needed): ${err.response?.data?.error?.message || err.message}`);
       }
 
       return {
@@ -183,7 +184,7 @@ const fetchLiveAnalytics = async (artist) => {
     // ─── 2. YOUTUBE ──────────────────────────────────────────────────────────
     (async () => {
       if (!youtubeChannelId) {
-        console.log(`⚠️ [YouTube] No channel ID configured for ${artist.name} — skipping`);
+        logger.warn('youtube', `No channel ID configured for ${artist.name} — skipping`);
         return null;
       }
       if (!youtubeApiKey) throw new Error('YouTube API key unconfigured');
@@ -213,7 +214,7 @@ const fetchLiveAnalytics = async (artist) => {
             videoList = vids.data.items || [];
           }
         } catch (err) {
-          console.error('❌ [YouTube] Playlist/videos error:', err.message);
+          logger.error('youtube', 'Playlist/videos error', { err: err.message });
         }
       }
 
@@ -226,7 +227,7 @@ const fetchLiveAnalytics = async (artist) => {
           );
           externalVideoList = extVids.data?.items || [];
         } catch (err) {
-          console.error('❌ [YouTube] External videos error:', err.message);
+          logger.error('youtube', 'External videos error', { err: err.message });
         }
       }
 
@@ -238,7 +239,7 @@ const fetchLiveAnalytics = async (artist) => {
       const { fetchMetaAnalytics } = require('./metaGraphService');
       const metaCreds = artist.oauthCredentials?.meta || {};
       if (!metaCreds.accessToken && !metaCreds.igAccountId && !metaCreds.fbPageId && !process.env.META_USER_TOKEN) {
-        console.log(`⚠️ [Meta] No credentials for ${artist.name} — connect Instagram/Facebook via OAuth`);
+        logger.warn('meta', `No credentials for ${artist.name} — connect Instagram/Facebook via OAuth`);
         return null;
       }
       return fetchMetaAnalytics(metaCreds);

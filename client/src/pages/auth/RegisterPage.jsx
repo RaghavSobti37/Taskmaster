@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDepartments } from '../../hooks/useTaskmasterQueries';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import BrandLogo from '../../components/brand/BrandLogo';
+import { brand, registerCopy } from '../../constants/marketingContent';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -46,8 +47,8 @@ const RegisterPage = () => {
       <div className="tm-modal-panel max-w-md relative z-10 bg-card p-8 rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
         <div className="text-center mb-8">
           <BrandLogo size={64} className="mx-auto mb-4" />
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2 font-medium">Join the team today</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{registerCopy.title}</h1>
+          <p className="text-[var(--color-text-secondary)] mt-2 font-medium">{registerCopy.subtitle}</p>
         </div>
 
         {error && (
@@ -138,16 +139,16 @@ const RegisterPage = () => {
             disabled={loading}
             className="w-full bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20"
           >
-            {loading ? 'Registering...' : 'Sign Up'} <ArrowRight size={20} />
+            {loading ? 'Registering...' : registerCopy.submitLabel} <ArrowRight size={20} />
           </button>
         </form>
 
         <div className="mt-8 pt-6 border-t border-border text-center text-sm">
           <p className="text-[var(--color-text-muted)] font-medium mb-4">
-            Already have an account?
+            {registerCopy.signInPrompt}
           </p>
           <Link to="/login" className="flex items-center justify-center w-full py-3 rounded-xl bg-card border border-border text-foreground font-bold hover:bg-background transition shadow-sm">
-            Sign In
+            {registerCopy.signInLink}
           </Link>
         </div>
       </div>

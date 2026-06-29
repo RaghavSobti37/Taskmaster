@@ -10,6 +10,13 @@ const {
   handleUploadSingleRequest,
 } = require('../utils/uploadthingServer');
 const { syncFolderPlacementFromDisk } = require('../utils/financeDiskSync');
+const {
+  isAllowedFinanceFileUrl,
+  downloadFinanceFile,
+  sendInlineFile,
+} = require('../utils/financeFileProxy');
+const { parseDocument } = require('../utils/documentParser');
+const { getOcrMaxBytes, shouldRunOcr } = require('../utils/financeOcrLimits');
 
 const populateFinanceDoc = (id) =>
   FinanceDocument.findById(id)
@@ -17,6 +24,60 @@ const populateFinanceDoc = (id) =>
     .populate('project', 'name')
     .populate('folderId', 'folderName title isFolder')
     .lean();
+
+const FINANCE_COLLECTION = FinanceDocument.collection.name;
+
+/** Stages: folders sort by latest child payment date; docs by metadata.date */
+const financePaymentDateSortStages = (order) => [
+  {
+    $lookup: {
+      from: FINANCE_COLLECTION,
+      let: { folderId: '$_id' },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $eq: ['$folderId', '$$folderId'] },
+                { $ne: ['$isFolder', true] },
+              ],
+            },
+          },
+        },
+        { $group: { _id: null, latest: { $max: '$metadata.date' } } },
+      ],
+      as: '_folderLatest',
+    },
+  },
+  {
+    $addFields: {
+      _sortPaymentDate: {
+        $cond: {
+          if: '$isFolder',
+          then: {
+            $ifNull: [
+              { $arrayElemAt: ['$_folderLatest.latest', 0] },
+              { $ifNull: ['$updatedAt', '$createdAt'] },
+            ],
+          },
+          else: { $ifNull: ['$metadata.date', '$createdAt'] },
+        },
+      },
+    },
+  },
+  { $sort: { isFolder: -1, _sortPaymentDate: order, createdAt: order } },
+];
+
+const populateFinanceDocsByIds = async (ids) => {
+  if (!ids.length) return [];
+  const docsRaw = await FinanceDocument.find({ _id: { $in: ids } })
+    .populate('uploadedBy', 'name email avatar')
+    .populate('project', 'name')
+    .populate('folderId', 'folderName title isFolder')
+    .lean();
+  const byId = Object.fromEntries(docsRaw.map((d) => [d._id.toString(), d]));
+  return ids.map((id) => byId[id.toString()]).filter(Boolean);
+};
 
 const uploadFile = handleUploadSingleRequest;
 const uploadFilesMany = handleUploadFilesManyRequest;
@@ -96,7 +157,10 @@ const uploadDocumentsBulk = async (req, res) => {
     const { allocate: allocateReference } = createReferenceAllocator();
 
     for (const d of documents) {
-      const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId, referenceNumber } = d;
+      const {
+        title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType,
+        folderId, referenceNumber, metadata: clientMetadata,
+      } = d;
       if (!title || !project || !fileUrl) continue;
 
       if (folderId) {
@@ -106,12 +170,30 @@ const uploadDocumentsBulk = async (req, res) => {
 
       const docReference = await allocateReference(project, referenceNumber);
 
+      const baseMetadata = {
+        amount: 0,
+        currency: 'INR',
+        vendor: '',
+        date: null,
+        tax: 0,
+        detectedCategory: category || 'other',
+      };
+      const mergedMetadata = clientMetadata && typeof clientMetadata === 'object'
+        ? {
+          ...baseMetadata,
+          ...clientMetadata,
+          amount: Number(clientMetadata.amount) || 0,
+          tax: Number(clientMetadata.tax) || 0,
+          date: clientMetadata.date ? new Date(clientMetadata.date) : null,
+        }
+        : baseMetadata;
+
       const doc = new FinanceDocument({
         title,
         description: description || '',
         project,
         folderId: folderId || null,
-        category: category || 'other',
+        category: category || mergedMetadata.detectedCategory || 'other',
         referenceNumber: docReference,
         fileUrl,
         fileKey,
@@ -120,18 +202,13 @@ const uploadDocumentsBulk = async (req, res) => {
         fileType,
         uploadedBy: req.user._id,
         extractedText: '',
-        metadata: {
-          amount: 0,
-          currency: 'INR',
-          vendor: '',
-          date: null,
-          tax: 0,
-          detectedCategory: category || 'other',
-        },
+        metadata: mergedMetadata,
       });
 
       await doc.save();
-      scheduleFinanceDocumentOcr(doc._id, { fileUrl, fileType, fileName, fileSize });
+      if (!clientMetadata?.vendor && !clientMetadata?.amount) {
+        scheduleFinanceDocumentOcr(doc._id, { fileUrl, fileType, fileName, fileSize });
+      }
       savedDocs.push(doc._id);
     }
 
@@ -224,15 +301,18 @@ const getDocuments = async (req, res) => {
       category: 'category',
       fileSize: 'fileSize',
       docDate: 'metadata.date',
+      paymentDate: 'metadata.date',
       folderName: 'folderName',
     };
     const order = sortOrder === 'asc' ? 1 : -1;
-    let sort = { isFolder: -1, folderName: 1, 'metadata.date': -1, createdAt: -1 };
-    if (sortField && SORTABLE[sortField]) {
-      const key = SORTABLE[sortField];
+    const effectiveSortField = sortField === 'paymentDate' ? 'docDate' : sortField;
+    const usePaymentDateSort = !effectiveSortField || effectiveSortField === 'docDate';
+
+    let sort = { isFolder: -1, 'metadata.date': -1, createdAt: -1, updatedAt: -1 };
+    if (effectiveSortField && SORTABLE[effectiveSortField] && !usePaymentDateSort) {
+      const key = SORTABLE[effectiveSortField];
       sort = { isFolder: -1, [key]: order };
-      if (sortField === 'docDate') sort.createdAt = order;
-      if (sortField === 'title') sort.fileName = order;
+      if (effectiveSortField === 'title') sort.fileName = order;
     }
 
     const total = await FinanceDocument.countDocuments(filter);
@@ -259,14 +339,26 @@ const getDocuments = async (req, res) => {
       count: row.count,
     }));
 
-    let docs = await FinanceDocument.find(filter)
-      .populate('uploadedBy', 'name email avatar')
-      .populate('project', 'name')
-      .populate('folderId', 'folderName title isFolder')
-      .sort(sort)
-      .skip(skip)
-      .limit(limitVal)
-      .lean();
+    let docs;
+    if (usePaymentDateSort) {
+      const idRows = await FinanceDocument.aggregate([
+        { $match: filter },
+        ...financePaymentDateSortStages(order),
+        { $skip: skip },
+        { $limit: limitVal },
+        { $project: { _id: 1 } },
+      ]);
+      docs = await populateFinanceDocsByIds(idRows.map((r) => r._id));
+    } else {
+      docs = await FinanceDocument.find(filter)
+        .populate('uploadedBy', 'name email avatar')
+        .populate('project', 'name')
+        .populate('folderId', 'folderName title isFolder')
+        .sort(sort)
+        .skip(skip)
+        .limit(limitVal)
+        .lean();
+    }
 
     // Attach document counts to folder rows
     const folderIds = docs.filter((d) => d.isFolder).map((d) => d._id);
@@ -367,10 +459,14 @@ const getFolders = async (req, res) => {
       parentFolderId: parentFolderId || null,
     };
 
-    const folders = await FinanceDocument.find(filter)
-      .populate('project', 'name')
-      .sort({ folderName: 1 })
-      .lean();
+    const folders = await FinanceDocument.populate(
+      await FinanceDocument.aggregate([
+        { $match: filter },
+        ...financePaymentDateSortStages(-1),
+        { $project: { _folderLatest: 0, _sortPaymentDate: 0 } },
+      ]),
+      { path: 'project', select: 'name' },
+    );
 
     const folderIds = folders.map((f) => f._id);
     const counts = await FinanceDocument.aggregate([
@@ -833,6 +929,84 @@ const getNextReference = async (req, res) => {
   }
 };
 
+const proxyFileByUrl = async (req, res) => {
+  try {
+    const fileUrl = req.query.url;
+    if (!isAllowedFinanceFileUrl(fileUrl)) {
+      return res.status(400).json({ success: false, message: 'Invalid or disallowed file URL' });
+    }
+
+    const buffer = await downloadFinanceFile(fileUrl, getOcrMaxBytes());
+    sendInlineFile(res, buffer, {
+      contentType: req.query.type,
+      fileName: req.query.name || 'document',
+    });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    if (status >= 500) console.error('Finance file proxy error:', error);
+    res.status(status).json({
+      success: false,
+      message: status === 400 ? error.message : 'Failed to load file',
+    });
+  }
+};
+
+const streamDocumentFile = async (req, res) => {
+  try {
+    const doc = await FinanceDocument.findById(req.params.id).lean();
+    if (!doc || doc.isFolder) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+    if (!doc.fileUrl) {
+      return res.status(404).json({ success: false, message: 'No file attached' });
+    }
+
+    const buffer = await downloadFinanceFile(doc.fileUrl, getOcrMaxBytes());
+    sendInlineFile(res, buffer, {
+      contentType: doc.fileType,
+      fileName: doc.fileName || doc.title || 'document',
+    });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    if (status >= 500) console.error('Stream finance document error:', error);
+    res.status(status).json({
+      success: false,
+      message: status === 400 ? error.message : 'Failed to load file',
+    });
+  }
+};
+
+const parseDocumentPreview = async (req, res) => {
+  try {
+    const { fileUrl, fileName, fileSize, fileType } = req.body || {};
+    if (!fileUrl) {
+      return res.status(400).json({ success: false, message: 'fileUrl is required' });
+    }
+    if (!isAllowedFinanceFileUrl(fileUrl)) {
+      return res.status(400).json({ success: false, message: 'Invalid or disallowed file URL' });
+    }
+    if (!shouldRunOcr(fileSize)) {
+      return res.json({
+        success: true,
+        data: { metadata: {}, extractedText: '' },
+      });
+    }
+
+    const buffer = await downloadFinanceFile(fileUrl, getOcrMaxBytes());
+    const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
+    const parsed = await parseDocument(buffer, mimeType, { fileSize: buffer.length });
+
+    res.json({ success: true, data: parsed });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    if (status >= 500) console.error('Parse finance preview error:', error);
+    res.status(status).json({
+      success: false,
+      message: status === 400 ? error.message : 'Failed to parse document',
+    });
+  }
+};
+
 module.exports = {
   uploadFile,
   uploadFilesMany,
@@ -853,4 +1027,7 @@ module.exports = {
   deleteFolder,
   getFolderBreadcrumb,
   syncFolderPlacementFromDiskHandler,
+  streamDocumentFile,
+  proxyFileByUrl,
+  parseDocumentPreview,
 };

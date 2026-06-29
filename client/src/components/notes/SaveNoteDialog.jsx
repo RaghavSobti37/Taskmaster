@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -52,7 +53,7 @@ export default function SaveNoteDialog({
       .slice(0, 80)
       .map((ev) => ({
         value: ev._id,
-        label: `${ev.title} · ${format(new Date(ev.date || ev.dueDate), 'MMM d')}`,
+        label: `${ev.title} · ${formatDisplayDateShort(new Date(ev.date || ev.dueDate))}`,
         searchKey: `${ev.title} ${ev.workspace || ''}`,
       })),
     [calendarEvents]

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Clock, CheckCircle, XCircle } from 'lucide-react';
@@ -17,8 +18,8 @@ const STATUS_STYLES = {
 
 const formatDateRange = (from, to) => {
   if (!from && !to) return '—';
-  const f = from ? format(new Date(from), 'MMM d, yyyy') : '?';
-  const t = to ? format(new Date(to), 'MMM d, yyyy') : f;
+  const f = from ? formatDisplayDate(new Date(from)) : '?';
+  const t = to ? formatDisplayDate(new Date(to)) : f;
   return f === t ? f : `${f} → ${t}`;
 };
 
@@ -90,7 +91,7 @@ function LeaveRequestsCard() {
                       {item.status === 'pending' && <Clock size={10} />}
                       Submitted{' '}
                       {item.createdAt
-                        ? format(new Date(item.createdAt), 'MMM d, yyyy')
+                        ? formatDisplayDate(new Date(item.createdAt))
                         : '—'}
                     </p>
                   </>

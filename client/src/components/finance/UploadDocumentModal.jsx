@@ -1,11 +1,14 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Upload, X, FileText, Loader2, FolderOpen, FolderPlus, ChevronDown } from 'lucide-react';
+import { Upload, X, FileText, Loader2, FolderOpen, FolderPlus, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { FinanceUploadProgressBar, FinanceUploadStateBadge, FINANCE_UPLOAD_STATES } from './FinanceDocumentRow';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalShell';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
-import { fetchNextFinanceReferences } from '../../utils/financeUpload';
+import { fetchNextFinanceReferences, parseFinanceDocumentPreview } from '../../utils/financeUpload';
+import { isFinancePdf } from '../../utils/financeFilePreview';
+import FinanceDocumentPreview from './FinanceDocumentPreview';
+import { FINANCE_CURRENCY_OPTIONS, normalizeFinanceCurrency } from '../../utils/financeCurrency';
 
 const CATEGORIES = [
   { value: 'invoice', label: 'Invoice' },
@@ -19,6 +22,11 @@ const CATEGORIES = [
 ];
 
 const ROOT_FOLDER_VALUE = '__root__';
+const STEPS = [
+  { id: 1, label: 'Upload' },
+  { id: 2, label: 'Details' },
+  { id: 3, label: 'Review' },
+];
 
 const formatBytes = (bytes) => {
   if (!bytes) return '—';
@@ -26,6 +34,14 @@ const formatBytes = (bytes) => {
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(1) + ' MB';
 };
+
+const emptyOcrMetadata = () => ({
+  vendor: '',
+  amount: '',
+  tax: '',
+  date: '',
+  currency: 'INR',
+});
 
 const FolderCombobox = ({
   projectId,
@@ -53,10 +69,9 @@ const FolderCombobox = ({
 
   const trimmed = query.trim();
   const matchingFolder = folders.find(
-    (f) => f.folderName.toLowerCase() === trimmed.toLowerCase()
+    (f) => f.folderName.toLowerCase() === trimmed.toLowerCase(),
   );
-  const showCreateOption =
-    trimmed.length > 0 && !matchingFolder && projectId;
+  const showCreateOption = trimmed.length > 0 && !matchingFolder && projectId;
 
   const options = useMemo(() => {
     const list = [
@@ -66,7 +81,7 @@ const FolderCombobox = ({
     if (!trimmed) return list;
     return list.filter((o) =>
       o.isRoot ? 'root'.includes(trimmed.toLowerCase())
-        : o.label.toLowerCase().includes(trimmed.toLowerCase())
+        : o.label.toLowerCase().includes(trimmed.toLowerCase()),
     );
   }, [folders, trimmed]);
 
@@ -107,7 +122,7 @@ const FolderCombobox = ({
               onChange({ folderId: null, folderLabel: '', newFolderName: '' });
             } else {
               const match = folders.find(
-                (f) => f.folderName.toLowerCase() === e.target.value.trim().toLowerCase()
+                (f) => f.folderName.toLowerCase() === e.target.value.trim().toLowerCase(),
               );
               if (match) {
                 onChange({ folderId: match._id, folderLabel: match.folderName, newFolderName: '' });
@@ -166,6 +181,28 @@ const FolderCombobox = ({
   );
 };
 
+const StepIndicator = ({ step }) => (
+  <ol className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+    {STEPS.map((s, idx) => {
+      const done = step > s.id;
+      const active = step === s.id;
+      return (
+        <React.Fragment key={s.id}>
+          {idx > 0 && <ChevronRight size={12} className="text-[var(--color-text-muted)] opacity-50" />}
+          <li
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${
+              active ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400' : done ? 'text-emerald-600' : 'text-[var(--color-text-muted)]'
+            }`}
+          >
+            {done ? <Check size={12} /> : <span className="w-4 text-center">{s.id}</span>}
+            {s.label}
+          </li>
+        </React.Fragment>
+      );
+    })}
+  </ol>
+);
+
 const UploadDocumentModal = ({
   isOpen,
   onClose,
@@ -181,11 +218,11 @@ const UploadDocumentModal = ({
   onFilesSelected,
   onBulkSubmit,
   isSubmitting,
-  isParsing = false,
 }) => {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
   const [isDragOver, setIsDragOver] = useState(false);
+  const [step, setStep] = useState(1);
 
   const [uploadWorkspace, setUploadWorkspace] = useState('General');
   const [uploadProject, setUploadProject] = useState('');
@@ -197,7 +234,10 @@ const UploadDocumentModal = ({
   const [loadingReference, setLoadingReference] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setStep(1);
+      return;
+    }
     const initialProject = selectedProject || '';
     const initialProjectRecord = projects.find((p) => p._id === initialProject);
     setUploadWorkspace(initialProjectRecord?.workspace || 'General');
@@ -206,6 +246,7 @@ const UploadDocumentModal = ({
     setUploadFolderLabel(currentFolder?.folderName || '');
     setUploadNewFolderName('');
     setDefaultReferenceNumber('');
+    setStep(1);
   }, [isOpen, selectedProject, currentFolderId, currentFolder?.folderName, projects]);
 
   useEffect(() => {
@@ -244,6 +285,54 @@ const UploadDocumentModal = ({
 
   const projectFolders = foldersRes?.data || [];
 
+  const runOcrForFile = useCallback(async (file) => {
+    if (!file?.fileUrl || file.ocrStatus === 'parsing' || file.ocrStatus === 'done') return;
+    setStagedFiles((prev) => prev.map((f) => (
+      f.id === file.id ? { ...f, ocrStatus: 'parsing' } : f
+    )));
+
+    try {
+      const result = await parseFinanceDocumentPreview({
+        fileUrl: file.fileUrl,
+        fileKey: file.fileKey,
+        fileName: file.fileName,
+        fileSize: file.fileSize,
+        fileType: file.fileType,
+      });
+      const meta = result.metadata || {};
+      const dateStr = meta.date ? new Date(meta.date).toISOString().slice(0, 10) : '';
+      setStagedFiles((prev) => prev.map((f) => {
+        if (f.id !== file.id) return f;
+        return {
+          ...f,
+          ocrStatus: 'done',
+          ocrMetadata: {
+            vendor: meta.vendor || '',
+            amount: meta.amount ? String(meta.amount) : '',
+            tax: meta.tax ? String(meta.tax) : '',
+            date: dateStr,
+            currency: normalizeFinanceCurrency(meta.currency),
+          },
+          category: meta.detectedCategory && meta.detectedCategory !== 'other' ? meta.detectedCategory : f.category,
+        };
+      }));
+    } catch (err) {
+      console.error('OCR preview failed:', err);
+      setStagedFiles((prev) => prev.map((f) => (
+        f.id === file.id ? { ...f, ocrStatus: 'error', ocrMetadata: emptyOcrMetadata() } : f
+      )));
+    }
+  }, [setStagedFiles]);
+
+  useEffect(() => {
+    if (!isOpen || step < 2) return;
+    stagedFiles
+      .filter((f) => f.fileUrl && f.ocrStatus === 'idle')
+      .forEach((f) => {
+        runOcrForFile(f);
+      });
+  }, [isOpen, step, stagedFiles, runOcrForFile]);
+
   const applyDefaultsToStaged = (project, folderId, folderLabel, newFolderName, referenceNumber) => {
     setStagedFiles((prev) =>
       prev.map((f) => ({
@@ -253,7 +342,7 @@ const UploadDocumentModal = ({
         folderLabel: folderLabel || '',
         newFolderName: newFolderName || '',
         referenceNumber: referenceNumber ?? f.referenceNumber ?? '',
-      }))
+      })),
     );
   };
 
@@ -263,34 +352,10 @@ const UploadDocumentModal = ({
       const [referenceNumber] = await fetchNextFinanceReferences(projectId, 1);
       if (!referenceNumber) return;
       setStagedFiles((prev) =>
-        prev.map((f) => (f.id === fileId ? { ...f, referenceNumber } : f))
+        prev.map((f) => (f.id === fileId ? { ...f, referenceNumber } : f)),
       );
     } catch (err) {
       console.error('Failed to fetch reference number:', err);
-    }
-  };
-
-  const refreshReferencesForProject = async (projectId, fileIds = null) => {
-    if (!projectId) return;
-    const targets = stagedFiles.filter((f) => {
-      if (fileIds && !fileIds.includes(f.id)) return false;
-      return (f.project || uploadProject) === projectId;
-    });
-    if (!targets.length) return;
-    try {
-      const refs = await fetchNextFinanceReferences(projectId, targets.length);
-      setStagedFiles((prev) => {
-        let refIndex = 0;
-        return prev.map((f) => {
-          const target = targets.find((t) => t.id === f.id);
-          if (!target) return f;
-          const referenceNumber = refs[refIndex] || f.referenceNumber || '';
-          refIndex += 1;
-          return { ...f, referenceNumber };
-        });
-      });
-    } catch (err) {
-      console.error('Failed to fetch reference numbers:', err);
     }
   };
 
@@ -302,7 +367,8 @@ const UploadDocumentModal = ({
     setUploadNewFolderName('');
     applyDefaultsToStaged(projectId, null, '', '', '');
     if (projectId && stagedFiles.length > 0) {
-      await refreshReferencesForProject(projectId);
+      const refs = await fetchNextFinanceReferences(projectId, stagedFiles.length);
+      setStagedFiles((prev) => prev.map((f, i) => ({ ...f, referenceNumber: refs[i] || f.referenceNumber })));
     }
   };
 
@@ -317,6 +383,16 @@ const UploadDocumentModal = ({
     setStagedFiles((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)));
   };
 
+  const updateOcrField = (id, field, value) => {
+    setStagedFiles((prev) => prev.map((f) => {
+      if (f.id !== id) return f;
+      return {
+        ...f,
+        ocrMetadata: { ...(f.ocrMetadata || emptyOcrMetadata()), [field]: value },
+      };
+    }));
+  };
+
   const removeStagedFile = (id) => {
     setStagedFiles((prev) => prev.filter((f) => f.id !== id));
   };
@@ -324,7 +400,7 @@ const UploadDocumentModal = ({
   const ensureFolder = async (projectId, folderName) => {
     const name = folderName.trim();
     const existing = projectFolders.find(
-      (f) => f.folderName.toLowerCase() === name.toLowerCase()
+      (f) => f.folderName.toLowerCase() === name.toLowerCase(),
     );
     if (existing) return existing._id;
 
@@ -340,7 +416,7 @@ const UploadDocumentModal = ({
       if (err.response?.status === 409) {
         const list = await axios.get(`/api/finance/folders?project=${projectId}`);
         const found = list.data?.data?.find(
-          (f) => f.folderName.toLowerCase() === name.toLowerCase()
+          (f) => f.folderName.toLowerCase() === name.toLowerCase(),
         );
         if (found) return found._id;
       }
@@ -373,6 +449,7 @@ const UploadDocumentModal = ({
           folderId = folderCache.get(key);
         }
 
+        const ocr = file.ocrMetadata || emptyOcrMetadata();
         documents.push({
           title: file.title,
           description: file.description || '',
@@ -385,6 +462,14 @@ const UploadDocumentModal = ({
           fileName: file.fileName,
           fileSize: file.fileSize,
           fileType: file.fileType,
+          metadata: {
+            vendor: ocr.vendor || '',
+            amount: Number(ocr.amount) || 0,
+            tax: Number(ocr.tax) || 0,
+            currency: ocr.currency || 'INR',
+            date: ocr.date || null,
+            detectedCategory: file.category,
+          },
         });
       }
 
@@ -396,12 +481,12 @@ const UploadDocumentModal = ({
 
   const contextHint = selectedProjectName
     ? `Filtered project: ${selectedProjectName}${currentFolder?.folderName ? ` › ${currentFolder.folderName}` : ''}`
-    : 'No project filter — pick project & folder below';
+    : 'No project filter — pick project in step 2';
 
   const acceptTypes = '.pdf,.png,.jpg,.jpeg,.webp,.txt,.xls,.xlsx,.csv,.doc,.docx';
 
   const pickFiles = (fileList) => {
-    if (!fileList?.length || isUploading || !uploadProject) return;
+    if (!fileList?.length || isUploading) return;
     onFilesSelected(fileList, uploadProject, defaultReferenceNumber);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -411,7 +496,7 @@ const UploadDocumentModal = ({
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isUploading && uploadProject) setIsDragOver(true);
+    if (!isUploading) setIsDragOver(true);
   };
 
   const handleDragLeave = (e) => {
@@ -424,7 +509,6 @@ const UploadDocumentModal = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    if (!uploadProject) return;
     pickFiles(e.dataTransfer.files);
   };
 
@@ -432,117 +516,148 @@ const UploadDocumentModal = ({
     isDragOver
       ? 'border-blue-500 bg-blue-500/10'
       : 'border-[var(--color-bg-border)] hover:border-blue-500/50 bg-[var(--color-bg-workspace)]'
-  } ${isUploading || !uploadProject ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
+  } ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
+
+  const canGoStep2 = stagedFiles.length > 0 && !isUploading;
+  const canGoStep3 = uploadProject && stagedFiles.every((f) => f.title && (f.project || uploadProject));
+  const anyOcrParsing = stagedFiles.some((f) => f.ocrStatus === 'parsing');
+
+  const handleClose = () => {
+    if (!isUploading && !isSubmitting) onClose();
+  };
 
   return (
-    <ModalShell isOpen={isOpen} onClose={onClose} size="xl" widthPx={896} zIndex={1000}>
-      <ModalHeader title="Upload Finance Documents" onClose={onClose} icon={Upload} />
+    <ModalShell isOpen={isOpen} onClose={handleClose} size="xl" widthPx={896} zIndex={1000}>
+      <ModalHeader title="Upload Finance Documents" onClose={handleClose} icon={Upload} />
       <ModalBody className="space-y-4">
-        <p className="text-[10px] text-[var(--color-text-muted)]">
-          {contextHint}. Defaults apply to all staged files.
-        </p>
-
-        {/* Global project + folder */}
-        <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] space-y-4">
-          <WorkspaceProjectFields
-            projects={projects}
-            workspace={uploadWorkspace}
-            projectId={uploadProject}
-            onChange={handleProjectChange}
-            layout="inline"
-          />
-          <FolderCombobox
-            projectId={uploadProject}
-            folders={projectFolders}
-            value={uploadFolderId || ROOT_FOLDER_VALUE}
-            folderLabel={uploadFolderLabel}
-            onChange={handleFolderChange}
-            disabled={!uploadProject}
-          />
-          <div>
-            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-              Reference #
-            </label>
-            <input
-              type="text"
-              value={defaultReferenceNumber}
-              disabled={!uploadProject || loadingReference}
-              placeholder={
-                !uploadProject
-                  ? 'Select a project first'
-                  : loadingReference
-                    ? 'Generating…'
-                    : 'e.g. TSCCO-HM-001'
-              }
-              onChange={(e) => {
-                const value = e.target.value;
-                setDefaultReferenceNumber(value);
-                applyDefaultsToStaged(uploadProject, uploadFolderId, uploadFolderLabel, uploadNewFolderName, value);
-              }}
-              className="w-full px-3 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg text-sm disabled:opacity-50"
-            />
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-              Auto-generated from workspace/project. Increments per document — editable before save.
-            </p>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <StepIndicator step={step} />
+          <p className="text-[10px] text-[var(--color-text-muted)]">{contextHint}</p>
         </div>
 
-        {stagedFiles.length > 0 ? (
-          <div
-            className="space-y-4"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[var(--color-text-primary)]">
-                {stagedFiles.length} file{stagedFiles.length !== 1 ? 's' : ''} staged
-              </span>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="text-xs font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <Upload size={14} /> Add more
-              </button>
-            </div>
-
-            <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-              {stagedFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="p-4 border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] rounded-xl relative space-y-3"
-                >
+        {/* Step 1 — upload only */}
+        {step === 1 && (
+          <>
+            {stagedFiles.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold">{stagedFiles.length} file(s) ready</span>
                   <button
                     type="button"
-                    onClick={() => removeStagedFile(file.id)}
-                    className="absolute top-3 right-3 p-1 hover:bg-red-500/10 rounded text-red-500"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="text-xs font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1.5"
                   >
-                    <X size={14} />
+                    <Upload size={14} /> Add more
                   </button>
+                </div>
+                <ul className="space-y-2 max-h-[40vh] overflow-y-auto">
+                  {stagedFiles.map((file) => (
+                    <li
+                      key={file.id}
+                      className="flex items-center gap-3 p-3 border border-[var(--color-bg-border)] rounded-xl bg-[var(--color-bg-surface)]"
+                    >
+                      <FileText size={18} className="text-blue-500 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold truncate">{file.fileName}</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">{formatBytes(file.fileSize)}</p>
+                      </div>
+                      <button type="button" onClick={() => removeStagedFile(file.id)} className="p-1 text-red-500 hover:bg-red-500/10 rounded">
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={dropZoneClass}
+              >
+                <Upload size={36} className={`mb-3 ${isDragOver ? 'text-blue-500' : 'text-[var(--color-text-muted)]'}`} />
+                <p className="text-sm font-bold text-blue-500">Drag & drop files here or click to browse</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">PDF, images, spreadsheets — up to 32MB each</p>
+              </div>
+            )}
 
-                  <div className="flex items-center gap-3 pr-8">
-                    <FileText size={20} className="text-blue-500 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">{file.fileName}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">{formatBytes(file.fileSize)}</p>
-                      {(isUploading || isParsing) && (
-                        <div className="mt-2 space-y-1.5">
-                          <FinanceUploadStateBadge
-                            state={isParsing ? FINANCE_UPLOAD_STATES.PARSING : FINANCE_UPLOAD_STATES.UPLOADING}
-                          />
-                          <FinanceUploadProgressBar progress={isParsing ? 66 : uploadProgress} />
-                        </div>
-                      )}
-                    </div>
+            {isUploading && (
+              <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-blue-500">
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={14} className="animate-spin" /> Uploading…
+                  </span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <FinanceUploadProgressBar progress={uploadProgress} />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Step 2 — basic details + background OCR */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] space-y-4">
+              <WorkspaceProjectFields
+                projects={projects}
+                workspace={uploadWorkspace}
+                projectId={uploadProject}
+                onChange={handleProjectChange}
+                layout="inline"
+              />
+              <FolderCombobox
+                projectId={uploadProject}
+                folders={projectFolders}
+                value={uploadFolderId || ROOT_FOLDER_VALUE}
+                folderLabel={uploadFolderLabel}
+                onChange={handleFolderChange}
+                disabled={!uploadProject}
+              />
+              <div>
+                <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
+                  Reference #
+                </label>
+                <input
+                  type="text"
+                  value={defaultReferenceNumber}
+                  disabled={!uploadProject || loadingReference}
+                  placeholder={loadingReference ? 'Generating…' : 'e.g. TSCCO-HM-001'}
+                  onChange={(e) => {
+                    setDefaultReferenceNumber(e.target.value);
+                    applyDefaultsToStaged(uploadProject, uploadFolderId, uploadFolderLabel, uploadNewFolderName, e.target.value);
+                  }}
+                  className="w-full px-3 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            <p className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5">
+              {anyOcrParsing ? (
+                <><Loader2 size={12} className="animate-spin text-blue-500" /> OCR running in background…</>
+              ) : (
+                <><Check size={12} className="text-emerald-500" /> OCR will pre-fill review on next step</>
+              )}
+            </p>
+
+            <div className="space-y-3 max-h-[36vh] overflow-y-auto">
+              {stagedFiles.map((file) => (
+                <div key={file.id} className="p-4 border border-[var(--color-bg-border)] rounded-xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} className="text-blue-500" />
+                    <span className="text-xs font-bold truncate flex-1">{file.fileName}</span>
+                    <FinanceUploadStateBadge
+                      state={file.ocrStatus === 'parsing' ? FINANCE_UPLOAD_STATES.PARSING : FINANCE_UPLOAD_STATES.UPLOADING}
+                    />
                   </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-                        Title *
-                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Title *</label>
                       <input
                         type="text"
                         value={file.title}
@@ -550,84 +665,114 @@ const UploadDocumentModal = ({
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
                       />
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-                        Reference #
-                      </label>
-                      <input
-                        type="text"
-                        value={file.referenceNumber || ''}
-                        onChange={(e) => updateStagedFile(file.id, 'referenceNumber', e.target.value)}
-                        placeholder="Auto-generated from project"
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
-                      />
-                    </div>
                     <div>
-                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-                        Project
-                      </label>
-                      <select
-                        value={file.project || uploadProject}
-                        onChange={(e) => {
-                          const pid = e.target.value;
-                          updateStagedFile(file.id, 'project', pid);
-                          const project = projects.find((p) => p._id === pid);
-                          if (project?.workspace) setUploadWorkspace(project.workspace);
-                          refreshReferenceForFile(file.id, pid);
-                        }}
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm cursor-pointer"
-                      >
-                        <option value="">Select project</option>
-                        {filterProjectsByWorkspace(projects, uploadWorkspace).map((p) => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-                        Category
-                      </label>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Category</label>
                       <select
                         value={file.category}
                         onChange={(e) => updateStagedFile(file.id, 'category', e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm cursor-pointer"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
                       >
                         {CATEGORIES.map((c) => (
                           <option key={c.value} value={c.value}>{c.label}</option>
                         ))}
                       </select>
                     </div>
-                    {(file.newFolderName || file.folderLabel) && (
-                      <div className="sm:col-span-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
-                        <FolderOpen size={12} />
-                        {file.newFolderName
-                          ? `New folder: ${file.newFolderName}`
-                          : file.folderLabel || 'Project root'}
-                      </div>
-                    )}
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Reference #</label>
+                      <input
+                        type="text"
+                        value={file.referenceNumber || ''}
+                        onChange={(e) => updateStagedFile(file.id, 'referenceNumber', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        ) : (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => !isUploading && uploadProject && fileInputRef.current?.click()}
-            onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={dropZoneClass}
-          >
-            <Upload size={36} className={`mb-3 ${isDragOver ? 'text-blue-500' : 'text-[var(--color-text-muted)]'}`} />
-            <p className="text-sm font-bold text-blue-500">
-              {uploadProject ? 'Drag & drop files here or click to browse' : 'Select a project above first'}
-            </p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-              Multiple files supported — PDF, images, spreadsheets — up to 32MB each
-            </p>
+        )}
+
+        {/* Step 3 — OCR review */}
+        {step === 3 && (
+          <div className="space-y-4 max-h-[52vh] overflow-y-auto pr-1">
+            {stagedFiles.map((file) => {
+              const ocr = file.ocrMetadata || emptyOcrMetadata();
+              return (
+                <div key={file.id} className="p-4 border border-[var(--color-bg-border)] rounded-xl space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold">{file.title}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">{file.fileName}</p>
+                    </div>
+                    {file.ocrStatus === 'parsing' && (
+                      <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> Parsing…
+                      </span>
+                    )}
+                  </div>
+
+                  {isFinancePdf(file) && (
+                    <FinanceDocumentPreview
+                      doc={file}
+                      iframeClassName="w-full h-40 rounded-lg border border-[var(--color-bg-border)] bg-slate-900"
+                      className="w-full h-40 rounded-lg border border-[var(--color-bg-border)] bg-slate-900"
+                    />
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Vendor</label>
+                      <input
+                        type="text"
+                        value={ocr.vendor}
+                        onChange={(e) => updateOcrField(file.id, 'vendor', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Amount (INR)</label>
+                      <input
+                        type="number"
+                        value={ocr.amount}
+                        onChange={(e) => updateOcrField(file.id, 'amount', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Tax</label>
+                      <input
+                        type="number"
+                        value={ocr.tax}
+                        onChange={(e) => updateOcrField(file.id, 'tax', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Payment date</label>
+                      <input
+                        type="date"
+                        value={ocr.date}
+                        onChange={(e) => updateOcrField(file.id, 'date', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Currency</label>
+                      <select
+                        value={normalizeFinanceCurrency(ocr.currency)}
+                        onChange={(e) => updateOcrField(file.id, 'currency', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm"
+                      >
+                        {FINANCE_CURRENCY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -639,50 +784,71 @@ const UploadDocumentModal = ({
           accept={acceptTypes}
           className="hidden"
         />
-
-        {isUploading && (
-          <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-blue-500">
-              <span className="flex items-center gap-1.5">
-                <Loader2 size={14} className="animate-spin" /> Uploading…
-              </span>
-              <span>{uploadProgress}%</span>
-            </div>
-            <div className="w-full bg-[var(--color-bg-border)] h-2 rounded-full overflow-hidden">
-              <div className="bg-blue-500 h-full transition-all" style={{ width: `${uploadProgress}%` }} />
-            </div>
-          </div>
-        )}
       </ModalBody>
 
       <ModalFooter>
         <button
           type="button"
-          disabled={isUploading || resolvingFolders}
-          onClick={onClose}
+          disabled={isUploading || resolvingFolders || isSubmitting}
+          onClick={handleClose}
           className="px-4 py-2 text-xs font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-border)] rounded-xl disabled:opacity-40"
         >
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={
-            stagedFiles.length === 0
-            || stagedFiles.some((f) => !f.title || !(f.project || uploadProject))
-            || !uploadProject
-            || isUploading
-            || isSubmitting
-            || resolvingFolders
-          }
-          className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl disabled:opacity-50"
-        >
-          {resolvingFolders
-            ? 'Creating folders…'
-            : isSubmitting
-              ? 'Saving & parsing…'
-              : `Save ${stagedFiles.length} document${stagedFiles.length !== 1 ? 's' : ''}`}
-        </button>
+
+        {step > 1 && (
+          <button
+            type="button"
+            disabled={isUploading || isSubmitting}
+            onClick={() => setStep((s) => s - 1)}
+            className="px-4 py-2 text-xs font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-border)] rounded-xl"
+          >
+            Back
+          </button>
+        )}
+
+        {step === 1 && (
+          <button
+            type="button"
+            disabled={!canGoStep2}
+            onClick={() => setStep(2)}
+            className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl disabled:opacity-50"
+          >
+            Next — details
+          </button>
+        )}
+
+        {step === 2 && (
+          <button
+            type="button"
+            disabled={!canGoStep3}
+            onClick={() => setStep(3)}
+            className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl disabled:opacity-50"
+          >
+            Next — review OCR
+          </button>
+        )}
+
+        {step === 3 && (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={
+              stagedFiles.length === 0
+              || !uploadProject
+              || isUploading
+              || isSubmitting
+              || resolvingFolders
+            }
+            className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl disabled:opacity-50"
+          >
+            {resolvingFolders
+              ? 'Creating folders…'
+              : isSubmitting
+                ? 'Saving…'
+                : `Save ${stagedFiles.length} document${stagedFiles.length !== 1 ? 's' : ''}`}
+          </button>
+        )}
       </ModalFooter>
     </ModalShell>
   );

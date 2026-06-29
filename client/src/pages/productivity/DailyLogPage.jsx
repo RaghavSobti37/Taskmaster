@@ -1,34 +1,39 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect } from 'react';
-import { format, isSameDay, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
-
-const ACTIVITY_GRID_START = new Date(2026, 4, 12); // 12 May 2026
+import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import {
-  Calendar as CalIcon, CheckCircle2, Clock, ChevronLeft,
+  CheckCircle2, ChevronLeft,
   ChevronRight, Plus, Send, Timer, Zap,
-  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, History, Search
+  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading, Spinner } from '../../components/ui';
+import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, DataLoading, Spinner } from '../../components/ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
+import DailyLogTimeline from '../../components/productivity/DailyLogTimeline';
+import DailyLogActivityCalendar from '../../components/productivity/DailyLogActivityCalendar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
-import { useSearchParams } from 'react-router-dom';
-import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useUpdateLog, useDeleteLog, useActivityGrid 
+  useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useUpdateLog, useDeleteLog, useActivityGrid, useAttendance,
 } from '../../hooks/useTaskmasterQueries';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { resolveTaskId } from '../../utils/taskCompletion';
 import WorkspaceProjectFields, {
   resolveWorkspaceFromProjectName,
 } from '../../components/forms/WorkspaceProjectFields';
-import { parseTimeSpentToMinutes } from '../../utils/timeSpent';
-
-const parseLogMinutes = parseTimeSpentToMinutes;
+import { formatMinuteGap } from '../../utils/timeSpent';
+import {
+  getLogWorkDateKey,
+  readLogTimeSpentMinutes,
+  isLogEditable,
+  formatLogInterval,
+  normalizeWorkDate,
+} from '../../utils/dailyLogDetails';
 
 const LOG_SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
@@ -43,17 +48,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
   const { addToast } = useSystemToast();
   const { confirm } = useConfirm();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const canViewLeadAudits = isAdminUser(user) && !adminViewUserId;
-  const activeView = canViewLeadAudits && searchParams.get('view') === 'lead-audits' ? 'lead-audits' : 'daily';
-
-  const handleViewChange = (viewId) => {
-    const next = new URLSearchParams(searchParams);
-    if (viewId === 'lead-audits') next.set('view', 'lead-audits');
-    else next.delete('view');
-    setSearchParams(next, { replace: true });
-  };
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ? new Date(searchParams.get('date')) : new Date());
+
+  useEffect(() => {
+    if (searchParams.get('view') === 'lead-audits') {
+      navigate('/admin/lead-audits', { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -69,7 +72,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [editingLogId, setEditingLogId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editMessage, setEditMessage] = useState('');
-  const [editTimeSpent, setEditTimeSpent] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
   const [editWorkspace, setEditWorkspace] = useState('General');
   const [editProjectId, setEditProjectId] = useState('');
 
@@ -129,12 +133,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     setEditingLogId(log._id);
     setEditTitle(cleanLogTitle(log.details?.title || ''));
     setEditMessage(cleanLogMessage(log.details?.message || ''));
-    setEditTimeSpent(log.details?.timeSpent || '');
+    setEditStartTime(log.details?.startTime || '');
+    setEditEndTime(log.details?.endTime || '');
     setEditWorkspace(log.details?.workspace || resolveWorkspaceFromProjectName(projects, projectName));
     setEditProjectId(matchedProject?._id || '');
   };
 
   const handleSaveEdit = async (logId) => {
+    const log = logs.find((l) => l._id === logId);
     const projectRecord = projects.find((p) => p._id === editProjectId);
     try {
       await updateLogMutation.mutateAsync({
@@ -143,7 +149,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           details: {
             title: editTitle,
             message: editMessage,
-            timeSpent: editTimeSpent,
+            startTime: editStartTime,
+            endTime: editEndTime,
+            workDate: log ? getLogWorkDateKey(log) : normalizeWorkDate(selectedDate),
             workspace: editWorkspace || projectRecord?.workspace || 'General',
             project: projectRecord?.name || 'General',
           },
@@ -172,11 +180,37 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     }
   };
 
+  const handleSelectDate = (date) => {
+    setSelectedDate(date);
+    const key = normalizeWorkDate(date);
+    const next = new URLSearchParams(searchParams);
+    if (key === normalizeWorkDate(new Date())) next.delete('date');
+    else next.set('date', key);
+    setSearchParams(next, { replace: true });
+  };
+
   const handleDateChange = (days) => {
     const nextDate = new Date(selectedDate);
     nextDate.setDate(selectedDate.getDate() + days);
-    setSelectedDate(nextDate);
+    handleSelectDate(nextDate);
   };
+
+  const selectedDateKey = useMemo(() => normalizeWorkDate(selectedDate), [selectedDate]);
+  const viewingSelf = !adminViewUserId || adminViewUserId === user?._id;
+  const { data: attendanceRows = [] } = useAttendance(
+    viewingSelf
+      ? { start: selectedDateKey, end: selectedDateKey, mine: 'true' }
+      : { start: selectedDateKey, end: selectedDateKey },
+    Boolean(targetUserId && deferLogSecondary)
+  );
+  const attendanceEntry = useMemo(() => {
+    const rows = Array.isArray(attendanceRows) ? attendanceRows : [];
+    if (viewingSelf) return rows[0] || null;
+    return rows.find(
+      (row) => String(row.userId?._id || row.userId) === String(targetUserId)
+    ) || null;
+  }, [attendanceRows, viewingSelf, targetUserId]);
+  const isTodayOrPast = selectedDateKey <= normalizeWorkDate(new Date());
 
   const dailyLogs = useMemo(() => {
     const ownerId = String(targetUserId || '');
@@ -184,9 +218,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       const logOwnerId = String(l.userId?._id || l.userId || '');
       return l.action === 'DAILY_LOG'
         && logOwnerId === ownerId
-        && isSameDay(new Date(l.createdAt), selectedDate);
+        && getLogWorkDateKey(l) === selectedDateKey;
     });
-  }, [logs, selectedDate, targetUserId]);
+  }, [logs, selectedDateKey, targetUserId]);
 
   const logWorkspaceOptions = useMemo(() => [
     { value: 'all', label: 'All workspaces' },
@@ -234,9 +268,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         case 'oldest':
           return new Date(a.createdAt) - new Date(b.createdAt);
         case 'time-desc':
-          return parseLogMinutes(b.details?.timeSpent) - parseLogMinutes(a.details?.timeSpent);
+          return readLogTimeSpentMinutes(b) - readLogTimeSpentMinutes(a);
         case 'time-asc':
-          return parseLogMinutes(a.details?.timeSpent) - parseLogMinutes(b.details?.timeSpent);
+          return readLogTimeSpentMinutes(a) - readLogTimeSpentMinutes(b);
         case 'title':
           return (a.details?.title || '').localeCompare(b.details?.title || '');
         case 'project':
@@ -265,7 +299,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       if (log.action !== 'DAILY_LOG') continue;
       const logType = log.details?.type;
       if (logType !== 'TASK_COMPLETION' && logType !== 'TASK_REVIEW') continue;
-      if (!isSameDay(new Date(log.createdAt), selectedDate)) continue;
+      if (!getLogWorkDateKey(log) || getLogWorkDateKey(log) !== selectedDateKey) continue;
       const id = String(log.targetId?._id || log.targetId || log._id);
       if (seen.has(id)) continue;
       seen.add(id);
@@ -278,96 +312,40 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     }
 
     return rows;
-  }, [tasks, logs, selectedDate]);
+  }, [tasks, logs, selectedDateKey]);
 
-  const totalMinutes = useMemo(() => dailyLogs.reduce((acc, log) => {
-    const time = log.details?.timeSpent;
-    if (!time) return acc;
-    const hours = time.match(/(\d+(?:\.\d+)?)\s*h/);
-    const mins = time.match(/(\d+)\s*m/);
-    let total = 0;
-    if (hours) total += parseFloat(hours[1]) * 60;
-    if (mins) total += parseInt(mins[1]);
-    if (!hours && !mins && !isNaN(time)) total += parseInt(time);
-    return acc + total;
-  }, 0), [dailyLogs]);
+  const totalMinutes = useMemo(
+    () => dailyLogs.reduce((acc, log) => acc + readLogTimeSpentMinutes(log), 0),
+    [dailyLogs]
+  );
 
-  const formatTime = (totalMins) => {
-    const h = Math.floor(totalMins / 60);
-    const m = totalMins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-  };
-
-  const timeOptions = useMemo(() => {
-    const opts = [];
-    for (let h = 0; h <= 4; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        if (h === 0 && m === 0) continue;
-        opts.push(h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}` : `${m}m`);
-      }
-    }
-    return opts;
-  }, []);
-
-  // Activity Grid Logic
-  const gridDays = useMemo(() => {
-    const end = new Date();
-    const days = eachDayOfInterval({ start: ACTIVITY_GRID_START, end });
-    
-    return days.map(day => {
-      const dateStr = format(day, 'yyyy-MM-dd');
-      const activity = activityGrid.find(a => a._id === dateStr);
-      return {
-        date: day,
-        count: activity?.count || 0,
-        intensity: activity ? Math.min(4, Math.ceil(activity.count / 2)) : 0
-      };
-    });
-  }, [activityGrid]);
+  const formatTime = (totalMins) => formatMinuteGap(totalMins);
 
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title={
-          activeView === 'lead-audits'
-            ? 'Lead Audits'
-            : (targetUserName ? `${targetUserName}'s History` : 'My Daily Progress')
-        }
-        icon={activeView === 'lead-audits' ? History : NotebookPen}
+        title={targetUserName ? `${targetUserName}'s History` : 'My Daily Progress'}
+        icon={NotebookPen}
         actions={
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {canViewLeadAudits && (
-              <TabSwitcher
-                activeTab={activeView}
-                onChange={handleViewChange}
-                tabs={[
-                  { id: 'daily', label: 'Daily Logs' },
-                  { id: 'lead-audits', label: 'Lead Audits' },
-                ]}
+            <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
+              <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
+              <input
+                type="date"
+                value={selectedDateKey}
+                max={normalizeWorkDate(new Date())}
+                onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
+                className="px-2 py-1 bg-transparent text-[10px] font-black uppercase tracking-widest tabular-nums border-0 outline-none"
               />
-            )}
-            {activeView === 'daily' && (
-              <>
-                <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
-                  <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
-                  <div className="px-3 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                    <CalIcon size={12} className="text-blue-500" /> {format(selectedDate, 'MMM dd')}
-                  </div>
-                  <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
-                </div>
-                {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
-                  <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Log Work</Button>
-                )}
-              </>
+              <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
+            </div>
+            {!adminViewUserId && isTodayOrPast && (
+              <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Log Work</Button>
             )}
           </div>
         }
       />
 
-      {activeView === 'lead-audits' ? (
-        <LeadAuditsContent />
-      ) : (
-        <>
       {logsError && (
         <QueryErrorBanner
           message={getQueryErrorMessage(logsErr, 'Failed to load daily logs')}
@@ -390,6 +368,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
+          <DailyLogTimeline logs={dailyLogs} attendanceEntry={attendanceEntry} />
           <section className="flex flex-col min-h-[400px] border-b border-[var(--color-bg-border)]">
              <div className="p-3 border-b border-[var(--color-bg-border)] space-y-3">
                 <div className="flex items-center justify-between">
@@ -455,15 +434,21 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   </div>
                 ) : (
                   displayedLogs.map((log, idx) => {
-                    const isEditable = isSameDay(new Date(log.createdAt), new Date()) || isAdminUser(user);
+                    const isEditable = isLogEditable(log, { isAdmin: isAdminUser(user) });
                     if (editingLogId === log._id) {
                       return (
                         <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-[var(--radius-atomic)] space-y-4">
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <Input label="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} size="sm" />
-                              <div className="space-y-1">
-                                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Time</label>
-                                 <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={editTimeSpent} onChange={setEditTimeSpent} placeholder="Time" />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Time In</label>
+                                  <input type="time" value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} className="w-full px-2 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-xs tabular-nums" />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Time Out</label>
+                                  <input type="time" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} className="w-full px-2 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-xs tabular-nums" />
+                                </div>
                               </div>
                            </div>
                            <WorkspaceProjectFields
@@ -502,6 +487,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
                                   <span className="text-xs font-black uppercase tracking-tight tm-data-primary">{cleanLogTitle(log.details?.title)}</span>
+                                  {log.details?.isSharedCopy && (
+                                    <Badge variant="warning" className="text-[8px] py-0">via {log.details?.sharedByName || 'teammate'}</Badge>
+                                  )}
+                                  {(log.details?.sharedMemberIds?.length > 0) && (
+                                    <Badge variant="mint" className="text-[8px] py-0">+{log.details.sharedMemberIds.length} shared</Badge>
+                                  )}
                                   {(log.details?.type === 'TASK_REVIEW'
                                     || log.details?.title === '[review]') && (
                                     <Badge variant="warning" className="text-[8px] py-0">[review]</Badge>
@@ -509,13 +500,20 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                                   <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>
-                               <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
-                                  <Clock size={10} /> <span className="tabular-nums">{format(new Date(log.createdAt), 'HH:mm')}</span>
-                                  <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 ml-2 tabular-nums">
-                                     {log.details?.timeSpent || '0m'}
+                               <div className="flex flex-col items-end gap-1 text-[10px] font-bold text-[var(--color-text-muted)]">
+                                  <span className="tabular-nums">
+                                    Logged {formatDisplayDateTime(new Date(log.createdAt))}
                                   </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 tabular-nums">
+                                      {formatLogInterval(log)}
+                                    </span>
+                                    <span className="text-[9px] tabular-nums opacity-80">
+                                      ({formatMinuteGap(readLogTimeSpentMinutes(log))})
+                                    </span>
+                                  </div>
                                   {isEditable && (
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-2">
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                       <Button variant="ghost" size="xs" className="!p-1 text-blue-400 hover:bg-blue-500/10" onClick={() => handleStartEdit(log)}>
                                         <Edit2 size={12} />
                                       </Button>
@@ -539,30 +537,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-           <section className="p-4 border-b border-[var(--color-bg-border)]">
-              <div className="flex items-center justify-between mb-6">
-                 <h4 className="tm-widget-label">Activity Grid</h4>
-                 <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Less</span>
-                    <div className="flex gap-1">
-                       {[0, 1, 2, 3, 4].map(i => (
-                         <div key={i} className={`w-2.5 h-2.5 rounded-sm bg-blue-500`} style={{ opacity: i === 0 ? 0.05 : i * 0.25 }} />
-                       ))}
-                    </div>
-                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">More</span>
-                 </div>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                 {gridDays.map((day, i) => (
-                   <div 
-                     key={i} 
-                     className={`w-3 h-3 rounded-sm transition-all duration-300 hover:ring-2 hover:ring-blue-400 cursor-help ${day.intensity === 0 ? 'bg-blue-500/5' : 'bg-blue-500'}`} 
-                     style={{ opacity: day.intensity === 0 ? 1 : day.intensity * 0.25 }}
-                     title={`${format(day.date, 'MMM d, yyyy')}: ${day.count} logs`}
-                   />
-                 ))}
-              </div>
-           </section>
+           <DailyLogActivityCalendar
+             activityGrid={activityGrid}
+             selectedDate={selectedDate}
+             onSelectDate={handleSelectDate}
+           />
 
            <section className="p-4 border border-[var(--color-bg-border)]">
               <div className="relative z-10 space-y-4">
@@ -591,9 +570,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       <DailyLogEntryModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+        defaultWorkDate={selectedDate}
       />
-        </>
-      )}
     </PageContainer>
   );
 };

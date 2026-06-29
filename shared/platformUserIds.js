@@ -71,9 +71,6 @@ const getAutoProjectMemberUserIds = () =>
 
 const getQaAdminUserId = () => singleIdFor('qaAdminUserId', 'QA_ADMIN_USER_ID');
 
-const getCrmDigestRecipientUserIds = () =>
-  idsFor('crmDigestRecipientUserIds', 'CRM_DIGEST_RECIPIENT_USER_IDS');
-
 const getBackupNotifyUserIds = () => idsFor('backupNotifyUserIds', 'BACKUP_NOTIFY_USER_IDS');
 
 const getSubscriptionReminderFallbackUserIds = () =>
@@ -104,7 +101,6 @@ module.exports = {
   isMailTemplateApproverUser,
   getAutoProjectMemberUserIds,
   getQaAdminUserId,
-  getCrmDigestRecipientUserIds,
   getBackupNotifyUserIds,
   getSubscriptionReminderFallbackUserIds,
   getPasswordResetCcUserIds,

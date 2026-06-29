@@ -94,7 +94,7 @@ if (typeof BroadcastChannel !== 'undefined') {
 const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href;
 
 self.addEventListener('push', (event) => {
-  let payload = { title: 'Coreknot', body: 'New notification', actionUrl: '/inbox' };
+  let payload = { title: 'CoreKnot', body: 'New notification', actionUrl: '/inbox' };
   try {
     payload = { ...payload, ...event.data.json() };
   } catch (e) {}

@@ -10,14 +10,7 @@ const adminScriptParams = z.object({
   scriptId: z.string().min(1),
 });
 
-const sendCrmReachOutDigestBody = z.object({
-  to: z.string().email().optional(),
-  days: z.coerce.number().int().min(1).max(30).optional(),
-  dryRun: z.boolean().optional(),
-});
-
 module.exports = {
   runAdminScriptBody,
   adminScriptParams,
-  sendCrmReachOutDigestBody,
 };

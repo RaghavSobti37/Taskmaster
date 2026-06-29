@@ -70,7 +70,6 @@ const MONGO_ENTITIES = Object.freeze([
   'MailCampaignRecipient',
   'TaskActivity',
   'Log',
-  'SystemLog',
   'CRMAudit',
   'XPAuditLog',
   'Artist',

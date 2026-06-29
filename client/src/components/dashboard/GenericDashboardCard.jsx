@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
@@ -16,11 +17,14 @@ const formatBarMetric = (value, _name, item) => {
   return [String(value), metric];
 };
 
-const GenericDashboardCard = React.memo(function GenericDashboardCard({ componentId }) {
+const GenericDashboardCard = React.memo(function GenericDashboardCard({ componentId, tasks: tasksProp }) {
   const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
 
-  const { data: tasks = [] } = useDashboardTasks(user?._id);
+  const needsTaskFallback = !tasksProp
+    && ['booked-calls', 'followups-today', 'artist-calendar'].includes(componentId);
+  const { data: tasksFromQuery = [] } = useDashboardTasks(user?._id, needsTaskFallback);
+  const tasks = tasksProp ?? tasksFromQuery;
   const {
     data: mailStats,
     isError: mailStatsError,
@@ -79,7 +83,7 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
           const rawDate = d.date || d._id || d.label;
           let label = String(rawDate).slice(5) || 'Unknown';
           try {
-            if (rawDate) label = format(parseISO(String(rawDate)), 'MMM dd');
+            if (rawDate) label = formatDisplayDateShort(parseISO(String(rawDate)));
           } catch (e) {
             // fallback gracefully
           }
@@ -107,12 +111,12 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
     const dataMap = new Map();
     for (let i = days - 1; i >= 0; i--) {
       const d = subDays(now, i);
-      dataMap.set(format(d, 'MMM dd'), 0);
+      dataMap.set(formatDisplayDateShort(d), 0);
     }
     tasks.forEach(t => {
       const day = t.scheduleDate || t.dueDate || t.createdAt;
       if (!day) return;
-      const fmt = format(new Date(day), 'MMM dd');
+      const fmt = formatDisplayDateShort(new Date(day));
       if (dataMap.has(fmt)) {
         dataMap.set(fmt, dataMap.get(fmt) + 1);
       }

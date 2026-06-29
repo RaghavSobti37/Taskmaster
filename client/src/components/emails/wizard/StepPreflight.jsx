@@ -209,6 +209,10 @@ export default function StepPreflight({
           ))}
         </div>
 
+        <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
+          Dispatch returns immediately. Sends run in background via BullMQ (Redis) with rate limiting — large lists will not block the API.
+        </p>
+
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] space-y-2 text-sm">
           <p><span className="text-[var(--color-text-muted)]">Campaign:</span> {formValues.title}</p>
           <p><span className="text-[var(--color-text-muted)]">Subject:</span> {formValues.subject}</p>

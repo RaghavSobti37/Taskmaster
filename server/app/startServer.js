@@ -2,10 +2,7 @@ const http = require('http');
 const mongoose = require('mongoose');
 const { config } = require('../config');
 const { corsAllowlist } = require('./cors');
-const { captureException } = require('../utils/sentry');
-const { shutdownPostHog } = require('../utils/posthog');
-const { writeSystemLog } = require('../services/systemLogService');
-const { SEVERITY, MODULE } = require('../../shared/systemLogContract');
+const logger = require('../utils/logger');
 const {
   resolveMongoUri,
   getDbNameFromUri,
@@ -24,28 +21,19 @@ let serverListening = false;
 let jobsBootstrapResult = null;
 
 function logProcessCrash(label, err) {
-  writeSystemLog({
-    severity: SEVERITY.ERROR,
-    module: MODULE.SYSTEM,
-    message: `${label}: ${err?.message || 'Unknown'}`,
-    userVisible: false,
-    actorId: 'SYSTEM',
-    payload: { stack: err?.stack },
+  logger.error('process', `${label}: ${err?.message || 'Unknown'}`, {
     errorCode: label,
+    stack: err?.stack,
   });
 }
 
 function registerProcessHandlers() {
   process.on('uncaughtException', (err) => {
-    console.error('[FATAL] uncaughtException', err);
-    captureException(err, { label: 'uncaughtException' });
     logProcessCrash('uncaughtException', err);
   });
 
   process.on('unhandledRejection', (reason) => {
     const err = reason instanceof Error ? reason : new Error(String(reason));
-    console.error('[FATAL] unhandledRejection', err);
-    captureException(err, { label: 'unhandledRejection' });
     logProcessCrash('unhandledRejection', err);
   });
 }
@@ -60,7 +48,7 @@ function connectMongo() {
     .then(() => {
       const { ensurePerformanceIndexes } = require('../scripts/ensureIndexes');
       ensurePerformanceIndexes().catch((err) => {
-        console.warn('[INDEX] Performance index sync skipped:', err.message);
+        logger.warn('INDEX', 'Performance index sync skipped', { error: err.message });
       });
 
       const { ensureDataHubBootstrap } = require('../utils/ensureDataHubBootstrap');
@@ -68,12 +56,12 @@ function connectMongo() {
 
       const { ensureDevAdminUser } = require('../utils/ensureDevAdminUser');
       ensureDevAdminUser().catch((err) => {
-        console.warn('[AUTH] Dev admin bootstrap skipped:', err.message);
+        logger.warn('AUTH', 'Dev admin bootstrap skipped', { error: err.message });
       });
 
       const { loadPlatformSettings } = require('../services/platformSettingsService');
       loadPlatformSettings().catch((err) => {
-        console.warn('[PLATFORM] Settings bootstrap skipped:', err.message);
+        logger.warn('PLATFORM', 'Settings bootstrap skipped', { error: err.message });
       });
 
       const { isSupabaseEnabled } = require('../config/supabase');
@@ -86,20 +74,20 @@ function connectMongo() {
       printStartupBanner(jobsBootstrapResult || {});
     })
     .catch((err) => {
-      console.error('[ERROR] Initial MongoDB connection failed:', err.message);
-      console.log('[SYSTEM] Server will remain active but DB operations will fail until connection is established.');
+      logger.error('MongoDB', 'Initial connection failed', { error: err.message });
+      logger.info('SYSTEM', 'Server active; DB operations fail until connection established');
     });
 
   mongoose.connection.on('error', (err) => {
-    console.error('[ERROR] Mongoose connection error:', err.message);
+    logger.error('MongoDB', 'Connection error', { error: err.message });
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('[WARN] Mongoose disconnected. Attempting reconnect...');
+    logger.warn('MongoDB', 'Disconnected; attempting reconnect');
   });
 
   mongoose.connection.on('reconnected', () => {
-    console.log('[SUCCESS] Mongoose reconnected.');
+    logger.info('MongoDB', 'Reconnected');
   });
 }
 
@@ -113,7 +101,7 @@ function onServerListening() {
   setTimeout(() => {
     const { resumeStuckCampaigns } = require('../services/queueService');
     resumeStuckCampaigns().catch((err) => {
-      console.warn('[WARN] Campaign dispatch resume failed:', err.message);
+      logger.warn('Campaign', 'Dispatch resume failed', { error: err.message });
     });
   }, 5000);
 
@@ -135,14 +123,9 @@ function beginListen(app, attempt) {
     if (err.code === 'EADDRINUSE' && attempt < LISTEN_RETRY_MAX) {
       const holders = [...getListeningPids(PORT)].filter((pid) => pid !== String(process.pid));
       if (attempt === 4 && holders.length) {
-        console.warn(
-          `[server] Port ${PORT} held by PID(s): ${holders.join(', ')}. ` +
-            'Stop extra "npm run dev" in server/ — only one terminal.',
-        );
+        logger.warn('server', `Port ${PORT} held by PID(s): ${holders.join(', ')}`);
       }
-      console.warn(
-        `[server] Port ${PORT} in use (waiting for release). Retry ${attempt + 1}/${LISTEN_RETRY_MAX} in ${LISTEN_RETRY_MS}ms`,
-      );
+      logger.warn('server', `Port ${PORT} in use; retry ${attempt + 1}/${LISTEN_RETRY_MAX}`);
       server.close(() => {
         server = null;
         const retry = () => setTimeout(() => listenWithRetry(app, attempt + 1), LISTEN_RETRY_MS);
@@ -155,7 +138,7 @@ function beginListen(app, attempt) {
       });
       return;
     }
-    console.error('[FATAL] Server listen failed', err);
+    logger.error('server', 'Listen failed', { error: err.message, code: err.code });
     process.exit(1);
   });
   server.on('listening', onServerListening);
@@ -195,12 +178,6 @@ async function gracefulShutdown() {
   try {
     const { closeRealtime } = require('../config/realtime');
     await closeRealtime();
-  } catch {
-    /* ignore */
-  }
-
-  try {
-    await shutdownPostHog();
   } catch {
     /* ignore */
   }

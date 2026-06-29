@@ -1,0 +1,19 @@
+---
+description: User-facing date display convention for CoreKnot Taskmaster
+alwaysApply: true
+---
+
+# Date display convention
+
+**User-facing dates:** `DD/MM/YYYY` everywhere in UI, emails, and reports.
+
+- Client: `client/src/utils/dateDisplay.js` — `formatDisplayDate`, `formatDisplayDateTime`, `DATE_DISPLAY_FORMAT` (`dd/MM/yyyy` date-fns tokens).
+- Server/shared: `shared/dateDisplay.js` — same convention for emails and digests.
+
+**Do not change** ISO `yyyy-MM-dd` for:
+
+- `<input type="date">` values
+- API payloads (`workDate`, `dateKey`, sort keys)
+- Database storage
+
+Display only — use helpers; avoid inline `toLocaleDateString('en-US'|'en-IN')` or `format(..., 'MMM d')`.

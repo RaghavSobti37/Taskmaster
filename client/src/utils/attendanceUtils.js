@@ -12,13 +12,24 @@ export const hasRecordedCheckIn = (entry) =>
 export const hasRecordedCheckOut = (entry) =>
   !!(entry?.outTimeRecord?.manualTimestamp || entry?.outTimeRecord?.systemTimestamp);
 
+/** Normalize clock string to HH:mm (matches attendance manualTimestamp display). */
+export const formatClockTimeForDisplay = (timeStr, { emptyLabel = '--' } = {}) => {
+  const manual = typeof timeStr === 'string' ? timeStr.trim() : '';
+  if (!manual) return emptyLabel;
+  const [hRaw, mRaw] = manual.split(':');
+  const h = parseInt(hRaw, 10);
+  const m = parseInt(mRaw ?? '0', 10);
+  if (!Number.isFinite(h)) return manual;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
 /** HH:mm for time card display from an in/out record. */
 export const formatAttendanceRecordTime = (record) => {
   if (!record) return '';
   const manual = typeof record.manualTimestamp === 'string' ? record.manualTimestamp.trim() : '';
-  if (manual) return manual;
+  if (manual) return formatClockTimeForDisplay(manual, { emptyLabel: '' });
   const legacy = typeof record.timestamp === 'string' ? record.timestamp.trim() : '';
-  if (legacy) return legacy;
+  if (legacy) return formatClockTimeForDisplay(legacy, { emptyLabel: '' });
   if (record.systemTimestamp) {
     return new Date(record.systemTimestamp).toLocaleTimeString([], {
       hour: '2-digit',

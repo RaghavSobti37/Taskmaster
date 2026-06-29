@@ -20,7 +20,6 @@ const { attachProfileCompletion } = require('../../../utils/profileCompleteness'
 const { getDefaultSeedPassword } = require('../../../utils/defaultPassword');
 const { sendSystemEmail } = require('../../../utils/sendSystemEmail');
 const { apiError } = require('../../../utils/apiResponse');
-const { captureEvent: capturePostHogEvent } = require('../../../utils/posthog');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
 
@@ -70,7 +69,6 @@ const formatAuthUser = (populated) => attachProfileCompletion(
 const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
   await finishAuthSession(req, res, populated._id);
   if (authMethod) {
-    capturePostHogEvent(req, 'user_logged_in', { method: authMethod });
   }
   return res.json(formatAuthUser(populated));
 };
@@ -154,7 +152,6 @@ exports.register = async (req, res) => {
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
     await finishAuthSession(req, res, populated._id);
-    capturePostHogEvent(req, 'user_registered', { method: 'email' });
     return res.status(201).json(formatAuthUser(populated));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -211,7 +208,6 @@ exports.login = async (req, res) => {
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
       await finishAuthSession(req, res, populated._id);
-      capturePostHogEvent(req, 'user_logged_in', { method: 'email_password' });
       return res.json(formatAuthUser(populated));
     }
 
@@ -271,7 +267,6 @@ exports.googleLogin = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    capturePostHogEvent(req, 'user_logged_out');
     const { getTokenFromRequest } = require('../../../utils/authCookie');
     const { verifySessionToken } = require('../../../utils/authSession');
     const { revokeToken } = require('../../../utils/tokenRevocation');
@@ -485,7 +480,6 @@ exports.oauthEstablishSession = async (req, res) => {
     }
 
     await finishAuthSession(req, res, populated._id);
-    capturePostHogEvent(req, 'user_logged_in', { method: 'google_oauth' });
     return res.json(formatAuthUser(populated));
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });

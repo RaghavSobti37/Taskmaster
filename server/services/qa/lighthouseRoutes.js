@@ -53,7 +53,6 @@ const PROTECTED_ROUTES = [
   { path: '/artists', name: 'Artists' },
   { path: '/finance', name: 'Finance' },
   { path: '/announcements', name: 'Announcements' },
-  { path: '/ops-logs', name: 'System logs' },
 ];
 
 function getAllLighthouseRoutes() {

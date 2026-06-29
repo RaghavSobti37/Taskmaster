@@ -1,4 +1,5 @@
 async function sendAiSensyMessage(destination, campaign, params, attributes, userName) {
+  const logger = require('./logger');
   if (!destination || !campaign) return;
 
   const cleanDestination = String(destination).replace(/\D/g, '');
@@ -27,7 +28,9 @@ async function sendAiSensyMessage(destination, campaign, params, attributes, use
       console.error(`[AiSensy] ${campaign} failed (${res.status}):`, json);
       return { ok: false, status: res.status, body: json };
     }
-    console.log(`[AiSensy] ${campaign} sent to ${cleanDestination.slice(-4).padStart(cleanDestination.length, '*')}`);
+    logger.debug('aisensy', `${campaign} sent`, {
+      destination: cleanDestination.slice(-4).padStart(cleanDestination.length, '*'),
+    });
     return { ok: true, status: res.status, body: json };
   } catch (e) {
     console.error('[AiSensy] Fetch Error:', e.message || e);

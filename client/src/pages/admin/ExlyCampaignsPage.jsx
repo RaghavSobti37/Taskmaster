@@ -1,8 +1,8 @@
 import React from 'react';
 import { GraduationCap, Layers } from 'lucide-react';
+import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ExlyDataContent from '../../components/admin/ExlyDataContent';
 import MasterclassFunnelPanel from '../../components/admin/MasterclassFunnelPanel';
-import ExlyPageLegend from '../../components/admin/ExlyPageLegend';
 import { PageContainer } from '../../components/ui';
 
 const ExlyCampaignsPage = () => {
@@ -18,13 +18,16 @@ const ExlyCampaignsPage = () => {
     <PageContainer className="!py-4 !space-y-6">
       <div className="space-y-3 border-b border-[var(--color-bg-border)] pb-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-              Admin · Exly
-            </p>
-            <h1 className="text-lg font-black text-[var(--color-text-primary)] mt-0.5">
-              Masterclass → Course
-            </h1>
+          <div className="flex items-start gap-2 min-w-0">
+            <AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} className="mt-0.5" />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                Admin · Exly
+              </p>
+              <h1 className="text-lg font-black text-[var(--color-text-primary)] mt-0.5">
+                Masterclass → Course
+              </h1>
+            </div>
           </div>
           <div className="flex gap-1 p-1 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
             <button
@@ -53,7 +56,6 @@ const ExlyCampaignsPage = () => {
             </button>
           </div>
         </div>
-        <ExlyPageLegend />
       </div>
 
       {view === 'funnel' ? (

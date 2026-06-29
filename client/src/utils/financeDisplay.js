@@ -1,4 +1,5 @@
 import { File, FileSpreadsheet, FileText, Image as ImageIcon } from 'lucide-react';
+import { formatDisplayDate } from './dateDisplay';
 
 export const FINANCE_CATEGORIES = [
   { value: 'all', label: 'All Types' },
@@ -33,7 +34,7 @@ export const formatFinanceBytes = (bytes) => {
 export const formatFinanceDocDate = (doc) => {
   const raw = doc?.metadata?.date;
   if (!raw) return '—';
-  return new Date(raw).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDisplayDate(raw);
 };
 
 export const getFinanceFileIcon = (type) => {

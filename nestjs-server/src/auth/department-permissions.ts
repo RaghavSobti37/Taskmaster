@@ -1,7 +1,7 @@
 import { AuthUser, DepartmentRef } from './auth.types';
 
 const ADMIN_SLUG = 'admin';
-const OPS_PAGE_KEYS = new Set(['finance', 'announcements', 'ops_logs']);
+const OPS_PAGE_KEYS = new Set(['finance', 'announcements']);
 
 const isDepartmentAdmin = (dept?: DepartmentRef | null) => {
   if (!dept) return false;
@@ -20,7 +20,7 @@ const getUserPagePermissions = (user: AuthUser): string[] => {
     return [
       'dashboard', 'calendar', 'todo', 'inbox', 'projects', 'assets', 'schedule',
       'logs', 'notes', 'emails', 'equipment', 'contacts', 'attendance', 'subscriptions',
-      'finance', 'announcements', 'ops_logs',
+      'finance', 'announcements',
     ];
   }
   return [];

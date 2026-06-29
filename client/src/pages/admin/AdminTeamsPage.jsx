@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Users } from 'lucide-react';
 import { ListPageLayout, PageSkeleton, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
 import { useUserDirectory, useDepartments } from '../../hooks/useTaskmasterQueries';
 import { distributionFromField } from '../../utils/buildChartSeries';
@@ -37,6 +38,7 @@ const AdminTeamsPage = () => {
       containerClassName="!py-4"
       title="Teams & Departments"
       icon={Building2}
+      backTo={ADMIN_CONSOLE_PATH}
       overview={{
         stats: [
           {

@@ -6,6 +6,7 @@ import SearchInput from '../../components/ui/SearchInput';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import DataOverviewSection from '../../components/ui/DataOverviewSection';
 import PageToolbar from '../../components/ui/PageToolbar';
+import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
 import DataHubOpsMenu from '../../components/dataHub/DataHubOpsMenu';
@@ -364,6 +365,15 @@ export function DataHubContent() {
   return (
     <>
       <div className="flex flex-col min-h-[calc(100vh-14rem)] w-full space-y-3 mb-8">
+        <div className="flex items-center gap-2 min-w-0">
+          <AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
+              <Database size={18} strokeWidth={2.5} />
+            </div>
+            <h1 className="tm-page-title uppercase min-w-0">Data Hub</h1>
+          </div>
+        </div>
         {localDevMode && (
           <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
             {syncStatus?.message || 'Local dev — CRM/person data not synced. Data Hub is empty by design.'}

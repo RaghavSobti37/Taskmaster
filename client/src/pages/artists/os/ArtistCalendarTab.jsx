@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
 import { Card, Badge, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
@@ -11,7 +12,7 @@ const EMPTY = { title: '', startAt: '', eventType: 'personal' };
 
 function formatDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatDisplayDate(new Date(d));
 }
 
 export default function ArtistCalendarTab({ artistId, isPreview }) {

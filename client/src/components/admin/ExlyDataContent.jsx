@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { 
@@ -562,7 +563,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
       header: 'Booked On',
       render: (b) => (
         <span className="text-xs font-mono text-[var(--color-text-primary)]">
-          {b.bookedOn ? format(new Date(b.bookedOn), 'MMM dd yyyy, hh:mm a') : '—'}
+          {b.bookedOn ? formatDisplayDateTime12hComma(new Date(new Date(b.bookedOn))) : '—'}
         </span>
       )
     },
@@ -1257,7 +1258,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                           <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{item.offeringId}</div>
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">
-                          {item.bookedOn ? format(new Date(item.bookedOn), 'MMM dd yyyy, hh:mm a') : '—'}
+                          {item.bookedOn ? formatDisplayDateTime12hComma(new Date(new Date(item.bookedOn))) : '—'}
                         </td>
                         <td className="p-3 text-xs font-mono font-bold text-[var(--color-text-primary)] text-right">
                           ₹ {formatInr(item.pricePaid, { exact: true })}

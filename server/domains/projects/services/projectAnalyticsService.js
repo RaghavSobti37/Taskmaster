@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const Log = require('../../../models/Log');
 const User = require('../../../models/User');
+const FinanceDocument = require('../../../models/FinanceDocument');
+const { rollupFinanceByProject } = require('../../../../shared/projectFinanceRollup');
 const taskProjectQueryService = require('../../tasks/services/taskProjectQueryService');
 const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const { resolveRollingRange, inRollingWindow } = require('../../../../shared/reportRange');
@@ -328,14 +330,42 @@ const buildProjectsAnalyticsSummary = async (user, rangeQuery = {}) => {
     'projectId status completedAt updatedAt'
   );
 
-  const summaries = projects.map((p) => ({
-    projectId: p._id,
-    totalHours: 0,
-    manualLogHours: 0,
-    taskCompletionHours: 0,
-    logCount: 0,
-    tasksCompleted: 0,
-  }));
+  const financeDocs = await FinanceDocument.find({
+    project: { $in: projectIds },
+    isFolder: { $ne: true },
+  })
+    .select('project category metadata createdAt')
+    .lean();
+
+  const financeByProjectId = rollupFinanceByProject(financeDocs, rangeStart, rangeEnd);
+
+  const summaries = projects.map((p) => {
+    const pid = p._id.toString();
+    const finance = financeByProjectId.get(pid) || {
+      budget: 0,
+      spentTotal: 0,
+      spentInRange: 0,
+      revenueTotal: 0,
+      revenueInRange: 0,
+      remaining: 0,
+      budgetUsedPct: null,
+    };
+    return {
+      projectId: p._id,
+      totalHours: 0,
+      manualLogHours: 0,
+      taskCompletionHours: 0,
+      logCount: 0,
+      tasksCompleted: 0,
+      budget: finance.budget,
+      spentTotal: finance.spentTotal,
+      spentInRange: finance.spentInRange,
+      revenueTotal: finance.revenueTotal,
+      revenueInRange: finance.revenueInRange,
+      remaining: finance.remaining,
+      budgetUsedPct: finance.budgetUsedPct,
+    };
+  });
 
   const summaryByProjectId = Object.fromEntries(summaries.map((s) => [s.projectId.toString(), s]));
 

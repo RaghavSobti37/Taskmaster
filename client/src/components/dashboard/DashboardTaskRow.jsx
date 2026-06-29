@@ -2,12 +2,19 @@ import React from 'react';
 import { Circle } from 'lucide-react';
 import { Badge, Skeleton } from '../ui';
 import { formatDueDate } from '../../utils/formatDueDate';
+import { formatDisplayDateShort } from '../../utils/dateDisplay';
 import { getTaskRowStyle } from '../../utils/workspaceColors';
 import { isTaskOverdue } from '../../utils/dashboardTasks';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { isPendingTask } from '../../utils/pendingTask';
 import MentionTitle from '../mentions/MentionTitle';
-import TaskMentionBadge from '../tasks/TaskMentionBadge';
+
+const PRIORITY_SHORT = {
+  low: 'Low',
+  medium: 'Med',
+  high: 'High',
+  urgent: 'Urg',
+};
 
 /**
  * Dashboard task row — flat strip with project accent bar (tm-task-row).
@@ -21,10 +28,13 @@ const DashboardTaskRow = ({
   isCompleting = false,
   className = '',
 }) => {
-  const dueLabel = formatDueDate(task.dueDate || task.scheduleDate, { emptyLabel: 'No date' });
   const overdue = isTaskOverdue(task);
-  const projectId = task.projectId?._id || task.projectId;
-  const projectName = task.projectId?.name || projects.find((p) => String(p._id) === String(projectId))?.name;
+  const dueDate = task.dueDate || task.scheduleDate;
+  const dueLabel = overdue
+    ? formatDisplayDateShort(dueDate, { emptyLabel: '—' })
+    : formatDueDate(dueDate, { emptyLabel: 'No date' });
+  const priorityKey = String(task.priority || 'medium').toLowerCase();
+  const priorityLabel = PRIORITY_SHORT[priorityKey] || priorityKey.slice(0, 3);
 
   if (isCompleting || isPendingTask(task) || task._updating) {
     return (
@@ -65,26 +75,20 @@ const DashboardTaskRow = ({
         <button
           type="button"
           onClick={() => onOpen?.(task)}
-          className="flex-1 flex items-center gap-3 min-w-0 text-left"
+          className="flex-1 flex items-center gap-2 min-w-0 text-left"
         >
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-2 min-w-0">
-              <MentionTitle text={task.title} className="tm-task-title" truncate />
-              <TaskMentionBadge task={task} />
-            </div>
-            {projectName && (
-              <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{projectName}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Badge variant={getPriorityBadgeVariant(task.priority)} className="uppercase !text-[10px] !font-bold tracking-wide">
-              {task.priority || 'medium'}
-            </Badge>
-            <p className={`text-xs tabular-nums whitespace-nowrap ${overdue ? 'text-[var(--color-pastel-rose-text)] font-bold' : 'text-[var(--color-text-muted)]'}`}>
-              {dueLabel}
-            </p>
-          </div>
+          <MentionTitle text={task.title} className="tm-task-title flex-1 min-w-0" truncate />
+          <Badge
+            variant={getPriorityBadgeVariant(task.priority)}
+            className="shrink-0 !text-[10px] !font-bold tracking-wide !px-1.5"
+          >
+            {priorityLabel}
+          </Badge>
+          <p
+            className={`text-xs tabular-nums whitespace-nowrap shrink-0 ${overdue ? 'text-[var(--color-pastel-rose-text)] font-bold' : 'text-[var(--color-text-muted)]'}`}
+          >
+            {dueLabel}
+          </p>
         </button>
       </div>
     </div>

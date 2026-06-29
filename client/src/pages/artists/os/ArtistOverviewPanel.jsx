@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatDisplayDateShort } from '../../../utils/dateDisplay';
 import { Link } from 'react-router-dom';
 import {
   Users, Headphones, Calendar, IndianRupee, MessageSquare, TrendingUp,
@@ -99,7 +100,7 @@ function connectionStatusFromProps(connections, platformId) {
 
 function formatShortDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return formatDisplayDateShort(d);
 }
 
 function inquiryStatusLabel(status) {

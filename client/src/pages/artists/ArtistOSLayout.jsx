@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ARTIST_OS_TABS } from './os/artistOsConstants';
 import { getLazyArtistOsTab } from './artistTabLoaders';
 import PageSkeleton from '../../components/ui/PageSkeleton';
+import ArtistProductHint from '../../components/brand/ArtistProductHint';
 
 export default function ArtistOSLayout({
   artist,
@@ -73,8 +74,10 @@ export default function ArtistOSLayout({
       <div
         role="tablist"
         aria-label="Artist OS sections"
-        className="flex flex-wrap gap-1 border-b border-[var(--color-bg-border)] pb-2 -mx-1 overflow-x-auto"
+        className="flex flex-wrap items-center gap-2 border-b border-[var(--color-bg-border)] pb-2 -mx-1 overflow-x-auto"
       >
+        <ArtistProductHint product="artistOs" className="shrink-0 px-1" />
+        <div className="flex flex-wrap gap-1">
         {ARTIST_OS_TABS.map((tab) => {
           const active = tab.id === resolvedTab;
           return (
@@ -94,6 +97,7 @@ export default function ArtistOSLayout({
             </button>
           );
         })}
+        </div>
       </div>
       <div role="tabpanel">
         <Suspense fallback={<PageSkeleton />} key={resolvedTab}>

@@ -1,10 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const useDashboardSummary = (enabled = true) => {
+export const useDashboardSummary = (enabled = true, { fields } = {}) => {
+  const fieldsParam = fields === 'calendar' ? 'calendar' : undefined;
   return useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
+    queryKey: ['dashboard', 'summary', fieldsParam || 'full'],
+    queryFn: async () => {
+      const url = fieldsParam
+        ? `/api/dashboard/summary?fields=${fieldsParam}`
+        : '/api/dashboard/summary';
+      return (await axios.get(url)).data;
+    },
     staleTime: 1000 * 60 * 2,
     enabled,
   });

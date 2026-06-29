@@ -8,6 +8,7 @@ import {
   useDeletePin,
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
 import { usePinBoardDraft } from './PinBoardContext';
 
 const PinBoardComposer = () => {
@@ -29,7 +30,11 @@ const PinBoardComposer = () => {
   };
 
   const saving = createPin.isPending || updatePin.isPending;
-  const canDelete = draft.editingId && pins.find((p) => p._id === draft.editingId)?.createdBy?._id === user?._id;
+  const editingPin = draft.editingId ? pins.find((p) => p._id === draft.editingId) : null;
+  const canDelete = editingPin && (
+    isAdminUser(user)
+    || String(editingPin.createdBy?._id || editingPin.createdBy) === String(user?._id)
+  );
 
   return (
     <DashboardWidgetShell

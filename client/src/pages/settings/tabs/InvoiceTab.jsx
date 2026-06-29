@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
@@ -109,7 +110,7 @@ export default function InvoiceTab() {
         header: 'Submitted',
         render: (item) =>
           item.createdAt
-            ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            ? formatDisplayDate(new Date(item.createdAt))
             : '—',
       },
     ],

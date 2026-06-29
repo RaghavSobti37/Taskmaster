@@ -23,6 +23,7 @@ import { canSeeWorkspaceTab, DEFAULT_PERMISSIONS_BY_ROLE } from '../../../utils/
 import { isArtistManagerUser } from '../../../utils/pagePermissions';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ARTIST_WORKSPACE_NAV, DEFAULT_WORKSPACE_TAB } from './artistWorkspaceConstants';
+import ArtistProductHint from '../../../components/brand/ArtistProductHint';
 
 const NAV_ICONS = {
   home: LayoutDashboard,
@@ -115,8 +116,9 @@ export default function ArtistWorkspaceShell({ children }) {
           </button>
           <BrandLogo size={28} />
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
               Artist Workspace
+              <ArtistProductHint product="artistWorkspace" />
             </p>
             <h1 className="text-sm font-black text-[var(--color-text-primary)] truncate">
               {artist?.name || 'Loading…'}

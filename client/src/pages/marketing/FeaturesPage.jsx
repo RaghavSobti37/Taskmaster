@@ -9,6 +9,7 @@ import {
   PageHeader, PageContainer, Card, Badge, 
   StatCard, Button 
 } from '../../components/ui';
+import { inAppFeatures } from '../../constants/marketingContent';
 
 const FeatureCard = ({ icon: Icon, title, description, status = "Live", variant = "info" }) => (
   <motion.div
@@ -96,10 +97,10 @@ const FeaturesPage = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 opacity-50" />
         <div className="relative z-10 space-y-6 max-w-xl">
           <h2 className="text-2xl font-black uppercase tracking-tight italic flex items-center gap-3">
-             <CheckCircle2 className="text-emerald-500" size={24} /> Mission Ready
+             <CheckCircle2 className="text-emerald-500" size={24} /> {inAppFeatures.missionTitle}
           </h2>
           <p className="text-[11px] font-bold text-white/60 leading-relaxed uppercase tracking-[0.1em]">
-            Coreknot is fully synced with your Google account. All your data is saved securely and updated in real time across all devices.
+            {inAppFeatures.missionBody}
           </p>
           <div className="flex gap-3">
              <Badge variant="info" className="!bg-blue-500/20 !text-blue-400 !border-blue-500/30 py-2 px-4">ONLINE</Badge>

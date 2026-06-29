@@ -63,14 +63,12 @@ const enumerateDateKeysBetween = (start, end) => {
   return keys;
 };
 
+const { formatDisplayDateShort } = require('../../../../shared/dateDisplay');
+
 const formatChartDayLabel = (dateKey) => {
   try {
     const d = new Date(`${dateKey}T12:00:00${getTzOffset()}`);
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: process.env.APP_TIMEZONE || 'Asia/Kolkata',
-      month: 'short',
-      day: '2-digit',
-    }).format(d);
+    return formatDisplayDateShort(d, { emptyLabel: dateKey?.slice(5) || dateKey });
   } catch {
     return dateKey?.slice(5) || dateKey;
   }
@@ -224,7 +222,12 @@ exports.getDepartmentStats = async (req, res) => {
 exports.getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
-    const cacheKey = `dashboard:summary:v2:${userId}`;
+    const fieldsParam = String(req.query.fields || '').trim().toLowerCase();
+    const calendarOnly = fieldsParam === 'calendar';
+
+    const cacheKey = calendarOnly
+      ? `dashboard:summary:calendar:v1:${userId}`
+      : `dashboard:summary:v2:${userId}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       res.set('Cache-Control', PRIVATE_CACHE_60);
@@ -233,6 +236,21 @@ exports.getDashboardSummary = async (req, res) => {
 
     const today = todayStart();
     const todayEndTime = todayEnd();
+
+    if (calendarOnly) {
+      const calendar = await mongoose.model('CalendarEvent').find({
+        $or: [
+          { visibility: 'public' },
+          { createdBy: userId },
+        ],
+        date: { $gte: today, $lte: todayEndTime },
+      }).setOptions({ bypassTenant: true }).lean();
+
+      const payload = { calendar: calendar || [] };
+      await setCache(cacheKey, payload, 60);
+      res.set('Cache-Control', PRIVATE_CACHE_60);
+      return res.json(payload);
+    }
 
     const assignments = await TaskAssignment.find({ userId }).select('taskId').lean();
     const assignedTaskIds = assignments.map(a => a.taskId);

@@ -1,6 +1,4 @@
 const logger = require('../utils/logger');
-const { writeSystemLog } = require('../services/systemLogService');
-const { SEVERITY, MODULE } = require('../../shared/systemLogContract');
 
 const SLOW_THRESHOLD_MS = 500;
 
@@ -13,25 +11,13 @@ function perfMiddleware(req, res, next) {
 
     if (durationMs < SLOW_THRESHOLD_MS) return;
 
-    const meta = {
+    logger.warn('perfMiddleware', 'Slow request', {
       method: req.method,
       path: req.originalUrl,
       status: res.statusCode,
       durationMs: Math.round(durationMs),
-    };
-
-    logger.warn('perfMiddleware', 'Slow request', meta);
-
-    writeSystemLog({
-      severity: SEVERITY.WARN,
-      module: MODULE.SYSTEM,
-      message: `Slow request ${meta.method} ${meta.path} (${meta.durationMs}ms)`,
-      route: req.originalUrl,
-      method: req.method,
-      httpStatus: res.statusCode,
+      traceId: req.traceId,
       errorCode: 'SLOW_REQUEST',
-      payload: meta,
-      userVisible: false,
     });
   });
 

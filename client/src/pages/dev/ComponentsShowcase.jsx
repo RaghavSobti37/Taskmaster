@@ -4,10 +4,11 @@ import {
 } from 'lucide-react';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
 import { SEVERITY, MODULE } from '../../lib/systemLogContract';
-import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataOverviewSection } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataInsightsLayout, MetricPanelGroup, MetricBlock, InsightsChartGrid } from '../../components/ui';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
 import { ChartSurface } from '../../components/ui/charts';
 import FluidRibbonLoaderGallery from '../../components/brand/FluidRibbonLoaderGallery';
+import ModuleSubnavShowcase from '../../components/ui/ModuleSubnavVariants';
 
 const SHOWCASE_MOCK_USERS = [
   { _id: 'u1', name: 'Alex Rivera', email: 'alex@coreknot.com', role: 'admin' },
@@ -98,6 +99,8 @@ const ComponentsShowcase = () => {
             ['feedback', 'Feedback'],
             ['notifications', 'Notifications'],
             ['add-members', 'Add members'],
+            ['subnav', 'Module subnav'],
+            ['insights-layout', 'Insights layout'],
             ['layout', 'Layout'],
           ].map(([id, label]) => (
             <a
@@ -500,6 +503,133 @@ const ComponentsShowcase = () => {
               />
             
           </div>
+        </ShowcaseSection>
+
+        <ShowcaseSection
+          id="subnav"
+          title="Module subnav — pick one"
+          description="Five layouts for Emails, CRM, Assets, etc. Click tabs in each demo, then tell us A–E to ship app-wide."
+        >
+          <ModuleSubnavShowcase />
+        </ShowcaseSection>
+
+        <ShowcaseSection
+          id="insights-layout"
+          title="Insights analytics primitives"
+          description="DataInsightsLayout, MetricPanelGroup, MetricBlock, and InsightsChartGrid with a live UDIF-style composition."
+        >
+          <DataInsightsLayout
+            header={(
+              <div className="space-y-1">
+                <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">Team analytics overview</h3>
+                <p className="text-[10px] text-[var(--color-text-muted)]">Three-layer shell: KPI panels, chart grid, then detailed workspace.</p>
+              </div>
+            )}
+            panels={[
+              {
+                id: 'showcase-kpis',
+                title: 'MetricPanelGroup example',
+                metricsCols: 2,
+                metrics: [
+                  { id: 'a', label: 'Qualified Leads', value: 184, sub: '+12 vs last week', tone: 'mint' },
+                  { id: 'b', label: 'Open Rate', value: '42%', sub: 'campaign aggregate', tone: 'default' },
+                  { id: 'c', label: 'Response Time', value: '3.1h', sub: 'median', tone: 'default' },
+                  { id: 'd', label: 'Escalations', value: 7, sub: 'active', tone: 'rose' },
+                ],
+              },
+            ]}
+            panelColumns={1}
+            charts={[
+              {
+                id: 'showcase-insights-line',
+                title: 'InsightsChartGrid line',
+                type: 'line',
+                data: [
+                  { date: 'Mon', value: 18 },
+                  { date: 'Tue', value: 24 },
+                  { date: 'Wed', value: 21 },
+                  { date: 'Thu', value: 31 },
+                  { date: 'Fri', value: 27 },
+                ],
+                xKey: 'date',
+                dataKey: 'value',
+              },
+              {
+                id: 'showcase-insights-bar',
+                title: 'InsightsChartGrid bar',
+                type: 'bar',
+                data: [
+                  { date: 'Email', value: 92 },
+                  { date: 'Calls', value: 63 },
+                  { date: 'Demo', value: 28 },
+                  { date: 'Closed', value: 11 },
+                ],
+                xKey: 'date',
+                dataKey: 'value',
+              },
+            ]}
+            chartColumns={2}
+            chartsEager
+            toolbar={(
+              <div className="flex items-center gap-2 border-t border-[var(--color-bg-border)] pt-3">
+                <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter details..." className="!w-56" />
+                <Badge variant="info">Toolbar slot</Badge>
+              </div>
+            )}
+          >
+            <div className="border-t border-[var(--color-bg-border)] pt-3 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">MetricBlock (standalone)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricBlock label="SLA Breaches" value={4} sub="this week" tone="rose" />
+                <MetricBlock label="Resolved" value={58} sub="7d total" tone="mint" />
+                <MetricBlock label="Avg Handle" value="12m" sub="support queue" />
+                <MetricBlock label="NPS Signals" value="87%" sub="survey sample" />
+              </div>
+            </div>
+            <div className="border-t border-[var(--color-bg-border)] pt-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+                InsightsChartGrid (standalone)
+              </p>
+              <InsightsChartGrid
+                eager
+                columns={1}
+                charts={[
+                  {
+                    id: 'showcase-standalone-area',
+                    title: 'Standalone area chart',
+                    type: 'area',
+                    data: [
+                      { date: 'W1', value: 31 },
+                      { date: 'W2', value: 35 },
+                      { date: 'W3', value: 29 },
+                      { date: 'W4', value: 44 },
+                    ],
+                    xKey: 'date',
+                    dataKey: 'value',
+                  },
+                ]}
+              />
+            </div>
+            <div className="border-t border-[var(--color-bg-border)] pt-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+                MetricPanelGroup (standalone)
+              </p>
+              <MetricPanelGroup
+                columns={1}
+                panels={[
+                  {
+                    id: 'showcase-standalone-panel',
+                    title: 'Standalone panel',
+                    metrics: [
+                      { id: 'pipeline', label: 'Pipeline', value: '₹4.2L', tone: 'default' },
+                      { id: 'win-rate', label: 'Win rate', value: '29%', tone: 'mint' },
+                      { id: 'risk', label: 'At risk', value: 6, tone: 'rose' },
+                    ],
+                  },
+                ]}
+              />
+            </div>
+          </DataInsightsLayout>
         </ShowcaseSection>
 
         <ShowcaseSection

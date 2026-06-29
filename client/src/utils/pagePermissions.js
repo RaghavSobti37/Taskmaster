@@ -1,93 +1,8 @@
-import { HUB_CONFIG } from './navbarConfig';
+import { HUB_CONFIG, buildPagePermissionGroups } from './navbarConfig';
 
-export const PAGE_GROUPS = [
-  {
-    id: 'platform',
-    label: 'Platform',
-    pages: [
-      { key: 'dashboard', label: 'Dashboard', path: '/dashboard' },
-      { key: 'calendar', label: 'Calendar', path: '/calendar' },
-      { key: 'todo', label: 'Todo', path: '/todo' },
-      { key: 'inbox', label: 'Inbox', path: '/inbox' },
-    ],
-  },
-  {
-    id: 'workspace',
-    label: 'Workspace',
-    pages: [
-      { key: 'projects', label: 'Projects', path: '/projects' },
-      { key: 'assets', label: 'Assets', path: '/assets' },
-      { key: 'schedule', label: 'Schedule', path: '/schedule' },
-      { key: 'logs', label: 'Daily Logs', path: '/logs' },
-      { key: 'notes', label: 'Notes', path: '/notes' },
-      { key: 'emails', label: 'Emails', path: '/emails' },
-    ],
-  },
-  {
-    id: 'office',
-    label: 'Office',
-    pages: [
-      { key: 'equipment', label: 'Equipment', path: '/equipment' },
-      { key: 'contacts', label: 'Contacts', path: '/contacts' },
-      { key: 'attendance', label: 'Attendance', path: '/attendance' },
-      { key: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
-    ],
-  },
-  {
-    id: 'crm',
-    label: 'CRM',
-    pages: [
-      { key: 'leads', label: 'Leads', path: '/leads' },
-      { key: 'followups', label: 'Followups', path: '/followups' },
-      { key: 'bookings', label: 'Bookings', path: '/bookings' },
-    ],
-  },
-  {
-    id: 'management',
-    label: 'Management',
-    pages: [
-      { key: 'finance', label: 'Finance', path: '/finance' },
-      { key: 'announcements', label: 'Announcements', path: '/announcements' },
-      { key: 'ops_logs', label: 'Ops Logs', path: '/ops-logs' },
-      { key: 'artists', label: 'Artists', path: '/artists' },
-    ],
-  },
-  {
-    id: 'tools',
-    label: 'App Tools',
-    pages: [
-      { key: 'settings', label: 'Settings', path: '/settings' },
-      { key: 'office_assets', label: 'Office Assets', path: '/office-assets' },
-      { key: 'features', label: 'Features', path: '/features' },
-      { key: 'workflows', label: 'Workflows', path: '/workflows' },
-    ],
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    pages: [
-      { key: 'admin_users', label: 'Users', path: '/admin/users' },
-      { key: 'admin_users', label: 'Platform settings', path: '/admin/platform-settings' },
-      { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
-      { key: 'admin_roles', label: 'Roles', path: '/admin/roles' },
-      { key: 'admin_data', label: 'Data Hub', path: '/admin' },
-      { key: 'admin_ops_hub', label: 'Ops Hub', path: '/admin/ops-hub' },
-      { key: 'ops_hub_academy', label: 'Ops Hub — Academy', path: '/admin/ops-hub' },
-      { key: 'ops_hub_media', label: 'Ops Hub — Media', path: '/admin/ops-hub' },
-      { key: 'ops_hub_show_booking', label: 'Ops Hub — Show Booking', path: '/admin/ops-hub' },
-      { key: 'ops_hub_influencers', label: 'Ops Hub — Influencers', path: '/admin/ops-hub' },
-      { key: 'admin_data', label: 'Media List', path: '/admin/media-list' },
-      { key: 'admin_artist_path', label: 'Artist Path', path: '/admin/artist-path' },
-      { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
-      { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
-      { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },
-      { key: 'admin_project_analytics', label: 'Project Analytics', path: '/admin/project-analytics' },
-      { key: 'campaigns', label: 'Campaign Details', path: '/campaign' },
-    ],
-  },
-];
+export const PAGE_GROUPS = buildPagePermissionGroups();
 
-export const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
+export const ALL_PAGE_KEYS = [...new Set(PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key)))];
 
 export const BASE_PAGE_KEYS = [
   'dashboard', 'calendar', 'todo', 'inbox', 'settings',
@@ -95,7 +10,7 @@ export const BASE_PAGE_KEYS = [
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
-const OPS_EXTRA_PAGES = ['finance', 'announcements', 'ops_logs', 'office_assets'];
+const OPS_EXTRA_PAGES = ['finance', 'announcements', 'office_assets'];
 const CREATIVE_EXTRA_PAGES = ['assets', 'features', 'workflows', 'office_assets'];
 
 export const PRESET_PAGES = {
@@ -110,15 +25,15 @@ export const PRESET_PAGES = {
 };
 
 const ADMIN_PAGE_KEYS = new Set(
-  PAGE_GROUPS.find((g) => g.id === 'admin')?.pages.map((p) => p.key) || []
+  PAGE_GROUPS.find((g) => g.id === 'admin')?.pages.map((p) => p.key) || [],
 );
 
 export const CRM_PAGE_KEYS = ['leads', 'followups', 'bookings'];
-const OPS_PAGE_KEYS = ['finance', 'announcements', 'ops_logs'];
+const OPS_PAGE_KEYS = ['finance', 'announcements'];
 
 export const PERMISSION_PRESET_OPTIONS = [
   { value: 'admin', label: 'Admin (all pages)', description: 'Full access to every page' },
-  { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, ops logs, office assets' },
+  { value: 'ops', label: 'Operations', description: 'Base workspace + finance, announcements, office assets' },
   { value: 'sales', label: 'Sales', description: 'Base workspace + CRM pages' },
   { value: 'artist-management', label: 'Artist Management', description: 'Base workspace + artists + artist CRM' },
   { value: 'artist-business', label: 'Artist Business', description: 'Artist bookings CRM + TSC Films project access' },
@@ -249,3 +164,5 @@ function hasHubAccess(user, hubPath) {
   if (!hub) return false;
   return hasAnyPageAccess(user, hub.childKeys);
 }
+
+export { HUB_CONFIG };

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { format } from 'date-fns';
 import { Pin } from 'lucide-react';
@@ -42,7 +43,7 @@ const PinBoardMessages = () => {
         pins.map((pin) => {
         const author = pin.updatedBy?.name || pin.createdBy?.name || 'Team';
         const avatar = pin.updatedBy?.avatar || pin.createdBy?.avatar;
-        const dateLabel = format(new Date(pin.updatedAt || pin.createdAt), 'MMM d, yyyy');
+        const dateLabel = formatDisplayDate(new Date(pin.updatedAt || pin.createdAt));
         const isActive = draft.editingId === pin._id;
 
         return (

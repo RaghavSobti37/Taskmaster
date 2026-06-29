@@ -1,29 +1,52 @@
 import { isAppSite, isAuthSite, isLandingSite } from './siteMode';
 
+const PROD_APP_ORIGIN = 'https://tsccoreknot.com';
+
 const trimSlash = (url) => String(url || '').replace(/\/$/, '');
 
-export const APP_ORIGIN = trimSlash(
-  import.meta.env.VITE_APP_URL || 'https://tsccoreknot.com',
-);
-/** Path-based landing on main app host (override with VITE_LANDING_URL for legacy subdomain). */
-export const LANDING_ORIGIN = trimSlash(
-  import.meta.env.VITE_LANDING_URL || `${APP_ORIGIN}/landing`,
-);
-/** Auth routes live on the main app host (e.g. /login), not a separate subdomain. */
-export const AUTH_ORIGIN = trimSlash(import.meta.env.VITE_AUTH_URL || APP_ORIGIN);
+const browserOrigin = () => {
+  if (typeof window === 'undefined' || !window.location?.origin) return null;
+  return trimSlash(window.location.origin);
+};
+
+/** App host serves workspace routes (prod: tsccoreknot.com). */
+export function getAppOrigin() {
+  if (import.meta.env.VITE_APP_URL) return trimSlash(import.meta.env.VITE_APP_URL);
+  if ((isAppSite() || isAuthSite()) && browserOrigin()) return browserOrigin();
+  return PROD_APP_ORIGIN;
+}
+
+/** Auth routes on app host in app mode; separate auth subdomain in split deploy. */
+export function getAuthOrigin() {
+  if (import.meta.env.VITE_AUTH_URL) return trimSlash(import.meta.env.VITE_AUTH_URL);
+  if ((isAppSite() || isAuthSite()) && browserOrigin()) return browserOrigin();
+  return getAppOrigin();
+}
+
+/** Marketing landing — path on app host or legacy subdomain. */
+export function getLandingOrigin() {
+  if (import.meta.env.VITE_LANDING_URL) return trimSlash(import.meta.env.VITE_LANDING_URL);
+  if (isLandingSite() && browserOrigin()) return browserOrigin();
+  return `${getAppOrigin()}/landing`;
+}
+
+/** Login/register live on the same SPA as the app (not a cross-origin hop). */
+export const hasSameOriginAuthRoutes = () => isAppSite() || isAuthSite();
 
 const joinOrigin = (origin, path = '/') => {
   const clean = path.startsWith('/') ? path : `/${path}`;
   return `${origin}${clean === '/' ? '' : clean}`;
 };
 
-export const landingUrl = (path = '/') => joinOrigin(LANDING_ORIGIN, path);
-export const authUrl = (path = '/login') => joinOrigin(AUTH_ORIGIN, path);
-export const appUrl = (path = '/dashboard') => joinOrigin(APP_ORIGIN, path);
+export const landingUrl = (path = '/') => joinOrigin(getLandingOrigin(), path);
+export const authUrl = (path = '/login') => joinOrigin(getAuthOrigin(), path);
+export const appUrl = (path = '/dashboard') => joinOrigin(getAppOrigin(), path);
 
-/** Post-login / deep links: auth subdomain → full app URL */
+/** Post-login / deep links: auth or landing subdomain → full app URL */
 export const resolveAppNavigationTarget = (pathOrUrl) => {
-  if (!pathOrUrl) return appUrl('/dashboard');
+  if (!pathOrUrl) {
+    return hasSameOriginAuthRoutes() ? '/dashboard' : appUrl('/dashboard');
+  }
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   if (pathOrUrl.startsWith('/') && (isAuthSite() || isLandingSite())) {
     return appUrl(pathOrUrl);

@@ -26,6 +26,7 @@ export const DASHBOARD_WIDGET_LOADERS = {
   'artist-calendar': () => import('../components/dashboard/GenericDashboardCard'),
   'attendance-overview': () => import('../components/dashboard/AttendanceOverviewCard'),
   'last-backup': () => import('../components/dashboard/LastBackupCard'),
+  'render-logs': () => import('../components/dashboard/RenderLogsCard'),
 };
 
 const lazyWidgetCache = new Map();

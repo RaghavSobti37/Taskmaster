@@ -11,6 +11,7 @@ const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const { validateCalendarEventRange, buildDateTimeFromParts, toDateKey } = require('../utils/dateValidation');
+const { formatWeekdayDateLong } = require('../../shared/dateDisplay');
 const { validateQuery } = require('../validation/validateQuery');
 const { validateBody } = require('../validation/validateBody');
 const { calendarQuery, calendarEventBody } = require('../validation/schemas/calendar');
@@ -211,12 +212,7 @@ router.post('/', validateBody(calendarEventBody), async (req, res) => {
     if (visibility === 'public') {
       try {
         const allUsers = await User.find({ email: { $exists: true, $ne: '' } }, 'email name');
-        const eventDate = eventDateTime.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
+        const eventDate = formatWeekdayDateLong(eventDateTime);
 
         const emailPromises = allUsers.map((user) =>
           dispatchEmailPayload({

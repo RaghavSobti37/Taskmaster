@@ -19,7 +19,6 @@ const MODEL_LOADERS = [
   () => require('../domains/tasks/models/Task'),
   () => require('../domains/crm/models/Lead'),
   () => require('../models/Attendance'),
-  () => require('../models/SystemLog'),
   () => require('../models/Log'),
   () => require('../domains/mail/models/MailEvent'),
   () => require('../domains/mail/models/Campaign'),

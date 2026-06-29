@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Shield, Users, Layers, Pencil, Trash2, Plus, Lock } from 'lucide-react';
 import { ListPageLayout, PageSkeleton, Button, Badge, Input, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
 import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
 import {
@@ -168,6 +169,7 @@ const AdminRolesPage = () => {
         containerClassName="!py-4"
         title="Roles & Permissions"
         icon={Shield}
+        backTo={ADMIN_CONSOLE_PATH}
         overview={{ stats }}
       >
         {isError && (

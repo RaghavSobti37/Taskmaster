@@ -1,8 +1,9 @@
 import { format, isToday, isYesterday } from 'date-fns';
+import { formatDisplayDate } from './dateDisplay';
 
 /**
  * Formats lastOnline for the users table:
- * Today · 3:45 PM | Yesterday · 9:12 AM | May 28, 2026 · 3:45 PM
+ * Today · 3:45 PM | Yesterday · 9:12 AM | 29/06/2026 · 3:45 PM
  */
 export function formatLastActivity(value, { emptyLabel = 'No record' } = {}) {
   if (!value) return emptyLabel;
@@ -11,5 +12,5 @@ export function formatLastActivity(value, { emptyLabel = 'No record' } = {}) {
   const time = format(date, 'h:mm a');
   if (isToday(date)) return `Today · ${time}`;
   if (isYesterday(date)) return `Yesterday · ${time}`;
-  return `${format(date, 'MMM dd, yyyy')} · ${time}`;
+  return `${formatDisplayDate(date, { emptyLabel: '' })} · ${time}`;
 }

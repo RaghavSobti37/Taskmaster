@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -284,7 +285,7 @@ export default function FollowupsPage() {
                     callStatus: 'Connected',
                     nextFollowupDate: '',
                     nextFollowupTime: '',
-                    remarks: (row.remarks ? row.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                    remarks: (row.remarks ? row.remarks + '\n' : '') + `[Follow-up done on ${formatDisplayDate(new Date())}]`
                   }
                 });
                 queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -332,7 +333,7 @@ export default function FollowupsPage() {
               {format(row.followupFullDate, 'h:mm a')}
             </span>
             <span className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase">
-              {isToday(row.followupFullDate) ? 'Today' : format(row.followupFullDate, 'MMM dd')}
+              {isToday(row.followupFullDate) ? 'Today' : formatDisplayDateShort(row.followupFullDate)}
             </span>
           </div>
         </div>
@@ -492,7 +493,7 @@ export default function FollowupsPage() {
                   callStatus: sanitized.callStatus === 'Pending' ? 'Connected' : sanitized.callStatus,
                   nextFollowupDate: '',
                   nextFollowupTime: '',
-                  remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                  remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${formatDisplayDate(new Date())}]`
                 };
                 await updateMutation.mutateAsync({
                   id: selectedLead._id,
@@ -562,7 +563,7 @@ export default function FollowupsPage() {
                     <div key={index} className="border-b border-[var(--color-bg-border)] pb-2 last:border-0 last:pb-0">
                       <div className="flex justify-between items-center text-[9px] text-[var(--color-text-muted)] font-mono">
                         <span className="font-bold text-[var(--color-text-primary)]">{log.userId?.name || 'System / Batch'}</span>
-                        <span>{new Date(log.timestamp).toLocaleDateString()}</span>
+                        <span>{formatDisplayDate(new Date(log.timestamp))}</span>
                       </div>
                       <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">
                         Changed <span className="font-bold text-blue-400">{log.fieldChanged}</span> from <span className="line-through text-[var(--color-text-muted)]">{log.oldValue || '(empty)'}</span> to <span className="font-bold text-emerald-400">{log.newValue || '(empty)'}</span>

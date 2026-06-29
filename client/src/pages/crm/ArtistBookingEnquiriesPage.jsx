@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo, useState } from 'react';
 import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
@@ -69,7 +70,7 @@ export default function ArtistBookingEnquiriesPage() {
       header: 'Received',
       render: (row) => (
         <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-          {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN') : '—'}
+          {row.createdAt ? formatDisplayDate(new Date(row.createdAt)) : '—'}
         </span>
       ),
     },

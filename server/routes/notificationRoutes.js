@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const Task = require('../models/Task');
-const TaskAssignment = require('../models/TaskAssignment');
 const Lead = require('../models/Lead');
 const CalendarEvent = require('../models/CalendarEvent');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
-const { startOfDay, endOfDay, isBefore } = require('date-fns');
+const { startOfDay, endOfDay } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
@@ -17,14 +15,14 @@ const { validateBody } = require('../validation/validateBody');
 const { FOLLOWUP_DATE_FIELD } = require('../utils/followupDateQuery');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
-const { countProjectOverdueTasks } = require('../utils/projectStatusCounts');
+const { countProjectOverdueTasks, buildUserTodoStatsFilter } = require('../utils/projectStatusCounts');
 const { getCache, setCache } = require('../services/cacheService');
 
 const STATUS_COUNTS_TTL_SECONDS = 20;
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
-    const cacheKey = `status-counts:v1:${req.user._id}`;
+    const cacheKey = `status-counts:v2:${req.user._id}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
@@ -34,20 +32,11 @@ router.get('/status-counts', protect, async (req, res) => {
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
 
-    const assignedTaskIds = await TaskAssignment.distinct('taskId', { userId: req.user._id });
-    const taskScope = assignedTaskIds.length ? { _id: { $in: assignedTaskIds } } : { _id: null };
-
-    const overdueTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: { $ne: 'done' },
-      dueDate: { $lt: now },
-    });
-
-    const todayTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: { $ne: 'done' },
-      dueDate: { $gte: todayStart, $lte: todayEnd },
-    });
+    const todoStatsBase = await buildUserTodoStatsFilter(req.user._id);
+    const todoStats = await TaskService.getTodoStats(todoStatsBase);
+    const overdueTasksCount = todoStats.overdue || 0;
+    const todayTasksCount = todoStats.today || 0;
+    const inReviewTasksCount = todoStats.inReview || 0;
 
     const [followupAgg] = await aggregateWithTenant(Lead, [
       {
@@ -86,11 +75,6 @@ router.get('/status-counts', protect, async (req, res) => {
     const todayCalendarCount = await CalendarEvent.countDocuments({
       $or: [{ createdBy: req.user._id }, { visibility: 'public' }],
       date: { $gte: todayStart, $lte: todayEnd }
-    });
-
-    const inReviewTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: 'in-review',
     });
 
     let reviewPendingCount = 0;

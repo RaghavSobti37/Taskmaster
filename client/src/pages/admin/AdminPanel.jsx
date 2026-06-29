@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 // UDIF 2.0 - Admin Control Center
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +22,7 @@ import {
   SearchInput,
   UserAvatar,
 } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
 import { DataHubContent } from './DataHubPage';
@@ -184,7 +186,7 @@ const AdminPanel = () => {
       sortFn: (u) => (u.lastOnline ? new Date(u.lastOnline) : null),
       render: (u) => (
         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-          {u.lastOnline ? format(new Date(u.lastOnline), 'MMM dd, yyyy h:mm a') : 'No record'}
+          {u.lastOnline ? formatDisplayDateTime12h(new Date(u.lastOnline)) : 'No record'}
         </span>
       )
     },
@@ -199,6 +201,7 @@ const AdminPanel = () => {
       containerClassName="!py-4"
       title={currentMeta.title}
       icon={ShieldCheck}
+      backTo={ADMIN_CONSOLE_PATH}
       overview={
         showRibbon
           ? {

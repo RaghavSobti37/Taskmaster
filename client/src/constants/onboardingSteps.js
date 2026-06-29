@@ -1,5 +1,7 @@
 /** Spotlight tour steps — selectors use data-tour attributes in the shell. */
 
+import { productSummary } from '@shared/marketing-content';
+
 export const TOUR_ATTR_BY_PATH = {
   '/dashboard': 'nav-dashboard',
   '/todo': 'nav-todo',
@@ -32,7 +34,7 @@ export function getOnboardingSteps(isMobile) {
         id: 'welcome',
         target: null,
         title: 'Welcome to CoreKnot',
-        body: 'CoreKnot is TSC\'s work hub — projects, tasks, CRM, attendance, email campaigns, and team ops in one place. This tour walks through every major area.',
+        body: `${productSummary.mobile} This tour walks through every major area.`,
         placement: 'center',
       },
       {
@@ -88,7 +90,7 @@ export function getOnboardingSteps(isMobile) {
         id: 'more-pages',
         target: null,
         title: 'Projects, CRM & more',
-        body: 'Tap You → full menu for Projects, Attendance, Calendar, Daily Logs, Notes, Assets, Emails, CRM (leads & bookings), People & Office, and Management hubs. Items match your department access.',
+        body: 'Tap You → full menu for Projects, Attendance, Calendar, Daily Logs, Notes, Assets, Emails, CRM (leads & bookings), Office, and Management hubs. Items match your department access.',
         placement: 'center',
       },
       {
@@ -127,7 +129,7 @@ export function getOnboardingSteps(isMobile) {
       id: 'welcome',
       target: null,
       title: 'Welcome to CoreKnot',
-      body: 'CoreKnot is TSC\'s unified operations platform — project governance, CRM, attendance, finance docs, email campaigns, gamification, and admin tooling. This tour covers the full product map.',
+      body: `${productSummary.desktop} This tour covers the full product map.`,
       placement: 'center',
     },
     {
@@ -224,7 +226,7 @@ export function getOnboardingSteps(isMobile) {
     {
       id: 'office',
       target: '[data-tour="nav-office"]',
-      title: 'People & Office',
+      title: 'Office',
       body: 'Equipment inventory, office contacts, and subscription renewals — operational stuff for studio and admin teams.',
       placement: 'right',
     },
@@ -232,7 +234,7 @@ export function getOnboardingSteps(isMobile) {
       id: 'management',
       target: '[data-tour="nav-management"]',
       title: 'Management',
-      body: 'Finance document OCR uploads, team announcements, ops logs, and artist analytics (Spotify, YouTube, Meta OAuth). Leadership and finance workflows live here.',
+      body: 'Finance document OCR uploads, team announcements, and artist analytics (Spotify, YouTube, Meta OAuth).',
       placement: 'right',
     },
     {

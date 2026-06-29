@@ -31,6 +31,10 @@ export default defineConfig(({ mode }) => {
   define: {
     __AGENTATION_ENABLED__: JSON.stringify(agentationEnabled),
   },
+  assetsInclude: ['**/*.wasm'],
+  optimizeDeps: {
+    exclude: ['@sqlite.org/sqlite-wasm'],
+  },
   plugins: [
     react(),
     tailwindcss(),

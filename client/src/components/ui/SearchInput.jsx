@@ -22,14 +22,13 @@ const SearchInput = ({
   };
 
   if (variant === 'toolbar') {
-    const toolbarLabel = label ?? 'Search';
     return (
       <div
         className={`tm-toolbar-field tm-toolbar-search flex flex-col gap-1.5 min-w-[10rem] w-[12rem] max-w-[16rem] shrink-0 ${className}`}
         data-toolbar-field=""
       >
-        {toolbarLabel ? (
-          <span className="block tm-section-label leading-none">{toolbarLabel}</span>
+        {label ? (
+          <span className="block tm-section-label leading-none">{label}</span>
         ) : null}
         <div className="relative min-w-0">
           <Search

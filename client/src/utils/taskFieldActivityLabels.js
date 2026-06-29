@@ -1,4 +1,5 @@
-import { format, parseISO, isValid } from 'date-fns';
+import { parseISO, isValid } from 'date-fns';
+import { formatDateKeyForDisplay } from './dateDisplay';
 import { TASK_CATEGORY_OPTIONS, SLOT_OPTIONS } from '../constants/taskOptions';
 import { formatTaskStatus } from './displayLabels';
 import { TASK_STATUS_BUTTON_OPTIONS } from './taskStatusButtons';
@@ -14,7 +15,7 @@ function formatDateValue(value) {
   if (!value) return '—';
   const d = parseISO(String(value).slice(0, 10));
   if (!isValid(d)) return String(value);
-  return format(d, 'MMM dd, yyyy');
+  return formatDateKeyForDisplay(d);
 }
 
 export function formatFieldActivityValue(fieldKey, value) {

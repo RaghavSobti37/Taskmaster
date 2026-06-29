@@ -34,6 +34,10 @@ const dashboardPresetSchema = new mongoose.Schema({
       default: 1,
       min: 1
     },
+    section: {
+      type: String,
+      default: null,
+    },
     order: {
       type: Number,
       default: 1
@@ -71,7 +75,19 @@ const dashboardPresetSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: () => new Date()
-  }
+  },
+  layoutVersion: {
+    type: Number,
+    default: 2,
+  },
+  sectionState: {
+    type: mongoose.Schema.Types.Mixed,
+    default: () => ({
+      'status-strip': true,
+      analytics: true,
+      more: true,
+    }),
+  },
 }, {
   collection: 'dashboardPresets'
 });

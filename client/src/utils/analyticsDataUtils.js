@@ -1,10 +1,12 @@
+import { formatDisplayDateShort } from './dateDisplay';
+
 export const formatChartData = (history, platform) => {
   if (!history || !Array.isArray(history)) return [];
 
   return history.map((item) => {
     const dateRaw = item.timestamp || item.date;
     const dateStr = dateRaw
-      ? new Date(dateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      ? formatDisplayDateShort(dateRaw, { emptyLabel: '' })
       : '';
 
     const metrics = item.metrics || item;

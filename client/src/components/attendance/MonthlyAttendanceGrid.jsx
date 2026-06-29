@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -23,7 +24,7 @@ const getSquareColor = (status, entry) => {
 };
 
 const buildTooltip = (date, entry, status) => {
-  const lines = [format(date, 'EEE, MMM d, yyyy')];
+  const lines = [formatWeekdayDateLong(date)];
   if (status === 'holiday') {
     lines.push(`Holiday: ${getHolidayLabel(date)}`);
     if (entry?.inTimeRecord?.timestamp || entry?.outTimeRecord?.timestamp) {
@@ -134,7 +135,7 @@ const MonthlyAttendanceGrid = ({
                         title={buildTooltip(date, entry, status)}
                         onClick={() => onEdit(userRow, date, entry, inferEditScope(entry))}
                         className={`w-7 h-7 rounded-md border transition-transform hover:scale-110 hover:z-10 mx-auto block ${getSquareColor(status, entry)}`}
-                        aria-label={`${userRow.name} — ${format(date, 'MMM d')}`}
+                        aria-label={`${userRow.name} — ${formatDisplayDateShort(date)}`}
                       />
                     </td>
                   );

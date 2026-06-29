@@ -54,31 +54,6 @@ function mapAppLogRow(plain) {
   ];
 }
 
-function mapSystemLogRow(plain) {
-  const id = mongoId(plain);
-  if (!id) return null;
-  return [
-    id,
-    toIso(plain.timestamp || plain.createdAt),
-    plain.traceId || null,
-    plain.contextId || null,
-    plain.severity,
-    plain.module,
-    plain.message,
-    Boolean(plain.userVisible),
-    plain.actorId || null,
-    plain.actorName || null,
-    plain.route || null,
-    plain.method || null,
-    plain.httpStatus ?? null,
-    plain.errorCode || null,
-    JSON.stringify(plain.payload || null),
-    JSON.stringify(plain.relatedEntities || null),
-    plain.tenantId?.toString?.() || plain.tenantId || null,
-    toIso(plain.createdAt || plain.timestamp),
-  ];
-}
-
 function mapCrmAuditRow(plain) {
   const id = mongoId(plain);
   if (!id) return null;
@@ -139,15 +114,6 @@ const TABLE_MAPPERS = {
     ],
     map: mapAppLogRow,
     castIndexes: { 8: 'jsonb', 12: 'jsonb' },
-  },
-  system_logs: {
-    columns: [
-      'mongo_id', 'timestamp', 'trace_id', 'context_id', 'severity', 'module', 'message',
-      'user_visible', 'actor_id', 'actor_name', 'route', 'method', 'http_status', 'error_code',
-      'payload', 'related_entities', 'tenant_id', 'created_at',
-    ],
-    map: mapSystemLogRow,
-    castIndexes: { 14: 'jsonb', 15: 'jsonb' },
   },
   crm_audits: {
     columns: [

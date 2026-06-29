@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { formatDisplayDate } = require('../../shared/dateDisplay');
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('./mailDriver');
@@ -21,8 +22,7 @@ const addDays = (date, days) => {
 const formatInr = (amount) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
 
-const formatDate = (date) =>
-  new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => formatDisplayDate(date);
 
 const getNotifyEmail = async () => {
   const { resolveSubscriptionFallbackEmails } = require('../utils/platformNotificationRecipients');

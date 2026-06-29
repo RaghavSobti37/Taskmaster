@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const MailEvent = require('../models/MailEvent');
 const MailCampaign = require('../models/MailCampaign');
 const axios = require('axios');
@@ -10,7 +11,7 @@ router.post('/webhook', express.json({ type: ['application/json', 'text/plain'] 
 
   // 1. Handle SNS Subscription Confirmation
   if (body.Type === 'SubscriptionConfirmation') {
-    console.log('[SNS] Confirming subscription:', body.SubscribeURL);
+    logger.info('sns', 'Confirming subscription', { url: body.SubscribeURL });
     await axios.get(body.SubscribeURL);
     return res.send('OK');
   }

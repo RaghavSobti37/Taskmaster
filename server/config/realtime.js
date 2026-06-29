@@ -56,10 +56,6 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
     socket.on('join', async (channelName) => {
       if (typeof channelName !== 'string' || !channelName.trim()) return;
 
-      if (channelName === 'system-logs') {
-        if (!socket.isAdmin && !socket.isOps) return;
-      }
-
       if (channelName.startsWith('user-')) {
         const channelUserId = channelName.slice(5);
         if (channelUserId !== socket.userId && !socket.isAdmin) {

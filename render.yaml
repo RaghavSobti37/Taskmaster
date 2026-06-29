@@ -32,12 +32,8 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
-      - key: DD_SERVICE
-        value: coreknot-api
-      - key: DD_ENV
-        value: production
-      - key: SENTRY_ENVIRONMENT
-        value: production
+      - key: LOG_LEVEL
+        value: warn
       - key: MONGODB_URI_PROD
         sync: false
       - key: JWT_SECRET
@@ -49,10 +45,6 @@ services:
           name: taskmaster-redis
           type: keyvalue
           property: connectionString
-      - key: SENTRY_DSN
-        sync: false
-      - key: DD_API_KEY
-        sync: false
       - key: SUPABASE_SECONDARY_ENABLED
         value: "true"
       - key: SUPABASE_PG_MODE
@@ -100,12 +92,8 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
-      - key: DD_SERVICE
-        value: coreknot-api
-      - key: DD_ENV
-        value: staging
-      - key: SENTRY_ENVIRONMENT
-        value: staging
+      - key: LOG_LEVEL
+        value: info
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
@@ -117,10 +105,6 @@ services:
           name: taskmaster-redis-staging
           type: keyvalue
           property: connectionString
-      - key: SENTRY_DSN
-        sync: false
-      - key: DD_API_KEY
-        sync: false
       - key: SUPABASE_SECONDARY_ENABLED
         value: "true"
       - key: SUPABASE_PG_MODE
@@ -161,12 +145,8 @@ services:
         value: production
       - key: PORT
         value: "5001"
-      - key: DD_SERVICE
-        value: coreknot-nest-api
-      - key: DD_ENV
-        value: staging
-      - key: SENTRY_ENVIRONMENT
-        value: staging
+      - key: LOG_LEVEL
+        value: info
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -226,22 +206,3 @@ services:
         value: production
       - key: SUBSCRIPTION_REMINDERS_ENABLED
         value: "true"
-  - type: cron
-    name: CoreKnot-crm-reach-out-digest
-    schedule: "0 19 * * *"
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
-    startCommand: node scripts/runCrmReachOutDigest.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: CRM_REACH_OUT_DIGEST_ENABLED
-        value: "true"
-      - key: CRM_REACH_OUT_DIGEST_EMAIL
-        sync: false
-      - key: CRM_DIGEST_MONTHLY_TARGET_LAKHS
-        value: "10"
-      - key: RESEND_API_KEY
-        sync: false
-      - key: MONGODB_URI_PROD
-        sync: false

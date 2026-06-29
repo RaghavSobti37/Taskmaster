@@ -1,9 +1,7 @@
-import { format } from 'date-fns';
+import { formatDisplayDateTimeSeconds } from './dateDisplay';
 
-/** Task history / header timestamps — `MMM dd, yyyy · HH:mm:ss` */
+/** Task history / header timestamps — `dd/MM/yyyy · HH:mm:ss` */
 export function formatActivityTime(value) {
   if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return format(d, 'MMM dd, yyyy · HH:mm:ss');
+  return formatDisplayDateTimeSeconds(value, { emptyLabel: '' });
 }

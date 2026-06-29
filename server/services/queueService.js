@@ -25,6 +25,8 @@ const { countPendingRecipients } = require('../utils/campaignStats');
 
 const { isResendRateLimitError } = require('../utils/resendSendGate');
 const TRIGGER_BATCH_SIZE = 25;
+/** Pending recipients queued per dispatch loop iteration — keeps API responsive. */
+const DISPATCH_CHUNK_SIZE = 100;
 /** Resend free tier is 2 req/s — keep in-process fallback under that. */
 const MEMORY_SEND_CONCURRENCY = 1;
 const MEMORY_SEND_DELAY_MS = 500;

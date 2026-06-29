@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('../utils/logger');
 const BASE_URL = 'https://holysheet.soneshjain.com/api/v1';
 
 let consecutiveErrors = 0;
@@ -93,12 +94,12 @@ exports.syncLeadToSheet = async (leadDoc) => {
         rowIndex,
         values
       });
-      console.log(`[HolySheet Backup] Successfully updated lead ${leadDoc.name} on row ${rowIndex}`);
+      logger.info('holySheet', `[HolySheet Backup] Successfully updated lead ${leadDoc.name} on row ${rowIndex}`);
     } else {
       // Append new row as pure values array to avoid pushing column names
       const rowValues = HEADERS.map(h => extractCell(leadDoc, h));
       await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [rowValues] }, { params: { sheet: sheetName } });
-      console.log(`[HolySheet Backup] Successfully appended new lead ${leadDoc.name} to HolySheet`);
+      logger.info('holySheet', `[HolySheet Backup] Successfully appended new lead ${leadDoc.name} to HolySheet`);
     }
     recordSuccess();
   } catch (error) {
@@ -119,7 +120,7 @@ exports.syncUnsubscribeToSheet = async ({ email, name, campaignId, reason, unsub
       existingRows = getRes.data?.data || [];
       if (existingRows.length === 0 && (getRes.data?.count === 0 || !getRes.data)) {
         await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [['email', 'name', 'campaign_id', 'reason', 'unsubscribed_at']] }, { params: { sheet: sheetName } });
-        console.log('[HolySheet Unsubscribe] Initialized header row.');
+        logger.info('holySheet', '[HolySheet Unsubscribe] Initialized header row.');
       }
     } catch (err) {
       console.warn('[HolySheet Unsubscribe Warn] Check header error:', err.message);
@@ -134,7 +135,7 @@ exports.syncUnsubscribeToSheet = async ({ email, name, campaignId, reason, unsub
     ];
 
     await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [rowValues] }, { params: { sheet: sheetName } });
-    console.log(`[HolySheet Unsubscribe] Successfully synced unsubscribed lead ${email} to sheet`);
+    logger.info('holySheet', `[HolySheet Unsubscribe] Successfully synced unsubscribed lead ${email} to sheet`);
   } catch (error) {
     console.error('[HolySheet Unsubscribe Error]', error.message, error.response?.data || '');
   }
@@ -200,7 +201,7 @@ exports.syncAndCleanUnsubscribeSheet = async () => {
     });
 
     const uniqueUnsubs = Array.from(mergedMap.values());
-    console.log(`[HolySheet Sync] Unified list has ${uniqueUnsubs.length} unique unsubscribed entries. (Previous sheet rows: ${sheetRows.length})`);
+    logger.info('holySheet', `[HolySheet Sync] Unified list has ${uniqueUnsubs.length} unique unsubscribed entries. (Previous sheet rows: ${sheetRows.length})`);
 
     // 4. Overwrite/update Google Sheet rows
     // Row 1 is header: we ensure it's correct
@@ -246,7 +247,7 @@ exports.syncAndCleanUnsubscribeSheet = async () => {
           }
         });
       }
-      console.log(`[HolySheet Sync] Cleared ${previousTotalRows - uniqueUnsubs.length} extra rows in sheet.`);
+      logger.info('holySheet', `[HolySheet Sync] Cleared ${previousTotalRows - uniqueUnsubs.length} extra rows in sheet.`);
     }
 
     // 5. Update local database to match the Google Sheet
@@ -264,7 +265,7 @@ exports.syncAndCleanUnsubscribeSheet = async () => {
       );
     }
 
-    console.log('[HolySheet Sync] Deduplication and sync completed successfully.');
+    logger.info('holySheet', '[HolySheet Sync] Deduplication and sync completed successfully.');
     return uniqueUnsubs;
   } catch (error) {
     console.error('[HolySheet Sync Error]', error.message, error.response?.data || '');

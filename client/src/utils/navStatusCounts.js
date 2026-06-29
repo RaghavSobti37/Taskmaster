@@ -1,5 +1,7 @@
 /**
- * Maps sidebar paths to urgent (rose) and today (amber) indicator counts from status-counts API.
+ * Maps sidebar paths to urgent (rose) and today/review (amber) counts from status-counts API.
+ * Todo counts use the same getTodoStats base filter as the Todo page (dueDate-first overdue).
+ * Projects overdue uses dashboard-scoped project tasks (matches ProjectsView cards).
  */
 export function getNavCountsForPath(path, statusCounts = {}) {
   const tasks = statusCounts.tasks || {};
@@ -14,21 +16,29 @@ export function getNavCountsForPath(path, statusCounts = {}) {
     case '/todo': {
       const overdue = tasks.overdue || 0;
       const today = tasks.today || 0;
-      const inReview = tasks.inReview || 0;
-      if (inReview > 0) {
+      const reviewPending = review.pending || 0;
+
+      if (overdue > 0) {
         return {
           count: overdue,
-          todayCount: inReview,
-          badgeCount: inReview,
+          todayCount: 0,
+          badgeCount: overdue,
+          badgeVariant: 'rose',
+        };
+      }
+      if (reviewPending > 0) {
+        return {
+          count: 0,
+          todayCount: reviewPending,
+          badgeCount: reviewPending,
           badgeVariant: 'amber',
         };
       }
-      const todayOnly = overdue > 0 ? 0 : today;
       return {
-        count: overdue,
-        todayCount: todayOnly,
-        badgeCount: overdue + todayOnly,
-        badgeVariant: overdue > 0 ? 'rose' : 'amber',
+        count: 0,
+        todayCount: today,
+        badgeCount: today,
+        badgeVariant: 'amber',
       };
     }
     case '/followups': {

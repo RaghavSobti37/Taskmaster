@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,12 +15,17 @@ import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPerm
 const ProjectCreate = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [users, setUsers] = useState([]);
   const [usersFetchError, setUsersFetchError] = useState(null);
   const [members, setMembers] = useState([]);
-  const [workspace, setWorkspace] = useState('GENERAL');
+  // P0-5: pre-select workspace from ?workspace= query param
+  const [workspace, setWorkspace] = useState(() => {
+    const ws = searchParams.get('workspace');
+    return ws ? ws.toUpperCase().trim() : 'GENERAL';
+  });
   const [loading, setLoading] = useState(false);
   const prevDefaultIdsRef = useRef([]);
   const navigate = useNavigate();

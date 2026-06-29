@@ -25,7 +25,7 @@ export default function CookieBanner() {
     >
       <p className="text-sm font-bold text-foreground mb-1">Cookies on CoreKnot</p>
       <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-4">
-        Session cookies keep you signed in. With your permission we load analytics (PostHog, Sentry, Datadog) to improve reliability.
+        Session cookies keep you signed in. Optional analytics use Vercel Analytics only.
         {' '}
         <Link to="/privacy" className="underline text-[var(--color-brand-teal)]">
           Privacy policy

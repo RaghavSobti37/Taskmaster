@@ -25,6 +25,12 @@ export function buildFinanceEditForm(selectedDoc, projects = []) {
 }
 
 export function financeEditPayload(editForm, selectedDoc) {
+  const preserved = {};
+  const meta = selectedDoc?.metadata || {};
+  if (meta.submissionType) preserved.submissionType = meta.submissionType;
+  if (meta.attachments) preserved.attachments = meta.attachments;
+  if (meta.detectedCategory) preserved.detectedCategory = meta.detectedCategory;
+
   return {
     title: editForm.title,
     description: editForm.description,
@@ -32,7 +38,7 @@ export function financeEditPayload(editForm, selectedDoc) {
     project: editForm.project || null,
     category: editForm.category,
     metadata: {
-      ...selectedDoc.metadata,
+      ...preserved,
       vendor: editForm.metadata.vendor,
       amount: parseFloat(editForm.metadata.amount) || 0,
       currency: editForm.metadata.currency,

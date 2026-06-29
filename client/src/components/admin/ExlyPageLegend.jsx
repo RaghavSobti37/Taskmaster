@@ -1,43 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { HelpCircle, X } from 'lucide-react';
 import { EXLY_PAGE_LEGEND } from '../../utils/exlyCourseLabels';
 
-const MENTOR_SWATCH = {
-  Sandesh: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border-[var(--color-pastel-mint-text)]/20',
-  Prasad: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border-[var(--color-pastel-rose-text)]/20',
-};
+const ExlyPageLegend = ({ className = '' }) => {
+  const [open, setOpen] = useState(false);
 
-const ExlyPageLegend = () => (
-  <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/60">
-    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-      Legend
-    </p>
-    <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-[var(--color-text-primary)]">
-      {EXLY_PAGE_LEGEND.map((item) => (
-        <span key={item.key} className="inline-flex items-center gap-1.5 min-w-0">
-          <span className="font-black uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">
-            {item.label}
-          </span>
-          <span className="text-[var(--color-text-muted)]">—</span>
-          <span>{item.hint}</span>
+  return (
+    <div className={`relative inline-flex ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+        aria-expanded={open}
+        aria-label={open ? 'Hide column guide' : 'What do these columns mean?'}
+      >
+        <HelpCircle size={13} aria-hidden />
+        <span className="hidden sm:inline">
+          {open ? 'Hide column guide' : 'What do these columns mean?'}
         </span>
-      ))}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1.5 w-[min(100vw-2rem,28rem)] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] shadow-lg p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+              Column guide
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+              aria-label="Close column guide"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <ul className="space-y-1.5 text-[10px] text-[var(--color-text-primary)]">
+            {EXLY_PAGE_LEGEND.map((item) => (
+              <li key={item.key} className="flex gap-1.5 min-w-0">
+                <span className="font-black uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">
+                  {item.label}
+                </span>
+                <span className="text-[var(--color-text-muted)]">—</span>
+                <span>{item.hint}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
-    <div className="flex flex-wrap items-center gap-2 pt-0.5">
-      <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-        Mentors
-      </span>
-      {['Sandesh', 'Prasad'].map((name) => (
-        <span
-          key={name}
-          className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-            MENTOR_SWATCH[name] || 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-bg-border)]'
-          }`}
-        >
-          {name}
-        </span>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 export default ExlyPageLegend;

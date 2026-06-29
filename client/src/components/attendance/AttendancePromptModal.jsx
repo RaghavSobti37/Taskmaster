@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
+import { formatWeekdayDateLong } from '../../utils/dateDisplay';
 import { ClipboardCheck } from 'lucide-react';
 import { Button } from '../ui';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';;
@@ -70,7 +70,7 @@ const AttendancePromptModal = () => {
       <ModalBody className="!pt-4">
         <UnifiedTimeCard
           entry={entry}
-          title={format(today, 'EEEE, MMMM d')}
+          title={formatWeekdayDateLong(today)}
           subTitle="Today"
           isSelfMode
           onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}

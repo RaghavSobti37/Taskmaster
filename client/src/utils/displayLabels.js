@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { DATETIME_DISPLAY_SECONDS_FORMAT } from './dateDisplay';
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../constants/taskOptions';
 
 const TIMEFRAME_LABELS = {
@@ -36,7 +37,7 @@ export function formatInboxCategory(category) {
 }
 
 /** Display timestamp with local timezone abbreviation */
-export function formatTimestampWithTz(date, pattern = 'MMM dd, yyyy · HH:mm:ss') {
+export function formatTimestampWithTz(date, pattern = DATETIME_DISPLAY_SECONDS_FORMAT) {
   if (!date) return '—';
   try {
     const d = date instanceof Date ? date : new Date(date);
@@ -49,6 +50,6 @@ export function formatTimestampWithTz(date, pattern = 'MMM dd, yyyy · HH:mm:ss'
   }
 }
 
-function formatShortTimestampWithTz(date, pattern = 'MMM dd, HH:mm:ss') {
+function formatShortTimestampWithTz(date, pattern = 'dd/MM/yyyy HH:mm:ss') {
   return formatTimestampWithTz(date, pattern);
 }

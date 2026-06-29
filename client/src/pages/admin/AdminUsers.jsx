@@ -15,6 +15,7 @@ import {
   SearchInput,
   UserAvatar,
 } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { formatLastActivity } from '../../utils/formatLastActivity';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
@@ -202,6 +203,9 @@ const AdminUsers = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
+      title="Users"
+      icon={Users}
+      backTo={ADMIN_CONSOLE_PATH}
       overviewMobileMaxStats={2}
       overview={{
         stats: [

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatDisplayDateTimeSeconds, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useLeadAudits } from '../../hooks/useTaskmasterQueries';
@@ -12,7 +13,7 @@ import { format } from 'date-fns';
 
 function LeadAuditMobileCard({ row }) {
   const timestamp = row.timestamp
-    ? format(new Date(row.timestamp), 'dd-MM-yyyy HH:mm:ss')
+    ? formatDisplayDateTimeSeconds(new Date(row.timestamp))
     : 'N/A';
 
   return (
@@ -100,7 +101,7 @@ const LeadAuditsContent = () => {
         <div className="flex items-center gap-2">
           <Calendar size={12} className="text-[var(--color-text-muted)]" />
           <span className="text-[10px] font-mono text-[var(--color-text-secondary)]">
-            {row.timestamp ? format(new Date(row.timestamp), 'dd-MM-yyyy HH:mm:ss') : 'N/A'}
+            {row.timestamp ? formatDisplayDateTimeSeconds(new Date(row.timestamp)) : 'N/A'}
           </span>
         </div>
       ),

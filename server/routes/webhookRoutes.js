@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const { handleBookedCall, handleArtistEnquiry, handleArtistPath, handleNewsletter, handleMasterclassReview } = require('../controllers/webhookController');
 const metaDataDeletion = require('../controllers/metaDataDeletionController');
 const { webhookIdempotency } = require('../middleware/webhookIdempotency');
@@ -34,10 +35,10 @@ router.get('/instagram', (req, res) => {
   const receivedToken = (token || '').replace(/['"]/g, '').trim();
   const receivedMode = (mode || '').trim();
 
-  console.log('⚡ Received webhook verification request. Mode:', receivedMode);
+  logger.debug('metaWebhook', 'Verification request', { mode: receivedMode });
 
   if (receivedMode === 'subscribe' && expectedToken && receivedToken === expectedToken) {
-    console.log('✅ Handshake validated successfully. Sending challenge code back.');
+    logger.info('metaWebhook', 'Handshake validated; sending challenge');
     res.setHeader('Content-Type', 'text/plain');
     return res.status(200).send(challenge);
   } else {
@@ -62,7 +63,7 @@ router.post('/instagram', (req, res) => {
         console.warn('❌ [Meta Webhook] Signature mismatch');
         return res.status(401).send('INVALID_SIGNATURE');
       }
-      console.log('🔒 [Meta Webhook] SHA256 payload signature verified successfully.');
+      logger.debug('metaWebhook', 'Payload signature verified');
     } else if (process.env.NODE_ENV === 'production') {
       return res.status(503).send('META_APP_SECRET_NOT_CONFIGURED');
     }
@@ -72,11 +73,17 @@ router.post('/instagram', (req, res) => {
       body.entry?.forEach(entry => {
         entry.changes?.forEach(change => {
           if (change.field === 'mentions') {
-            console.log('⚡ [Webhook] Mention received for media_id:', change.value?.media_id, 'Comment ID:', change.value?.comment_id);
+            logger.debug('metaWebhook', 'Mention received', {
+              mediaId: change.value?.media_id,
+              commentId: change.value?.comment_id,
+            });
           } else if (change.field === 'comments') {
-            console.log('💬 [Webhook] Comment received on media:', change.value?.media_id, 'Text:', change.value?.text);
+            logger.debug('metaWebhook', 'Comment received', {
+              mediaId: change.value?.media_id,
+              text: change.value?.text,
+            });
           } else if (change.field === 'messages') {
-            console.log('✉️ [Webhook] Message received from sender:', change.value?.sender?.id);
+            logger.debug('metaWebhook', 'Message received', { senderId: change.value?.sender?.id });
           }
         });
       });

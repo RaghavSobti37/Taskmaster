@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { format } from 'date-fns';
 import { Clock } from 'lucide-react';
@@ -11,7 +12,7 @@ function MarkAttendanceCard({
   onUndo,
   isLoading,
 }) {
-  const todayLabel = format(new Date(), 'EEE, MMM d');
+  const todayLabel = formatWeekdayDate(new Date());
 
   return (
     <DashboardWidgetShell

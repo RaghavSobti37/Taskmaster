@@ -12,7 +12,6 @@ describe('mongo cold archive TTL', () => {
     const models = COLD_ARCHIVE_COLLECTIONS.map((c) => c.model);
     expect(models).toEqual(
       expect.arrayContaining([
-        'SystemLog',
         'Log',
         'CRMAudit',
         'MailEvent',
@@ -20,6 +19,6 @@ describe('mongo cold archive TTL', () => {
         'TaskActivity',
       ])
     );
-    expect(models).toHaveLength(6);
+    expect(models).toHaveLength(5);
   });
 });

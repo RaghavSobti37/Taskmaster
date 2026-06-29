@@ -65,6 +65,12 @@ const checkLocalFiles = (hosts) => {
     pushError('Missing server/.env.render — copy server/.env.render.example and fill from Dashboard');
   } else {
     ok('server/.env.render present (sync vars to Render Dashboard)');
+    const renderEnv = fs.readFileSync(RENDER_ENV_PATH, 'utf8');
+    if (!/^POSTHOG_PROJECT_API_KEY\s*=/m.test(renderEnv)) {
+      pushWarn('server/.env.render missing POSTHOG_PROJECT_API_KEY — set in Render Dashboard for server capture');
+    } else {
+      ok('server/.env.render documents POSTHOG_PROJECT_API_KEY');
+    }
   }
 
   for (const file of ['vercel.json', 'client/vercel.json']) {
@@ -157,8 +163,9 @@ const main = async () => {
   console.log('Dashboard sync checklist:');
   console.log('  1. Render → CoreKnot-api → paste server/.env.render secrets');
   console.log('  2. Vercel Production → RENDER_API_PROXY_URL + VITE_API_URL = productionApiUrl');
-  console.log('  3. Render KEEP_WARM_URL cron → productionApiHealthUrl');
-  console.log('  4. GitHub → RENDER_DEPLOY_HOOK_API secret for CI deploy\n');
+  console.log('  3. Vercel Production → VITE_POSTHOG_PROJECT_TOKEN + VITE_POSTHOG_HOST + VITE_POSTHOG_APP_URL');
+  console.log('  4. Render KEEP_WARM_URL cron → productionApiHealthUrl');
+  console.log('  5. GitHub → RENDER_DEPLOY_HOOK_API secret for CI deploy\n');
   process.exit(0);
 };
 

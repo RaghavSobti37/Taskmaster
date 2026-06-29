@@ -11,7 +11,7 @@ function formatIstFollowupDate(date) {
   const day = parts.find((p) => p.type === 'day')?.value || '01';
   const month = parts.find((p) => p.type === 'month')?.value || '01';
   const year = parts.find((p) => p.type === 'year')?.value || '1970';
-  return `${day}-${month}-${year}`;
+  return `${day}/${month}/${year}`;
 }
 
 /** 24-hour HH:mm for CRM reminder parser */

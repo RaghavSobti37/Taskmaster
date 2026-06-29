@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,9 @@ import {
   FolderPlus, Clock, XCircle,
 } from 'lucide-react';
 import { uploadFinanceFiles, fetchNextFinanceReferences } from '../../utils/financeUpload';
+import { isFinancePdf, isFinanceImage } from '../../utils/financeFilePreview';
+import FinanceDocumentPreview from '../../components/finance/FinanceDocumentPreview';
+import { FINANCE_CURRENCY_OPTIONS, normalizeFinanceCurrency } from '../../utils/financeCurrency';
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
 import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAccordion';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
@@ -26,7 +30,7 @@ import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } f
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
-import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
+import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import {
   buildFinanceEditForm,
   cloneFinanceEditForm,
@@ -150,17 +154,26 @@ const FinancePage = () => {
   }, [selectedDoc?._id]);
 
   useEffect(() => {
-    if (selectedDoc) {
-      const form = buildFinanceEditForm(selectedDoc, projects);
-      setEditForm(form);
-      setEditBaseline(cloneFinanceEditForm(form));
-      setEditAmountUsd('');
-    } else {
+    if (!selectedDoc) {
       setEditForm(null);
       setEditBaseline(null);
       setEditAmountUsd('');
+      return;
     }
-  }, [selectedDoc?._id, projects]);
+    const form = buildFinanceEditForm(selectedDoc, projects);
+    setEditForm(form);
+    setEditBaseline(cloneFinanceEditForm(form));
+    setEditAmountUsd('');
+  }, [selectedDoc?._id]); // eslint-disable-line react-hooks/exhaustive-deps -- reset only when document changes
+
+  useEffect(() => {
+    if (!selectedDoc?._id || !projects.length || !editForm || !editBaseline) return;
+    if (!stableJsonEqual(editForm, editBaseline)) return;
+    const enriched = buildFinanceEditForm(selectedDoc, projects);
+    if (enriched.workspace === editForm.workspace) return;
+    setEditForm(enriched);
+    setEditBaseline(cloneFinanceEditForm(enriched));
+  }, [projects, selectedDoc, editForm, editBaseline]);
 
   useEffect(() => {
     if (!selectedDoc || !editForm?.metadata?.amount) return;
@@ -181,19 +194,6 @@ const FinancePage = () => {
   };
 
   const goToProjectRoot = () => navigateToFolder(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key !== 'Escape') return;
-      if (selectedDoc) {
-        setSelectedDoc(null);
-        return;
-      }
-      if (currentFolderId) goToProjectRoot();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentFolderId, selectedDoc, searchParams]);
 
   const { data: workspaces = [] } = useWorkspaces(deferFinanceFilters);
 
@@ -384,11 +384,18 @@ const FinancePage = () => {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }) => axios.patch(`/api/finance/${id}`, payload, {
-      headers: { 'x-skip-toast': 'true' }
+      headers: { 'x-skip-toast': 'true' },
     }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['finance-docs'] });
-      if (res?.data?.data) setSelectedDoc(res.data.data);
+      const doc = res?.data?.data;
+      if (doc) {
+        setSelectedDoc(doc);
+        const projectList = queryClient.getQueryData(['projects']) || projects;
+        const form = buildFinanceEditForm(doc, projectList);
+        setEditForm(form);
+        setEditBaseline(cloneFinanceEditForm(form));
+      }
     },
     onError: (err) => {
       const message = err.response?.data?.message || err.message || 'Failed to save document';
@@ -407,34 +414,52 @@ const FinancePage = () => {
   const hasFinanceEdits =
     !!selectedDoc && !!editForm && !!editBaseline && !stableJsonEqual(editForm, editBaseline);
 
-  const handleSaveFinanceEdits = async () => {
-    if (!selectedDoc || !editForm) return;
+  const handleSaveFinanceEdits = useCallback(async () => {
+    if (!selectedDoc || !editForm) return false;
     try {
       await updateMutation.mutateAsync({
         id: selectedDoc._id,
         payload: financeEditPayload(editForm, selectedDoc),
       });
       setEditBaseline(cloneFinanceEditForm(editForm));
+      return true;
     } catch {
-      /* updateMutation onError handles alert */
+      return false;
     }
-  };
+  }, [selectedDoc, editForm, updateMutation]);
 
-  const handleRevertFinanceEdits = () => {
+  const handleRevertFinanceEdits = useCallback(() => {
     if (editBaseline) setEditForm(cloneFinanceEditForm(editBaseline));
-  };
+  }, [editBaseline]);
 
-  useUnsavedChanges({
-    baseline: editBaseline,
-    draft: editForm,
-    setDraft: setEditForm,
-    hasChanges: hasFinanceEdits,
-    onSave: handleSaveFinanceEdits,
-    onCancel: handleRevertFinanceEdits,
-    isSaving: updateMutation.isPending,
-    enabled: !!selectedDoc && !!editForm,
-    elevated: true,
-  });
+  const handleCloseDocPanel = useCallback(async () => {
+    if (hasFinanceEdits) {
+      const choice = await confirm({
+        title: 'Unsaved changes',
+        message: 'Save changes before closing? Use Revert to discard edits.',
+        confirmLabel: 'Save & close',
+        cancelLabel: 'Keep editing',
+        type: 'warning',
+      });
+      if (!choice) return;
+      const saved = await handleSaveFinanceEdits();
+      if (!saved) return;
+    }
+    setSelectedDoc(null);
+  }, [hasFinanceEdits, confirm, handleSaveFinanceEdits]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (selectedDoc) {
+        handleCloseDocPanel();
+        return;
+      }
+      if (currentFolderId) goToProjectRoot();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentFolderId, selectedDoc, handleCloseDocPanel]);
 
   const deleteFolderMutation = useMutation({
     mutationFn: (folderId) => axios.delete(`/api/finance/folders/${folderId}`),
@@ -534,7 +559,7 @@ const FinancePage = () => {
     setIsUploading(true);
     setUploadProgress(0);
 
-    const effectiveProject = projectId || selectedProject || (projects[0]?._id || '');
+    const effectiveProject = projectId || selectedProject || '';
 
     const buildStaged = (uploadedItems, sourceFiles) => {
       const baseId = Date.now();
@@ -553,6 +578,8 @@ const FinancePage = () => {
         fileName: item.name,
         fileSize: item.size,
         fileType: sourceFiles[index]?.type || item.type || item.name?.split('.').pop(),
+        ocrStatus: 'idle',
+        ocrMetadata: null,
       }));
     };
 
@@ -833,7 +860,6 @@ const FinancePage = () => {
         onFilesSelected={handleFilesSelected}
         onBulkSubmit={handleBulkSubmit}
         isSubmitting={bulkCreateMutation.isPending}
-        isParsing={bulkCreateMutation.isPending}
       />
 
       <NexusModal
@@ -906,7 +932,7 @@ const FinancePage = () => {
                 {/* Top Navbar for Left Side */}
                 <div className="p-4 border-b border-slate-800 bg-slate-900/90 flex items-center gap-3 shrink-0 z-10">
                   <button
-                    onClick={() => setSelectedDoc(null)}
+                    onClick={handleCloseDocPanel}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-850 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-all text-xs font-bold"
                     title="Close Preview (Esc)"
                   >
@@ -920,17 +946,12 @@ const FinancePage = () => {
 
                 {/* Viewer Render */}
                 <div className="w-full h-full flex items-center justify-center p-6">
-                  {selectedDoc.fileType?.includes('pdf') ? (
-                    <iframe
-                      src={selectedDoc.fileUrl}
-                      title={selectedDoc.title}
-                      className="w-full h-full rounded-xl border border-slate-800 shadow-2xl bg-slate-900"
-                    />
-                  ) : selectedDoc.fileType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(selectedDoc.fileName) ? (
-                    <img
-                      src={selectedDoc.fileUrl}
-                      alt={selectedDoc.title}
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-slate-800"
+                  {isFinancePdf(selectedDoc) || isFinanceImage(selectedDoc) ? (
+                    <FinanceDocumentPreview
+                      doc={selectedDoc}
+                      iframeClassName="w-full h-full rounded-xl border border-slate-800 shadow-2xl bg-slate-900"
+                      imgClassName="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-slate-800"
+                      className="w-full h-full"
                     />
                   ) : (
                     <div className="text-center p-8 bg-slate-900/50 border border-slate-800 rounded-2xl max-w-sm">
@@ -985,7 +1006,7 @@ const FinancePage = () => {
                       <Trash2 size={14} />
                     </button>
                     <button
-                      onClick={() => setSelectedDoc(null)}
+                      onClick={handleCloseDocPanel}
                       className="p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-secondary)] transition-colors md:hidden"
                     >
                       <X size={16} />
@@ -1002,7 +1023,6 @@ const FinancePage = () => {
                         type="text"
                         value={editForm.title}
                         onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                        onBlur={() => updateMutation.mutate({ id: selectedDoc._id, payload: { title: editForm.title } })}
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                       />
                     </div>
@@ -1012,7 +1032,6 @@ const FinancePage = () => {
                       <textarea
                         value={editForm.description}
                         onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                        onBlur={() => updateMutation.mutate({ id: selectedDoc._id, payload: { description: editForm.description } })}
                         placeholder="Add brief details..."
                         rows={2}
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-action-primary)]/50 resize-none"
@@ -1025,10 +1044,6 @@ const FinancePage = () => {
                         type="text"
                         value={editForm.referenceNumber || ''}
                         onChange={(e) => setEditForm((prev) => ({ ...prev, referenceNumber: e.target.value }))}
-                        onBlur={() => updateMutation.mutate({
-                          id: selectedDoc._id,
-                          payload: { referenceNumber: editForm.referenceNumber || '' },
-                        })}
                         placeholder="e.g. TSCCO-HM-001"
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                       />
@@ -1040,7 +1055,6 @@ const FinancePage = () => {
                       projectId={editForm.project || ''}
                       onChange={({ workspace, projectId }) => {
                         setEditForm((prev) => ({ ...prev, workspace, project: projectId }));
-                        updateMutation.mutate({ id: selectedDoc._id, payload: { project: projectId || null } });
                       }}
                       layout="inline"
                       allowEmptyProject
@@ -1053,7 +1067,6 @@ const FinancePage = () => {
                           onChange={(e) => {
                             const val = e.target.value;
                             setEditForm(prev => ({ ...prev, category: val }));
-                            updateMutation.mutate({ id: selectedDoc._id, payload: { category: val } });
                           }}
                           className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
                         >
@@ -1094,10 +1107,6 @@ const FinancePage = () => {
                               ...prev,
                               metadata: { ...prev.metadata, vendor: e.target.value }
                             }))}
-                            onBlur={() => updateMutation.mutate({
-                              id: selectedDoc._id,
-                              payload: { metadata: { ...selectedDoc.metadata, vendor: editForm.metadata.vendor } }
-                            })}
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
@@ -1116,18 +1125,6 @@ const FinancePage = () => {
                           metadata: { ...prev.metadata, amount, currency: 'INR' },
                         }))}
                         onUsdChange={setEditAmountUsd}
-                        inrInputProps={{
-                          onBlur: () => updateMutation.mutate({
-                            id: selectedDoc._id,
-                            payload: {
-                              metadata: {
-                                ...selectedDoc.metadata,
-                                amount: parseFloat(editForm.metadata.amount) || 0,
-                                currency: 'INR',
-                              },
-                            },
-                          }),
-                        }}
                         rateHintClassName="mt-1 text-[9px] text-[var(--color-text-muted)]"
                       />
                       </div>
@@ -1135,19 +1132,18 @@ const FinancePage = () => {
                       <div className="grid grid-cols-3 gap-2">
                         <div>
                           <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Currency</label>
-                          <input
-                            type="text"
-                            value={editForm.metadata?.currency}
+                          <select
+                            value={normalizeFinanceCurrency(editForm.metadata?.currency)}
                             onChange={(e) => setEditForm(prev => ({
                               ...prev,
                               metadata: { ...prev.metadata, currency: e.target.value }
                             }))}
-                            onBlur={() => updateMutation.mutate({
-                              id: selectedDoc._id,
-                              payload: { metadata: { ...selectedDoc.metadata, currency: editForm.metadata.currency } }
-                            })}
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
-                          />
+                          >
+                            {FINANCE_CURRENCY_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.value}</option>
+                            ))}
+                          </select>
                         </div>
                         <div className={flashOcrFields.has('tax') ? 'flash-highlight rounded-lg' : ''}>
                           <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
@@ -1161,15 +1157,11 @@ const FinancePage = () => {
                               ...prev,
                               metadata: { ...prev.metadata, tax: e.target.value }
                             }))}
-                            onBlur={() => updateMutation.mutate({
-                              id: selectedDoc._id,
-                              payload: { metadata: { ...selectedDoc.metadata, tax: parseFloat(editForm.metadata.tax) || 0 } }
-                            })}
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
                         <div className={flashOcrFields.has('date') ? 'flash-highlight rounded-lg' : ''}>
-                          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Doc Date</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Payment Date</label>
                           <input
                             type="date"
                             value={editForm.metadata?.date}
@@ -1179,10 +1171,6 @@ const FinancePage = () => {
                                 ...prev,
                                 metadata: { ...prev.metadata, date: val }
                               }));
-                              updateMutation.mutate({
-                                id: selectedDoc._id,
-                                payload: { metadata: { ...selectedDoc.metadata, date: val ? new Date(val) : null } }
-                              });
                             }}
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
                           />
@@ -1222,7 +1210,7 @@ const FinancePage = () => {
                       <div className="flex justify-between">
                         <span>Uploaded On</span>
                         <span className="font-bold text-[var(--color-text-primary)]">
-                          {new Date(selectedDoc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {formatDisplayDateTime(new Date(selectedDoc.createdAt))}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1238,13 +1226,37 @@ const FinancePage = () => {
                 )}
 
                 {/* Footer Save / Done */}
-                <div className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex justify-end">
-                  <button
-                    onClick={() => setSelectedDoc(null)}
-                    className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-[var(--radius-atomic)] hover:opacity-90 transition-all"
-                  >
-                    Done
-                  </button>
+                <div className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between gap-3">
+                  {hasFinanceEdits ? (
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Unsaved changes</span>
+                  ) : (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">All changes saved</span>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRevertFinanceEdits}
+                      disabled={!hasFinanceEdits || updateMutation.isPending}
+                      className="px-4 py-2 text-xs font-bold rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)] disabled:opacity-40 transition-all"
+                    >
+                      Revert
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveFinanceEdits}
+                      disabled={!hasFinanceEdits || updateMutation.isPending}
+                      className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-[var(--radius-atomic)] hover:opacity-90 disabled:opacity-40 transition-all"
+                    >
+                      {updateMutation.isPending ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseDocPanel}
+                      className="px-4 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-[var(--radius-atomic)] hover:opacity-90 transition-all"
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

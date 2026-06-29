@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -522,7 +523,7 @@ export default function LeadsPage() {
       sortFn: (row) => (row.createdAt ? new Date(row.createdAt) : null),
       render: (row) => (
         <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-          {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+          {row.createdAt ? formatDisplayDate(new Date(row.createdAt)) : '—'}
         </span>
       ),
     },
@@ -760,7 +761,7 @@ export default function LeadsPage() {
                     callStatus: sanitized.callStatus === 'Pending' ? 'Connected' : sanitized.callStatus,
                     nextFollowupDate: '',
                     nextFollowupTime: '',
-                    remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${new Date().toLocaleDateString('en-GB')}]`
+                    remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${formatDisplayDate(new Date())}]`
                   };
                   await updateMutation.mutateAsync({
                     id: selectedLead._id,
@@ -920,7 +921,7 @@ export default function LeadsPage() {
                       <span className="text-[11px] font-bold text-[var(--color-text-primary)]">{off.title}</span>
                       {off.purchasedAt && (
                         <span className="text-[9px] font-mono text-[var(--color-text-muted)]">
-                          {new Date(off.purchasedAt).toLocaleDateString()}
+                          {formatDisplayDate(new Date(off.purchasedAt))}
                         </span>
                       )}
                     </div>

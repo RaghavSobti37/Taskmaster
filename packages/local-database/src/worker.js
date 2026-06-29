@@ -3,12 +3,14 @@
  * ponytail: OPFS needs COOP/COEP on parent origin; memory fallback for dev without headers.
  */
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
+import sqliteWasmUrl from '@sqlite.org/sqlite-wasm/sqlite3.wasm?url';
 import { PILOT_SCHEMA_SQL } from './schema.js';
 
 let db = null;
 
 async function openDatabase() {
   const sqlite3 = await sqlite3InitModule({
+    locateFile: () => sqliteWasmUrl,
     print: () => {},
     printErr: console.error,
   });

@@ -1,3 +1,4 @@
+import { formatDateKeyForDisplay, formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import {
@@ -30,7 +31,7 @@ const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueL
               formatter={(value) => [formatValue(value), valueLabel]}
               labelFormatter={(label) => {
                 const row = data.find((d) => d.label === label);
-                return row?.date ? format(parseISO(row.date), 'MMM d, yyyy') : label;
+                return row?.date ? formatDisplayDate(parseISO(row.date)) : label;
               }}
             />
             <Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={2} dot={false} name={valueLabel} />

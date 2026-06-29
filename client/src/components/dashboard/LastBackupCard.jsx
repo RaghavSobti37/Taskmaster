@@ -68,7 +68,7 @@ function LastBackupCard() {
       : `Atlas GridFS · ${backupTarget}`;
 
   const completedAtLabel = latest?.createdAt
-    ? formatTimestampWithTz(latest.createdAt, 'MMM dd, yyyy · HH:mm:ss')
+    ? formatTimestampWithTz(latest.createdAt)
     : null;
 
   const handleRunBackup = async () => {
@@ -174,7 +174,7 @@ function LastBackupCard() {
             <ul className="space-y-1.5">
               {recentBackups.map((snap, index) => {
                 const when = snap.createdAt
-                  ? formatTimestampWithTz(snap.createdAt, 'MMM dd · HH:mm')
+                  ? formatTimestampWithTz(snap.createdAt, 'dd/MM/yyyy HH:mm')
                   : snap.date;
                 return (
                   <li

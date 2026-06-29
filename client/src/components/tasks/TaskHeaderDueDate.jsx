@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { Badge } from '../ui';
@@ -33,7 +34,7 @@ export default function TaskHeaderDueDate({
     if (!dueDate) return 'Set date';
     const d = new Date(`${dueDate}T12:00:00`);
     if (Number.isNaN(d.getTime())) return dueDate;
-    return format(d, 'MMM d, yyyy');
+    return formatDisplayDate(d);
   }, [dueDate]);
 
   return (

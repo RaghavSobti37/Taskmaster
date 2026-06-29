@@ -22,6 +22,9 @@ const {
   deleteFolder,
   getFolderBreadcrumb,
   syncFolderPlacementFromDiskHandler,
+  streamDocumentFile,
+  proxyFileByUrl,
+  parseDocumentPreview,
 } = require('../controllers/financeController');
 const { getUsdInrRate } = require('../controllers/subscriptionController');
 
@@ -65,6 +68,8 @@ router.patch('/:id/reject', opsOnly, rejectInvoice);
 router.use(financeAccess);
 
 router.get('/next-reference', getNextReference);
+router.get('/file-proxy', proxyFileByUrl);
+router.post('/parse-preview', parseDocumentPreview);
 
 router.post('/upload', uploadRateLimit, upload.single('file'), uploadFile);
 router.post('/upload-many', uploadRateLimit, (req, res, next) => {
@@ -93,6 +98,8 @@ router.route('/')
   .get(getDocuments);
 
 router.get('/stats', getStats);
+
+router.get('/:id/file', streamDocumentFile);
 
 router.route('/:id')
   .patch(updateDocument)

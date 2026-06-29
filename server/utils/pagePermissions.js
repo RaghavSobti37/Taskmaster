@@ -68,7 +68,6 @@ const PAGE_GROUPS = [
     pages: [
       { key: 'finance', label: 'Finance', path: '/finance' },
       { key: 'announcements', label: 'Announcements', path: '/announcements' },
-      { key: 'ops_logs', label: 'Ops Logs', path: '/ops-logs' },
       { key: 'artists', label: 'Artists', path: '/artists' },
     ],
   },
@@ -108,7 +107,7 @@ const BASE_PAGE_KEYS = [
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
-const OPS_EXTRA_PAGES = ['finance', 'announcements', 'ops_logs', 'office_assets'];
+const OPS_EXTRA_PAGES = ['finance', 'announcements', 'office_assets'];
 const CREATIVE_EXTRA_PAGES = ['assets', 'features', 'workflows', 'office_assets'];
 
 const PRESET_PAGES = {
@@ -127,7 +126,7 @@ const ADMIN_PAGE_KEYS = new Set(
 );
 
 const CRM_PAGE_KEYS = ['leads', 'followups', 'bookings'];
-const OPS_PAGE_KEYS = ['finance', 'announcements', 'ops_logs'];
+const OPS_PAGE_KEYS = ['finance', 'announcements'];
 
 const isDepartmentAdmin = (dept) => {
   if (!dept || typeof dept !== 'object') return false;

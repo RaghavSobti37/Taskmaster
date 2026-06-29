@@ -27,11 +27,11 @@ function usePublicArtist(slug) {
   });
 }
 
+import { formatDisplayDate } from '../../utils/dateDisplay';
+
 function formatGigDate(value) {
   if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDisplayDate(value, { emptyLabel: null });
 }
 
 function setMetaTag(attr, key, content) {

@@ -3,10 +3,12 @@ import { RefreshCw, Music } from 'lucide-react';
 import { PageContainer, Button } from '../../components/ui/primitives';
 import SearchInput from '../../components/ui/SearchInput';
 import PageToolbar from '../../components/ui/PageToolbar';
+import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ArtistPathCardGrid from '../../components/artistPath/ArtistPathCardGrid';
 import { useArtistPathPeople, useArtistPathSync } from '../../hooks/queries/artistPath';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../contexts/ToastContext';
+import ArtistProductHint from '../../components/brand/ArtistProductHint';
 
 const ArtistPathProfileSlider = lazy(() => import('../../components/artistPath/ArtistPathProfileSlider'));
 
@@ -41,6 +43,7 @@ export default function ArtistPathPage() {
       <PageToolbar
         icon={Music}
         title="Artist Path"
+        leading={<AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />}
         actions={(
           <Button
             variant="secondary"
@@ -54,8 +57,9 @@ export default function ArtistPathPage() {
         )}
       />
 
-      <p className="text-xs text-[var(--color-text-muted)] -mt-2">
-        Live submissions arrive via website webhook. HolySheet remains the source of truth; use sync only to backfill.
+      <p className="text-xs text-[var(--color-text-muted)] -mt-2 flex flex-wrap items-center gap-2">
+        <span>Live submissions arrive via website webhook. HolySheet remains the source of truth; use sync only to backfill.</span>
+        <ArtistProductHint product="artistPath" />
       </p>
 
       <div className="max-w-md">

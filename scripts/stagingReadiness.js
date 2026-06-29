@@ -106,6 +106,16 @@ const main = async () => {
   await checkSyncProxy(stagingApi);
   await checkHealth('Nest staging API', stagingNest);
 
+  const serverEnvPath = path.join(ROOT, 'server', '.env');
+  if (fs.existsSync(serverEnvPath)) {
+    const serverEnv = fs.readFileSync(serverEnvPath, 'utf8');
+    if (/^POSTHOG_PROJECT_API_KEY\s*=/m.test(serverEnv)) {
+      ok('server/.env has POSTHOG_PROJECT_API_KEY for local/staging server capture');
+    } else {
+      pushError('server/.env missing POSTHOG_PROJECT_API_KEY');
+    }
+  }
+
   console.log('');
   if (errors.length) {
     console.log(`Blocking (${errors.length}):`);

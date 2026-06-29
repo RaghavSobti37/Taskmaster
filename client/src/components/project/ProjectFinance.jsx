@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -183,6 +184,7 @@ const ProjectFinance = ({ projectId }) => {
     }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['project-finance-docs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       setSelectedDoc(res.data.data);
     },
   });
@@ -191,6 +193,7 @@ const ProjectFinance = ({ projectId }) => {
     mutationFn: (id) => axios.delete(`/api/finance/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-finance-docs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       setSelectedDoc(null);
     },
   });
@@ -530,7 +533,7 @@ const ProjectFinance = ({ projectId }) => {
                       <div className="flex justify-between">
                         <span>Uploaded On</span>
                         <span className="font-bold text-[var(--color-text-primary)]">
-                          {new Date(selectedDoc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {formatDisplayDateTime(new Date(selectedDoc.createdAt))}
                         </span>
                       </div>
                       <div className="flex justify-between">

@@ -1,9 +1,10 @@
-/** @deprecated Inbox is local-only (device storage). Runtime dispatch does not write here. */
+/** Server-persisted inbox rows; client also caches in localStorage for offline/realtime merge. */
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
 
 const notificationSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
   recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, required: true },
   message: { type: String, required: true },

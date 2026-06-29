@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
 import { Disc, ExternalLink, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Card, Button, Input, DataTable } from '../../../components/ui';
@@ -71,7 +72,7 @@ export default function ArtistReleasesTab({ artistId, isPreview }) {
     {
       header: 'Date',
       render: (row) => (
-        <span className="text-xs">{row.releaseDate ? new Date(row.releaseDate).toLocaleDateString('en-IN') : '—'}</span>
+        <span className="text-xs">{row.releaseDate ? formatDisplayDate(new Date(row.releaseDate)) : '—'}</span>
       ),
     },
     {

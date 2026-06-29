@@ -1,7 +1,8 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation, XCircle } from 'lucide-react';
-import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection, Spinner, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Users, Navigation, XCircle } from 'lucide-react';
+import { PageContainer, Button, NexusDropdown, Input, UserLabel, Spinner, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import {
   useAttendance,
@@ -385,19 +386,6 @@ const AttendancePage = () => {
     });
   };
 
-  const attendanceOverview = useMemo(() => {
-    const todayEntries = rows.filter((r) => format(new Date(r.date), 'yyyy-MM-dd') === todayKey);
-    const presentToday = todayEntries.filter((r) => {
-      const st = resolveStatus(r, new Date(r.date));
-      return st === 'present' || st === 'halfDay';
-    }).length;
-    return {
-      pendingLeave: leaveRequests.length,
-      teamSize: visibleUsers.length,
-      presentToday: canEdit ? presentToday : (selfTodayRows[0] ? 1 : 0),
-    };
-  }, [rows, todayKey, leaveRequests.length, visibleUsers.length, canEdit, selfTodayRows]);
-
   return (
     <PageContainer className="!py-4 !space-y-6">
       {selfAttendanceError && (
@@ -406,34 +394,6 @@ const AttendancePage = () => {
           onRetry={() => refetchSelfAttendance()}
         />
       )}
-      <DataOverviewSection
-        stats={[
-          {
-            id: 'leave',
-            label: 'Pending Leave',
-            value: attendanceOverview.pendingLeave,
-            icon: Palmtree,
-            variant: 'apricot',
-            info: canEdit ? 'Leave requests waiting for manager approval.' : 'Only visible to ops managers.',
-          },
-          {
-            id: 'team',
-            label: 'Team Size',
-            value: attendanceOverview.teamSize,
-            icon: Users,
-            variant: 'info',
-            info: 'People shown in the attendance matrix — active in the last 7 days or on approved leave.',
-          },
-          {
-            id: 'present',
-            label: canEdit ? 'Present Today' : 'Checked In',
-            value: attendanceOverview.presentToday,
-            icon: Check,
-            variant: 'mint',
-            info: canEdit ? 'Team members marked present or half-day for today.' : 'Whether you have checked in today.',
-          },
-        ].filter((s) => canEdit || s.id !== 'team')}
-      />
       <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-h-[44px] pb-3 mb-4">
         <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-x-3 lg:gap-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -472,7 +432,7 @@ const AttendancePage = () => {
         <UnifiedTimeCard
           entry={selfTodayEntry}
           subTitle={user?.name}
-          title={format(today, 'EEE, MMM d, yyyy')}
+          title={formatWeekdayDateLong(today)}
           alwaysShowMarkInAccess
           isSelfMode={true}
           onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}
@@ -524,8 +484,8 @@ const AttendancePage = () => {
               </div>
               {leaveRequests.map((request) => {
                 const requester = request.userId?.name || request.username || 'Unknown';
-                const fromLabel = request.fromDate ? format(new Date(request.fromDate), 'MMM d, yyyy') : '—';
-                const toLabel = request.toDate ? format(new Date(request.toDate), 'MMM d, yyyy') : fromLabel;
+                const fromLabel = request.fromDate ? formatDisplayDate(new Date(request.fromDate)) : '—';
+                const toLabel = request.toDate ? formatDisplayDate(new Date(request.toDate)) : fromLabel;
                 return (
                   <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
@@ -609,7 +569,7 @@ const AttendancePage = () => {
                       {dateColumns.map((day) => (
                         <th key={day.key} className={`px-3 py-3 text-center border-b border-[var(--color-bg-border)] ${viewMode === VIEW_MODES.WEEK ? 'min-w-[120px]' : 'min-w-[200px]'}`} colSpan={2}>
                           <div>{day.label}</div>
-                          <div className="text-[10px] text-[var(--color-text-muted)]">{format(day.date, 'EEE, MMM d')}</div>
+                          <div className="text-[10px] text-[var(--color-text-muted)]">{formatWeekdayDate(day.date)}</div>
                         </th>
                       ))}
                     </tr>
@@ -649,7 +609,7 @@ const AttendancePage = () => {
       <NexusModal
         isOpen={!!editInCell}
         onClose={() => setEditInCell(null)}
-        title={editInCell ? format(editInCell.date, 'EEE, MMM d, yyyy') : ''}
+        title={editInCell ? formatWeekdayDateLong(editInCell.date) : ''}
         subtitle={editInCell?.userRow?.name}
         subtitleFirst
         prominentTitle
@@ -702,7 +662,7 @@ const AttendancePage = () => {
       <NexusModal
         isOpen={!!editOutCell}
         onClose={() => setEditOutCell(null)}
-        title={editOutCell ? format(editOutCell.date, 'EEE, MMM d, yyyy') : ''}
+        title={editOutCell ? formatWeekdayDateLong(editOutCell.date) : ''}
         subtitle={editOutCell?.userRow?.name}
         subtitleFirst
         prominentTitle

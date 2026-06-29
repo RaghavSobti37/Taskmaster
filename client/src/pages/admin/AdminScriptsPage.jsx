@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
 import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
+import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
@@ -38,7 +40,7 @@ const AdminScriptsPage = () => {
   const [runningId, setRunningId] = useState(null);
   const [results, setResults] = useState({});
 
-  const { data: scripts = [], isLoading, isFetching, refetch } = useQuery({
+  const { data: scripts = [], isLoading, isError, error, isFetching, refetch } = useQuery({
     queryKey: ['admin-scripts'],
     queryFn: async () => (await axios.get('/api/admin/scripts')).data?.data || [],
   });
@@ -107,9 +109,16 @@ const AdminScriptsPage = () => {
 
   return (
     <PageContainer className="space-y-5">
+      <QueryErrorSlot
+        isError={isError}
+        error={error}
+        onRetry={() => refetch()}
+        fallback="Failed to load admin scripts"
+      />
       <PageHeader
         title="Admin Script Runner"
         icon={Brackets}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={
           <div className="flex items-center gap-2">
             <Input

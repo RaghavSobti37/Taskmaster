@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -60,10 +61,39 @@ export default function MailCampaignList({ limit }) {
     },
     {
       header: 'Recipients',
+      render: (row) => {
+        const total = row.recipientCount ?? row.stats?.total ?? 0;
+        const sent = row.stats?.sent || 0;
+        const isSending = row.status === 'Sending';
+        const pct = total > 0 ? Math.round((sent / total) * 100) : 0;
+        return (
+          <div className="space-y-1 text-xs font-medium min-w-[7rem]">
+            <div className="flex items-center gap-4">
+              <span>{total} target</span>
+              <span className="text-[var(--color-pastel-mint-text)]">{sent} sent</span>
+            </div>
+            {isSending && total > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1 rounded-full bg-[var(--color-bg-border)] overflow-hidden">
+                  <div
+                    className="h-full bg-[var(--color-action-primary)] transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums">{pct}%</span>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Engagement',
       render: (row) => (
-        <div className="flex items-center gap-4 text-xs font-medium">
-          <span>{row.recipientCount ?? row.stats?.total ?? 0} target</span>
-          <span className="text-[var(--color-pastel-mint-text)]">{row.stats?.sent || 0} sent</span>
+        <div className="text-xs text-[var(--color-text-muted)] tabular-nums">
+          <span className="text-[var(--color-text-primary)]">{row.stats?.opened ?? 0}</span> opens
+          <span className="mx-1">·</span>
+          <span className="text-[var(--color-text-primary)]">{row.stats?.clicked ?? 0}</span> clicks
         </div>
       ),
     },
@@ -72,7 +102,7 @@ export default function MailCampaignList({ limit }) {
       render: (row) => (
         <div className="flex items-center justify-between gap-2 min-w-[10rem]">
           <span className="text-xs text-[var(--color-text-muted)]">
-            {format(new Date(row.createdAt), 'MMM dd, yyyy')}
+            {formatDisplayDate(new Date(row.createdAt))}
           </span>
           {!limit && (
             <div

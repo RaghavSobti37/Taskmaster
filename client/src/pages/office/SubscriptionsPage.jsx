@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -37,7 +38,7 @@ const formatInr = (amount) =>
   }).format(amount || 0);
 
 const formatDate = (date) =>
-  date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  date ? formatDisplayDate(new Date(date)) : '—';
 
 /** Normalize each line item to equivalent monthly INR from its billing periodicity. */
 const PERIODICITY_MONTHLY_FACTOR = {
@@ -122,7 +123,7 @@ const SubscriptionsPage = () => {
     });
   }, [isModalOpen, usdInrRate]);
 
-  const { data: subscriptions = [], isLoading } = useQuery({
+  const { data: subscriptions = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['subscriptions'],
     queryFn: async () => (await axios.get('/api/subscriptions')).data,
   });
@@ -252,8 +253,19 @@ const SubscriptionsPage = () => {
   ];
 
   return (
-    <PageLoadGuard loading={isLoading && !subscriptions.length} skeleton={PageSkeleton} className="!py-4">
+    <PageLoadGuard
+      loading={isLoading && !subscriptions.length}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      queryErrorFallback="Failed to load subscriptions"
+      skeleton={PageSkeleton}
+      className="!py-4"
+    >
     <ListPageLayout
+      queryError={isError ? error : null}
+      onQueryRetry={() => refetch()}
+      queryErrorFallback="Failed to load subscriptions"
       containerClassName="!py-4"
       overview={{
         stats: [

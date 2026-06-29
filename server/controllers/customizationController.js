@@ -58,7 +58,7 @@ exports.getDashboardPreset = async (req, res, next) => {
 exports.saveDashboardPreset = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { name, layoutName, elements, department } = req.body;
+    const { name, layoutName, elements, department, layoutVersion, sectionState } = req.body;
     const savedLayoutName = (layoutName || name || '').trim();
 
     if (!savedLayoutName) {
@@ -107,6 +107,8 @@ exports.saveDashboardPreset = async (req, res, next) => {
         name: savedLayoutName,
         elements: sortedElements,
         department: department || 'custom',
+        ...(layoutVersion != null ? { layoutVersion } : {}),
+        ...(sectionState && typeof sectionState === 'object' ? { sectionState } : {}),
         presets,
         updatedAt: new Date(),
       },

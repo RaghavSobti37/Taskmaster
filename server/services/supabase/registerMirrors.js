@@ -1,9 +1,8 @@
-const { isSupabaseEnabled, isLogsPrimarySupabase } = require('../../config/supabase');
+const { isSupabaseEnabled } = require('../../config/supabase');
 const logger = require('../../utils/logger');
 const {
   mirrorAsync,
   insertAppLog,
-  insertSystemLog,
   insertCrmAudit,
   insertXpAuditLog,
   insertQaTestRun,
@@ -26,7 +25,6 @@ function registerSupabaseMirrors() {
   }
 
   const Log = require('../../models/Log');
-  const SystemLog = require('../../models/SystemLog');
   const CRMAudit = require('../../models/CRMAudit');
   const XPAuditLog = require('../../models/XPAuditLog');
   const QATestRun = require('../../models/QATestRun');
@@ -34,12 +32,6 @@ function registerSupabaseMirrors() {
   Log.schema.post('save', function onLogSaved(doc) {
     mirrorAsync(insertAppLog, doc);
   });
-
-  if (!isLogsPrimarySupabase()) {
-    SystemLog.schema.post('save', function onSystemLogSaved(doc) {
-      mirrorAsync(insertSystemLog, doc);
-    });
-  }
 
   CRMAudit.schema.post('save', function onCrmAuditSaved(doc) {
     mirrorAsync(insertCrmAudit, doc);

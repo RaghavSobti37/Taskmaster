@@ -2,6 +2,7 @@ const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 const sgMail = require('@sendgrid/mail');
 const { ENV_CONFIG } = require('../../../config/environment');
+const logger = require('../../../utils/logger');
 
 const resendApiKey = process.env.RESEND_API_KEY || ENV_CONFIG.resendApiKey;
 const resend = resendApiKey && resendApiKey !== 'mock_resend_api_key' ? new Resend(resendApiKey) : null;
@@ -43,7 +44,7 @@ const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
         console.error(`❌ [Resend Error] Failed to dispatch email to ${toList.join(', ')}:`, error.message);
         throw new Error(error.message || 'Resend send failed');
       }
-      console.log(`📡 [Resend API] Email dispatched successfully to: ${toList.join(', ')} (ID: ${data?.id})`);
+      logger.info('mail', `Resend email dispatched to: ${toList.join(', ')}`, { id: data?.id });
       return data;
     } catch (err) {
       console.error(`❌ [Resend Error] Failed to dispatch email to ${toList.join(', ')}:`, err.message);
@@ -58,7 +59,7 @@ const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
       html,
       ...(ccList.length ? { cc: ccList } : {}),
     });
-    console.log(`📡 [SendGrid] Email dispatched successfully to: ${toList.join(', ')}`);
+    logger.info('mail', `SendGrid email dispatched to: ${toList.join(', ')}`);
   } else {
     // Local development fallback testing loop
     const transporter = nodemailer.createTransport({
@@ -78,9 +79,9 @@ const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
         html,
         ...(ccList.length ? { cc: ccList.join(', ') } : {}),
       });
-      console.log(`🧪 [Sandbox Dev] Email simulated. Preview URL: ${nodemailer.getTestMessageUrl(info) || 'N/A'}`);
+      logger.debug('mail', `Sandbox email simulated`, { preview: nodemailer.getTestMessageUrl(info) || 'N/A' });
     } catch (err) {
-      console.log(`🧪 [Sandbox Dev] Mock email dispatch logged for: ${toList.join(', ')} - Subject: "${subject}"`);
+      logger.debug('mail', `Sandbox mock dispatch for: ${toList.join(', ')}`, { subject });
     }
   }
 };

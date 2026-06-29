@@ -20,6 +20,9 @@ export const trackingUrls = loadLegacy('utils/trackingUrls.js');
 /** Locked open pixel + click wrap injection */
 export const emailTracker = loadLegacy('utils/emailTracker.js');
 
+/** Atomic open/click claim helpers (shared with Express track.js) */
+export const trackingClaim = loadLegacy('utils/trackingClaim.js');
+
 /** Legacy Mongoose models (tenant-aware writes match Express) */
 export const legacyModels = {
   EmailLog: loadLegacy('models/EmailLog.js'),

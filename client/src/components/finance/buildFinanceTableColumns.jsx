@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import {
   FinanceCategoryBadge,
@@ -55,7 +56,7 @@ export function buildProjectFinanceTableColumns({
       header: 'Date',
       render: (row) => (
         <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest tabular-nums">
-          {new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {formatDisplayDate(new Date(row.createdAt))}
         </span>
       ),
     },
@@ -138,7 +139,7 @@ export function buildFinanceTableColumns({
     {
       key: 'docDate',
       sortKey: 'docDate',
-      header: 'Doc Date',
+      header: 'Payment Date',
       mobileHidden: true,
       render: (row) => <FinanceDocDateCell doc={row} />,
     },

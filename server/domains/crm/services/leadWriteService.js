@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('../../../utils/logger');
 const Lead = require('../models/Lead');
 const leadRepository = require('../repositories/leadRepository');
 const EMI = require('../models/EMI');
@@ -15,7 +16,6 @@ const {
   clearBlockingDuplicateLead,
   mergeCorruptLeadIntoKeeper,
 } = require('./leadDuplicateService');
-const logger = require('../../../utils/logger');
 const { sendAiSensyMessage } = require('../../../utils/aisensyClient');
 const { dispatchEmailPayload } = require('../../../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../../../config/realtime');
@@ -203,7 +203,7 @@ async function sendFirstCallNotifications(lead) {
             `,
       from: 'support@coreknot.io',
     });
-    console.log(`✅ Email sent to ${lead.email}`);
+    logger.info('crm', `Email sent to ${lead.email}`);
   }
 }
 

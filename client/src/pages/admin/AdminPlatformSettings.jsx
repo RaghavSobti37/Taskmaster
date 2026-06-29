@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react';
 import { Button, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
+import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import PlatformSettingsUserField from '../../components/admin/PlatformSettingsUserField';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
@@ -26,6 +28,7 @@ const AdminPlatformSettings = () => {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const deferUsers = useDeferredQueryEnabled(!loading);
   const { data: users = [], isLoading: usersLoading } = useUserDirectory(deferUsers);
   const [saving, setSaving] = useState(false);
@@ -36,6 +39,7 @@ const AdminPlatformSettings = () => {
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await axios.get('/api/admin/platform-settings');
       setFields(res.data.fields || []);
@@ -43,6 +47,7 @@ const AdminPlatformSettings = () => {
       setSettings(res.data.settings);
       setBaseline(res.data.settings);
     } catch (err) {
+      setLoadError(err);
       toast.error(err.response?.data?.error || 'Failed to load platform settings');
     } finally {
       setLoading(false);
@@ -89,10 +94,17 @@ const AdminPlatformSettings = () => {
 
   return (
     <PageContainer>
+      <QueryErrorSlot
+        isError={Boolean(loadError)}
+        error={loadError}
+        onRetry={loadSettings}
+        fallback="Failed to load platform settings"
+      />
       <PageHeader
         title="Platform settings"
         subtitle="Assign users for system emails, alerts, CRM routing, and protected roles — no env edits needed."
         icon={Settings2}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={(
           <div className="flex items-center gap-2">
             <Button

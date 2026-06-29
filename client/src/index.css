@@ -387,12 +387,6 @@ select option {
   );
   opacity: 0.35;
 }
-
-.ops-terminal-page .tm-data-primary,
-.ops-terminal-page input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
 .tm-leaderboard-rank-badge {
   width: 36px;
   height: 40px;
@@ -444,7 +438,7 @@ select option {
 }
 
 .page-toolbar-controls {
-  align-items: flex-end;
+  align-items: center;
 }
 
 .page-toolbar-controls .tm-toolbar-field {

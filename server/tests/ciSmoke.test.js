@@ -19,21 +19,16 @@ describe('CI production readiness smoke', () => {
     expect(res.body.paths).toHaveProperty('/auth/login');
   });
 
-  it('Sentry server module exports captureException', () => {
-    const sentry = require('../utils/sentry');
-    expect(typeof sentry.captureException).toBe('function');
-    expect(typeof sentry.initSentry).toBe('function');
+  it('system-logs route removed', async () => {
+    const res = await request(app).get('/api/system-logs');
+    expect(res.statusCode).toBe(404);
   });
 
-  it('PostHog server module exports captureEvent', () => {
-    const posthog = require('../utils/posthog');
-    expect(typeof posthog.captureEvent).toBe('function');
-    expect(typeof posthog.initPostHog).toBe('function');
-  });
-
-  it('Datadog init file exists', () => {
-    const initPath = path.join(__dirname, '../datadog-init.js');
-    expect(fs.existsSync(initPath)).toBe(true);
+  it('Pino structured logger is configured', () => {
+    const logger = require('../utils/logger');
+    expect(typeof logger.error).toBe('function');
+    expect(typeof logger.warn).toBe('function');
+    expect(typeof logger.info).toBe('function');
   });
 
   it('render.yaml defines health check', () => {
@@ -46,8 +41,11 @@ describe('CI production readiness smoke', () => {
     expect(fs.existsSync(path.join(repoRoot, 'docs/DEPLOY_ROLLBACK.md'))).toBe(true);
   });
 
+  it('Render logging doc exists', () => {
+    expect(fs.existsSync(path.join(repoRoot, 'docs/RENDER_LOGGING.md'))).toBe(true);
+  });
+
   it('monitoring docs exist', () => {
     expect(fs.existsSync(path.join(repoRoot, 'docs/MONITORING_ALERTS.md'))).toBe(true);
-    expect(fs.existsSync(path.join(repoRoot, 'docs/SENTRY_ALERTS.md'))).toBe(true);
   });
 });

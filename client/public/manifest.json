@@ -2,7 +2,7 @@
   "id": "/?app=coreknot-harmonic-v2",
   "name": "CoreKnot",
   "short_name": "CoreKnot",
-  "description": "Enterprise Work Management",
+  "description": "Project management, CRM, and team workspace for modern operations.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

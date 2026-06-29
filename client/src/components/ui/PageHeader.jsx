@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import AdminConsoleBackButton from '../admin/AdminConsoleBackButton';
 
 /**
  * PageHeader — legacy / simple pages without ListPageLayout.
@@ -10,10 +11,18 @@ const PageHeader = ({
   title,
   subtitle: _subtitle,
   showTitle = true,
+  backTo,
   leadingActions,
   actions,
   children,
 }) => {
+  const mergedLeading = backTo || leadingActions ? (
+    <>
+      {backTo && <AdminConsoleBackButton to={backTo} />}
+      {leadingActions}
+    </>
+  ) : null;
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -21,9 +30,9 @@ const PageHeader = ({
       className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4"
     >
       <div className="flex items-start gap-3 min-w-0 flex-1">
-        {leadingActions && (
+        {mergedLeading && (
           <div className="flex items-center gap-2 shrink-0 self-center">
-            {leadingActions}
+            {mergedLeading}
           </div>
         )}
         <div className="space-y-1 min-w-0 flex-1">

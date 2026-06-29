@@ -4,6 +4,7 @@ import { Monitor, Shield, LogOut, RefreshCw } from 'lucide-react';
 import RelativeTimestamp from '../../../components/ui/RelativeTimestamp';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Badge } from '../../../components/ui';
+import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
 import { globalConfirm } from '../../../contexts/confirmContext';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -12,7 +13,7 @@ const SessionsTab = () => {
   const { logout } = useAuth();
   const [busyJti, setBusyJti] = useState(null);
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
     queryKey: ['auth', 'sessions'],
     queryFn: async () => {
       const { data: res } = await axios.get('/api/auth/sessions');
@@ -69,6 +70,12 @@ const SessionsTab = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl">
+      <QueryErrorSlot
+        isError={isError}
+        error={error}
+        onRetry={() => refetch()}
+        fallback="Failed to load active sessions"
+      />
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 text-[var(--color-brand-teal)] mb-2">

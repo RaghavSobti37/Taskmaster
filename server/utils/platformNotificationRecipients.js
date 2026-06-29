@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 const {
-  getCrmDigestRecipientUserIds,
   getBackupNotifyUserIds,
   getSubscriptionReminderFallbackUserIds,
   getPasswordResetCcUserIds,
@@ -41,12 +40,6 @@ async function resolveRecipientEmails(getUserIds, envKeys = []) {
   return [];
 }
 
-const resolveCrmDigestRecipientEmails = () =>
-  resolveRecipientEmails(getCrmDigestRecipientUserIds, [
-    'CRM_REACH_OUT_DIGEST_EMAIL',
-    'ADMIN_EMAIL',
-  ]);
-
 const resolveBackupNotifyEmails = () =>
   resolveRecipientEmails(getBackupNotifyUserIds, ['BACKUP_NOTIFY_EMAIL', 'ADMIN_EMAIL']);
 
@@ -63,7 +56,6 @@ module.exports = {
   parseEmailList,
   resolveEmailsFromUserIds,
   resolveRecipientEmails,
-  resolveCrmDigestRecipientEmails,
   resolveBackupNotifyEmails,
   resolveSubscriptionFallbackEmails,
   resolvePasswordResetCcEmails,

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
@@ -23,7 +24,7 @@ export default function ScheduleDayViewControl({
       const value = i + 1;
       const dateKey = addDaysToDateKey(rangeStartKey, i);
       const date = parseDateKey(dateKey);
-      const dateLabel = date ? format(date, 'MMM d') : '';
+      const dateLabel = date ? formatDisplayDateShort(date) : '';
       const dayName = date ? format(date, 'EEE') : '';
       return {
         value,
@@ -45,8 +46,8 @@ export default function ScheduleDayViewControl({
     const start = parseDateKey(rangeStartKey);
     const end = parseDateKey(rangeEndKey);
     if (!start || !end) return '';
-    if (rangeStartKey === rangeEndKey) return format(start, 'EEE, MMM d');
-    return `${format(start, 'MMM d')} – ${format(end, 'MMM d')}`;
+    if (rangeStartKey === rangeEndKey) return formatWeekdayDate(start);
+    return `${formatDisplayDateShort(start)} – ${formatDisplayDateShort(end)}`;
   }, [rangeStartKey, rangeEndKey]);
 
   const columnCenterInset = maxDays > 0 ? `calc(100% / ${maxDays} / 2)` : '0px';

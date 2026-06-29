@@ -3,6 +3,7 @@ const CRMAudit = require('../../../models/CRMAudit');
 const EMI = require('../../../models/EMI');
 const User = require('../../../models/User');
 const ContactService = require('../../../services/ContactService');
+const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const { buildDataHubExcludeFilter } = require('../../../services/qa/qaTestData');
 const { resolveLeadInletKey } = require('../queryHelpers');
 
@@ -56,11 +57,11 @@ async function buildLeadsAnalytics(result, { total, weekAgo }) {
   const qaExclude = buildDataHubExcludeFilter();
   const leadMatch = { $match: qaExclude };
   const [funnel, callStatus, sources, quality, connect, newWeek, converted] = await Promise.all([
-    Lead.aggregate([leadMatch, { $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-    Lead.aggregate([leadMatch, { $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-    Lead.aggregate([leadMatch, { $group: { _id: '$source', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-    Lead.aggregate([leadMatch, { $group: { _id: '$leadQuality', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-    Lead.aggregate([leadMatch, { $group: { _id: '$meaningfulConnect', count: { $sum: 1 } } }]),
+    aggregateWithTenant(Lead, [leadMatch, { $group: { _id: '$leadStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    aggregateWithTenant(Lead, [leadMatch, { $group: { _id: '$callStatus', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+    aggregateWithTenant(Lead, [leadMatch, { $group: { _id: '$source', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+    aggregateWithTenant(Lead, [leadMatch, { $group: { _id: '$leadQuality', count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
+    aggregateWithTenant(Lead, [leadMatch, { $group: { _id: '$meaningfulConnect', count: { $sum: 1 } } }]),
     Lead.countDocuments({ ...qaExclude, createdAt: { $gte: weekAgo } }),
     Lead.countDocuments({ ...qaExclude, leadStatus: { $regex: /convert/i } }),
   ]);

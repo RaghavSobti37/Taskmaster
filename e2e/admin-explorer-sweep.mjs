@@ -78,7 +78,7 @@ const STATIC_ROUTES = [
   '/emails/newsletter',
   '/emails/newsletter/curate',
   '/emails/create',
-  '/logs?view=lead-audits',
+  '/admin/lead-audits',
 ];
 
 async function apiLogin() {

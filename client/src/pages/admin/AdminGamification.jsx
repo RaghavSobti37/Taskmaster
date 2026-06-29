@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge } from '../../components/ui';
+import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { Edit2, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
@@ -133,11 +134,24 @@ const AdminGamification = () => {
     return <PageContainer><PageSkeleton /></PageContainer>;
   }
 
+  if (!config && message.type === 'error') {
+    return (
+      <PageContainer className="space-y-5 max-w-4xl">
+        <PageHeader title="Gamification Rules" icon={Trophy} backTo={ADMIN_CONSOLE_PATH} />
+        <QueryErrorBanner
+          message={getQueryErrorMessage(null, message.text || 'Failed to load gamification rules')}
+          onRetry={fetchRules}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer className="space-y-5 max-w-4xl">
       <PageHeader
         title="Gamification Rules"
         icon={Trophy}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={(
           <Button
             onClick={handleRecalculateAllLevels}

@@ -3,7 +3,12 @@
  * Central source of truth for all dashboard widgets, their access rules, and layout templates.
  */
 
+import { getDefaultTierElements } from './dashboardSections';
+
 // Permission presets from Department model: 'admin', 'operations', 'sales', 'artist-management', 'standard'
+
+/** Settings route for dashboard layout editor */
+export const DASHBOARD_SETTINGS_PATH = '/settings?tab=dashboard';
 
 export const COMPONENT_REGISTRY = {
   // ── Universal (all departments) ──
@@ -36,7 +41,39 @@ export const COMPONENT_REGISTRY = {
   'dept-stats': { label: 'Department Stats', access: ['admin'], defaultSize: '2', icon: '🏢', mobileTier: 'analytics', mobileOrder: 27 },
   'system-health': { label: 'System Health', access: ['admin'], defaultSize: '1', icon: '🖥️', mobileTier: 'analytics', mobileOrder: 28 },
   'last-backup': { label: 'Last Backup', access: ['admin'], defaultSize: '1', icon: '💾', mobileTier: 'analytics', mobileOrder: 29 },
-
+  'render-logs': {
+    label: 'Render Logs',
+    description: 'Open Render Dashboard log streams for API and Nest services',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '📜',
+    mobileTier: 'analytics',
+    mobileOrder: 30,
+  },
+  'render-logs-production': {
+    label: 'Production API Logs',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '🟢',
+    mobileTier: 'analytics',
+    mobileOrder: 31,
+  },
+  'render-logs-staging-api': {
+    label: 'Staging API Logs',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '🟡',
+    mobileTier: 'analytics',
+    mobileOrder: 32,
+  },
+  'render-logs-staging-nest': {
+    label: 'Nest Staging Logs',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '🟣',
+    mobileTier: 'analytics',
+    mobileOrder: 33,
+  },
   // ── Artist Management ──
   'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨', mobileTier: 'action', mobileOrder: 8 },
 };
@@ -80,20 +117,18 @@ export const isAnalyticsWidget = (componentId) =>
 export const LAYOUT_TEMPLATES = [
   {
     id: 'coreknot',
-    name: 'Coreknot',
-    description: 'Balanced default with tasks, projects, and team tools',
+    name: 'CoreKnot',
+    description: 'Daily actions first — clock, calendar, tasks, review; team context below; clutter hidden',
     target: ['all'],
     elements: [
-      { componentId: 'leaderboard', size: '1', col: 1, row: 1 },
-      { componentId: 'daily-missions', size: '1', col: 1, row: 2 },
-      { componentId: 'announcements', size: '1', col: 1, row: 3 },
-      { componentId: 'pinboard', size: '1', col: 1, row: 4 },
-      { componentId: 'schedule', size: '1', col: 1, row: 5 },
-      { componentId: 'review-queue', size: '2', col: 2, row: 1 },
-      { componentId: 'todos-today', size: '2', col: 2, row: 2 },
-      { componentId: 'projects-today', size: '2', col: 2, row: 3 },
-      { componentId: 'notes', size: '1', col: 4, row: 1 },
-      { componentId: 'composer', size: '1', col: 4, row: 2 },
+      { componentId: 'mark-attendance', size: '1', col: 1, row: 1 },
+      { componentId: 'schedule', size: '1', col: 2, row: 1 },
+      { componentId: 'todos-today', size: '1', col: 3, row: 1 },
+      { componentId: 'todos-overdue', size: '1', col: 4, row: 1 },
+      { componentId: 'review-queue', size: '2', col: 1, row: 2 },
+      { componentId: 'leaderboard', size: '1', col: 3, row: 2 },
+      { componentId: 'announcements', size: '1', col: 4, row: 2 },
+      { componentId: 'projects-today', size: '4', col: 1, row: 3 },
     ],
   },
   {
@@ -126,50 +161,61 @@ export const LAYOUT_TEMPLATES = [
   {
     id: 'sales-command',
     name: 'Sales Command',
-    description: 'Pipeline, calls, and follow-ups at a glance',
+    description: 'Daily sales actions first; pipeline metrics on lower rows',
     target: ['sales'],
     elements: [
-      { componentId: 'pipeline-summary', size: '2', col: 1, row: 1 },
-      { componentId: 'booked-calls', size: '2', col: 3, row: 1 },
-      { componentId: 'followups-today', size: '2', col: 1, row: 2 },
-      { componentId: 'campaign-metrics', size: '2', col: 3, row: 2 },
-      { componentId: 'leaderboard', size: '1', col: 1, row: 3 },
-      { componentId: 'todos-today', size: '2', col: 2, row: 3 },
-      { componentId: 'mark-attendance', size: '1', col: 4, row: 3 },
+      { componentId: 'mark-attendance', size: '1', col: 1, row: 1 },
+      { componentId: 'schedule', size: '1', col: 2, row: 1 },
+      { componentId: 'todos-today', size: '1', col: 3, row: 1 },
+      { componentId: 'todos-overdue', size: '1', col: 4, row: 1 },
+      { componentId: 'review-queue', size: '2', col: 1, row: 2 },
+      { componentId: 'leaderboard', size: '1', col: 3, row: 2 },
+      { componentId: 'announcements', size: '1', col: 4, row: 2 },
+      { componentId: 'projects-today', size: '4', col: 1, row: 3 },
+      { componentId: 'pipeline-summary', size: '2', col: 1, row: 4 },
+      { componentId: 'campaign-metrics', size: '2', col: 3, row: 4 },
     ],
   },
   {
     id: 'operations-hub',
     name: 'Operations Hub',
-    description: 'Attendance, leaves, invoices, and team oversight',
+    description: 'Attendance and team oversight; leave/reimbursement alerts available in Library',
     target: ['operations'],
     elements: [
-      { componentId: 'attendance-overview', size: '2', col: 1, row: 1 },
-      { componentId: 'leave-alerts', size: '1', col: 3, row: 1 },
-      { componentId: 'invoice-alerts', size: '1', col: 4, row: 1 },
-      { componentId: 'team-activity', size: '2', col: 1, row: 2 },
-      { componentId: 'todos-today', size: '2', col: 3, row: 2 },
-      { componentId: 'mark-attendance', size: '1', col: 1, row: 3 },
-      { componentId: 'announcements', size: '1', col: 2, row: 3 },
-      { componentId: 'schedule', size: '2', col: 3, row: 3 },
+      { componentId: 'mark-attendance', size: '1', col: 1, row: 1 },
+      { componentId: 'schedule', size: '1', col: 2, row: 1 },
+      { componentId: 'todos-today', size: '1', col: 3, row: 1 },
+      { componentId: 'todos-overdue', size: '1', col: 4, row: 1 },
+      { componentId: 'attendance-overview', size: '2', col: 1, row: 2 },
+      { componentId: 'team-activity', size: '2', col: 3, row: 2 },
+      { componentId: 'review-queue', size: '2', col: 1, row: 3 },
+      { componentId: 'announcements', size: '1', col: 3, row: 3 },
+      { componentId: 'leaderboard', size: '1', col: 4, row: 3 },
+      { componentId: 'projects-today', size: '4', col: 1, row: 4 },
     ],
   },
   {
     id: 'admin-control',
     name: 'Admin Control',
-    description: 'Full organizational oversight and analytics',
+    description: 'Daily actions up top; compact health strip; analytics on lower rows',
     target: ['admin'],
     elements: [
-      { componentId: 'dept-stats', size: '2', col: 1, row: 1 },
-      { componentId: 'system-health', size: '1', col: 3, row: 1 },
-      { componentId: 'last-backup', size: '1', col: 4, row: 1 },
-      { componentId: 'team-activity', size: '4', col: 1, row: 2 },
-      { componentId: 'attendance-overview', size: '2', col: 1, row: 3 },
-      { componentId: 'leave-alerts', size: '1', col: 3, row: 3 },
-      { componentId: 'invoice-alerts', size: '1', col: 4, row: 3 },
-      { componentId: 'leaderboard', size: '1', col: 1, row: 4 },
-      { componentId: 'todos-today', size: '2', col: 2, row: 4 },
-      { componentId: 'pipeline-summary', size: '1', col: 4, row: 4 },
+      { componentId: 'mark-attendance', size: '1', col: 1, row: 1 },
+      { componentId: 'schedule', size: '1', col: 2, row: 1 },
+      { componentId: 'todos-today', size: '1', col: 3, row: 1 },
+      { componentId: 'todos-overdue', size: '1', col: 4, row: 1 },
+      { componentId: 'review-queue', size: '2', col: 1, row: 2 },
+      { componentId: 'leaderboard', size: '1', col: 3, row: 2 },
+      { componentId: 'announcements', size: '1', col: 4, row: 2 },
+      { componentId: 'projects-today', size: '4', col: 1, row: 3 },
+      { componentId: 'system-health', size: '1', col: 1, row: 4 },
+      { componentId: 'last-backup', size: '1', col: 2, row: 4 },
+      { componentId: 'render-logs', size: '1', col: 3, row: 4 },
+      { componentId: 'pipeline-summary', size: '2', col: 3, row: 4 },
+      { componentId: 'dept-stats', size: '2', col: 1, row: 5 },
+      { componentId: 'campaign-metrics', size: '2', col: 3, row: 5 },
+      { componentId: 'team-activity', size: '2', col: 1, row: 6 },
+      { componentId: 'attendance-overview', size: '2', col: 1, row: 7 },
     ],
   },
   {
@@ -178,12 +224,12 @@ export const LAYOUT_TEMPLATES = [
     description: 'Bookings, calendar, and creative team coordination',
     target: ['artist-management'],
     elements: [
-      { componentId: 'artist-calendar', size: '2', col: 1, row: 1 },
-      { componentId: 'schedule', size: '2', col: 3, row: 1 },
-      { componentId: 'todos-today', size: '2', col: 1, row: 2 },
+      { componentId: 'schedule', size: '2', col: 1, row: 1 },
+      { componentId: 'todos-today', size: '2', col: 3, row: 1 },
+      { componentId: 'pinboard', size: '2', col: 1, row: 2 },
       { componentId: 'announcements', size: '1', col: 3, row: 2 },
       { componentId: 'notes', size: '1', col: 4, row: 2 },
-      { componentId: 'pinboard', size: '2', col: 1, row: 3 },
+      { componentId: 'review-queue', size: '2', col: 1, row: 3 },
       { componentId: 'mark-attendance', size: '1', col: 3, row: 3 },
     ],
   },
@@ -246,7 +292,7 @@ export const LAYOUT_TEMPLATES = [
   {
     id: 'analytics-dashboard',
     name: 'Analytics Dashboard',
-    description: 'Data-driven overview for leadership',
+    description: 'Data-driven overview — MetricPanelGroup KPI headers + chart widgets',
     target: ['admin'],
     elements: [
       { componentId: 'dept-stats', size: '2', col: 1, row: 1 },
@@ -269,3 +315,19 @@ export const getAccessibleTemplates = (permissionPreset) => {
     t.target.includes('all') || t.target.includes(preset)
   );
 };
+
+/** Recommended layout template id for a department permission preset. */
+export const getRecommendedTemplateId = (permissionPreset) => {
+  const map = {
+    sales: 'sales-command',
+    operations: 'operations-hub',
+    admin: 'admin-control',
+    'artist-management': 'artist-manager',
+    'artist-business': 'artist-manager',
+  };
+  return map[permissionPreset] || 'coreknot';
+};
+
+/** Default grid elements for a permission preset (new users / reset). */
+export const getDefaultLayoutElements = (permissionPreset) =>
+  getDefaultTierElements(permissionPreset);

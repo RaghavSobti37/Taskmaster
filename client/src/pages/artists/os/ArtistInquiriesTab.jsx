@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
 import { Card, Badge, DataTable, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
@@ -37,7 +38,7 @@ export default function ArtistInquiriesTab({ artistId, isPreview }) {
       header: 'Date',
       render: (row) => (
         <span className="text-xs">
-          {row.eventDate ? new Date(row.eventDate).toLocaleDateString('en-IN') : '—'}
+          {row.eventDate ? formatDisplayDate(new Date(row.eventDate)) : '—'}
         </span>
       ),
     },

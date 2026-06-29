@@ -103,7 +103,7 @@ export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) =>
   });
 };
 
-const useUpdateProject = () => {
+export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/projects/${id}`, data),

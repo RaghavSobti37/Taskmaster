@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, GripVertical, Plus, EyeOff, Scaling, PanelRight, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LayoutDashboard, PanelRight, Plus, X, ArrowLeft, GripVertical, Minus } from 'lucide-react';
 import {
   useDashboardPreset,
   savedLayoutOptionValue,
@@ -9,59 +10,52 @@ import {
 } from '../../../hooks/queries/dashboard';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
-import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
-import { DesktopRecommendedBanner, LoadingState } from '../../../components/ui';
+import {
+  COMPONENT_REGISTRY,
+  LAYOUT_TEMPLATES,
+  getAccessibleComponents,
+  getAccessibleTemplates,
+  getRecommendedTemplateId,
+} from '../../../lib/componentRegistry';
+import {
+  DASHBOARD_SECTIONS,
+  DASHBOARD_LAYOUT_VERSION,
+  DEFAULT_SECTION_STATE,
+  getDefaultTierElements,
+  getWidgetSection,
+  normalizeDashboardElements,
+  resolveSectionState,
+} from '../../../lib/dashboardSections';
+import { DesktopRecommendedBanner, LoadingState, Button } from '../../../components/ui';
+import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
+import DashboardCollapsibleSection from '../../../components/dashboard/DashboardCollapsibleSection';
 import { useIsMobile } from '../../../hooks/useBreakpoint';
+import { isAdminUser } from '../../../utils/departmentPermissions';
+
+const SECTION_PREVIEW_HINTS = {
+  'status-strip': 'System health, backups, leave & reimbursement alerts',
+  'daily-actions': 'Clock in, calendar, tasks, review queue',
+  'team-context': 'Leaderboard, projects today, announcements',
+  analytics: 'CRM stats, campaigns, department metrics, PostHog',
+  more: 'Notes, pin board, composer, daily missions',
+};
+
+function sectionMaxCols(sectionId) {
+  if (sectionId === 'more') return 3;
+  return 4;
+}
 
 const GRID_COLS = 4;
-const GAP = 16;
-const CELL_HEIGHT = 160;
 
-const clampCol = (col, size) => Math.max(1, Math.min(col, GRID_COLS - (parseInt(size) || 1) + 1));
-const clampRow = (row) => Math.max(1, row);
+const getElementSection = (el) => el.section || getWidgetSection(el.componentId);
 
-/** Element occupying a grid cell (row + column within span). */
-const findElementAtGridCell = (elements, row, col, excludeId = null) => {
-  const visible = elements.filter((e) => e.visible && e.componentId !== excludeId);
-  return (
-    visible.find((el) => {
-      const size = parseInt(el.size, 10) || 1;
-      const startCol = clampCol(el.col, el.size);
-      const startRow = el.row || 1;
-      return row === startRow && col >= startCol && col < startCol + size;
-    }) || null
-  );
-};
-
-/** Drag/drop: swap with widget under cursor, or move into empty cell — never repack others. */
-const applyDragLayout = (elements, dragId, target, origin) => {
-  const dragged = elements.find((e) => e.componentId === dragId);
-  if (!dragged || !target || !origin) return elements;
-
-  const targetCol = clampCol(target.col, dragged.size);
-  const targetRow = clampRow(target.row);
-  const origCol = clampCol(origin.col, dragged.size);
-  const origRow = clampRow(origin.row);
-  const hit = findElementAtGridCell(elements, targetRow, targetCol, dragId);
-
-  return elements.map((el) => {
-    if (el.componentId === dragId) {
-      return { ...el, row: targetRow, col: targetCol };
-    }
-    if (hit && el.componentId === hit.componentId) {
-      return { ...el, row: origRow, col: origCol };
-    }
-    return el;
-  });
-};
-
-/** Pack all visible widgets (templates, load, add) — not used during drag. */
-const resolveCollisions = (elements) => {
-  const visibleEls = elements.filter((e) => e.visible);
-  const hiddenEls = elements.filter((e) => !e.visible);
+/** Pack widgets inside one section grid (respects size / col / row). */
+const packSectionElements = (sectionElements, maxCols) => {
+  const visibleEls = sectionElements.filter((e) => e.visible !== false);
+  const hiddenEls = sectionElements.filter((e) => e.visible === false);
 
   const reqPos = [...visibleEls].sort(
-    (a, b) => (a.row - b.row) || (a.col - b.col)
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.row - b.row) || (a.col - b.col)
   );
 
   const grid = [];
@@ -78,13 +72,13 @@ const resolveCollisions = (elements) => {
 
   const placed = [];
   for (const el of reqPos) {
-    const sizeNum = parseInt(el.size, 10) || 1;
+    const sizeNum = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
     let placedRow = 1;
     let placedCol = 1;
     let found = false;
 
     for (let r = 1; r < 100; r++) {
-      for (let c = 1; c <= GRID_COLS - sizeNum + 1; c++) {
+      for (let c = 1; c <= maxCols - sizeNum + 1; c++) {
         if (!isOccupied(r, c, sizeNum)) {
           placedRow = r;
           placedCol = c;
@@ -96,49 +90,125 @@ const resolveCollisions = (elements) => {
     }
 
     markOccupied(placedRow, placedCol, sizeNum);
-    placed.push({ ...el, row: placedRow, col: placedCol });
+    placed.push({ ...el, row: placedRow, col: placedCol, size: String(sizeNum) });
   }
 
   return [...placed, ...hiddenEls];
 };
 
-const findFirstAvailableVacancy = (elements, sizeNum) => {
-  const visibleEls = elements.filter(e => e.visible);
-  const grid = [];
-  const markOccupied = (r, c, size) => {
-    if (!grid[r]) grid[r] = [];
-    for (let i = 0; i < size; i++) grid[r][c + i] = true;
-  };
-  
-  visibleEls.forEach(el => markOccupied(el.row, el.col, parseInt(el.size) || 1));
+const repackAllSections = (elements) => {
+  const hidden = elements.filter((e) => e.visible === false);
+  const packed = [];
 
-  const isOccupied = (r, c, size) => {
-    for (let i = 0; i < size; i++) {
-      if (grid[r] && grid[r][c + i]) return true;
-    }
-    return false;
-  };
-
-  for (let r = 1; r < 100; r++) {
-    for (let c = 1; c <= GRID_COLS - sizeNum + 1; c++) {
-      if (!isOccupied(r, c, sizeNum)) {
-        return { row: r, col: c };
-      }
+  for (const section of DASHBOARD_SECTIONS) {
+    const sectionEls = elements.filter(
+      (e) => e.visible !== false && getElementSection(e) === section.id
+    );
+    if (sectionEls.length) {
+      packed.push(...packSectionElements(sectionEls, sectionMaxCols(section.id)));
     }
   }
-  return { row: 99, col: 1 };
+
+  const packedIds = new Set(packed.map((e) => e.componentId));
+  elements
+    .filter((e) => e.visible !== false && !packedIds.has(e.componentId))
+    .forEach((e) => packed.push(e));
+
+  return [...packed, ...hidden];
 };
+
+const resolveCollisions = (elements) => repackAllSections(elements);
+
+const mergeSectionPacked = (allElements, sectionId, orderedSectionEls) => {
+  const packed = packSectionElements(orderedSectionEls, sectionMaxCols(sectionId));
+  const packedMap = Object.fromEntries(packed.map((e) => [e.componentId, e]));
+  return allElements.map((e) => packedMap[e.componentId] || e);
+};
+
+const buildSavePayload = (elements) => {
+  const hidden = elements.filter((el) => el.visible === false);
+  const visible = elements.filter((el) => el.visible !== false);
+  const payload = [];
+  let order = 0;
+
+  for (const section of DASHBOARD_SECTIONS) {
+    const sectionItems = visible
+      .filter((el) => getElementSection(el) === section.id)
+      .sort((a, b) => (a.row - b.row) || (a.col - b.col) || (a.order ?? 0) - (b.order ?? 0));
+
+    sectionItems.forEach((el) => {
+      order += 1;
+      payload.push({
+        componentId: el.componentId,
+        section: section.id,
+        size: el.size || COMPONENT_REGISTRY[el.componentId]?.defaultSize || '1',
+        col: el.col ?? 1,
+        row: el.row ?? 1,
+        order,
+        visible: true,
+      });
+    });
+  }
+
+  hidden.forEach((el) => {
+    payload.push({
+      componentId: el.componentId,
+      section: el.section || getWidgetSection(el.componentId),
+      size: el.size || '1',
+      col: el.col ?? 1,
+      row: el.row ?? 99,
+      order: 99999,
+      visible: false,
+    });
+  });
+
+  return payload;
+};
+
+function widgetGridStyle(el, sectionId) {
+  const maxCols = sectionMaxCols(sectionId);
+  const size = Math.min(Math.max(parseInt(el.size, 10) || 1, 1), maxCols);
+  return { gridColumn: `span ${size}` };
+}
+
+function sectionGridStyle(sectionId) {
+  const cols = sectionMaxCols(sectionId);
+  const minRow = sectionId === 'status-strip' ? 120 : sectionId === 'analytics' ? 140 : 150;
+  return {
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridAutoRows: `minmax(${minRow}px, auto)`,
+    gridAutoFlow: 'row dense',
+  };
+}
+
+function widgetCardMinHeight(sectionId) {
+  if (sectionId === 'status-strip') return 'min-h-[120px]';
+  if (sectionId === 'analytics') return 'min-h-[140px]';
+  return 'min-h-[150px]';
+}
 
 export default function DashboardCustomizationTab() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const permissionPreset = user?.departmentId?.permissionPreset || 'standard';
-  
+  const permissionPreset = useMemo(() => {
+    if (isAdminUser(user)) return 'admin';
+    return user?.departmentId?.permissionPreset || user?.departmentId?.slug || 'standard';
+  }, [user]);
+
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [originalElements, setOriginalElements] = useState([]);
-  const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
+  const [originalSnapshot, setOriginalSnapshot] = useState('');
+  const {
+    data: dashboardPreset,
+    isLoading: presetLoading,
+    isError: presetError,
+    error: presetErr,
+    refetch: refetchPreset,
+  } = useDashboardPreset();
   const [dashboardElements, setDashboardElements] = useState([]);
+  const [sectionState, setSectionState] = useState({ ...DEFAULT_SECTION_STATE });
+  const [previewCollapsed, setPreviewCollapsed] = useState({ ...DEFAULT_SECTION_STATE });
   const [selectedTemplate, setSelectedTemplate] = useState('custom');
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [layoutNameInput, setLayoutNameInput] = useState('');
@@ -151,39 +221,37 @@ export default function DashboardCustomizationTab() {
   );
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const [dragId, setDragId] = useState(null);
-  const [dragDelta, setDragDelta] = useState({ dx: 0, dy: 0 });
-  const [dropTarget, setDropTarget] = useState(null); 
-  const dragRef = useRef(null); 
-  const gridRef = useRef(null);
-  const dropTargetRef = useRef(null);
+  const [dragState, setDragState] = useState(null);
+  const [dropTargetId, setDropTargetId] = useState(null);
 
   useEffect(() => {
     if (presetLoading) return;
-    let init;
-    if (dashboardPreset?.elements?.length) {
-      init = dashboardPreset.elements.map((el, i) => ({
-        ...el, col: el.col ?? 1, row: el.row ?? (i + 1),
-      }));
-    } else {
-      init = JSON.parse(JSON.stringify(LAYOUT_TEMPLATES.find(t => t.id === 'coreknot').elements.map(e => ({...e, visible: true}))));
-    }
-    
-    const accessibleCompIds = getAccessibleComponents(permissionPreset);
-    init = init.filter(el => accessibleCompIds.includes(el.componentId));
-    
-    // Auto-pack once on load just to be safe
+    const raw = dashboardPreset?.elements?.length
+      ? dashboardPreset.elements
+      : getDefaultTierElements(permissionPreset);
+    let init = normalizeDashboardElements(raw, permissionPreset).map((el, i) => ({
+      ...el,
+      section: el.section || getWidgetSection(el.componentId),
+      col: el.col ?? ((i % GRID_COLS) + 1),
+      row: el.row ?? (Math.floor(i / GRID_COLS) + 1),
+    }));
     init = resolveCollisions(init);
-    
+    const initSections = resolveSectionState(dashboardPreset?.sectionState);
     setDashboardElements(init);
-    setOriginalElements(JSON.parse(JSON.stringify(init)));
+    setSectionState(initSections);
+    setPreviewCollapsed({ ...initSections });
+    setOriginalSnapshot(JSON.stringify({ elements: init, sectionState: initSections }));
+    if (dashboardPreset?.name) setLayoutNameInput(dashboardPreset.name);
 
     if (!templateInitRef.current) {
       const presets = dashboardPreset?.presets || [];
-      const match = presets.find((p) => p.name === dashboardPreset?.name);
-      if (match) {
-        setSelectedTemplate(savedLayoutOptionValue(match.name));
+      const currentName = dashboardPreset?.name;
+      const savedMatch = presets.find((p) => p.name === currentName);
+      if (savedMatch) {
+        setSelectedTemplate(savedLayoutOptionValue(savedMatch.name));
+      } else if (currentName) {
+        const builtin = LAYOUT_TEMPLATES.find((t) => t.name === currentName);
+        if (builtin) setSelectedTemplate(builtin.id);
       }
       templateInitRef.current = true;
     }
@@ -221,7 +289,6 @@ export default function DashboardCustomizationTab() {
 
       const packed = resolveCollisions(elements);
       setDashboardElements(packed);
-      setOriginalElements(JSON.parse(JSON.stringify(packed)));
       setSelectedTemplate(templateId);
       return;
     }
@@ -245,148 +312,148 @@ export default function DashboardCustomizationTab() {
     setSelectedTemplate(templateId);
   };
 
-  const getGridMetrics = useCallback(() => {
-    if (!gridRef.current) return null;
-    const rect = gridRef.current.getBoundingClientRect();
-    const colWidth = (rect.width - (GRID_COLS - 1) * GAP) / GRID_COLS;
-    return { rect, colWidth };
-  }, []);
+  const handleResetToDepartment = () => {
+    const defaults = getDefaultTierElements(permissionPreset).map((el, i) => ({
+      ...el,
+      col: el.col ?? ((i % GRID_COLS) + 1),
+      row: el.row ?? (Math.floor(i / GRID_COLS) + 1),
+    }));
+    const packed = resolveCollisions(defaults);
+    setDashboardElements(packed);
+    setSectionState({ ...DEFAULT_SECTION_STATE });
+    setPreviewCollapsed({ ...DEFAULT_SECTION_STATE });
+    setSelectedTemplate(getRecommendedTemplateId(permissionPreset));
+  };
 
-  const cellFromPoint = useCallback((clientX, clientY, elSize) => {
-    const m = getGridMetrics();
-    if (!m) return null;
-    const relX = clientX - m.rect.left;
-    const relY = clientY - m.rect.top;
-    const col = Math.floor(relX / (m.colWidth + GAP)) + 1;
-    const row = Math.floor(relY / (CELL_HEIGHT + GAP)) + 1;
-    return { col: clampCol(col, elSize), row: clampRow(row) };
-  }, [getGridMetrics]);
+  const setSectionOpenByDefault = (sectionId, openByDefault) => {
+    setSectionState((prev) => ({ ...prev, [sectionId]: !openByDefault }));
+  };
 
-  const placeElement = useCallback((componentId, updates) => {
-    setDashboardElements(prev => {
-      const next = prev.map(el => {
-        if (el.componentId !== componentId) return el;
-        const n = { ...el, ...updates };
-        n.col = clampCol(n.col, n.size);
-        n.row = clampRow(n.row);
-        return n;
-      });
-      return resolveCollisions(next);
-    });
-    setSelectedTemplate('custom');
-  }, []);
+  const setPreviewSectionCollapsed = (sectionId, collapsed) => {
+    setPreviewCollapsed((prev) => ({ ...prev, [sectionId]: collapsed }));
+  };
+
+  const renderOpenByDefaultControl = (sectionId) => (
+    <label className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] cursor-pointer whitespace-nowrap">
+      <input
+        type="checkbox"
+        className="rounded"
+        checked={!sectionState[sectionId]}
+        onChange={(e) => setSectionOpenByDefault(sectionId, e.target.checked)}
+      />
+      Open by default
+    </label>
+  );
 
   const toggleVisibility = (componentId, e) => {
     if (e) e.stopPropagation();
-    setDashboardElements(prev => {
-      const next = prev.map(el =>
-        el.componentId === componentId ? { ...el, visible: !el.visible } : el
+    setDashboardElements((prev) =>
+      repackAllSections(
+        prev.map((el) =>
+          el.componentId === componentId ? { ...el, visible: !el.visible } : el
+        )
+      )
+    );
+    setSelectedTemplate('custom');
+  };
+
+  const cycleWidgetSize = (componentId, delta) => {
+    setDashboardElements((prev) => {
+      const target = prev.find((e) => e.componentId === componentId);
+      if (!target) return prev;
+      const sectionId = getElementSection(target);
+      const maxCols = sectionMaxCols(sectionId);
+      const current = Math.min(parseInt(target.size, 10) || 1, maxCols);
+      const next = Math.min(maxCols, Math.max(1, current + delta));
+      if (next === current) return prev;
+      return repackAllSections(
+        prev.map((e) =>
+          e.componentId === componentId ? { ...e, size: String(next) } : e
+        )
       );
-      return resolveCollisions(next);
     });
+    setSelectedTemplate('custom');
+  };
+
+  const handleDragStart = (componentId, sectionId) => (e) => {
+    setDragState({ componentId, sectionId });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', componentId);
+  };
+
+  const handleDragEnd = () => {
+    setDragState(null);
+    setDropTargetId(null);
+  };
+
+  const handleDropOnWidget = (targetId, sectionId) => (e) => {
+    e.preventDefault();
+    setDropTargetId(null);
+    if (!dragState || dragState.sectionId !== sectionId) return;
+    const fromId = dragState.componentId;
+    if (fromId === targetId) return;
+
+    setDashboardElements((prev) => {
+      const sectionEls = prev
+        .filter((el) => el.visible !== false && getElementSection(el) === sectionId)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.row - b.row) || (a.col - b.col));
+      const fromIdx = sectionEls.findIndex((el) => el.componentId === fromId);
+      const toIdx = sectionEls.findIndex((el) => el.componentId === targetId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+
+      const reordered = [...sectionEls];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+      const withOrder = reordered.map((el, i) => ({ ...el, order: i + 1 }));
+      return mergeSectionPacked(prev, sectionId, withOrder);
+    });
+    setDragState(null);
     setSelectedTemplate('custom');
   };
 
   const addComponent = (componentId) => {
     const meta = COMPONENT_REGISTRY[componentId];
     if (!meta) return;
-    setDashboardElements(prev => {
-      const exists = prev.find(p => p.componentId === componentId);
-      const sizeStr = exists ? exists.size : '1';
-      const vacancy = findFirstAvailableVacancy(prev, parseInt(sizeStr));
-      
-      let nextState;
+    const section = getWidgetSection(componentId);
+    setDashboardElements((prev) => {
+      const exists = prev.find((p) => p.componentId === componentId);
+      const sizeStr = meta.defaultSize || '1';
+      const sectionOrder = prev
+        .filter((p) => p.visible && getElementSection(p) === section)
+        .length;
+
+      let next;
       if (exists) {
-        nextState = prev.map(p => p.componentId === componentId ? { ...p, visible: true, col: vacancy.col, row: vacancy.row } : p);
+        next = prev.map((p) => (p.componentId === componentId
+          ? {
+            ...p,
+            visible: true,
+            section,
+            order: sectionOrder + 1,
+          }
+          : p));
       } else {
-        const newEl = { componentId, size: sizeStr, col: vacancy.col, row: vacancy.row, visible: true };
-        nextState = [...prev, newEl];
+        next = [
+          ...prev,
+          {
+            componentId,
+            size: sizeStr,
+            col: 1,
+            row: 1,
+            order: sectionOrder + 1,
+            visible: true,
+            section,
+          },
+        ];
       }
-      return resolveCollisions(nextState);
+      return repackAllSections(next);
     });
     setSelectedTemplate('custom');
-    
+
     setTimeout(() => {
-      if (gridRef.current) {
-        const els = gridRef.current.querySelectorAll(`[data-comp="${componentId}"]`);
-        if (els.length > 0) {
-          els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
+      const el = document.querySelector(`[data-comp="${componentId}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
-  };
-
-  const handlePointerDown = useCallback((e, el) => {
-    if (e.button !== 0) return;
-    if (e.target.closest('.no-drag')) return; 
-    e.preventDefault();
-    const dr = { id: el.componentId, startX: e.clientX, startY: e.clientY, size: el.size, origCol: el.col, origRow: el.row };
-    dragRef.current = dr;
-    dropTargetRef.current = { col: el.col, row: el.row };
-    setDragId(el.componentId);
-    setDragDelta({ dx: 0, dy: 0 });
-    setDropTarget({ col: el.col, row: el.row });
-
-    const onMove = (ev) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const dx = ev.clientX - d.startX;
-      const dy = ev.clientY - d.startY;
-      setDragDelta({ dx, dy });
-      const target = cellFromPoint(ev.clientX, ev.clientY, d.size);
-      if (target && (target.col !== dropTargetRef.current.col || target.row !== dropTargetRef.current.row)) {
-        dropTargetRef.current = target;
-        setDropTarget({ ...target });
-      }
-    };
-
-    const onUp = () => {
-      const d = dragRef.current;
-      const t = dropTargetRef.current;
-      if (d && t) {
-        const origin = { col: d.origCol, row: d.origRow };
-        setDashboardElements((prev) => applyDragLayout(prev, d.id, t, origin));
-        setSelectedTemplate('custom');
-      }
-      dragRef.current = null;
-      dropTargetRef.current = null;
-      setDragId(null);
-      setDragDelta({ dx: 0, dy: 0 });
-      setDropTarget(null);
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-    };
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }, [cellFromPoint]);
-
-  const handleResizeDown = (e, el) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const startX = e.clientX;
-    const startSize = parseInt(el.size) || 1;
-    const m = getGridMetrics();
-    if (!m) return;
-    const cellW = m.colWidth + GAP;
-    let newSize = startSize;
-
-    const onMove = (ev) => {
-      const dx = ev.clientX - startX;
-      const sizeDelta = Math.round(dx / cellW);
-      newSize = startSize + sizeDelta;
-      newSize = Math.max(1, Math.min(newSize, GRID_COLS - el.col + 1));
-      if (newSize !== parseInt(el.size)) {
-         placeElement(el.componentId, { size: String(newSize) });
-      }
-    };
-    
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-    };
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
   };
 
   const persistLayout = async (layoutName) => {
@@ -399,21 +466,16 @@ export default function DashboardCustomizationTab() {
     setSaving(true);
     setSaveError('');
     try {
-      const elementsToSave = dashboardElements.map((el, idx) => ({
-        componentId: el.componentId,
-        size: el.size,
-        col: el.col,
-        row: el.row,
-        order: idx + 1,
-        visible: el.visible,
-      }));
+      const elementsToSave = buildSavePayload(dashboardElements);
       await axios.post('/api/customization/dashboard/preset', {
         layoutName: trimmed,
         name: trimmed,
         department: 'custom',
+        layoutVersion: DASHBOARD_LAYOUT_VERSION,
+        sectionState,
         elements: elementsToSave,
       });
-      setOriginalElements(JSON.parse(JSON.stringify(dashboardElements)));
+      setOriginalSnapshot(JSON.stringify({ elements: dashboardElements, sectionState }));
       setSelectedTemplate(savedLayoutOptionValue(trimmed));
       setNameModalOpen(false);
       setLayoutNameInput('');
@@ -427,10 +489,18 @@ export default function DashboardCustomizationTab() {
     }
   };
 
+  const resolveSaveLayoutName = () => {
+    const savedName = parseSavedLayoutOptionValue(selectedTemplate);
+    if (savedName) return savedName;
+    const builtin = LAYOUT_TEMPLATES.find((t) => t.id === selectedTemplate);
+    if (builtin) return builtin.name;
+    return null;
+  };
+
   const handleSave = async () => {
-    const existingName = parseSavedLayoutOptionValue(selectedTemplate);
-    if (existingName) {
-      await persistLayout(existingName);
+    const layoutName = resolveSaveLayoutName();
+    if (layoutName) {
+      await persistLayout(layoutName);
       return;
     }
     setLayoutNameInput('');
@@ -444,11 +514,17 @@ export default function DashboardCustomizationTab() {
   };
 
   const handleRevert = () => {
-    setDashboardElements(JSON.parse(JSON.stringify(originalElements)));
+    const parsed = JSON.parse(originalSnapshot || '{}');
+    if (parsed.elements) setDashboardElements(parsed.elements);
+    if (parsed.sectionState) {
+      setSectionState(parsed.sectionState);
+      setPreviewCollapsed({ ...parsed.sectionState });
+    }
     setSelectedTemplate('custom');
   };
 
-  const hasChanges = JSON.stringify(dashboardElements) !== JSON.stringify(originalElements);
+  const hasChanges = JSON.stringify({ elements: dashboardElements, sectionState })
+    !== originalSnapshot;
 
   useUnsavedChanges({
     hasChanges,
@@ -456,7 +532,6 @@ export default function DashboardCustomizationTab() {
     onCancel: handleRevert,
     isSaving: saving,
   });
-  const colSpanClass = (size) => ({ '4': 'col-span-4', '3': 'col-span-3', '2': 'col-span-2' }[String(size)] || 'col-span-1');
 
   const renderDummyContent = (id) => {
     switch (id) {
@@ -488,11 +563,18 @@ export default function DashboardCustomizationTab() {
         </div>
       );
       case 'projects-today': return (
-        <div className="flex gap-3 w-full items-end justify-center h-14">
-          <div className="flex flex-col items-center gap-1"><div className="w-7 bg-blue-500 rounded-t h-14"></div><div className="text-[8px] text-[var(--color-text-muted)]">Web</div></div>
-          <div className="flex flex-col items-center gap-1"><div className="w-7 bg-blue-400 rounded-t h-10"></div><div className="text-[8px] text-[var(--color-text-muted)]">API</div></div>
-          <div className="flex flex-col items-center gap-1"><div className="w-7 bg-blue-300 rounded-t h-6"></div><div className="text-[8px] text-[var(--color-text-muted)]">App</div></div>
-          <div className="flex flex-col items-center gap-1"><div className="w-7 bg-emerald-400 rounded-t h-8"></div><div className="text-[8px] text-[var(--color-text-muted)]">CRM</div></div>
+        <div className="flex gap-2 w-full max-w-full items-end justify-center overflow-hidden">
+          {[
+            { h: 'h-8', c: 'bg-blue-500', label: 'Web' },
+            { h: 'h-6', c: 'bg-blue-400', label: 'API' },
+            { h: 'h-4', c: 'bg-blue-300', label: 'App' },
+            { h: 'h-5', c: 'bg-emerald-400', label: 'CRM' },
+          ].map(({ h, c, label }) => (
+            <div key={label} className="flex flex-col items-center gap-0.5 min-w-0 flex-1 max-w-[2.25rem]">
+              <div className={`w-full max-w-7 ${c} rounded-t ${h}`} />
+              <div className="text-[8px] text-[var(--color-text-muted)] truncate w-full text-center">{label}</div>
+            </div>
+          ))}
         </div>
       );
       case 'schedule': return (
@@ -568,12 +650,120 @@ export default function DashboardCustomizationTab() {
       case 'last-backup': return (
         <div className="w-full space-y-2"><div className="h-3 w-2/3 bg-emerald-500/40 rounded"></div><div className="h-2 w-full bg-[var(--color-text-muted)] opacity-30 rounded"></div><div className="flex gap-1"><div className="h-4 w-12 bg-[var(--color-bg-secondary)] rounded"></div><div className="h-4 w-14 bg-[var(--color-bg-secondary)] rounded"></div></div></div>
       );
+      case 'render-logs':
+      case 'render-logs-production':
+      case 'render-logs-staging-api':
+      case 'render-logs-staging-nest': return (
+        <div className="w-full flex flex-col items-center justify-center gap-2 py-1">
+          <div className="h-8 w-full rounded bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
+            <div className="h-2 w-2/3 bg-teal-500/50 rounded" />
+          </div>
+          <span className="text-[9px] text-teal-600/80 font-semibold">Render logs</span>
+        </div>
+      );
       case 'artist-calendar': return (
         <div className="space-y-1.5 w-full"><div className="h-6 bg-purple-500/20 rounded flex items-center px-2"><div className="h-2 w-1/2 bg-purple-500/60 rounded"></div></div><div className="h-6 bg-pink-500/20 rounded flex items-center px-2"><div className="h-2 w-1/3 bg-pink-500/60 rounded"></div></div></div>
       );
       default: return <div className="w-full h-8 bg-[var(--color-bg-secondary)] rounded"></div>;
     }
   };
+
+  const renderEditorWidgetCard = (el, sectionId) => {
+    const maxCols = sectionMaxCols(sectionId);
+    const size = Math.min(parseInt(el.size, 10) || 1, maxCols);
+    const isDragging = dragState?.componentId === el.componentId;
+    const isDropTarget = dropTargetId === el.componentId;
+
+    return (
+      <div
+        key={el.componentId}
+        data-comp={el.componentId}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (dragState?.sectionId === sectionId) setDropTargetId(el.componentId);
+        }}
+        onDragLeave={() => setDropTargetId(null)}
+        onDrop={handleDropOnWidget(el.componentId, sectionId)}
+        style={widgetGridStyle(el, sectionId)}
+        className={`${widgetCardMinHeight(sectionId)} w-full min-h-0 self-stretch overflow-hidden bg-[var(--color-bg-primary)] rounded-[var(--radius-atomic)] flex flex-col pt-3 pb-2 px-3 relative group box-border transition-[box-shadow,opacity] ${
+          isDragging ? 'opacity-40' : ''
+        } ${isDropTarget ? 'ring-2 ring-blue-500' : ''}`}
+      >
+        <div className="flex items-start justify-between w-full mb-2 gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span
+              draggable
+              onDragStart={handleDragStart(el.componentId, sectionId)}
+              onDragEnd={handleDragEnd}
+              className="cursor-grab active:cursor-grabbing p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] shrink-0 touch-none"
+              title="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </span>
+            <span className="font-bold text-sm text-[var(--color-text-primary)] tracking-tight truncate">
+              {COMPONENT_REGISTRY[el.componentId]?.label || el.componentId.replace(/-/g, ' ')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => toggleVisibility(el.componentId, e)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-[var(--color-bg-secondary)] rounded hover:bg-rose-500/10 hover:text-rose-500 text-[var(--color-text-muted)] shrink-0"
+            title="Remove from dashboard"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 w-full flex items-center justify-center py-2 px-1 overflow-hidden pointer-events-none">
+          {renderDummyContent(el.componentId)}
+        </div>
+        <div
+          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/95 shadow-sm"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            disabled={size <= 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleWidgetSize(el.componentId, -1);
+            }}
+            className="p-1 rounded-l-md hover:bg-[var(--color-bg-primary)] disabled:opacity-30 text-[var(--color-text-muted)]"
+            title="Narrower"
+            aria-label="Make widget narrower"
+          >
+            <Minus size={12} />
+          </button>
+          <span className="text-[9px] font-bold tabular-nums px-1 min-w-[1.25rem] text-center text-[var(--color-text-primary)]">
+            {size}
+          </span>
+          <button
+            type="button"
+            disabled={size >= maxCols}
+            onClick={(e) => {
+              e.stopPropagation();
+              cycleWidgetSize(el.componentId, 1);
+            }}
+            className="p-1 rounded-r-md hover:bg-[var(--color-bg-primary)] disabled:opacity-30 text-[var(--color-text-muted)]"
+            title="Wider"
+            aria-label="Make widget wider"
+          >
+            <Plus size={12} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSectionGrid = (sectionId, widgets) => (
+    <div
+      data-section-grid={sectionId}
+      className="grid w-full gap-3 items-stretch"
+      style={sectionGridStyle(sectionId)}
+      onDragOver={(e) => e.preventDefault()}
+    >
+      {widgets.map((el) => renderEditorWidgetCard(el, sectionId))}
+    </div>
+  );
 
   const accessibleTemplates = getAccessibleTemplates(permissionPreset);
   const accessibleComponents = getAccessibleComponents(permissionPreset);
@@ -583,40 +773,64 @@ export default function DashboardCustomizationTab() {
     return !existing || !existing.visible;
   });
 
-  const displayElements = useMemo(() => {
-    if (dragId && dropTarget && dragRef.current) {
-      const origin = { col: dragRef.current.origCol, row: dragRef.current.origRow };
-      return applyDragLayout(dashboardElements, dragId, dropTarget, origin);
-    }
-    return dashboardElements;
-  }, [dashboardElements, dragId, dropTarget]);
+  const libraryBySection = useMemo(() => {
+    const buckets = DASHBOARD_SECTIONS.map((section) => ({
+      ...section,
+      items: availableToAdd.filter((id) => getWidgetSection(id) === section.id),
+    }));
+    return buckets.filter((b) => b.items.length > 0);
+  }, [availableToAdd]);
 
-  const maxVisibleRow = useMemo(
-    () => displayElements
+  const elementsGroupedBySection = useMemo(() => {
+    const groups = Object.fromEntries(DASHBOARD_SECTIONS.map((s) => [s.id, []]));
+    dashboardElements
       .filter((el) => el.visible)
-      .reduce((max, el) => Math.max(max, el.row || 1), 1),
-    [displayElements]
-  );
-
-  const gridContentHeight = maxVisibleRow * CELL_HEIGHT + Math.max(0, maxVisibleRow - 1) * GAP;
-  const workspaceMinHeight = Math.max(500, gridContentHeight + 48);
+      .forEach((el) => {
+        const sid = el.section || getWidgetSection(el.componentId);
+        if (groups[sid]) groups[sid].push(el);
+      });
+    Object.keys(groups).forEach((key) => {
+      groups[key].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.row - b.row) || (a.col - b.col));
+    });
+    return groups;
+  }, [dashboardElements]);
 
   return (
     <div className="flex h-full overflow-hidden relative">
       <div className="flex-1 flex flex-col overflow-y-auto px-4 md:px-8 custom-scrollbar pt-6 pb-24">
-        <DesktopRecommendedBanner className="mb-4" message="Drag-and-drop dashboard layout editing requires a desktop screen." />
-        <div className={`mb-4 flex items-center justify-between ${isMobile ? 'pointer-events-none opacity-50' : ''}`}>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-            <LayoutDashboard size={18} className="text-blue-500" /> Grid Layout
-          </h2>
+        <DesktopRecommendedBanner className="mb-4" message="Section layout editing works best on a desktop screen." />
+        <QueryErrorSlot
+          isError={presetError}
+          error={presetErr}
+          onRetry={() => refetchPreset()}
+          fallback="Failed to load dashboard layout"
+          className="mb-4"
+        />
+        <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 ${isMobile ? 'pointer-events-none opacity-50' : ''}`}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="p-2 rounded-lg border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)]"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+              <LayoutDashboard size={18} className="text-blue-500" /> Dashboard layout
+            </h2>
+          </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--color-text-muted)]">Template:</span>
-              <select 
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="dashboard-template-select" className="text-xs text-[var(--color-text-muted)]">
+                Layout template
+              </label>
+              <select
+                id="dashboard-template-select"
                 value={selectedTemplate}
                 onChange={(e) => applyTemplate(e.target.value)}
-                className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md px-2 py-1 text-xs outline-none text-[var(--color-text-primary)] max-w-[180px]"
+                className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md px-2 py-1.5 text-xs outline-none text-[var(--color-text-primary)] max-w-[200px]"
               >
                 <option value="custom">Custom layout (save to name)</option>
                 {savedLayouts.length > 0 && (
@@ -635,7 +849,19 @@ export default function DashboardCustomizationTab() {
                 </optgroup>
               </select>
             </div>
+            <Button type="button" variant="secondary" size="sm" onClick={handleResetToDepartment}>
+              Reset defaults
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!hasChanges || saving}
+              onClick={handleSave}
+            >
+              {saving ? 'Saving…' : 'Save layout'}
+            </Button>
             <button 
+              type="button"
               onClick={() => setDrawerOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg text-sm text-[var(--color-text-primary)] transition-colors"
             >
@@ -644,114 +870,63 @@ export default function DashboardCustomizationTab() {
           </div>
         </div>
 
+        <p className="mb-4 text-xs text-[var(--color-text-muted)] leading-relaxed max-w-3xl">
+          Drag the grip to reorder. Use <strong>− / +</strong> on the bottom-right corner to narrow or
+          widen a widget. Expand a section to preview it — that does not change <strong>Open by default</strong>.
+        </p>
+
         {presetLoading && dashboardElements.length === 0 ? (
-          <LoadingState showPhrase className="min-h-[400px] border border-[var(--color-bg-border)] rounded-3xl" />
+          <LoadingState showPhrase className="min-h-[400px] rounded-3xl" />
         ) : (
         <div
-          className="border-[4px] border-[var(--color-text-primary)] bg-[var(--color-bg-workspace)] rounded-3xl p-6"
-          style={{ minHeight: workspaceMinHeight }}
+          className={`w-full max-w-full box-border bg-[var(--color-bg-workspace)] rounded-3xl p-4 sm:p-6 space-y-6 min-h-[min(400px,50vh)] ${isMobile ? 'pointer-events-none opacity-50' : ''}`}
         >
-          <div
-            ref={gridRef}
-            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative ${isMobile ? 'pointer-events-none opacity-50' : ''}`}
-            style={{
-              gridAutoRows: `${CELL_HEIGHT}px`,
-              gridTemplateRows: `repeat(${maxVisibleRow}, ${CELL_HEIGHT}px)`,
-            }}
-          >
-            {displayElements.filter(el => el.visible).map((el) => {
-              const cCol = clampCol(el.col, el.size);
-              const isDragging = dragId === el.componentId;
+          {DASHBOARD_SECTIONS.map((section) => {
+            const widgets = elementsGroupedBySection[section.id] || [];
 
-              if (isDragging) {
-                const origCol = clampCol(dragRef.current.origCol, el.size);
-                const origRow = dragRef.current.origRow || 1;
-
-                return (
-                  <React.Fragment key={el.componentId}>
-                    {/* Placeholder Outline */}
-                    <div
-                      className={`${colSpanClass(el.size)} bg-blue-500/10 border-2 border-dashed border-blue-500/50 rounded-xl transition-all duration-200`}
-                      style={{
-                        gridColumnStart: cCol,
-                        gridRowStart: el.row || 1,
-                      }}
-                    />
-                    
-                    {/* The actual dragged element */}
-                    <div
-                      data-comp={el.componentId}
-                      className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-xl flex flex-col pt-3 pb-2 px-3 relative group select-none border-blue-500 z-50 shadow-2xl pointer-events-none`}
-                      style={{
-                        gridColumnStart: origCol,
-                        gridRowStart: origRow,
-                        transform: `translate(${dragDelta.dx}px, ${dragDelta.dy}px) scale(1.03)`,
-                        transition: 'none'
-                      }}
-                    >
-                      <div className="flex items-start justify-between w-full mb-2">
-                        <span className="font-bold text-sm md:text-base text-[var(--color-text-primary)] tracking-tight capitalize">
-                          {COMPONENT_REGISTRY[el.componentId]?.label || el.componentId.replace(/-/g, ' ')}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <GripVertical size={16} className="text-[var(--color-text-muted)]" />
-                        </div>
-                      </div>
-                      <div className="flex-1 w-full flex items-center justify-center py-2 px-1">
-                        {renderDummyContent(el.componentId)}
-                      </div>
-                    </div>
-                  </React.Fragment>
-                );
-              }
-
+            if (!section.collapsible) {
               return (
-                <div
-                  key={el.componentId}
-                  data-comp={el.componentId}
-                  className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-[var(--radius-atomic)] flex flex-col pt-3 pb-2 px-3 relative group select-none border-[var(--color-text-primary)] transition-all duration-300`}
-                  style={{
-                    gridColumnStart: cCol,
-                    gridRowStart: el.row || 1,
-                    transform: 'scale(1)'
-                  }}
-                >
-                  <div className="flex items-start justify-between w-full mb-2">
-                    <span className="font-bold text-sm md:text-base text-[var(--color-text-primary)] tracking-tight capitalize">
-                      {COMPONENT_REGISTRY[el.componentId]?.label || el.componentId.replace(/-/g, ' ')}
+                <div key={section.id} className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                      {section.sectionLabel || section.title.toUpperCase()}
+                    </p>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
+                      Always expanded on dashboard
                     </span>
-                    <div className="flex items-center gap-1">
-                      <button onClick={(e) => toggleVisibility(el.componentId, e)}
-                        className="no-drag opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-[var(--color-bg-secondary)] rounded hover:bg-rose-500/10 hover:text-rose-500 text-[var(--color-text-muted)]"
-                        title="Remove Component"
-                      >
-                        <X size={14} />
-                      </button>
-                      <div
-                        className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        onPointerDown={(e) => handlePointerDown(e, el)}
-                        title="Drag to reposition"
-                      >
-                        <GripVertical size={16} />
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="flex-1 w-full flex items-center justify-center py-2 px-1">
-                    {renderDummyContent(el.componentId)}
-                  </div>
-                  
-                  <div 
-                    className="no-drag absolute bottom-0 right-0 w-6 h-6 flex items-center justify-center cursor-ew-resize text-[var(--color-text-muted)] hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    onPointerDown={(e) => handleResizeDown(e, el)}
-                    title="Drag to resize"
-                  >
-                    <Scaling size={12} className="rotate-90" />
-                  </div>
+                  {widgets.length > 0 ? (
+                    renderSectionGrid(section.id, widgets)
+                  ) : (
+                    <p className="text-xs text-[var(--color-text-muted)] italic py-1">
+                      No widgets in this section — open Library to add.
+                    </p>
+                  )}
                 </div>
               );
-            })}
-          </div>
+            }
+
+            return (
+              <DashboardCollapsibleSection
+                key={section.id}
+                title={section.title}
+                subtitle={SECTION_PREVIEW_HINTS[section.id] || section.collapsedLabel}
+                sectionLabel={section.id === 'analytics' ? section.sectionLabel : undefined}
+                strip={section.id === 'status-strip'}
+                collapsed={!!previewCollapsed[section.id]}
+                onCollapsedChange={(v) => setPreviewSectionCollapsed(section.id, v)}
+                trailing={renderOpenByDefaultControl(section.id)}
+              >
+                {widgets.length > 0 ? (
+                  renderSectionGrid(section.id, widgets)
+                ) : (
+                  <p className="text-xs text-[var(--color-text-muted)] italic py-2">
+                    No widgets in this section — open Library to add.
+                  </p>
+                )}
+              </DashboardCollapsibleSection>
+            );
+          })}
         </div>
         )}
       </div>
@@ -813,28 +988,52 @@ export default function DashboardCustomizationTab() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+          <p className="text-[11px] text-[var(--color-text-muted)] mb-4 leading-relaxed">
+            Tap a widget to add it to your grid. Items are grouped by the section they appear in on
+            your dashboard.
+          </p>
           {availableToAdd.length === 0 ? (
             <div className="text-center text-sm text-[var(--color-text-muted)] mt-10">All components added!</div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {availableToAdd.map(id => {
-                const meta = COMPONENT_REGISTRY[id];
-                return (
-                  <div 
-                    key={id} 
-                    className="bg-[var(--color-bg-workspace)] border-2 border-dashed border-[var(--color-bg-border)] rounded-xl p-4 flex items-center justify-between hover:border-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-all cursor-pointer group" 
-                    onClick={() => addComponent(id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-xl opacity-70 group-hover:opacity-100 transition-opacity">{meta?.icon || '📊'}</div>
-                      <span className="text-sm font-bold text-[var(--color-text-primary)] capitalize">{meta?.label || id.replace(/-/g, ' ')}</span>
-                    </div>
-                    <div className="p-1.5 bg-[var(--color-bg-primary)] rounded-md text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:bg-blue-500/10 transition-colors">
-                      <Plus size={16} />
-                    </div>
+            <div className="flex flex-col gap-5">
+              {libraryBySection.map((section) => (
+                <div key={section.id}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">
+                    {section.title}
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {section.items.map((id) => {
+                      const meta = COMPONENT_REGISTRY[id];
+                      return (
+                        <div
+                          key={id}
+                          className="bg-[var(--color-bg-workspace)] border-2 border-dashed border-[var(--color-bg-border)] rounded-xl p-3 flex items-center justify-between hover:border-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-all cursor-pointer group"
+                          onClick={() => addComponent(id)}
+                        >
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="text-xl opacity-70 group-hover:opacity-100 transition-opacity shrink-0">
+                              {meta?.icon || '📊'}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-sm font-bold text-[var(--color-text-primary)] block truncate">
+                                {meta?.label || id.replace(/-/g, ' ')}
+                              </span>
+                              {meta?.description && (
+                                <span className="text-[11px] text-[var(--color-text-muted)] line-clamp-2">
+                                  {meta.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="p-1.5 bg-[var(--color-bg-primary)] rounded-md text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:bg-blue-500/10 transition-colors shrink-0">
+                            <Plus size={16} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>

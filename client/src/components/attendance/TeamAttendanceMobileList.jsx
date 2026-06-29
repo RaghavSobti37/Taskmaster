@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import { format } from 'date-fns';
 import { Check, Lock } from 'lucide-react';
 import { UserLabel, Spinner } from '../ui';
@@ -47,7 +48,7 @@ const DayBlock = ({ userRow, date, dayLabel, entry, status, onEdit, statusDot })
         <div className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
           {dayLabel}
           <span className="font-bold normal-case tracking-normal text-[var(--color-text-primary)] ml-1.5">
-            {format(date, 'EEE, MMM d')}
+            {formatWeekdayDate(date)}
           </span>
         </div>
         <button
@@ -70,7 +71,7 @@ const DayBlock = ({ userRow, date, dayLabel, entry, status, onEdit, statusDot })
       <div className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
         {dayLabel}
         <span className="font-bold normal-case tracking-normal text-[var(--color-text-primary)] ml-1.5">
-          {format(date, 'EEE, MMM d')}
+          {formatWeekdayDate(date)}
         </span>
       </div>
       <div className="flex gap-2">

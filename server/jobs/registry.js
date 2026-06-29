@@ -33,13 +33,6 @@ const CRON_JOBS = [
     description: 'Daily digest notifications',
   },
   {
-    id: 'crm-reach-out-digest',
-    module: '../services/crmReachOutDigestService',
-    init: 'init',
-    schedule: '0 19 * * *',
-    description: 'Daily CRM call stats email to manager (Akash + Satyam)',
-  },
-  {
     id: 'supabase-sync',
     module: '../workers/supabaseSyncWorker',
     init: 'initSupabaseSyncWorker',
@@ -62,13 +55,6 @@ const QUEUE_WORKERS = [
     init: 'initImportWorker',
     queue: 'import',
     description: 'CRM / data import jobs',
-  },
-  {
-    id: 'log-archiver',
-    module: '../workers/logArchiverWorker',
-    init: 'initLogArchiverWorker',
-    queue: 'log-archiver',
-    description: 'Archive system logs',
   },
   {
     id: 'supabase-sync-worker',

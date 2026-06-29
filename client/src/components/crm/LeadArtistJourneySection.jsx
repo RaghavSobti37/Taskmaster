@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { format } from 'date-fns';
 import { Music } from 'lucide-react';
@@ -22,7 +23,7 @@ function ReadOnlyField({ label, value, fullWidth = false }) {
 function formatSubmittedAt(d) {
   if (!d) return null;
   try {
-    return format(new Date(d), 'MMM dd, yyyy');
+    return formatDisplayDate(new Date(d));
   } catch {
     return null;
   }

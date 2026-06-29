@@ -6,6 +6,7 @@ import axios from 'axios';
 import BrandLogo from '../../components/brand/BrandLogo';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import MarketingThemeToggle from '../../components/MarketingThemeToggle';
+import { brand, footer } from '../../constants/marketingContent';
 
 export default function UserDataDeletion() {
   const location = useLocation();
@@ -60,7 +61,7 @@ export default function UserDataDeletion() {
         <div className="flex items-center gap-3 relative z-10">
           <BrandLogo size={40} />
           <div>
-            <span className="font-bold text-base tracking-tight text-foreground block">Coreknot</span>
+            <span className="font-bold text-base tracking-tight text-foreground block">{brand.name}</span>
             <span className="text-[10px] text-[var(--color-text-secondary)] font-mono">Data Deletion Protocol v1.1</span>
           </div>
         </div>
@@ -220,7 +221,7 @@ export default function UserDataDeletion() {
         )}
 
         <footer className="pt-8 border-t border-border flex items-center justify-between text-xs text-[var(--color-text-secondary)] flex-wrap gap-4">
-          <span>© 2026 Coreknot / The Shakti Collective. All rights reserved.</span>
+          <span>{footer.copyright()}</span>
           <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
         </footer>
       </main>

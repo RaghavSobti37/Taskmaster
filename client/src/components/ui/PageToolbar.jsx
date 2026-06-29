@@ -20,7 +20,7 @@ const TOOLBAR_FIELD_TYPES = new Set([
 function normalizeToolbarChild(child) {
   if (!isValidElement(child)) return child;
   if (!TOOLBAR_FIELD_TYPES.has(child.type)) return child;
-  if (child.props?.variant === 'field') return child;
+  if (child.props?.variant === 'toolbar') return child;
   return cloneElement(child, { variant: 'toolbar' });
 }
 
@@ -31,6 +31,7 @@ function normalizeToolbarChild(child) {
 export default function PageToolbar({
   icon: Icon,
   title,
+  leading,
   children,
   actions,
   className = '',
@@ -148,6 +149,7 @@ export default function PageToolbar({
 
     const titleBlock = hasTitle ? (
       <div className="flex items-center gap-2 min-w-0 flex-1">
+        {leading && <div className="shrink-0">{leading}</div>}
         {Icon && (
           <div className="flex items-center justify-center w-9 h-9 rounded-[var(--radius-atomic)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
             <Icon size={16} strokeWidth={2.5} />
@@ -196,6 +198,7 @@ export default function PageToolbar({
             </>
           ) : (
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              {leading && <div className="shrink-0">{leading}</div>}
               {inlineSearch && (
                 <div className="flex-1 min-w-[140px] basis-[min(100%,200px)]">
                   {isValidElement(inlineSearch)
@@ -234,8 +237,9 @@ export default function PageToolbar({
     <div
       className={`page-toolbar-row flex flex-nowrap items-center gap-2 min-w-0 min-h-[44px] py-2 border-b border-[var(--color-bg-border)] overflow-x-auto custom-scrollbar ${className}`}
     >
-      {(Icon || title) && (
+      {(leading || Icon || title) && (
         <div className="flex items-center gap-2 shrink-0 pr-3 h-9 border-r border-[var(--color-bg-border)]">
+          {leading && <div className="shrink-0">{leading}</div>}
           {Icon && (
             <div className="flex items-center justify-center w-9 h-9 rounded-[var(--radius-atomic)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
               <Icon size={16} strokeWidth={2.5} />

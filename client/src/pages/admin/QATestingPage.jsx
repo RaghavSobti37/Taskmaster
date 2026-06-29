@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy, Lock, Globe, Gauge, FileWarning, ScrollText, RotateCcw, GitBranch } from 'lucide-react';
-import { PageContainer, PageHeader, Button, Badge, LoadingState } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Badge, LoadingState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -313,7 +314,7 @@ const QATestingPage = () => {
     });
   }, [allLighthouseRoutes]);
 
-  const { data: historyData, isLoading: historyLoading } = useQuery({
+  const { data: historyData, isLoading: historyLoading, isError: historyError, error: historyErr, refetch: refetchHistory } = useQuery({
     queryKey: ['qa-history'],
     queryFn: async () => {
       const { data } = await axios.get(`/api/qa/history`);
@@ -1133,6 +1134,7 @@ const QATestingPage = () => {
       <PageHeader
         title="Omni-Security & React Doctor Engine"
         icon={ShieldAlert}
+        backTo={ADMIN_CONSOLE_PATH}
         actions={
           <div className="flex flex-wrap items-center gap-2 justify-end">
             {latestResults && !isRunning && (
@@ -1178,6 +1180,13 @@ const QATestingPage = () => {
       />
 
       <div className="max-w-6xl mx-auto py-6 space-y-8">
+
+        {historyError && (
+          <QueryErrorBanner
+            message={getQueryErrorMessage(historyErr, 'Failed to load QA history')}
+            onRetry={() => refetchHistory()}
+          />
+        )}
 
         {/* Control Panel / Test Runner */}
         <section className="p-6 overflow-hidden relative min-h-[300px] flex flex-col justify-center border border-[var(--color-bg-border)]">

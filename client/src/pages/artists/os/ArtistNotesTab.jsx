@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDisplayDateTime } from '../../../utils/dateDisplay';
 import { Card, Button, Input } from '../../../components/ui';
 import ArtistOsQueryShell from './ArtistOsQueryShell';
 import { Plus } from 'lucide-react';
@@ -30,7 +31,7 @@ export default function ArtistNotesTab({ artistId, isPreview }) {
           <Card key={n._id} className="p-4">
             <p className="text-xs whitespace-pre-wrap">{n.body}</p>
             <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
-              {n.authorName || 'Team'} · {new Date(n.createdAt).toLocaleString('en-IN')}
+              {n.authorName || 'Team'} · {formatDisplayDateTime(n.createdAt)}
             </p>
           </Card>
         ))

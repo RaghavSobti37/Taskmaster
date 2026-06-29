@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
@@ -22,55 +22,13 @@ import {
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
-import { initSentry } from './lib/sentry';
-import { initDatadogRum } from './lib/datadog';
-import { initPostHog, getPostHogClient } from './lib/posthog';
-import { initTelemetryCorrelation } from './lib/telemetryCorrelation';
-import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
-import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
 import { Analytics } from '@vercel/analytics/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
 const AgentationDev = __AGENTATION_ENABLED__
   ? lazy(() => import('./components/dev/AgentationDev'))
   : null;
-
-const bootAnalytics = () => {
-  if (!hasAnalyticsConsent()) return;
-  initSentry();
-  initDatadogRum();
-  initPostHog();
-  initTelemetryCorrelation();
-};
-
-bootAnalytics();
-
-function Root() {
-  const [posthogClient, setPosthogClient] = useState(() => getPostHogClient());
-
-  useEffect(() => {
-    const onConsent = (event) => {
-      if (!event.detail?.analytics) return;
-      bootAnalytics();
-      setPosthogClient(getPostHogClient());
-    };
-    window.addEventListener('coreknot:cookie-consent', onConsent);
-    return () => window.removeEventListener('coreknot:cookie-consent', onConsent);
-  }, []);
-
-  const tree = posthogClient ? (
-    <PostHogProvider client={posthogClient}>
-      <PostHogErrorBoundary>
-        {appTree}
-      </PostHogErrorBoundary>
-    </PostHogProvider>
-  ) : (
-    appTree
-  );
-
-  return tree;
-}
 
 applyPwaDesktopDocumentFlag();
 watchDisplayModeFlags();
@@ -136,7 +94,7 @@ const appTree = (
                       <App />
                     </LocalFirstRoot>
                     <CookieBanner />
-                    <Analytics />
+                    {import.meta.env.PROD ? <Analytics /> : null}
                     {AgentationDev ? (
                       <Suspense fallback={null}>
                         <AgentationDev />
@@ -155,6 +113,6 @@ const appTree = (
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Root />
+    {appTree}
   </React.StrictMode>,
 )

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const Log = require('../../models/Log');
-const SystemLog = require('../../models/SystemLog');
 const CRMAudit = require('../../models/CRMAudit');
 const XPAuditLog = require('../../models/XPAuditLog');
 const QATestRun = require('../../models/QATestRun');
@@ -16,7 +15,6 @@ const USER_ROLLUP_CONCURRENCY = 6;
 
 const COLLECTIONS = [
   { stream: 'app_logs', model: Log, table: 'app_logs' },
-  { stream: 'system_logs', model: SystemLog, table: 'system_logs' },
   { stream: 'crm_audits', model: CRMAudit, table: 'crm_audits' },
   { stream: 'xp_audit_logs', model: XPAuditLog, table: 'xp_audit_logs' },
   { stream: 'qa_test_runs', model: QATestRun, table: 'qa_test_runs' },

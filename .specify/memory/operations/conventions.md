@@ -1,5 +1,13 @@
 # Operations & Conventions
 
+## Date display
+
+- **User-facing:** `DD/MM/YYYY` everywhere (UI, emails, reports).
+- **Helpers:** `client/src/utils/dateDisplay.js`, `shared/dateDisplay.js` (`formatDisplayDate`, `DATE_DISPLAY_FORMAT` = `dd/MM/yyyy`).
+- **Storage / API / `<input type="date">`:** keep ISO `yyyy-MM-dd` — display-only change.
+
+---
+
 ## Local dev (Windows / OneDrive)
 
 - Repo path under OneDrive: expect mtime churn — use committed `client/vite.config.js` watch tuning; do not register service workers in Vite dev
@@ -31,7 +39,7 @@ npm run audit:history     # After history rewrite or fork import
 
 | Path | Purpose |
 | --- | --- |
-| `.cursor/rules/agent-os.mdc` | Agent OS — Ponytail + Superpowers + Caveman layers |
+| `.cursor/rules/date-format.mdc` | DD/MM/YYYY user-facing date convention |
 | `.cursor/rules/backend-standards.mdc` | Express route patterns, validation, errors |
 | `.cursor/rules/component-standards.mdc` | React component structure |
 | `.cursor/rules/rbac-defense.mdc` | Page + API permission alignment |

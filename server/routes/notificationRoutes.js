@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const Task = require('../models/Task');
-const TaskAssignment = require('../models/TaskAssignment');
 const Lead = require('../models/Lead');
 const CalendarEvent = require('../models/CalendarEvent');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
-const { startOfDay, endOfDay, isBefore } = require('date-fns');
+const { startOfDay, endOfDay } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
@@ -16,14 +15,14 @@ const { validateBody } = require('../validation/validateBody');
 const { FOLLOWUP_DATE_FIELD } = require('../utils/followupDateQuery');
 const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 const { aggregateWithTenant } = require('../repositories/aggregateWithTenant');
-const { countProjectOverdueTasks } = require('../utils/projectStatusCounts');
+const { countProjectOverdueTasks, buildUserTodoStatsFilter } = require('../utils/projectStatusCounts');
 const { getCache, setCache } = require('../services/cacheService');
 
 const STATUS_COUNTS_TTL_SECONDS = 20;
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
-    const cacheKey = `status-counts:v1:${req.user._id}`;
+    const cacheKey = `status-counts:v2:${req.user._id}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
@@ -33,20 +32,11 @@ router.get('/status-counts', protect, async (req, res) => {
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
 
-    const assignedTaskIds = await TaskAssignment.distinct('taskId', { userId: req.user._id });
-    const taskScope = assignedTaskIds.length ? { _id: { $in: assignedTaskIds } } : { _id: null };
-
-    const overdueTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: { $ne: 'done' },
-      dueDate: { $lt: now },
-    });
-
-    const todayTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: { $ne: 'done' },
-      dueDate: { $gte: todayStart, $lte: todayEnd },
-    });
+    const todoStatsBase = await buildUserTodoStatsFilter(req.user._id);
+    const todoStats = await TaskService.getTodoStats(todoStatsBase);
+    const overdueTasksCount = todoStats.overdue || 0;
+    const todayTasksCount = todoStats.today || 0;
+    const inReviewTasksCount = todoStats.inReview || 0;
 
     const [followupAgg] = await aggregateWithTenant(Lead, [
       {
@@ -87,11 +77,6 @@ router.get('/status-counts', protect, async (req, res) => {
       date: { $gte: todayStart, $lte: todayEnd }
     });
 
-    const inReviewTasksCount = await Task.countDocuments({
-      ...taskScope,
-      status: 'in-review',
-    });
-
     let reviewPendingCount = 0;
     let projectReviewCount = 0;
     try {
@@ -111,11 +96,25 @@ router.get('/status-counts', protect, async (req, res) => {
 
     const allowed = await getAllowedCategoriesForUser(req.user);
 
+    const unreadNotifications = await Notification.find({
+      recipient: req.user._id,
+      read: false,
+    }).select('category').lean();
+    const unreadByCategory = {};
+    for (const row of unreadNotifications) {
+      if (row.category) unreadByCategory[row.category] = (unreadByCategory[row.category] || 0) + 1;
+    }
+
     const payload = {
       tasks: { overdue: overdueTasksCount, today: todayTasksCount, inReview: inReviewTasksCount },
       followups: { overdue: overdueFollowupsCount, today: todayFollowupsCount },
       calendar: { today: todayCalendarCount },
-      notifications: { unread: 0, byCategory: {}, localOnly: true, allowedCategories: ['all', ...allowed] },
+      notifications: {
+        unread: unreadNotifications.length,
+        byCategory: unreadByCategory,
+        localOnly: false,
+        allowedCategories: ['all', ...allowed],
+      },
       review: { pending: reviewPendingCount },
       projects: { overdue: projectOverdueCount, review: projectReviewCount },
     };
@@ -177,27 +176,60 @@ router.get('/', protect, async (req, res) => {
   try {
     const allowed = await getAllowedCategoriesForUser(req.user);
     const user = await User.findById(req.user._id).populate('departmentId', 'slug name');
+    const rows = await Notification.find({ recipient: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .populate('actorId', 'name avatar')
+      .lean();
+
+    const notifications = rows.map((row) => ({
+      ...row,
+      _id: row._id?.toString?.() || String(row._id),
+      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    }));
+
     res.json({
-      notifications: [],
-      localOnly: true,
+      notifications,
+      localOnly: false,
       allowedCategories: ['all', ...allowed],
       departmentSlug: user?.departmentId?.slug || '',
     });
   } catch (error) {
+    logger.error('Notifications', 'List failed', { error: error.message, userId: req.user?._id });
     res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 });
 
 router.patch('/:id/read', protect, async (req, res) => {
-  res.json({ _id: req.params.id, read: true, localOnly: true });
+  try {
+    const doc = await Notification.findOneAndUpdate(
+      { _id: req.params.id, recipient: req.user._id },
+      { read: true },
+      { new: true },
+    );
+    if (!doc) return res.status(404).json({ error: 'Notification not found' });
+    res.json({ _id: doc._id.toString(), read: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark notification read' });
+  }
 });
 
 router.patch('/read-all', protect, async (req, res) => {
-  res.json({ message: 'All notifications marked as read', localOnly: true });
+  try {
+    await Notification.updateMany({ recipient: req.user._id, read: false }, { read: true });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark all read' });
+  }
 });
 
 router.delete('/', protect, async (req, res) => {
-  res.json({ message: 'Notifications cleared', deletedCount: 0, localOnly: true });
+  try {
+    const result = await Notification.deleteMany({ recipient: req.user._id });
+    res.json({ message: 'Notifications cleared', deletedCount: result.deletedCount || 0 });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear notifications' });
+  }
 });
 
 module.exports = router;

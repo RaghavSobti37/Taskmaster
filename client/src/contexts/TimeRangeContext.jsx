@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../utils/dateDisplay';
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
   endOfDay,
@@ -84,7 +85,7 @@ export function computeRange(preset, customStart, customEnd) {
       const end = customEnd ? endOfDay(new Date(customEnd)) : todayEnd;
       const label =
         customStart && customEnd
-          ? `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`
+          ? `${formatDisplayDateShort(start)} – ${formatDisplayDate(end)}`
           : PRESET_LABELS.custom;
       return { preset, label, start, end };
     }

@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Receipt, Clock, CheckCircle, XCircle } from 'lucide-react';
@@ -72,7 +73,7 @@ function ReimbursementsCard() {
                       {status.label}
                       {item.createdAt && (
                         <span className="text-[var(--color-text-muted)] font-normal ml-1">
-                          · {format(new Date(item.createdAt), 'MMM d, yyyy')}
+                          · {formatDisplayDate(new Date(item.createdAt))}
                         </span>
                       )}
                     </span>

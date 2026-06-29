@@ -1,8 +1,10 @@
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { Receipt, FileText, Upload, Clock, CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { Input, Button, DataTable } from '../../../components/ui';
+import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
 import { NexusModal } from '../../../components/ui/modals';;
 import WorkspaceProjectFields from '../../../components/forms/WorkspaceProjectFields';
 import { useProjects } from '../../../hooks/queries/projects';
@@ -63,7 +65,13 @@ export default function InvoiceTab() {
     }
   }, [workspaces]);
 
-  const { data: myReimbursements = [], isLoading: reimbursementsLoading } = useMyReimbursements();
+  const {
+    data: myReimbursements = [],
+    isLoading: reimbursementsLoading,
+    isError: reimbursementsError,
+    error: reimbursementsErr,
+    refetch: refetchReimbursements,
+  } = useMyReimbursements();
 
   const reimbursementColumns = useMemo(
     () => [
@@ -102,7 +110,7 @@ export default function InvoiceTab() {
         header: 'Submitted',
         render: (item) =>
           item.createdAt
-            ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            ? formatDisplayDate(new Date(item.createdAt))
             : '—',
       },
     ],
@@ -361,13 +369,20 @@ export default function InvoiceTab() {
         </div>
       </section>
 
-      {(reimbursementsLoading || myReimbursements.length > 0) && (
+      {(reimbursementsLoading || reimbursementsError || myReimbursements.length > 0) && (
         <section className="pt-2">
           <div className="pb-4 border-b border-[var(--color-bg-border)]">
             <h3 className="tm-widget-label flex items-center gap-2">
               <Clock size={14} className="text-amber-500" /> Your Reimbursements
             </h3>
           </div>
+          <QueryErrorSlot
+            isError={reimbursementsError}
+            error={reimbursementsErr}
+            onRetry={() => refetchReimbursements()}
+            fallback="Failed to load reimbursements"
+            className="mb-3"
+          />
           <DataTable
             columns={reimbursementColumns}
             data={myReimbursements}

@@ -1,5 +1,6 @@
 import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Disc, ExternalLink, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Card, Button, Input, DataTable } from '../../../components/ui';
 import ArtistOsQueryShell from '../os/ArtistOsQueryShell';
@@ -142,7 +143,10 @@ export default function ArtistReleasesTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.releaseDate) return alert('Title and release date required');
+    if (!form.title || !form.releaseDate) {
+      toast.error('Title and release date required');
+      return;
+    }
     const payload = {
       title: form.title,
       releaseDate: form.releaseDate,

@@ -1,5 +1,6 @@
 import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Badge, DataTable, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
 import { formatInr } from './artistOsConstants';
@@ -51,7 +52,10 @@ export default function ArtistGigsTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.gigDate) return alert('Name and date required');
+    if (!form.name || !form.gigDate) {
+      toast.error('Name and date required');
+      return;
+    }
     await createMutation.mutateAsync({
       artistId,
       data: {

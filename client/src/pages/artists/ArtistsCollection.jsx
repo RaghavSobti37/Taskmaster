@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, TrendingUp, RefreshCw, Globe, BarChart3,
@@ -39,7 +40,10 @@ export default function ArtistsCollection() {
 
   const handleAddArtistSubmit = async (e) => {
     e.preventDefault();
-    if (!newArtist.name) return alert('Artist Name is required');
+    if (!newArtist.name) {
+      toast.error('Artist name is required');
+      return;
+    }
     try {
       const payload = {
         name: newArtist.name,
@@ -55,7 +59,7 @@ export default function ArtistsCollection() {
       setIsAddModalOpen(false);
       setNewArtist({ name: '', bio: '', website: '', spotifyId: '', youtubeId: '', instaId: '' });
     } catch (err) {
-      alert('Failed to create artist: ' + err.message);
+      toast.error(`Failed to create artist: ${err.message}`);
     }
   };
 
@@ -67,7 +71,7 @@ export default function ArtistsCollection() {
       setSyncingId(null);
     } catch (err) {
       setSyncingId(null);
-      alert(`Sync failed: ${err.response?.data?.message || err.message}`);
+      toast.error(`Sync failed: ${err.response?.data?.message || err.message}`);
     }
   };
 

@@ -1,5 +1,6 @@
 import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Card, Badge, DataTable, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
 import { INQUIRY_STATUSES, BOOKING_PIPELINE_STAGES, formatInr } from './artistOsConstants';
@@ -51,7 +52,19 @@ export default function ArtistInquiriesTab({ artistId, isPreview }) {
           value={row.status}
           disabled={isPreview || updateMutation.isPending}
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => updateMutation.mutate({ artistId, inquiryId: row._id, data: { status: e.target.value } })}
+          onChange={(e) => {
+            const status = e.target.value;
+            updateMutation.mutate(
+              { artistId, inquiryId: row._id, data: { status } },
+              {
+                onSuccess: () => {
+                  if (status === 'confirmed') {
+                    toast.success('Inquiry confirmed — gig created on Gigs tab');
+                  }
+                },
+              }
+            );
+          }}
         >
           {INQUIRY_STATUSES.map((s) => (
             <option key={s.id} value={s.id}>{s.label}</option>
@@ -64,7 +77,10 @@ export default function ArtistInquiriesTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.clientName) return alert('Client name required');
+    if (!form.clientName) {
+      toast.error('Client name required');
+      return;
+    }
     await createMutation.mutateAsync({
       artistId,
       data: {

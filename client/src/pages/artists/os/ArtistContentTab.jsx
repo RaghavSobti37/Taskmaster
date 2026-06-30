@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Card, Button, Input, DataTable, Badge } from '../../../components/ui';
 import ArtistOsQueryShell from './ArtistOsQueryShell';
 import { NexusModal } from '../../../components/ui/modals';
@@ -103,7 +104,10 @@ export default function ArtistContentTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.url) return alert('Title and URL required');
+    if (!form.title || !form.url) {
+      toast.error('Title and URL required');
+      return;
+    }
     const payload = {
       type: form.type,
       title: form.title,

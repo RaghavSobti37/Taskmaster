@@ -15,11 +15,15 @@ export function useArtistDashboard(id, { isPreview = false } = {}) {
   const [searchParams] = useSearchParams();
   const shareToken = searchParams.get('token');
 
-  const previewQuery = useArtistPreview(id, shareToken, isPreview && !!shareToken);
-  const artistQuery = useArtist(id, !isPreview || !shareToken);
+  const hasValidPreviewToken = isPreview && !!shareToken;
+  const previewQuery = useArtistPreview(id, shareToken, hasValidPreviewToken);
+  const artistQuery = useArtist(id, !isPreview);
 
-  const artist = isPreview && shareToken ? previewQuery.data : artistQuery.data;
-  const isArtistLoading = isPreview && shareToken ? previewQuery.isLoading : artistQuery.isLoading;
+  const artist = isPreview ? previewQuery.data : artistQuery.data;
+  const isArtistLoading = isPreview
+    ? (shareToken ? previewQuery.isLoading : false)
+    : artistQuery.isLoading;
+  const previewInvalid = isPreview && !shareToken;
 
   const connections = artist?.connections || [];
   const normalized = artist?.normalized;
@@ -38,6 +42,7 @@ export function useArtistDashboard(id, { isPreview = false } = {}) {
   return {
     artist,
     isArtistLoading,
+    previewInvalid,
     shareToken,
     connections,
     normalized,

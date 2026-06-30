@@ -5,17 +5,11 @@ const lazyWithRetry = createLazyWithRetry;
 /** ponytail: code-split artist OS tabs — only active tab chunk loads */
 export const ARTIST_OS_TAB_LOADERS = {
   overview: () => lazyWithRetry(() => import('./os/ArtistCommandCenter')),
-  calendar: () => lazyWithRetry(() => import('./os/ArtistCalendarTab')),
-  inquiries: () => lazyWithRetry(() => import('./os/ArtistInquiriesTab')),
-  gigs: () => lazyWithRetry(() => import('./os/ArtistGigsTab')),
+  bookings: () => lazyWithRetry(() => import('./os/ArtistOsBookingsTab')),
   finance: () => lazyWithRetry(() => import('./os/ArtistFinanceTab')),
   analytics: () => lazyWithRetry(() => import('./os/ArtistAnalyticsTab')),
-  content: () => lazyWithRetry(() => import('./os/ArtistContentTab')),
-  releases: () => lazyWithRetry(() => import('./workspace/ArtistReleasesTab')),
-  notes: () => lazyWithRetry(() => import('./os/ArtistNotesTab')),
-  documents: () => lazyWithRetry(() => import('./os/ArtistDocumentsTab')),
-  contracts: () => lazyWithRetry(() => import('./os/ArtistContractsTab')),
-  team: () => lazyWithRetry(() => import('./workspace/ArtistTeamTab')),
+  content: () => lazyWithRetry(() => import('./os/ArtistOsContentHubTab')),
+  team: () => lazyWithRetry(() => import('./os/ArtistOsTeamHubTab')),
 };
 
 const osTabCache = new Map();

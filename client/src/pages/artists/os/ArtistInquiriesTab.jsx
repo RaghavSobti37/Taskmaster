@@ -59,7 +59,7 @@ export default function ArtistInquiriesTab({ artistId, isPreview }) {
               {
                 onSuccess: () => {
                   if (status === 'confirmed') {
-                    toast.success('Inquiry confirmed — gig created on Gigs tab');
+                    toast.success('Inquiry confirmed — gig created under Bookings');
                   }
                 },
               }

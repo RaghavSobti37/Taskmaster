@@ -1,17 +1,22 @@
 export const ARTIST_OS_TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'calendar', label: 'Calendar' },
-  { id: 'inquiries', label: 'Inquiries' },
-  { id: 'gigs', label: 'Gigs' },
+  { id: 'bookings', label: 'Bookings' },
   { id: 'finance', label: 'Finance' },
   { id: 'analytics', label: 'Analytics' },
   { id: 'content', label: 'Content' },
-  { id: 'releases', label: 'Releases' },
-  { id: 'notes', label: 'Team Notes' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'contracts', label: 'Contracts' },
   { id: 'team', label: 'Team' },
 ];
+
+/** Legacy ?tab= URLs → grouped tab + optional ?section= */
+export const ARTIST_OS_TAB_ALIASES = {
+  calendar: { tab: 'bookings', section: 'calendar' },
+  inquiries: { tab: 'bookings', section: 'inquiries' },
+  gigs: { tab: 'bookings', section: 'gigs' },
+  releases: { tab: 'content', section: 'releases' },
+  notes: { tab: 'team', section: 'notes' },
+  documents: { tab: 'team', section: 'documents' },
+  contracts: { tab: 'team', section: 'contracts' },
+};
 
 export const CALENDAR_EVENT_COLORS = {
   inquiry: { bg: 'bg-amber-400', label: 'Inquiry', hex: '#fbbf24' },

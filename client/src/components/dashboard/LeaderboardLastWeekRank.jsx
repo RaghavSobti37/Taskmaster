@@ -5,8 +5,8 @@ const LeaderboardLastWeekRank = ({ rank, weekLabel }) => {
   if (rank == null) return null;
 
   const title = weekLabel
-    ? `Rank ${rank} last week (${weekLabel})`
-    : `Rank ${rank} last week`;
+    ? `Rank ${rank} last month (${weekLabel})`
+    : `Rank ${rank} last month`;
 
   return (
     <span

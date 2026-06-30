@@ -142,6 +142,41 @@ const getPreviousWeekRange = () => {
   return getCurrentWeekRange(getDateKey(anchor));
 };
 
+const getFirstDayOfMonthDateKey = (referenceInput) => {
+  const dateKey = typeof referenceInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(referenceInput.trim())
+    ? referenceInput.trim()
+    : getDateKey(referenceInput instanceof Date ? referenceInput : new Date(referenceInput || Date.now()));
+  const [year, month] = dateKey.split('-');
+  return `${year}-${month}-01`;
+};
+
+const getLastDayOfMonthDateKey = (referenceInput) => {
+  const firstKey = getFirstDayOfMonthDateKey(referenceInput);
+  const anchor = toDateKeyAnchor(firstKey);
+  anchor.setMonth(anchor.getMonth() + 1);
+  anchor.setDate(anchor.getDate() - 1);
+  return getDateKey(anchor);
+};
+
+const getCurrentMonthRange = (monthStartInput) => {
+  const monthStartKey = monthStartInput
+    ? getFirstDayOfMonthDateKey(monthStartInput)
+    : getFirstDayOfMonthDateKey(getDateKey());
+
+  const monthStart = startOfDayFromKey(monthStartKey);
+  const monthEndKey = getLastDayOfMonthDateKey(monthStartKey);
+  const monthEnd = endOfDayFromKey(monthEndKey);
+
+  return { monthStart, monthEnd, monthStartKey, monthEndKey };
+};
+
+const getPreviousMonthRange = () => {
+  const { monthStartKey } = getCurrentMonthRange();
+  const anchor = toDateKeyAnchor(monthStartKey);
+  anchor.setDate(anchor.getDate() - 1);
+  return getCurrentMonthRange(getDateKey(anchor));
+};
+
 const validateAttendanceTimes = ({ dateKey, timeIn, timeOut, onLeave, isHalfDay }) => {
   const todayKey = getDateKey();
   const now = new Date();
@@ -193,6 +228,10 @@ module.exports = {
   getMondayDateKey,
   getCurrentWeekRange,
   getPreviousWeekRange,
+  getFirstDayOfMonthDateKey,
+  getLastDayOfMonthDateKey,
+  getCurrentMonthRange,
+  getPreviousMonthRange,
   validateAttendanceTimes,
   parseTimeToMinutes,
 };

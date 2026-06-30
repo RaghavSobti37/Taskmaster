@@ -1,4 +1,4 @@
-import { formatDisplayDateTime, formatDateKeyForDisplay } from '../../utils/dateDisplay';
+import { formatDisplayDateTime, formatDateKeyForDisplay, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, RefreshCw, Target, Users } from 'lucide-react';
 import { Button, Input } from '../ui';
@@ -95,8 +95,10 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
     <NexusModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Log Your Work"
-      subtitle={workDate ? formatDateKeyForDisplay(workDate, { withWeekday: true }) : undefined}
+      title={workDate ? formatWeekdayDateLong(`${workDate}T12:00:00`) : 'Select work date'}
+      subtitle="Log Your Work"
+      subtitleFirst
+      prominentTitle
       showFooter={false}
       size="lg"
     >
@@ -114,6 +116,11 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
               className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-bold tabular-nums"
               required
             />
+            {workDate ? (
+              <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
+                {formatDateKeyForDisplay(workDate, { withWeekday: true })}
+              </p>
+            ) : null}
           </div>
           <div className="text-[10px] text-[var(--color-text-muted)] flex items-end pb-2">
             Logged at submit: {formatDisplayDateTime(new Date())}

@@ -1,4 +1,4 @@
-import { formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDisplayDateTime, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import {
@@ -340,6 +340,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   max={normalizeWorkDate(new Date())}
                   onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
                   className="px-0 py-0.5 bg-transparent text-[10px] font-black uppercase tracking-widest tabular-nums border-0 outline-none w-full text-center"
+                  aria-label={formatWeekdayDateLong(selectedDate)}
                 />
               </div>
               <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
@@ -349,7 +350,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             )}
           </div>
         }
-      />
+      >
+        <p className="text-sm font-semibold text-[var(--color-text-secondary)] tabular-nums normal-case tracking-normal">
+          {formatWeekdayDateLong(selectedDate)}
+        </p>
+      </PageHeader>
 
       {logsError && (
         <QueryErrorBanner

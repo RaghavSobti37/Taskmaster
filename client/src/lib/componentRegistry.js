@@ -74,6 +74,15 @@ export const COMPONENT_REGISTRY = {
     mobileTier: 'analytics',
     mobileOrder: 33,
   },
+  'posthog-dashboard': {
+    label: 'PostHog Analytics',
+    description: 'Open PostHog product analytics dashboard (production project)',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '📊',
+    mobileTier: 'analytics',
+    mobileOrder: 34,
+  },
   // ── Artist Management ──
   'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨', mobileTier: 'action', mobileOrder: 8 },
 };
@@ -211,6 +220,7 @@ export const LAYOUT_TEMPLATES = [
       { componentId: 'system-health', size: '1', col: 1, row: 4 },
       { componentId: 'last-backup', size: '1', col: 2, row: 4 },
       { componentId: 'render-logs', size: '1', col: 3, row: 4 },
+      { componentId: 'posthog-dashboard', size: '1', col: 4, row: 4 },
       { componentId: 'pipeline-summary', size: '2', col: 3, row: 4 },
       { componentId: 'dept-stats', size: '2', col: 1, row: 5 },
       { componentId: 'campaign-metrics', size: '2', col: 3, row: 5 },

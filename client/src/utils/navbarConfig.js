@@ -234,6 +234,16 @@ export const HUB_CONFIG = {
         description: 'Tail coreknot-nest-staging on Render',
         externalLogTarget: 'staging-nest',
       },
+      {
+        id: 'posthog-dashboard',
+        label: 'PostHog Analytics',
+        key: 'admin_data',
+        icon: 'BarChart3',
+        section: 'analytics',
+        accent: 'purple',
+        description: 'Product analytics — production project dashboard',
+        externalUrl: 'posthog-dashboard',
+      },
     ],
   },
 };

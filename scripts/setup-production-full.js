@@ -284,6 +284,12 @@ function vercelEnvForProject(siteMode, hosts, posthogEnv) {
         { key: 'VITE_POSTHOG_HOST', value: posthogEnv.VITE_POSTHOG_HOST || 'https://us.i.posthog.com', target: ['production'] },
         { key: 'VITE_POSTHOG_APP_URL', value: frontendUrl(hosts), target: ['production'] },
       );
+      if (posthogEnv.VITE_POSTHOG_PROJECT_ID) {
+        base.push({ key: 'VITE_POSTHOG_PROJECT_ID', value: posthogEnv.VITE_POSTHOG_PROJECT_ID, target: ['production'] });
+      }
+      if (posthogEnv.VITE_POSTHOG_DASHBOARD_URL) {
+        base.push({ key: 'VITE_POSTHOG_DASHBOARD_URL', value: posthogEnv.VITE_POSTHOG_DASHBOARD_URL, target: ['production'] });
+      }
     }
   }
   return base;

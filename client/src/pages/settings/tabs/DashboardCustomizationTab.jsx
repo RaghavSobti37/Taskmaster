@@ -572,6 +572,14 @@ export default function DashboardCustomizationTab() {
           <span className="text-[9px] text-teal-600/80 font-semibold">Render logs</span>
         </div>
       );
+      case 'posthog-dashboard': return (
+        <div className="w-full flex flex-col items-center justify-center gap-2 py-1">
+          <div className="h-8 w-full rounded bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+            <div className="h-2 w-2/3 bg-violet-500/50 rounded" />
+          </div>
+          <span className="text-[9px] text-violet-600/80 font-semibold">PostHog</span>
+        </div>
+      );
       case 'artist-calendar': return (
         <div className="space-y-1.5 w-full"><div className="h-6 bg-purple-500/20 rounded flex items-center px-2"><div className="h-2 w-1/2 bg-purple-500/60 rounded"></div></div><div className="h-6 bg-pink-500/20 rounded flex items-center px-2"><div className="h-2 w-1/3 bg-pink-500/60 rounded"></div></div></div>
       );

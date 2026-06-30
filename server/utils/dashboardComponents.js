@@ -28,6 +28,7 @@ const COMPONENT_ACCESS = {
   'render-logs-production': ['admin'],
   'render-logs-staging-api': ['admin'],
   'render-logs-staging-nest': ['admin'],
+  'posthog-dashboard': ['admin'],
   'artist-calendar': ['artist-management'],
 };
 

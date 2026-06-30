@@ -66,8 +66,13 @@ function createApp() {
     },
   }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
-  // NoSQL injection guard — immediately after body parsers, before routes.
-  app.use(mongoSanitize({ allowDots: true }));
+  // ponytail: express-mongo-sanitize mutates req.query — broken on Express 5 (read-only getter)
+  app.use((req, _res, next) => {
+    const { sanitize } = mongoSanitize;
+    if (req.body && typeof req.body === 'object') req.body = sanitize(req.body);
+    if (req.params && typeof req.params === 'object') req.params = sanitize(req.params);
+    next();
+  });
   applyRateLimits(app);
 
   app.use('/api/public', require('../routes/publicRoutes'));

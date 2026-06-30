@@ -60,22 +60,22 @@ financeDocumentSchema.index({ submittedBy: 1 });
 financeDocumentSchema.index({ project: 1, referenceNumber: 1 });
 
 // Sanitize title / folderName; validate folder vs document
-financeDocumentSchema.pre('save', function (next) {
+financeDocumentSchema.pre('save', function () {
   if (this.isFolder) {
     if (!this.folderName) {
-      return next(new Error('folderName is required for folders'));
+      throw new Error('folderName is required for folders');
     }
     this.title = this.folderName;
     this.folderName = this.folderName.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
     this.title = this.folderName;
     if (!this.fileUrl) this.fileUrl = 'folder://placeholder';
-    return next();
+    return;
   }
   if (!this.title) {
-    return next(new Error('title is required for documents'));
+    throw new Error('title is required for documents');
   }
   if (!this.fileUrl) {
-    return next(new Error('fileUrl is required for documents'));
+    throw new Error('fileUrl is required for documents');
   }
   if (this.title) {
     this.title = this.title.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
@@ -83,7 +83,6 @@ financeDocumentSchema.pre('save', function (next) {
   if (this.description) {
     this.description = this.description.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
   }
-  next();
 });
 
 financeDocumentSchema.plugin(tenantPlugin);

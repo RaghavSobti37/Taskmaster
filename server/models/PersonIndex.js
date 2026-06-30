@@ -53,13 +53,8 @@ personIndexSchema.index({ 'inlets.key': 1 });
 personIndexSchema.index({ updatedAt: -1 });
 personIndexSchema.index({ name: 'text', email: 'text', phone: 'text' });
 
-personIndexSchema.pre('save', function (next) {
-  try {
-    applyPersonIdentityToDoc(this);
-    next();
-  } catch (err) {
-    next(err);
-  }
+personIndexSchema.pre('save', function () {
+  applyPersonIdentityToDoc(this);
 });
 
 personIndexSchema.plugin(tenantPlugin);

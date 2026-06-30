@@ -59,8 +59,8 @@ function computeTooltipLayout(placement, rect, isMobile, isCenterStep) {
   const vh = window.innerHeight;
   const margin = VIEWPORT_MARGIN;
   const gap = 12;
-  let top = margin;
-  let left = margin;
+  let top;
+  let left;
 
   if (placement === 'bottom') {
     top = rect.top + rect.height + gap;

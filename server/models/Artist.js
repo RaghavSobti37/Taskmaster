@@ -59,10 +59,9 @@ ArtistSchema.set('toObject', { virtuals: true });
 ArtistSchema.set('toJSON', { virtuals: true });
 
 // Input sanitization hook
-ArtistSchema.pre('save', function(next) {
+ArtistSchema.pre('save', function () {
   if (this.name) this.name = this.name.trim().replace(/\s+/g, ' ');
   if (this.slug) this.slug = this.slug.trim().toLowerCase().replace(/\s+/g, '-');
-  next();
 });
 
 ArtistSchema.index({ slug: 1 }, { unique: true, sparse: true });

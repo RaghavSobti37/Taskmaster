@@ -37,8 +37,18 @@ describe('pushSubscriptions', () => {
   });
 
   test('dedupePushSubscriptions caps at MAX_PUSH_SUBSCRIPTIONS', () => {
-    const subs = Array.from({ length: 8 }, (_, i) =>
-      sub(`https://x/${i}`, `device-${i} customua`, `2024-01-${String(i + 1).padStart(2, '0')}`)
+    const agents = [
+      'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0',
+      'Mozilla/5.0 (Macintosh) Safari/605.1.15',
+      'Mozilla/5.0 (iPhone) Safari/604.1',
+      'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0',
+      'Mozilla/5.0 (X11; Linux x86_64) Firefox/121.0',
+      'Mozilla/5.0 (Windows NT 10.0) Edg/120.0.0.0',
+      'Mozilla/5.0 (iPhone) CriOS/120.0.0.0',
+      'Mozilla/5.0 (Macintosh) Firefox/121.0',
+    ];
+    const subs = agents.map((ua, i) =>
+      sub(`https://x/${i}`, ua, `2024-01-${String(i + 1).padStart(2, '0')}`)
     );
     expect(dedupePushSubscriptions(subs)).toHaveLength(MAX_PUSH_SUBSCRIPTIONS);
   });

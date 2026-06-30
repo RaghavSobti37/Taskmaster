@@ -35,13 +35,8 @@ const ExlyBookingSchema = new mongoose.Schema({
 ExlyBookingSchema.index({ email: 1, phone: 1, offeringId: 1, bookedOn: 1 }, { unique: true });
 ExlyBookingSchema.index({ nameKey: 1 });
 
-ExlyBookingSchema.pre('save', function(next) {
-  try {
-    applyPersonIdentityToDoc(this, { phoneRequired: true });
-    next();
-  } catch (err) {
-    next(err);
-  }
+ExlyBookingSchema.pre('save', function () {
+  applyPersonIdentityToDoc(this, { phoneRequired: true });
 });
 
 ExlyBookingSchema.plugin(tenantPlugin);

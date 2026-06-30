@@ -1,5 +1,3 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
 const { canDeletePin } = require('../utils/pinBoardPermissions');
 
 describe('pinBoardPermissions', () => {
@@ -12,9 +10,9 @@ describe('pinBoardPermissions', () => {
     const other = { _id: otherId };
     const admin = { _id: otherId, departmentId: { slug: 'admin' } };
 
-    assert.equal(canDeletePin(author, pin), true);
-    assert.equal(canDeletePin(admin, pin), true);
-    assert.equal(canDeletePin(other, pin), false);
-    assert.equal(canDeletePin(null, pin), false);
+    expect(canDeletePin(author, pin)).toBe(true);
+    expect(canDeletePin(admin, pin)).toBe(true);
+    expect(canDeletePin(other, pin)).toBe(false);
+    expect(canDeletePin(null, pin)).toBe(false);
   });
 });

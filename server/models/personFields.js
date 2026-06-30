@@ -14,13 +14,8 @@ const personFields = {
 };
 
 function applyPersonPreSave(schema) {
-  schema.pre('save', function (next) {
-    try {
-      applyPersonIdentityToDoc(this);
-      next();
-    } catch (err) {
-      next(err);
-    }
+  schema.pre('save', function () {
+    applyPersonIdentityToDoc(this);
   });
   schema.index({ name: 'text', email: 'text', phone: 'text' });
   schema.index({ createdAt: -1 });

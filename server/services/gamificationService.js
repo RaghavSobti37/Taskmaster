@@ -968,7 +968,7 @@ class GamificationService {
       qaGamificationPurge,
       duplicateRepair,
       reviewExploitRepair,
-      weeklyPreview: weekly,
+      weeklyPreview: monthly,
       recalculatedAt,
     };
   }

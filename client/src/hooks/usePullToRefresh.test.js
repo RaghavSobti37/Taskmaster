@@ -46,8 +46,8 @@ describe('usePullToRefresh', () => {
 
     await vi.waitFor(() => {
       expect(onRefresh).toHaveBeenCalledTimes(1);
+      expect(result.current.isRefreshing).toBe(false);
     });
-    expect(result.current.isRefreshing).toBe(false);
   });
 
   it('ignores pull when not at scroll top', async () => {

@@ -101,19 +101,14 @@ const LeadSchema = new mongoose.Schema({
 
 
 
-LeadSchema.pre('save', function(next) {
-  try {
-    if (this.email === null || (typeof this.email === 'string' && !this.email.trim())) {
-      this.email = undefined;
-      if (this._doc && 'email' in this._doc) delete this._doc.email;
-    }
-    if (this.leadStatus) this.leadStatus = canonicalLeadStatus(this.leadStatus);
-    const phoneRequired = this.crmType !== 'artist';
-    applyPersonIdentityToDoc(this, { phoneRequired });
-    next();
-  } catch (err) {
-    next(err);
+LeadSchema.pre('save', function () {
+  if (this.email === null || (typeof this.email === 'string' && !this.email.trim())) {
+    this.email = undefined;
+    if (this._doc && 'email' in this._doc) delete this._doc.email;
   }
+  if (this.leadStatus) this.leadStatus = canonicalLeadStatus(this.leadStatus);
+  const phoneRequired = this.crmType !== 'artist';
+  applyPersonIdentityToDoc(this, { phoneRequired });
 });
 
 const sanitizeLeadUpdate = (update) => {
@@ -125,14 +120,12 @@ const sanitizeLeadUpdate = (update) => {
   }
 };
 
-LeadSchema.pre('findOneAndUpdate', function(next) {
+LeadSchema.pre('findOneAndUpdate', function () {
   sanitizeLeadUpdate(this.getUpdate());
-  next();
 });
 
-LeadSchema.pre('updateOne', function(next) {
+LeadSchema.pre('updateOne', function () {
   sanitizeLeadUpdate(this.getUpdate());
-  next();
 });
 
 // Apply Audit Plugin

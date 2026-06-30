@@ -32,9 +32,8 @@ const gamificationConfigSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-gamificationConfigSchema.pre('save', function (next) {
+gamificationConfigSchema.pre('save', function () {
   this.updatedAt = new Date();
-  next();
 });
 
 module.exports = mongoose.model('GamificationConfig', gamificationConfigSchema);

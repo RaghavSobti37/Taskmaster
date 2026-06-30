@@ -112,8 +112,10 @@ describe('GET /connections/hub data shape', () => {
   });
 
   it('migrates legacy oauthCredentials when building hub', async () => {
-    const artist = await Artist.create({
-      name: 'Legacy OAuth Artist',
+    const artist = await Artist.create({ name: 'Legacy OAuth Artist' });
+    const ArtistAuth = require('../models/ArtistAuth');
+    await ArtistAuth.create({
+      artistId: artist._id,
       oauthCredentials: {
         meta: {
           accessToken: 'legacy-token',

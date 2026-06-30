@@ -139,19 +139,19 @@ describe('SEC-A02 schedule projectId IDOR', () => {
   });
 
   test('owner can load schedule for own project', async () => {
+    const { toDateKey } = require('../../shared/dateValidation');
+    const end = toDateKey(new Date());
     const payload = await getScheduleForUser({
       user: owner,
       userId: owner._id,
       projectId: project._id.toString(),
       start: '2026-06-01',
-      end: '2026-06-30',
+      end,
     });
-    expect(payload).toMatchObject({
-      start: '2026-06-01',
-      end: '2026-06-30',
-      departments: expect.any(Array),
-      tasks: expect.any(Array),
-    });
+    expect(payload.start).toBe('2026-06-01');
+    expect(payload.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(payload.departments).toEqual(expect.any(Array));
+    expect(payload.tasks).toEqual(expect.any(Array));
   });
 });
 

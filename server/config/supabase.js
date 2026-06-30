@@ -72,11 +72,18 @@ function getSupabaseProjectRef() {
 }
 
 function isSupabaseConfigured() {
-  return Boolean(SUPABASE_URL && (SUPABASE_SERVICE_ROLE_KEY || SUPABASE_DB_URL));
+  const url = firstEnv(['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']);
+  const serviceKey = firstEnv([
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SUPABASE_SECRET_KEY',
+    'SUPABASE_SERVICE_KEY',
+  ]);
+  const dbUrl = firstEnv(['SUPABASE_DB_URL', 'DATABASE_URL', 'SUPABASE_POSTGRES_URL']);
+  return Boolean(url && (serviceKey || dbUrl));
 }
 
 function isSupabaseEnabled() {
-  return SUPABASE_SECONDARY_ENABLED && isSupabaseConfigured();
+  return readBool('SUPABASE_SECONDARY_ENABLED', true) && isSupabaseConfigured();
 }
 
 function isLogsPrimarySupabase() {

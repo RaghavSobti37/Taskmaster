@@ -107,7 +107,7 @@ export const ModalShell = ({
         className="tm-modal-backdrop absolute inset-0 bg-black/40"
         onClick={handleBackdropClick}
       />
-      <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
+      <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 pointer-events-none overflow-y-auto`}>
         <div
           ref={panelRef}
           style={{
@@ -172,7 +172,7 @@ export const ModalHeader = ({
       </div>
     </div>
     {showClose && onClose && (
-      <button type="button" onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-black/5 rounded transition-colors shrink-0">
+      <button type="button" onClick={onClose} aria-label="Close dialog" className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 hover:bg-black/5 rounded transition-colors shrink-0 touch-manipulation">
         <X size={16} className="text-[var(--color-text-muted)]" />
       </button>
     )}

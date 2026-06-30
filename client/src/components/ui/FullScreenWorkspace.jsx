@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -24,10 +24,21 @@ export const FullScreenWorkspace = ({
   const titleId = React.useId();
   useFocusTrap(isOpen, workspaceRef);
 
+  const discardEdits = useCallback(() => {
+    onCancel?.();
+  }, [onCancel]);
+
+  const handleClose = useCallback(() => {
+    if (dirty) {
+      discardEdits();
+    }
+    onClose?.();
+  }, [dirty, discardEdits, onClose]);
+
   useUnsavedChanges({
     hasChanges: dirty && !saveDisabled,
     onSave,
-    onCancel: onCancel || onClose,
+    onCancel: discardEdits,
     isSaving,
     enabled: dirty,
     elevated: true,
@@ -36,28 +47,33 @@ export const FullScreenWorkspace = ({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown, true);
     }
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   return (
     <>
       {isOpen && (
         <div
           ref={workspaceRef}
-          className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
         >
-          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between px-4 sm:px-6 shrink-0">
+          <div className="h-14 min-h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between px-4 sm:px-6 shrink-0">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
-              <button type="button" onClick={onClose} aria-label="Close workspace" className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0">
+              <button
+                type="button"
+                onClick={handleClose}
+                aria-label="Close workspace"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0 touch-manipulation"
+              >
                 <X size={20} />
               </button>
               <div className="min-w-0">

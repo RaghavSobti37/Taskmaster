@@ -8,11 +8,15 @@ import {
   useDeletePin,
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
-import { isAdminUser } from '../../utils/departmentPermissions';
+import { useConfirm } from '../../contexts/confirmContext';
+import { useToast } from '../../contexts/ToastContext';
+import { canDeletePin } from '../../utils/pinBoardPermissions';
 import { usePinBoardDraft } from './PinBoardContext';
 
 const PinBoardComposer = () => {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { data: pins = [] } = usePinBoard();
   const createPin = useCreatePin();
   const updatePin = useUpdatePin();
@@ -31,10 +35,28 @@ const PinBoardComposer = () => {
 
   const saving = createPin.isPending || updatePin.isPending;
   const editingPin = draft.editingId ? pins.find((p) => p._id === draft.editingId) : null;
-  const canDelete = editingPin && (
-    isAdminUser(user)
-    || String(editingPin.createdBy?._id || editingPin.createdBy) === String(user?._id)
-  );
+  const canDelete = canDeletePin(user, editingPin);
+
+  const handleDelete = async () => {
+    if (!draft.editingId || !canDelete) return;
+    const ok = await confirm({
+      title: 'Delete pin?',
+      message: 'This removes the pin for everyone on the team board.',
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    deletePin.mutate(draft.editingId, {
+      onSuccess: () => {
+        resetDraft();
+        toast.success('Pin deleted');
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.error || 'Failed to delete pin');
+      },
+    });
+  };
 
   return (
     <DashboardWidgetShell
@@ -66,8 +88,9 @@ const PinBoardComposer = () => {
             {canDelete && (
               <button
                 type="button"
-                onClick={() => deletePin.mutate(draft.editingId, { onSuccess: resetDraft })}
-                className="text-[10px] text-red-500 flex items-center gap-1 font-bold ml-auto"
+                onClick={handleDelete}
+                disabled={deletePin.isPending}
+                className="text-[10px] text-red-500 flex items-center gap-1 font-bold ml-auto disabled:opacity-50"
               >
                 <Trash2 size={12} /> Delete
               </button>

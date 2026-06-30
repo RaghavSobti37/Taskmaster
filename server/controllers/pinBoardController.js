@@ -1,5 +1,5 @@
 const PinBoardNote = require('../models/PinBoardNote');
-const { isAdminUser } = require('../utils/departmentPermissions');
+const { canDeletePin } = require('../utils/pinBoardPermissions');
 
 exports.getPins = async (req, res) => {
   try {
@@ -51,8 +51,7 @@ exports.deletePin = async (req, res) => {
   try {
     const pin = await PinBoardNote.findById(req.params.id);
     if (!pin) return res.status(404).json({ error: 'Pin not found' });
-    const isCreator = pin.createdBy?.toString() === req.user._id.toString();
-    if (!isCreator && !isAdminUser(req.user)) {
+    if (!canDeletePin(req.user, pin)) {
       return res.status(403).json({ error: 'Only the pin author or an admin can delete this pin' });
     }
     await PinBoardNote.findByIdAndDelete(req.params.id);

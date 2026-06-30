@@ -46,10 +46,6 @@
       "destination": "https://YOUR-RENDER-SERVICE.onrender.com/socket.io/$1"
     },
     {
-      "source": "/((?!api/)(?!.*\\.[^/]+$).*)",
-      "destination": "/index.html"
-    },
-    {
       "source": "/ph/static/:path*",
       "destination": "https://us-assets.i.posthog.com/static/:path*"
     },
@@ -60,6 +56,10 @@
     {
       "source": "/ph/:path*",
       "destination": "https://us.i.posthog.com/:path*"
+    },
+    {
+      "source": "/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)",
+      "destination": "/index.html"
     }
   ],
   "buildCommand": "npm run vercel-build",

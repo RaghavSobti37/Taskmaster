@@ -82,6 +82,20 @@ const checkLocalFiles = (hosts) => {
     } else {
       ok(`${file} has Render API rewrite`);
     }
+
+    try {
+      const json = JSON.parse(raw);
+      const sources = (json.rewrites || []).map((rule) => rule.source);
+      const catchallIdx = sources.indexOf('/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)');
+      const phIdx = sources.findIndex((source) => String(source).startsWith('/ph/'));
+      if (phIdx >= 0 && catchallIdx >= 0 && phIdx > catchallIdx) {
+        pushError(`${file} PostHog /ph rewrites must come before SPA catch-all`);
+      } else if (phIdx >= 0 && catchallIdx >= 0) {
+        ok(`${file} PostHog proxy precedes SPA catch-all`);
+      }
+    } catch {
+      pushWarn(`${file} could not parse for PostHog rewrite order`);
+    }
   }
 
   const apiUrl = hosts?.productionApiUrl || '';

@@ -77,12 +77,12 @@ const LeaderboardBreakdownModal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[10000] flex flex-col bg-[var(--color-bg-primary)]"
+      className="fixed inset-0 z-[10000] flex flex-col bg-[var(--color-bg-primary)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="leaderboard-breakdown-title"
     >
-      <header className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+      <header className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
         <div className="w-12 h-12 shrink-0 rounded-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] flex items-center justify-center text-sm font-bold text-[var(--color-text-muted)]">
           {member.avatar ? (
             <img src={member.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
@@ -105,11 +105,11 @@ const LeaderboardBreakdownModal = ({
         </div>
         <button
           type="button"
-          onClick={onClose}
-          className="shrink-0 p-2 rounded-lg border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)] transition-colors"
+          onClick={() => onClose?.()}
+          className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)] active:bg-[var(--color-bg-primary)] transition-colors touch-manipulation"
           aria-label="Close breakdown"
         >
-          <X size={20} className="text-[var(--color-text-muted)]" />
+          <X size={20} className="text-[var(--color-text-muted)] pointer-events-none" />
         </button>
       </header>
 

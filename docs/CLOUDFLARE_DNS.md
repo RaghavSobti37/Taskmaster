@@ -136,6 +136,27 @@ Updates `vercel.json`, `client/vercel.json`, `sites/landing/vercel.json`, and `s
 
 ---
 
+## 7. Automated setup (optional)
+
+With gitignored credential files:
+
+```bash
+# Copy examples → fill values:
+#   .cursor/production-hosts.local.json
+#   .cursor/render-api.local.env
+#   .cursor/vercel-api.local.env      (optional)
+#   .cursor/cloudflare-api.local.env  (optional)
+#   .cursor/posthog.local.env         (optional)
+
+node scripts/setup-production-full.js --dry-run
+node scripts/setup-production-full.js --all
+npm run production:setup
+```
+
+Vercel projects must exist first (link repo, root directories from table above). Script updates env + DNS; redeploy all three Vercel projects after merge.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause |

@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const { captureException: capturePostHogException } = require('../utils/posthog');
 
 const errorHandler = (err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
@@ -31,6 +32,11 @@ const errorHandler = (err, req, res, next) => {
 
   if (statusCode >= 500) {
     logger.error('errorMiddleware', message, { ...logMeta, stack: err.stack });
+    capturePostHogException(err, req, {
+      route: req.originalUrl,
+      method: req.method,
+      statusCode,
+    });
   } else {
     logger.warn('errorMiddleware', message, logMeta);
   }

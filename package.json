@@ -56,6 +56,7 @@
     "migration:readiness": "node scripts/migrationReadiness.js",
     "staging:readiness": "node scripts/stagingReadiness.js",
     "production:deploy": "node scripts/deploy-production-render.js --wait",
+    "production:setup": "node scripts/setup-production-full.js --all",
     "staging:deploy": "node scripts/deploy-staging-render.js --wait",
     "staging:deploy:loop": "node scripts/deploy-staging-render.js --loop --clear-cache",
     "staging:create": "node scripts/create-staging-render-services.js",

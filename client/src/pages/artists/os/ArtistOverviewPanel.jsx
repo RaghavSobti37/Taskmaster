@@ -85,7 +85,8 @@ function SectionCard({ title, icon: Icon, tabHref, children }) {
   );
 }
 
-function tabHref(tab) {
+function tabHref(tab, section) {
+  if (section) return `?tab=${tab}&section=${section}`;
   return `?tab=${tab}`;
 }
 
@@ -217,8 +218,9 @@ export default function ArtistOverviewPanel({
     });
   }, [hub, health, analytics, connections, isPreview]);
 
-  const bookingsTab = isWorkspace ? 'bookings' : 'inquiries';
+  const bookingsTab = 'bookings';
   const releasesTab = isWorkspace ? 'releases' : 'content';
+  const releasesSection = isWorkspace ? null : 'releases';
   const connectionsTab = isWorkspace ? 'connections' : null;
 
   const kpiItems = [
@@ -373,7 +375,7 @@ export default function ArtistOverviewPanel({
         )}
 
         {canCalendar && (
-          <SectionCard title="Upcoming Events" icon={Calendar} tabHref={tabHref('calendar')}>
+          <SectionCard title="Upcoming Events" icon={Calendar} tabHref={isWorkspace ? tabHref('calendar') : tabHref('bookings', 'calendar')}>
             {upcomingEvents.length ? (
               <ul className="space-y-2">
                 {upcomingEvents.map((ev) => {
@@ -393,7 +395,7 @@ export default function ArtistOverviewPanel({
           </SectionCard>
         )}
 
-        <SectionCard title="Recent Activity" icon={Activity} tabHref={isWorkspace ? null : tabHref('notes')}>
+        <SectionCard title="Recent Activity" icon={Activity} tabHref={isWorkspace ? null : tabHref('team', 'notes')}>
           {(enabled ? timeline : []).length ? (
             <ul className="space-y-2">
               {timeline.slice(0, 5).map((item) => (
@@ -411,7 +413,7 @@ export default function ArtistOverviewPanel({
         </SectionCard>
 
         {canContent && (
-          <SectionCard title="Top Releases" icon={Disc} tabHref={tabHref(releasesTab)}>
+          <SectionCard title="Top Releases" icon={Disc} tabHref={tabHref(releasesTab, releasesSection)}>
             {topReleases.length ? (
               <ul className="space-y-2">
                 {topReleases.map((item) => (
@@ -457,7 +459,7 @@ export default function ArtistOverviewPanel({
           )}
           {canCalendar && (
             <Link
-              to={tabHref('calendar')}
+              to={isWorkspace ? tabHref('calendar') : tabHref('bookings', 'calendar')}
               className={`${LINK_BTN} bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]`}
             >
               Calendar

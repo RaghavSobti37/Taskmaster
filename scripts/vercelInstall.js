@@ -23,7 +23,7 @@ if (process.platform === 'win32') {
 run(['--yes', 'npm@11', 'install', '--legacy-peer-deps', '--include=optional', '-w', 'CoreKnot-client']);
 run([
   '--yes', 'npm@11', 'install', '--include=optional',
-  '@tailwindcss/oxide-linux-x64-gnu@4.3.0',
-  '@rollup/rollup-linux-x64-gnu@4.61.1',
+  '@tailwindcss/oxide-linux-x64-gnu@4.3.2',
+  '@rollup/rollup-linux-x64-gnu@4.62.2',
   'lightningcss-linux-x64-gnu@1.32.0',
 ]);

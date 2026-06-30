@@ -35,9 +35,9 @@ describe('ArtistDocumentsTab UI', () => {
     expect(screen.getByText(/Central document vault for Jane Doe/)).toBeInTheDocument();
   });
 
-  it('renders contracts tab action when artistId is set', () => {
+  it('renders contracts action when artistId is set', () => {
     renderTab();
 
-    expect(screen.getByRole('button', { name: 'View contracts tab' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View contracts' })).toBeInTheDocument();
   });
 });

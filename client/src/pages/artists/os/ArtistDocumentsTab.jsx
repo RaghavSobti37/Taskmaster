@@ -17,8 +17,8 @@ export default function ArtistDocumentsTab({ artistId, artistName, isPreview }) 
   const { data, isLoading, isError, error, refetch } = useArtistOsDocuments(artistId, !!artistId && !isPreview);
   const items = data?.items || [];
 
-  const openContractsTab = () => {
-    setSearchParams({ tab: 'contracts' });
+  const openContractsSection = () => {
+    setSearchParams({ tab: 'team', section: 'contracts' });
   };
 
   return (
@@ -51,8 +51,8 @@ export default function ArtistDocumentsTab({ artistId, artistName, isPreview }) 
       )}
       <div className="flex flex-wrap gap-2">
         {!isPreview && artistId && (
-          <Button size="sm" variant="secondary" onClick={openContractsTab}>
-            View contracts tab
+          <Button size="sm" variant="secondary" onClick={openContractsSection}>
+            View contracts
           </Button>
         )}
         <Link to="/management?tab=finance" className="inline-flex">

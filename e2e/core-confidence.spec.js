@@ -154,10 +154,11 @@ test.describe('artist OS smoke', () => {
       timeout: 20_000,
     });
     await expect(page.getByRole('tab', { name: /^overview$/i })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /inquiries/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /^bookings$/i })).toBeVisible();
 
-    await page.getByRole('tab', { name: /inquiries/i }).click();
-    await expect(page).toHaveURL(/tab=inquiries/);
-    await expect(page.getByRole('tab', { name: /inquiries/i, selected: true })).toBeVisible();
+    await page.getByRole('tab', { name: /^bookings$/i }).click();
+    await expect(page).toHaveURL(/tab=bookings/);
+    await expect(page.getByRole('tab', { name: /^bookings$/i, selected: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /^inquiries$/i })).toBeVisible();
   });
 });

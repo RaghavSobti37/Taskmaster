@@ -1,6 +1,6 @@
 import React, { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ARTIST_OS_TABS } from './os/artistOsConstants';
+import { ARTIST_OS_TABS, ARTIST_OS_TAB_ALIASES } from './os/artistOsConstants';
 import { getLazyArtistOsTab } from './artistTabLoaders';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import ArtistProductHint from '../../components/brand/ArtistProductHint';
@@ -19,15 +19,32 @@ export default function ArtistOSLayout({
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab') || 'overview';
-  const resolvedTab = ARTIST_OS_TABS.some((t) => t.id === tabParam) ? tabParam : 'overview';
+  const alias = ARTIST_OS_TAB_ALIASES[tabParam];
+  const resolvedTab = ARTIST_OS_TABS.some((t) => t.id === tabParam)
+    ? tabParam
+    : (alias?.tab ?? 'overview');
 
   React.useEffect(() => {
-    if (tabParam !== resolvedTab) {
-      setSearchParams({ tab: resolvedTab }, { replace: true });
+    if (alias) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', alias.tab);
+      if (alias.section) next.set('section', alias.section);
+      setSearchParams(next, { replace: true });
+      return;
     }
-  }, [tabParam, resolvedTab, setSearchParams]);
+    if (tabParam !== resolvedTab) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', resolvedTab);
+      setSearchParams(next, { replace: true });
+    }
+  }, [alias, tabParam, resolvedTab, searchParams, setSearchParams]);
 
-  const setTab = (id) => setSearchParams({ tab: id });
+  const setTab = (id) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', id);
+    next.delete('section');
+    setSearchParams(next);
+  };
 
   const panelProps = {
     artistId,
@@ -50,22 +67,21 @@ export default function ArtistOSLayout({
     switch (resolvedTab) {
       case 'overview':
         return <Panel {...panelProps} />;
-      case 'calendar':
-      case 'inquiries':
-      case 'gigs':
+      case 'bookings':
       case 'finance':
       case 'content':
-      case 'releases':
-      case 'notes':
-        return <Panel artistId={artistId} isPreview={isPreview} />;
-      case 'documents':
-        return <Panel artistId={artistId} artistName={artist?.name} isPreview={isPreview} />;
-      case 'contracts':
         return <Panel artistId={artistId} isPreview={isPreview} />;
       case 'analytics':
         return <Panel {...panelProps} />;
       case 'team':
-        return <Panel artistId={artistId} canManageTeam={!isPreview} />;
+        return (
+          <Panel
+            artistId={artistId}
+            artistName={artist?.name}
+            canManageTeam={!isPreview}
+            isPreview={isPreview}
+          />
+        );
       default:
         return null;
     }

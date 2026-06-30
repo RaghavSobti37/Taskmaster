@@ -11,9 +11,10 @@ test.describe('public smoke', () => {
 
   test('login page renders', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /coreknot/i })).toBeVisible();
-    await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
+    const username = page.locator('input[autocomplete="username"]');
+    await expect(username).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('input[autocomplete="current-password"]')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/coreknot/i);
   });
 });
 

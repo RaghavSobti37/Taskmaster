@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Spinner } from './Spinner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useIsMobile } from '../../hooks/useBreakpoint';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
 /** Default rows per page for DataTable and TablePagination */
@@ -357,7 +358,7 @@ export const TablePagination = ({
   const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
 
   return (
-    <div className="p-3 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+    <div className="shrink-0 p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
       <div className="flex items-center gap-2">
         <span>Show</span>
         <select
@@ -543,6 +544,7 @@ export const DataTable = ({
     overscan: 8,
   });
 
+  const isMobile = useIsMobile();
   const mobileColumns = columns.filter((c) => !c.mobileHidden);
   const primaryCol = columns.find((c) => c.mobilePrimary) || mobileColumns[0];
   const detailColumns = mobileColumns.filter((c) => c !== primaryCol);
@@ -552,8 +554,8 @@ export const DataTable = ({
     <div className={`w-full flex flex-col ${className}`}>
       <div
         ref={parentRef}
-        className={`w-full max-lg:overflow-visible lg:overflow-y-auto custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
-        style={{ maxHeight: tableMaxHeight }}
+        className={`w-full ${isMobile ? 'overflow-visible' : 'overflow-y-auto'} custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
+        style={isMobile ? undefined : { maxHeight: tableMaxHeight }}
       >
         <table
           className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}

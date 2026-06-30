@@ -12,6 +12,8 @@ import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
 
+import ArtistShareModal from '../../components/artists/ArtistShareModal';
+
 import ClaimWorkspaceBanner from '../../components/artists/ClaimWorkspaceBanner';
 
 import ArtistOSLayout from './ArtistOSLayout';
@@ -61,6 +63,8 @@ export default function ArtistDetail({ isPreview = false }) {
   const [syncing, setSyncing] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
+
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const [editedArtist, setEditedArtist] = useState(null);
 
@@ -147,30 +151,6 @@ export default function ArtistDetail({ isPreview = false }) {
     } finally {
 
       setSyncing(false);
-
-    }
-
-  };
-
-
-
-  const handleShare = async () => {
-
-    try {
-
-      const { url } = await shareLinkMutation.mutateAsync(id);
-
-      await navigator.clipboard.writeText(url);
-
-      alert(`Share link copied:\n${url}`);
-
-    } catch {
-
-      const fallback = `${window.location.origin}/preview/artist/${id}`;
-
-      await navigator.clipboard.writeText(fallback);
-
-      alert(`Preview link copied:\n${fallback}`);
 
     }
 
@@ -272,7 +252,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
             {!isPreview && (
 
-              <Button size="sm" onClick={handleShare}>
+              <Button size="sm" onClick={() => setIsShareOpen(true)}>
 
                 <Share2 size={14} /> Share
 
@@ -331,6 +311,22 @@ export default function ArtistDetail({ isPreview = false }) {
         onDelete={handleDelete}
 
         isPreview={isPreview}
+
+      />
+
+      <ArtistShareModal
+
+        isOpen={isShareOpen}
+
+        onClose={() => setIsShareOpen(false)}
+
+        artistId={id}
+
+        artistName={artist.name}
+
+        artistSlug={artist.slug}
+
+        shareLinkMutation={shareLinkMutation}
 
       />
 

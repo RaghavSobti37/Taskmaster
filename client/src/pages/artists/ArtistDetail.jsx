@@ -12,6 +12,9 @@ import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
 
+import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { buildArtistEditForm } from '../../utils/artistEditForm';
+
 import ClaimWorkspaceBanner from '../../components/artists/ClaimWorkspaceBanner';
 
 import ArtistOSLayout from './ArtistOSLayout';
@@ -63,6 +66,7 @@ export default function ArtistDetail({ isPreview = false }) {
   const [isEditing, setIsEditing] = useState(false);
 
   const [editedArtist, setEditedArtist] = useState(null);
+  const [editBaseline, setEditBaseline] = useState(null);
 
 
 
@@ -70,21 +74,9 @@ export default function ArtistDetail({ isPreview = false }) {
 
     if (!artist) return;
 
-    setEditedArtist({
-
-      name: artist.name || '',
-
-      bio: artist.bio || '',
-
-      website: artist.website || '',
-
-      spotifyId: artist.oauthCredentials?.spotify?.artistId || connections.find((c) => c.provider === 'spotify')?.accountHandle || '',
-
-      youtubeId: artist.oauthCredentials?.youtube?.channelId || connections.find((c) => c.provider === 'youtube')?.accountHandle || '',
-
-      instaId: artist.oauthCredentials?.meta?.igAccountId || connections.find((c) => c.provider === 'instagram')?.accountHandle || '',
-
-    });
+    const snapshot = buildArtistEditForm(artist, connections);
+    setEditedArtist(snapshot);
+    setEditBaseline(cloneSnapshot(snapshot));
 
     setIsEditing(true);
 
@@ -325,6 +317,8 @@ export default function ArtistDetail({ isPreview = false }) {
         editedArtist={editedArtist}
 
         setEditedArtist={setEditedArtist}
+
+        editBaseline={editBaseline}
 
         onSave={saveArtist}
 

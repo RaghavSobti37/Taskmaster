@@ -330,18 +330,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
               <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
-              <div className="flex flex-col items-center px-1 min-w-[7.5rem]">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] tabular-nums leading-none">
-                  {formatWeekdayDateLong(selectedDate)}
-                </span>
-                <input
-                  type="date"
-                  value={selectedDateKey}
-                  max={normalizeWorkDate(new Date())}
-                  onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
-                  className="px-0 py-0.5 bg-transparent text-[10px] font-black uppercase tracking-widest tabular-nums border-0 outline-none w-full text-center"
-                />
-              </div>
+              <input
+                type="date"
+                value={selectedDateKey}
+                max={normalizeWorkDate(new Date())}
+                onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
+                className="px-2 py-1 bg-transparent text-[10px] font-black uppercase tracking-widest tabular-nums border-0 outline-none"
+                aria-label={formatWeekdayDateLong(selectedDate)}
+              />
               <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
             </div>
             {!adminViewUserId && isTodayOrPast && (
@@ -349,7 +345,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             )}
           </div>
         }
-      />
+      >
+        <p className="text-sm font-semibold text-[var(--color-text-secondary)] tabular-nums normal-case tracking-normal">
+          {formatWeekdayDateLong(selectedDate)}
+        </p>
+      </PageHeader>
 
       {logsError && (
         <QueryErrorBanner

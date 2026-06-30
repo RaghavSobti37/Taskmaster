@@ -80,6 +80,7 @@
     "node": ">=18"
   },
   "overrides": {
+    "react-dom": "$react",
     "form-data": "^4.0.4",
     "minimist": "^1.2.8",
     "shell-quote": "^1.8.3",

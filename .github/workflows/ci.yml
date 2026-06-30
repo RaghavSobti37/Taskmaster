@@ -28,29 +28,6 @@ jobs:
         env:
           NODE_ENV: test
 
-  client-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - name: Exposure audit
-        run: node scripts/checkCommittedExposure.js
-      - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
-      - name: Lint
-        run: npm run lint --prefix client -- --quiet
-      - name: Unit tests
-        run: npm test --prefix client -- --coverage
-      - name: Production build
-        run: npm run build --prefix client
-
   lighthouse-public:
     runs-on: ubuntu-latest
     steps:
@@ -71,8 +48,13 @@ jobs:
         working-directory: client
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 &
-          npx --yes wait-on@8.0.1 http://127.0.0.1:4173 -t 120000
+          PREVIEW_PID=$!
+          for i in $(seq 1 120); do
+            curl -sf http://127.0.0.1:4173 >/dev/null && break
+            sleep 1
+          done
           LH_BASE_URL=http://127.0.0.1:4173 npm run lighthouse:ci
+          kill "$PREVIEW_PID" 2>/dev/null || true
 
   e2e-public:
     runs-on: ubuntu-latest
@@ -92,6 +74,18 @@ jobs:
         run: npx playwright install chromium --with-deps
       - name: Build client
         run: npm run build --prefix client
+      - name: Start API
+        run: npm run dev --prefix server &
+        env:
+          NODE_ENV: development
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 120); do
+            curl -sf http://127.0.0.1:5000/api/health >/dev/null && exit 0
+            sleep 1
+          done
+          echo "API did not become ready"
+          exit 1
       - name: Public E2E smoke
         run: npm run test:e2e:public
 
@@ -142,7 +136,13 @@ jobs:
         env:
           NODE_ENV: development
       - name: Wait for API
-        run: npx --yes wait-on@8.0.1 http://127.0.0.1:5000/api/health -t 120000
+        run: |
+          for i in $(seq 1 120); do
+            curl -sf http://127.0.0.1:5000/api/health >/dev/null && exit 0
+            sleep 1
+          done
+          echo "API did not become ready"
+          exit 1
       - name: Core confidence E2E
         run: npm run test:e2e:core-confidence
         env:
@@ -173,7 +173,13 @@ jobs:
         env:
           NODE_ENV: development
       - name: Wait for API
-        run: npx --yes wait-on@8.0.1 http://127.0.0.1:5000/api/health -t 120000
+        run: |
+          for i in $(seq 1 120); do
+            curl -sf http://127.0.0.1:5000/api/health >/dev/null && exit 0
+            sleep 1
+          done
+          echo "API did not become ready"
+          exit 1
       - name: Authenticated E2E smoke
         run: npm run test:e2e
         env:

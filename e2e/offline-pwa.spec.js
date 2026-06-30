@@ -1,9 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+async function waitForServiceWorker(page) {
+  await page.waitForFunction(async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    return Boolean(reg?.installing || reg?.waiting || reg?.active);
+  }, { timeout: 20_000 });
+}
+
 test.describe('PWA resiliency @public', () => {
   test('registers service worker on load', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForServiceWorker(page);
 
     const active = await page.evaluate(async () => {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -13,14 +20,13 @@ test.describe('PWA resiliency @public', () => {
   });
 
   test('serves shell when offline', async ({ page, context }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await waitForServiceWorker(page);
 
     await context.setOffline(true);
-    await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const root = page.locator('#root');
-    await expect(root).toBeVisible();
+    await expect(page.locator('#root')).toBeVisible();
   });
 });

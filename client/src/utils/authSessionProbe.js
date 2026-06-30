@@ -26,6 +26,11 @@ export async function probeAuthSession() {
     return { status: res.status, user: null };
   }
 
+  // ponytail: broken Vercel /api proxy returns 404 — treat as logged out, not fatal
+  if (res.status === 404) {
+    return { status: 401, user: null };
+  }
+
   if (!res.ok) {
     const err = new Error(`auth session probe failed: ${res.status}`);
     err.status = res.status;

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  NPM_VERSION: "11.13.0"
+
 jobs:
   server-test:
     runs-on: ubuntu-latest
@@ -19,14 +22,31 @@ jobs:
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
       - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Jest
-        run: npm test --prefix server -- --coverage
+        run: npm test --workspace=coreknot-server -- --coverage
         env:
           NODE_ENV: test
+
+  client-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Exposure audit
+        run: node scripts/checkCommittedExposure.js
+      - name: Install deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Lint
+        run: npm run lint --workspace=CoreKnot-client -- --quiet
+      - name: Unit tests
+        run: npm test --workspace=CoreKnot-client -- --coverage
+      - name: Production build
+        run: npm run build --workspace=CoreKnot-client
 
   lighthouse-public:
     runs-on: ubuntu-latest
@@ -38,12 +58,9 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Build for preview
-        run: npm run build --prefix client
+        run: npm run build --workspace=CoreKnot-client
       - name: Lighthouse public a11y gate (≥90)
         working-directory: client
         run: |
@@ -66,14 +83,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client
-        run: npm run build --prefix client
+        run: npm run build --workspace=CoreKnot-client
       - name: Public E2E smoke
         run: npm run test:e2e:public
 
@@ -111,16 +125,13 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client
-        run: npm run build --prefix client
+        run: npm run build --workspace=CoreKnot-client
       - name: Start API
-        run: npm run dev --prefix server &
+        run: npm run dev --workspace=coreknot-server &
         env:
           NODE_ENV: development
       - name: Wait for API
@@ -148,16 +159,13 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install deps
-        run: |
-          corepack enable
-          corepack prepare npm@11.13.0 --activate
-          corepack npm ci --legacy-peer-deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client
-        run: npm run build --prefix client
+        run: npm run build --workspace=CoreKnot-client
       - name: Start API
-        run: npm run dev --prefix server &
+        run: npm run dev --workspace=coreknot-server &
         env:
           NODE_ENV: development
       - name: Wait for API

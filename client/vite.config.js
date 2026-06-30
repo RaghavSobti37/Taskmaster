@@ -77,6 +77,8 @@ export default defineConfig(({ mode }) => {
       : []),
   ],
   resolve: {
+    // ponytail: workspace hoists react-dom under client/ — dedupe for Rolldown resolution
+    dedupe: ['react', 'react-dom'],
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "../shared"),

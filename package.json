@@ -15,7 +15,7 @@
     "packages/ui-components"
   ],
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
+    "install:all": "npx --yes npm@11.13.0 ci",
     "preflight": "node server/scripts/preflightEnv.js",
     "audit:exposure": "node scripts/checkCommittedExposure.js",
     "audit:deadcode": "node scripts/auditDeadCode.js",
@@ -80,6 +80,8 @@
     "node": ">=18"
   },
   "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "form-data": "^4.0.4",
     "minimist": "^1.2.8",
     "shell-quote": "^1.8.3",

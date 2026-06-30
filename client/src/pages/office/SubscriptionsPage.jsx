@@ -7,9 +7,8 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import MemberSelect from '../../components/forms/MemberSelect';
-import { Button, Input, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel } from '../../components/ui';
+import { Button, Input, Badge, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
-import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
@@ -203,54 +202,86 @@ const SubscriptionsPage = () => {
     return { totalMonthlyInr: monthly, totalYearlyInr: monthly * 12 };
   }, [subscriptions]);
 
-  const typeChart = useMemo(
-    () => distributionFromField(subscriptions, 'type'),
-    [subscriptions]
-  );
-
-  const subscriptionColumns = [
-    { header: 'Name', sortKey: 'name', render: (sub) => <span className="font-bold">{sub.name}</span> },
-    {
-      header: 'Amount',
-      sortKey: 'amount',
-      sortFn: (sub) => Number(sub.amount) || 0,
-      render: (sub) => formatInr(sub.amount),
-    },
-    {
-      header: 'Due Date',
-      sortKey: 'dueDate',
-      sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
-      render: (sub) => formatDate(sub.dueDate),
-    },
-    { header: 'Type', sortKey: 'type', render: (sub) => sub.type },
-    { header: 'Periodicity', sortKey: 'periodicity', render: (sub) => sub.periodicity },
-    {
-      header: 'Used By',
-      sortKey: 'usedBy',
-      sortFn: (sub) =>
-        normalizeUsedByUsers(sub.usedBy)
-          .map((user) => user?.name || '')
-          .join(', '),
-      render: (sub) => {
-        const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
-        if (!users.length) {
-          return <span className="text-[var(--color-text-muted)]">—</span>;
-        }
-        return (
-          <div className="flex flex-wrap gap-2">
-            {users.map((user) => (
-              <UserLabel
-                key={user._id || user.name}
-                user={user}
-                size="xs"
-                nameClassName="font-bold text-xs"
-              />
-            ))}
+  const subscriptionColumns = useMemo(
+    () => [
+      {
+        header: 'Subscription',
+        sortKey: 'name',
+        render: (sub) => (
+          <div className="min-w-0">
+            <span className="tm-data-primary text-xs tracking-tight block truncate">{sub.name}</span>
+            {sub.notes ? (
+              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{sub.notes}</span>
+            ) : null}
           </div>
-        );
+        ),
       },
-    },
-  ];
+      {
+        header: 'Amount',
+        sortKey: 'amount',
+        sortFn: (sub) => Number(sub.amount) || 0,
+        numeric: true,
+        align: 'right',
+        render: (sub) => (
+          <span className="text-[11px] font-bold tabular-nums text-[var(--color-text-primary)]">
+            {formatInr(sub.amount)}
+          </span>
+        ),
+      },
+      {
+        header: 'Due Date',
+        sortKey: 'dueDate',
+        sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
+        render: (sub) => (
+          <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">{formatDate(sub.dueDate)}</span>
+        ),
+      },
+      {
+        header: 'Type',
+        sortKey: 'type',
+        render: (sub) => (
+          <Badge variant="info" className="max-w-full truncate" title={sub.type}>
+            {sub.type}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Periodicity',
+        sortKey: 'periodicity',
+        render: (sub) => (
+          <Badge variant="mint" className="max-w-full truncate" title={sub.periodicity}>
+            {sub.periodicity}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Used By',
+        sortKey: 'usedBy',
+        sortFn: (sub) =>
+          normalizeUsedByUsers(sub.usedBy)
+            .map((user) => user?.name || '')
+            .join(', '),
+        render: (sub) => {
+          const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
+          if (!users.length) {
+            return <span className="text-[var(--color-text-muted)]">—</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-2">
+              {users.map((user) => (
+                <UserLabel
+                  key={user._id || user.name}
+                  user={user}
+                  size="xs"
+                />
+              ))}
+            </div>
+          );
+        },
+      },
+    ],
+    []
+  );
 
   return (
     <PageLoadGuard
@@ -308,14 +339,22 @@ const SubscriptionsPage = () => {
         </Button>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load subscriptions')}
+          onRetry={() => refetch()}
+        />
+      )}
       <DataTable
         columns={subscriptionColumns}
         data={filtered}
         onRowClick={openEdit}
         getRowId={(sub) => sub._id}
-        isLoading={isLoading}
-        emptyTitle="No subscriptions"
-        emptyDescription="Add one to get started."
+        rowEstimateSize={52}
+        tableMaxHeight="70vh"
+        fitWidth
+        emptyTitle="No subscriptions found"
+        emptyDescription="Try a different search or add a new subscription."
       />
 
       <NexusModal
@@ -384,9 +423,9 @@ const SubscriptionsPage = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs mb-1">Type</label>
+              <label className="block tm-section-label mb-2">Type</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
@@ -398,9 +437,9 @@ const SubscriptionsPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1">Periodicity</label>
+              <label className="block tm-section-label mb-2">Periodicity</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.periodicity}
                 onChange={(e) => setFormData({ ...formData, periodicity: e.target.value })}
               >
@@ -412,9 +451,9 @@ const SubscriptionsPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1">Payment Mode</label>
+              <label className="block tm-section-label mb-2">Payment Mode</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.paymentMode}
                 onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
               >

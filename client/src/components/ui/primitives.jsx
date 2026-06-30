@@ -358,8 +358,8 @@ export const TablePagination = ({
   const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
 
   return (
-    <div className="shrink-0 p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
-      <div className="flex items-center gap-2">
+    <div className="shrink-0 p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
         <span>Show</span>
         <select
           value={pageSize}
@@ -376,12 +376,12 @@ export const TablePagination = ({
           <option value={100}>100</option>
         </select>
         <span>entries</span>
-        <span className="text-[10px] font-bold opacity-60 ml-2">
+        <span className="text-[10px] font-bold opacity-60 sm:ml-2">
           (Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems})
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1">
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}

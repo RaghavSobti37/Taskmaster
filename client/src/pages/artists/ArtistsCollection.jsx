@@ -239,12 +239,6 @@ export default function ArtistsCollection() {
           onRowClick={(row) => navigate(`/artists/${row?._id}`)}
           emptyTitle="No artists found in roster"
         />
-
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-            Showing {filteredArtists.length} of {artists.length} artists
-          </p>
-        </div>
       </div>
     </ListPageLayout>
 

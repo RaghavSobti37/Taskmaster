@@ -16,6 +16,13 @@ import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { probeAuthSession } from '../utils/authSessionProbe';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
+import { hasAnalyticsConsent } from '../lib/cookieConsent';
+import {
+  ensurePostHogForConsent,
+  setPostHogUser,
+  clearPostHogUser,
+  capturePostHogEvent,
+} from '../lib/posthog';
 
 const defaultAuthContext = {
   user: null,
@@ -128,6 +135,8 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     setSessionReady(false);
     setUser(null);
+    capturePostHogEvent('user_logged_out');
+    clearPostHogUser();
     setLoading(false);
   }, [queryClient]);
 
@@ -184,6 +193,10 @@ export const AuthProvider = ({ children }) => {
         const newData = probe.user;
         if (userSessionChanged(userRef.current, newData)) {
           setUser(newData);
+        }
+        if (newData && hasAnalyticsConsent()) {
+          ensurePostHogForConsent();
+          setPostHogUser(newData);
         }
         if (newData && !userRef.current) {
           recordAttendanceSessionLogin();
@@ -294,6 +307,7 @@ export const AuthProvider = ({ children }) => {
     if (!nextUser) return;
     setUser((prev) => {
       const merged = mergeSessionUser(prev, nextUser);
+      setPostHogUser(merged);
       return merged;
     });
   }, []);

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { config } = require('../config');
 const { corsAllowlist } = require('./cors');
 const logger = require('../utils/logger');
+const { shutdownPostHog } = require('../utils/posthog');
 const {
   resolveMongoUri,
   getDbNameFromUri,
@@ -178,6 +179,12 @@ async function gracefulShutdown() {
   try {
     const { closeRealtime } = require('../config/realtime');
     await closeRealtime();
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    await shutdownPostHog();
   } catch {
     /* ignore */
   }

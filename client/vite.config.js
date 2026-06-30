@@ -26,6 +26,9 @@ export default defineConfig(({ mode }) => {
     || (env[envKey] === 'true' ? `http://127.0.0.1:${fallbackPort}` : 'http://127.0.0.1:5000')
   const attendanceProxyTarget = nestProxy('VITE_NEST_ATTENDANCE', 'VITE_ATTENDANCE_PROXY')
   const tasksProxyTarget = nestProxy('VITE_NEST_TASKS', 'VITE_TASKS_PROXY')
+  const posthogRegion = String(env.VITE_POSTHOG_HOST || '').toLowerCase().includes('eu') ? 'eu' : 'us'
+  const posthogApiTarget = `https://${posthogRegion}.i.posthog.com`
+  const posthogAssetsTarget = `https://${posthogRegion}-assets.i.posthog.com`
 
   return {
   define: {
@@ -150,6 +153,21 @@ export default defineConfig(({ mode }) => {
             }
           });
         },
+      },
+      '/ph/static': {
+        target: posthogAssetsTarget,
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/ph/, ''),
+      },
+      '/ph/array': {
+        target: posthogAssetsTarget,
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/ph/, ''),
+      },
+      '/ph': {
+        target: posthogApiTarget,
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/ph/, ''),
       },
     },
   },

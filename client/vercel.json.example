@@ -46,7 +46,7 @@
       "destination": "https://YOUR-RENDER-SERVICE.onrender.com/socket.io/$1"
     },
     {
-      "source": "/((?!api/)(?!.*\\.[^/]+$).*)",
+      "source": "/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }
   ],

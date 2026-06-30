@@ -46,10 +46,44 @@ const BANNED_PROXY_HOSTS = new Set([
 ]);
 
 const POSTHOG_PROXY_PREFIX = '/ph';
+/** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
+const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)';
 
 const resolvePostHogRegion = (host = '') => (
   String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
 );
+
+const isPostHogRewrite = (rule) => String(rule?.source || '').startsWith(`${POSTHOG_PROXY_PREFIX}/`);
+
+const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
+  rules
+    .filter((rule) => !isPostHogRewrite(rule))
+    .map((rule) => {
+      if (rule.source === '/api/(.*)') {
+        return { ...rule, destination: apiDestination };
+      }
+      if (rule.source === '/socket.io/(.*)') {
+        return { ...rule, destination: socketDestination };
+      }
+      if (String(rule.source || '').includes('(?!api/)')) {
+        return { ...rule, source: SPA_CATCHALL_SOURCE };
+      }
+      return rule;
+    })
+);
+
+/** PostHog rewrites must precede SPA catch-all — first Vercel match wins. */
+const composeRewrites = (templateRewrites, apiDestination, socketDestination) => {
+  const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
+  const posthog = buildPostHogRewrites();
+  const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
+  if (catchallIdx === -1) return [...mapped, ...posthog];
+  return [
+    ...mapped.slice(0, catchallIdx),
+    ...posthog,
+    ...mapped.slice(catchallIdx),
+  ];
+};
 
 /** PostHog same-origin proxy — static/array before catch-all (cache headers). */
 const buildPostHogRewrites = () => {
@@ -157,6 +191,7 @@ const existingRewritesLookValid = (existing) => {
   }
 };
 
+const main = () => {
 const proxyUrl = pickProxyUrl();
 const nestProxyUrl = pickNestProxyUrl();
 const onVercel = process.env.VERCEL === '1';
@@ -226,6 +261,12 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
   process.exit(1);
 }
 
+if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.VITE_POSTHOG_PROJECT_TOKEN || '').trim()) {
+  console.warn(
+    '[generateVercelConfig] VITE_POSTHOG_PROJECT_TOKEN missing on Vercel production — PostHog will not capture until set and redeployed',
+  );
+}
+
 const payload = {
   ...(template.redirects ? { redirects: template.redirects } : {}),
   rewrites: [
@@ -241,16 +282,7 @@ const payload = {
           },
         ]
       : []),
-    ...template.rewrites.map((rule) => {
-    if (rule.source === '/api/(.*)') {
-      return { ...rule, destination: apiDestination };
-    }
-    if (rule.source === '/socket.io/(.*)') {
-      return { ...rule, destination: socketDestination };
-    }
-    return rule;
-  }),
-    ...buildPostHogRewrites(),
+    ...composeRewrites(template.rewrites, apiDestination, socketDestination),
   ],
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
@@ -306,4 +338,16 @@ if (proxyUrl) {
 }
 if (nestAttendanceDestination) {
   console.log(`[generateVercelConfig] /api/attendance strangler → ${nestAttendanceDestination}`);
+}
+};
+
+module.exports = {
+  SPA_CATCHALL_SOURCE,
+  composeRewrites,
+  buildPostHogRewrites,
+  mapTemplateRewrites,
+};
+
+if (require.main === module) {
+  main();
 }

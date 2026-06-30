@@ -174,9 +174,15 @@ async function main() {
     updated += 1;
     console.log('    patched');
 
-    if (shouldDeploy && (/^taskmaster$/i.test(String(service.name))
-      || /^coreknot-api-staging$/i.test(String(service.name))
-      || /^coreknot-nest-staging$/i.test(String(service.name)))) {
+    const deployName = String(service.name || '').toLowerCase();
+    const deploySlug = String(service.slug || '').toLowerCase();
+    const isProdApi =
+      deployName === 'coreknot-api'
+      || deployName === 'taskmaster'
+      || (deploySlug.includes('taskmaster') && String(service.type || '').includes('web'));
+    if (shouldDeploy && (isProdApi
+      || deployName === 'coreknot-api-staging'
+      || deployName === 'coreknot-nest-staging')) {
       await triggerDeploy(service.id);
       console.log(`    deploy triggered${clearCache ? ' (cache cleared)' : ''}`);
     }

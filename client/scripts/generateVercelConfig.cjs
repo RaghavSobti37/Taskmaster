@@ -45,6 +45,25 @@ const BANNED_PROXY_HOSTS = new Set([
   'your-render-service.onrender.com',
 ]);
 
+const POSTHOG_PROXY_PREFIX = '/ph';
+
+const resolvePostHogRegion = (host = '') => (
+  String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
+);
+
+/** PostHog same-origin proxy — static/array before catch-all (cache headers). */
+const buildPostHogRewrites = () => {
+  const region = resolvePostHogRegion(process.env.VITE_POSTHOG_HOST);
+  const apiBase = `https://${region}.i.posthog.com`;
+  const assetsBase = `https://${region}-assets.i.posthog.com`;
+  const prefix = POSTHOG_PROXY_PREFIX;
+  return [
+    { source: `${prefix}/static/:path*`, destination: `${assetsBase}/static/:path*` },
+    { source: `${prefix}/array/:path*`, destination: `${assetsBase}/array/:path*` },
+    { source: `${prefix}/:path*`, destination: `${apiBase}/:path*` },
+  ];
+};
+
 const normalizeProxyUrl = (raw) => String(raw || '').trim().replace(/\/$/, '');
 
 const pickProxyUrl = () => {
@@ -231,6 +250,7 @@ const payload = {
     }
     return rule;
   }),
+    ...buildPostHogRewrites(),
   ],
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),

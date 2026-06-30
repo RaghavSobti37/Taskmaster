@@ -31,6 +31,12 @@ describe('CI production readiness smoke', () => {
     expect(typeof logger.info).toBe('function');
   });
 
+  it('PostHog server module exports captureEvent', () => {
+    const posthog = require('../utils/posthog');
+    expect(typeof posthog.captureEvent).toBe('function');
+    expect(typeof posthog.initPostHog).toBe('function');
+  });
+
   it('render.yaml defines health check', () => {
     const yaml = fs.readFileSync(path.join(repoRoot, 'render.yaml'), 'utf8');
     expect(yaml).toContain('healthCheckPath: /api/health');

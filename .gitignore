@@ -2,8 +2,6 @@
 .env.local
 .env.*.local
 client/.env.development
-client/.env.auth
-client/.env.landing
 server/data/media-sheets/
 server/data/crm-sheet-import/
 server/data/*.csv
@@ -13,7 +11,6 @@ server/data/*.csv
 .cursor/render-api.local.env
 .cursor/git-promotion.json
 .cursor/multiagent/*-ledger.json
-sites/*/vercel.json
 .local/
 !.env.example
 !.env.*.example

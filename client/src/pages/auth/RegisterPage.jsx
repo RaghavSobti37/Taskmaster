@@ -3,6 +3,7 @@ import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
+import { navigateAfterAuth } from '../../utils/authNavigation';
 import { useDepartments } from '../../hooks/useTaskmasterQueries';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import BrandLogo from '../../components/brand/BrandLogo';
@@ -22,7 +23,7 @@ const RegisterPage = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/dashboard', { replace: true });
+      navigateAfterAuth(navigate, '/dashboard');
     }
   }, [authLoading, user, navigate]);
 
@@ -33,7 +34,7 @@ const RegisterPage = () => {
     try {
       await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
       await login();
-      navigate('/dashboard', { replace: true });
+      navigateAfterAuth(navigate, '/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {

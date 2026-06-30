@@ -1,4 +1,8 @@
 {
+  "buildCommand": "cd ../../client && npm run vercel-build:landing",
+  "outputDirectory": "../../client/dist",
+  "installCommand": "cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js",
+  "framework": null,
   "redirects": [
     {
       "source": "/home",
@@ -50,11 +54,6 @@
       "destination": "/index.html"
     }
   ],
-  "buildCommand": "npm run vercel-build",
-  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd .. && node scripts/vercelInstall.js",
-  "env": {
-    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
-  },
   "headers": [
     {
       "source": "/",
@@ -83,5 +82,8 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+  }
 }

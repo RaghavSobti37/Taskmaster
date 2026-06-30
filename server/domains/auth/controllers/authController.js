@@ -39,7 +39,7 @@ const verifyOAuthTicket = (ticket) => {
   return decoded.id;
 };
 
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+const { resolveAuthFrontendUrl } = require('../../../utils/oauthEnv');
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
 const PASSWORD_RESET_CC = ADMIN_EMAIL || 'REDACTED_ADMIN@example.com';
@@ -421,11 +421,11 @@ exports.googleAuthCallback = async (req, res) => {
         user.googleCalendarLinked = true;
         await user.save();
       }
-      return res.redirect(`${FRONTEND_URL}/auth/google/success?link=success`);
+      return res.redirect(`${resolveAuthFrontendUrl()}/auth/google/success?link=success`);
     }
 
     if (process.env.NODE_ENV === 'production' && emailLower !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && state !== 'connect') {
-      return res.redirect(`${FRONTEND_URL}/login?error=unauthorized_domain`);
+      return res.redirect(`${resolveAuthFrontendUrl()}/login?error=unauthorized_domain`);
     }
 
     let user = await User.findOne({ email: emailLower });
@@ -452,10 +452,10 @@ exports.googleAuthCallback = async (req, res) => {
 
     const ticket = generateOAuthTicket(user._id);
 
-    res.redirect(`${FRONTEND_URL}/auth/google/success?ticket=${encodeURIComponent(ticket)}`);
+    res.redirect(`${resolveAuthFrontendUrl()}/auth/google/success?ticket=${encodeURIComponent(ticket)}`);
   } catch (error) {
     logger.error('authController', 'Google Auth ', { error: error.message || error });
-    res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
+    res.redirect(`${resolveAuthFrontendUrl()}/login?error=auth_failed`);
   }
 };
 
@@ -600,7 +600,7 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
     await user.save();
 
-    const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${resolveAuthFrontendUrl()}/reset-password?token=${resetToken}`;
 
     const { resolvePasswordResetCcEmails } = require('../../../utils/platformNotificationRecipients');
     const ccList = await resolvePasswordResetCcEmails();

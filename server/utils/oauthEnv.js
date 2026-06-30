@@ -68,9 +68,23 @@ function resolveOAuthRedirectUri(req, { envVar, path, prodEnvVar }) {
   return `${resolveApiBaseUrl(req)}${path}`;
 }
 
+function resolveAuthFrontendUrl() {
+  const authExplicit = trimUrl(process.env.AUTH_FRONTEND_URL);
+  if (authExplicit && !(process.env.NODE_ENV === 'production' && isLocalhostUrl(authExplicit))) {
+    return authExplicit;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://auth.tsccoreknot.com';
+  }
+
+  return resolveClientUrl();
+}
+
 module.exports = {
   isLocalhostUrl,
   resolveApiBaseUrl,
   resolveClientUrl,
+  resolveAuthFrontendUrl,
   resolveOAuthRedirectUri,
 };

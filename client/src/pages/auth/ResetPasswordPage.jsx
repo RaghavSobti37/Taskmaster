@@ -6,7 +6,7 @@ import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
-import BrandLogo from '../../components/brand/BrandLogo';
+import { navigateAfterAuth } from '../../utils/authNavigation';
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -62,7 +62,7 @@ const ResetPasswordPage = () => {
       setSuccess(res.data?.message || 'Password updated successfully.');
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => navigate('/login', { replace: true }), 2000);
+      setTimeout(() => navigateAfterAuth(navigate, '/login'), 2000);
     } catch (err) {
       setError(
         err.response?.data?.error ||

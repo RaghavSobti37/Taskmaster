@@ -8,6 +8,9 @@ import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootFallback from './components/AppBootFallback';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
+import ExternalAuthRedirect from './components/ExternalAuthRedirect';
+import ExternalLandingRedirect from './components/ExternalLandingRedirect';
+import { usesExternalAuthHost, usesExternalLandingHost } from './config/siteUrls';
 
 const lazyWithRetry = createLazyWithRetry;
 
@@ -116,8 +119,22 @@ function AppRootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <AppBootFallback />;
   if (user) return <Navigate to="/dashboard" replace />;
+  if (usesExternalLandingHost()) {
+    return <ExternalLandingRedirect />;
+  }
   return <Navigate to="/landing" replace />;
 }
+
+const externalAuthRouteElements = (
+  <>
+    <Route path="/login" element={<ExternalAuthRedirect />} />
+    <Route path="/register" element={<ExternalAuthRedirect />} />
+    <Route path="/forgot-password" element={<ExternalAuthRedirect />} />
+    <Route path="/reset-password" element={<ExternalAuthRedirect />} />
+    <Route path="/relegends" element={<ExternalAuthRedirect />} />
+    <Route path="/auth/google/success" element={<ExternalAuthRedirect />} />
+  </>
+);
 
 const marketingAuthRoutes = (
   <>
@@ -165,8 +182,20 @@ function App() {
           {isAppSite() && (
             <>
           <Route path="/" element={<AppRootRedirect />} />
-          <Route path="/landing" element={<LandingPage />} />
-          {marketingAuthRoutes}
+          {usesExternalLandingHost() ? (
+            <Route path="/landing" element={<ExternalLandingRedirect />} />
+          ) : (
+            <Route path="/landing" element={<LandingPage />} />
+          )}
+          {usesExternalAuthHost() ? (
+            <>
+              {externalAuthRouteElements}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/userdata" element={<UserDataDeletion />} />
+            </>
+          ) : (
+            marketingAuthRoutes
+          )}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />

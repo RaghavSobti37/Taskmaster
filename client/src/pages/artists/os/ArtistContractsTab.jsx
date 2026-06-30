@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Badge, DataTable, Button, Input } from '../../../components/ui';
 import ArtistOsQueryShell from './ArtistOsQueryShell';
 import { NexusModal } from '../../../components/ui/modals';
@@ -26,7 +27,10 @@ export default function ArtistContractsTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title) return alert('Title required');
+    if (!form.title) {
+      toast.error('Title required');
+      return;
+    }
     await createMutation.mutateAsync({ artistId, data: form });
     setOpen(false);
     setForm(EMPTY);

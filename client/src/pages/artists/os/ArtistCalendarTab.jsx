@@ -1,5 +1,6 @@
 import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Card, Badge, Button, Input } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';
 import { Plus } from 'lucide-react';
@@ -23,7 +24,10 @@ export default function ArtistCalendarTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.startAt) return alert('Title and date required');
+    if (!form.title || !form.startAt) {
+      toast.error('Title and date required');
+      return;
+    }
     await createMutation.mutateAsync({
       artistId,
       data: {

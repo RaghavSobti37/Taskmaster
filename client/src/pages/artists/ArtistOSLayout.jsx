@@ -57,7 +57,9 @@ export default function ArtistOSLayout({
       case 'content':
       case 'releases':
       case 'notes':
+        return <Panel artistId={artistId} isPreview={isPreview} />;
       case 'documents':
+        return <Panel artistId={artistId} artistName={artist?.name} isPreview={isPreview} />;
       case 'contracts':
         return <Panel artistId={artistId} isPreview={isPreview} />;
       case 'analytics':

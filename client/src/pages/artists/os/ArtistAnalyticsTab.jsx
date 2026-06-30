@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button, Input, FullScreenWorkspace, SectionCard, MetricCard } from '../../../components/ui';
@@ -303,7 +304,10 @@ function ArtistAnalyticsTabInner({
           hasChanges={showAddVideo && !!(newVideo.url || newVideo.title || newVideo.channelName)}
           onCancel={() => setNewVideo({ url: '', title: '', channelName: '' })}
           onSave={async () => {
-            if (!newVideo.url) return alert('YouTube URL required');
+            if (!newVideo.url) {
+              toast.error('YouTube URL required');
+              return;
+            }
             await addVideoMutation.mutateAsync({ id: artistId, data: newVideo });
             setShowAddVideo(false);
             setNewVideo({ url: '', title: '', channelName: '' });

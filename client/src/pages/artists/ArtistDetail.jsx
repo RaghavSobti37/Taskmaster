@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
-
 import { useParams, useNavigate } from 'react-router-dom';
-
-import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc } from 'lucide-react';
-
+import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc, Link2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
-
 import { useConfirm } from '../../contexts/confirmContext';
-
 import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
@@ -31,9 +27,8 @@ export default function ArtistDetail({ isPreview = false }) {
   const {
 
     artist,
-
     isArtistLoading,
-
+    previewInvalid,
     shareToken,
 
     connections,
@@ -161,17 +156,11 @@ export default function ArtistDetail({ isPreview = false }) {
       const { url } = await shareLinkMutation.mutateAsync(id);
 
       await navigator.clipboard.writeText(url);
-
-      alert(`Share link copied:\n${url}`);
-
+      toast.success('Share link copied to clipboard');
     } catch {
-
       const fallback = `${window.location.origin}/preview/artist/${id}`;
-
       await navigator.clipboard.writeText(fallback);
-
-      alert(`Preview link copied:\n${fallback}`);
-
+      toast.success('Preview link copied (token generation unavailable)');
     }
 
   };
@@ -192,28 +181,28 @@ export default function ArtistDetail({ isPreview = false }) {
 
   if (isArtistLoading) return <PageSkeleton />;
 
-
+  if (previewInvalid) {
+    return (
+      <PageContainer className="!py-16 text-center">
+        <Link2 size={48} className="mx-auto mb-4 text-amber-500 opacity-50" />
+        <h2 className="text-lg font-black uppercase text-amber-600">Invalid Share Link</h2>
+        <p className="text-sm text-[var(--color-text-muted)] mt-2 max-w-md mx-auto">
+          This preview URL is missing a token. Ask your manager for a fresh share link.
+        </p>
+      </PageContainer>
+    );
+  }
 
   if (!artist) {
-
     return (
-
       <PageContainer className="!py-16 text-center">
-
         <Disc size={48} className="mx-auto mb-4 text-rose-500 opacity-50" />
-
         <h2 className="text-lg font-black uppercase text-rose-500">Artist Not Found</h2>
-
         <Button variant="secondary" className="mt-6 mx-auto" onClick={() => navigate('/artists')}>
-
           <ArrowLeft size={16} /> Back to Roster
-
         </Button>
-
       </PageContainer>
-
     );
-
   }
 
 

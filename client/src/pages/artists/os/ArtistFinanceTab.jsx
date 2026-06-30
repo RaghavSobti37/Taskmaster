@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Card, Button, Input } from '../../../components/ui';
 import ArtistOsQueryShell from './ArtistOsQueryShell';
@@ -19,7 +20,10 @@ export default function ArtistFinanceTab({ artistId, isPreview }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.amount || !form.entryDate) return alert('Amount and date required');
+    if (!form.amount || !form.entryDate) {
+      toast.error('Amount and date required');
+      return;
+    }
     await createMutation.mutateAsync({
       artistId,
       data: {

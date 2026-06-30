@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc, Link2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
 
+import ArtistShareModal from '../../components/artists/ArtistShareModal';
 import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import { buildArtistEditForm } from '../../utils/artistEditForm';
 
@@ -59,6 +59,8 @@ export default function ArtistDetail({ isPreview = false }) {
   const [syncing, setSyncing] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
+
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const [editedArtist, setEditedArtist] = useState(null);
   const [editBaseline, setEditBaseline] = useState(null);
@@ -135,24 +137,6 @@ export default function ArtistDetail({ isPreview = false }) {
 
       setSyncing(false);
 
-    }
-
-  };
-
-
-
-  const handleShare = async () => {
-
-    try {
-
-      const { url } = await shareLinkMutation.mutateAsync(id);
-
-      await navigator.clipboard.writeText(url);
-      toast.success('Share link copied to clipboard');
-    } catch {
-      const fallback = `${window.location.origin}/preview/artist/${id}`;
-      await navigator.clipboard.writeText(fallback);
-      toast.success('Preview link copied (token generation unavailable)');
     }
 
   };
@@ -253,7 +237,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
             {!isPreview && (
 
-              <Button size="sm" onClick={handleShare}>
+              <Button size="sm" onClick={() => setIsShareOpen(true)}>
 
                 <Share2 size={14} /> Share
 
@@ -314,6 +298,22 @@ export default function ArtistDetail({ isPreview = false }) {
         onDelete={handleDelete}
 
         isPreview={isPreview}
+
+      />
+
+      <ArtistShareModal
+
+        isOpen={isShareOpen}
+
+        onClose={() => setIsShareOpen(false)}
+
+        artistId={id}
+
+        artistName={artist.name}
+
+        artistSlug={artist.slug}
+
+        shareLinkMutation={shareLinkMutation}
 
       />
 

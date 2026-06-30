@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import AppBootFallback from '../../components/AppBootFallback';
+import { navigateAfterAuth } from '../../utils/authNavigation';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 
@@ -23,13 +24,13 @@ const GoogleSuccessPage = () => {
 
     if (linkSuccess) {
       processedKeyRef.current = authKey;
-      navigate('/settings?tab=profile', { replace: true });
+      navigateAfterAuth(navigate, '/settings?tab=profile');
       return;
     }
 
     const finishLogin = async () => {
       await login();
-      navigate('/dashboard', { replace: true });
+      navigateAfterAuth(navigate, '/dashboard');
     };
 
     if (ticket) {
@@ -69,7 +70,7 @@ const GoogleSuccessPage = () => {
           }
           const sessionUser = await refreshUser({ clearOn401: false });
           if (sessionUser) {
-            navigate('/dashboard', { replace: true });
+            navigateAfterAuth(navigate, '/dashboard');
             return;
           }
         }

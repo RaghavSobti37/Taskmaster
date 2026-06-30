@@ -258,9 +258,34 @@ const payload = {
   ...(template.headers ? { headers: template.headers } : {}),
 };
 
-const targets = [path.join(REPO_ROOT, 'vercel.json'), path.join(CLIENT_ROOT, 'vercel.json')];
-const payloadText = `${JSON.stringify(payload, null, 2)}\n`;
+const buildSitePayload = (buildCommand) => ({
+  buildCommand,
+  outputDirectory: '../../client/dist',
+  installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
+  framework: null,
+  ...(payload.redirects ? { redirects: payload.redirects } : {}),
+  rewrites: payload.rewrites,
+  ...(payload.headers ? { headers: payload.headers } : {}),
+  env: payload.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
+});
+
+const targets = [
+  path.join(REPO_ROOT, 'vercel.json'),
+  path.join(CLIENT_ROOT, 'vercel.json'),
+  path.join(REPO_ROOT, 'sites/landing/vercel.json'),
+  path.join(REPO_ROOT, 'sites/auth/vercel.json'),
+];
+
+const payloadsByTarget = new Map([
+  [path.join(REPO_ROOT, 'vercel.json'), payload],
+  [path.join(CLIENT_ROOT, 'vercel.json'), payload],
+  [path.join(REPO_ROOT, 'sites/landing/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:landing')],
+  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:auth')],
+]);
+
 for (const file of targets) {
+  const filePayload = payloadsByTarget.get(file);
+  const payloadText = `${JSON.stringify(filePayload, null, 2)}\n`;
   let existing = '';
   try {
     existing = fs.readFileSync(file, 'utf8');

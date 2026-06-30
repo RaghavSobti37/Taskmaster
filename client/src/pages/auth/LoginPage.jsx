@@ -11,15 +11,9 @@ import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
 import { consumeAuthReturnPath } from '../../lib/authUnauthorized';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+import { navigateAfterAuth } from '../../utils/authNavigation';
 
-const navigateAfterLogin = (navigate, target) => {
-  if (/^https?:\/\//i.test(target)) {
-    window.location.replace(target);
-    return;
-  }
-  navigate(target, { replace: true });
-};
-import { formatLoginError } from '../../utils/loginError';
+const LoginPage = () => {
 import { postLogin } from '../../utils/loginRequest';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
@@ -50,7 +44,7 @@ const LoginPage = () => {
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      navigateAfterLogin(navigate, resolveReturnPath());
+      navigateAfterAuth(navigate, resolveReturnPath());
     }
   }, [authLoading, user, navigate, resolveReturnPath]);
 
@@ -92,7 +86,7 @@ const LoginPage = () => {
     try {
       await postLogin(trimmedEmail, password);
       await login();
-      navigateAfterLogin(navigate, resolveReturnPath());
+      navigateAfterAuth(navigate, resolveReturnPath());
     } catch (err) {
       setError(formatLoginError(err).message);
     } finally {

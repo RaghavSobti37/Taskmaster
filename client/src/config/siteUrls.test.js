@@ -46,4 +46,23 @@ describe('siteUrls', () => {
     expect(hasSameOriginAuthRoutes()).toBe(false);
     expect(authUrl('/login')).toBe('https://auth.tsccoreknot.com/login');
   });
+
+  it('redirects app host auth slugs to auth subdomain when configured', async () => {
+    import.meta.env.VITE_SITE_MODE = 'app';
+    import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';
+    import.meta.env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
+    import.meta.env.VITE_LANDING_URL = 'https://landing.tsccoreknot.com';
+
+    const {
+      usesExternalAuthHost,
+      externalAuthRedirectTarget,
+      shouldRedirectMarketingRoute,
+    } = await import('./siteUrls.js');
+
+    expect(usesExternalAuthHost()).toBe(true);
+    expect(externalAuthRedirectTarget('/login', '?redirect=%2Fdashboard')).toBe(
+      'https://auth.tsccoreknot.com/login?redirect=%2Fdashboard',
+    );
+    expect(shouldRedirectMarketingRoute('/')).toBe('https://landing.tsccoreknot.com/');
+  });
 });

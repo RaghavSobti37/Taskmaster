@@ -37,6 +37,8 @@
     "keepWarmUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/health",
     "corsAllowedOrigins": [
       "https://YOUR-FRONTEND-DOMAIN.com",
+      "https://landing.tsccoreknot.com",
+      "https://auth.tsccoreknot.com",
       "https://YOUR-PREVIEW-APP.vercel.app"
     ]
   },

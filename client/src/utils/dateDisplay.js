@@ -82,14 +82,15 @@ export function formatWeekdayDateLong(value, { emptyLabel = EMPTY } = {}) {
 }
 
 /** Parse yyyy-MM-dd or ISO timestamp to display date. */
-export function formatDateKeyForDisplay(dateKey, { emptyLabel = EMPTY } = {}) {
+export function formatDateKeyForDisplay(dateKey, { emptyLabel = EMPTY, withWeekday = false } = {}) {
   if (!dateKey) return emptyLabel;
+  const pattern = withWeekday ? WEEKDAY_DATE_DISPLAY_FORMAT : DATE_DISPLAY_FORMAT;
   if (typeof dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey.trim())) {
     const d = parseISO(dateKey.trim());
     if (!isValid(d)) return emptyLabel;
-    return format(d, DATE_DISPLAY_FORMAT);
+    return format(d, pattern);
   }
-  return formatDisplayDate(dateKey, { emptyLabel });
+  return withWeekday ? formatWeekdayDate(dateKey, { emptyLabel }) : formatDisplayDate(dateKey, { emptyLabel });
 }
 
 export function formatDisplayDateTime12h(value, { emptyLabel = EMPTY } = {}) {

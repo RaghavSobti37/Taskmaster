@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -470,7 +470,7 @@ export default function ProjectGoalsPanel({ projectId, project, startInEdit = fa
 
       {goal.endDate && (
         <p className="text-[10px] text-[var(--color-text-muted)]">
-          Goal deadline: {formatDisplayDate(new Date(goal.endDate))}
+          Goal deadline: {formatWeekdayDateLong(new Date(goal.endDate))}
         </p>
       )}
 

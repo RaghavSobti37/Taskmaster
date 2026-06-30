@@ -1,7 +1,6 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDisplayDateTime, formatDateKeyForDisplay } from '../../utils/dateDisplay';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, RefreshCw, Target, Users } from 'lucide-react';
-import { format } from 'date-fns';
 import { Button, Input } from '../ui';
 import { NexusModal } from '../ui/modals';
 import WorkspaceProjectFields from '../forms/WorkspaceProjectFields';
@@ -83,7 +82,7 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
             : '';
           addToast({
             title: 'Log saved',
-            message: `Daily log added for ${workDate}.${shared}`,
+            message: `Daily log added for ${formatDateKeyForDisplay(workDate, { withWeekday: true })}.${shared}`,
             type: 'success',
             module: MODULE.SYSTEM,
           });
@@ -97,6 +96,7 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
       isOpen={isOpen}
       onClose={handleClose}
       title="Log Your Work"
+      subtitle={workDate ? formatDateKeyForDisplay(workDate, { withWeekday: true }) : undefined}
       showFooter={false}
       size="lg"
     >

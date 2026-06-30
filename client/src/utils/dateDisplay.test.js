@@ -4,6 +4,7 @@ import {
   formatDisplayDate,
   formatDisplayDateTime,
   formatDateKeyForDisplay,
+  formatWeekdayDateLong,
 } from './dateDisplay';
 
 describe('dateDisplay', () => {
@@ -17,6 +18,11 @@ describe('dateDisplay', () => {
 
   it('formats date keys for display', () => {
     expect(formatDateKeyForDisplay('2026-06-29')).toBe('29/06/2026');
+  });
+
+  it('formats date keys with weekday for headings', () => {
+    expect(formatDateKeyForDisplay('2026-06-29', { withWeekday: true })).toMatch(/^Mon, 29\/06\/2026$/);
+    expect(formatWeekdayDateLong('2026-06-29')).toMatch(/^Monday, 29\/06\/2026$/);
   });
 
   it('formats datetime with time', () => {

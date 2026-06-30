@@ -116,7 +116,7 @@ async function main() {
     process.exit(1);
   }
 
-  const url = svc.serviceDetails?.url || svc.url || 'https://taskmaster-jfw0.onrender.com';
+  const url = svc.serviceDetails?.url || svc.url || 'https://YOUR-PRODUCTION-API.onrender.com';
   console.log(`→ ${svc.name} (${svc.id})`);
   console.log(`  url: ${url}`);
 

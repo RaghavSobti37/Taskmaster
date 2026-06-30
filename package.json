@@ -70,11 +70,11 @@
     "artist-crm:bulk:prod": "node server/scripts/bulkPushArtistCrmToProd.js --prod --fix-index"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "concurrently": "^9.1.2",
-    "dependency-cruiser": "^16.10.4",
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^10.0.3",
+    "dependency-cruiser": "^18.0.0",
     "husky": "^9.1.7",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

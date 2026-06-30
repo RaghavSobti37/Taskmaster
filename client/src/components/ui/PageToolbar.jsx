@@ -172,7 +172,6 @@ export default function PageToolbar({
             <>
               <div className="flex items-center gap-3 min-w-0">
                 {titleBlock}
-                {filtersButton && <div className="shrink-0 ml-auto">{filtersButton}</div>}
               </div>
               {hasControlsRow && (
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -190,30 +189,39 @@ export default function PageToolbar({
                   ))}
                 </div>
               )}
-              {actionsNode && (
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-bg-border)]/50">
-                  {actionsNode}
+              {(filtersButton || actionsNode) && (
+                <div className="flex items-center gap-2 min-w-0">
+                  {filtersButton}
+                  {actionsNode && <div className="shrink-0 ml-auto">{actionsNode}</div>}
                 </div>
               )}
             </>
           ) : (
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              {leading && <div className="shrink-0">{leading}</div>}
-              {inlineSearch && (
-                <div className="flex-1 min-w-[140px] basis-[min(100%,200px)]">
-                  {isValidElement(inlineSearch)
-                    ? cloneSearchForMobile(inlineSearch)
-                    : inlineSearch}
+            <>
+              {(leading || inlineSearch || inlineControls.length > 0) && (
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  {leading && <div className="shrink-0">{leading}</div>}
+                  {inlineSearch && (
+                    <div className="flex-1 min-w-[140px] basis-[min(100%,200px)]">
+                      {isValidElement(inlineSearch)
+                        ? cloneSearchForMobile(inlineSearch)
+                        : inlineSearch}
+                    </div>
+                  )}
+                  {inlineControls.map((control, i) => (
+                    <div key={i} className="shrink-0">
+                      {control}
+                    </div>
+                  ))}
                 </div>
               )}
-              {inlineControls.map((control, i) => (
-                <div key={i} className="shrink-0">
-                  {control}
+              {(filtersButton || actionsNode) && (
+                <div className="flex items-center gap-2 min-w-0">
+                  {filtersButton}
+                  {actionsNode && <div className="shrink-0 ml-auto">{actionsNode}</div>}
                 </div>
-              ))}
-              {filtersButton}
-              {actionsNode && <div className="shrink-0 ml-auto">{actionsNode}</div>}
-            </div>
+              )}
+            </>
           )}
         </div>
         {hasFilters && (

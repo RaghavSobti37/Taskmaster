@@ -27,6 +27,7 @@ jobs:
         run: npm test --workspace=coreknot-server -- --coverage
         env:
           NODE_ENV: test
+          NODE_OPTIONS: --experimental-vm-modules
 
   client-check:
     runs-on: ubuntu-latest

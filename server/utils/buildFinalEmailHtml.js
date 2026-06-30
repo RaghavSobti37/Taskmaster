@@ -42,20 +42,19 @@ const ensureAbsoluteImageUrls = (html, { baseUrl } = {}) => {
   });
 };
 
-const { createRequire } = require('module');
-const requireJuice = createRequire(__filename);
-
-let juiceFn;
-const loadJuice = () => {
-  if (!juiceFn) juiceFn = requireJuice('juice');
-  return juiceFn;
+let juiceLoader;
+const loadJuice = async () => {
+  if (!juiceLoader) {
+    juiceLoader = import('juice').then((mod) => mod.default ?? mod);
+  }
+  return juiceLoader;
 };
 
 const inlineCss = async (html) => {
   const hasNonQuillStyles = /<style[\s>]/i.test(html) && !/\.ql-|quill/i.test(html);
   if (!hasNonQuillStyles) return html;
   try {
-    const juice = loadJuice();
+    const juice = await loadJuice();
     return juice(html, {
       extraCss: JUICE_RESET_CSS,
       applyStyleTags: true,

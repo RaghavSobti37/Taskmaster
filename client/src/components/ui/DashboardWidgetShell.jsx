@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from './primitives';
+import { useDashboardLayout } from '../dashboard/DashboardLayoutContext';
 
 /**
  * Standard dashboard widget chrome — flat surface, uniform header band, cell border.
@@ -13,8 +14,14 @@ export default function DashboardWidgetShell({
   bodyClassName = 'p-4',
   headerClassName = '',
 }) {
+  const { expandContent } = useDashboardLayout();
+
   return (
-    <Card className={`dashboard-widget p-0 flex flex-col h-full min-h-0 overflow-hidden ${className}`}>
+    <Card
+      className={`dashboard-widget p-0 flex flex-col ${className} ${
+        expandContent ? '!h-auto !min-h-0 !overflow-visible' : 'h-full min-h-0 overflow-hidden'
+      }`}
+    >
       {(title || actions) && (
         <div
           className={`dashboard-widget-header px-4 h-11 min-h-[44px] w-full border-b border-[var(--color-bg-border)] flex items-center justify-between gap-2 shrink-0 box-border ${headerClassName}`}
@@ -37,7 +44,15 @@ export default function DashboardWidgetShell({
           {actions && <div className="flex items-center gap-2 shrink-0 ml-auto">{actions}</div>}
         </div>
       )}
-      <div className={`flex-1 min-h-0 overflow-hidden ${bodyClassName}`}>{children}</div>
+      <div
+        className={
+          expandContent
+            ? bodyClassName
+            : `flex-1 min-h-0 overflow-hidden ${bodyClassName}`
+        }
+      >
+        {children}
+      </div>
     </Card>
   );
 }

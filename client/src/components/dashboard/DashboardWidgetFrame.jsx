@@ -4,6 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '../ui/primitives';
 import DashboardWidgetShell from '../ui/DashboardWidgetShell';
 import { getWidgetRoute, getWidgetLabel } from '../../lib/dashboardSections';
+import { useDashboardLayout } from './DashboardLayoutContext';
 
 /**
  * Widget chrome with optional navigation, compact cap, and View all.
@@ -23,6 +24,7 @@ export default function DashboardWidgetFrame({
   onNavigate,
 }) {
   const navigate = useNavigate();
+  const { expandContent } = useDashboardLayout();
   const route = href || getWidgetRoute(componentId);
   const displayTitle = title || getWidgetLabel(componentId);
 
@@ -48,8 +50,8 @@ export default function DashboardWidgetFrame({
 
   return (
     <DashboardWidgetShell
-      className={`h-full ${compact ? 'dashboard-widget--compact' : ''} ${className}`}
-      bodyClassName="p-0 flex flex-col flex-1 min-h-0"
+      className={`${expandContent ? 'h-auto' : 'h-full'} ${compact && !expandContent ? 'dashboard-widget--compact' : ''} ${className}`}
+      bodyClassName={expandContent ? 'p-0' : 'p-0 flex flex-col flex-1 min-h-0'}
       title={headerTitle}
       icon={icon}
       actions={
@@ -70,18 +72,22 @@ export default function DashboardWidgetFrame({
         </>
       }
     >
-      <div
-        role={route ? 'button' : undefined}
-        tabIndex={route ? 0 : undefined}
-        onClick={route ? () => go(route) : undefined}
-        onKeyDown={route ? (e) => { if (e.key === 'Enter') go(route); } : undefined}
-        className={`flex-1 min-h-0 overflow-hidden ${route ? 'cursor-pointer' : ''}`}
-        style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
-      >
-        <div className="h-full overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-          {children}
+      {expandContent ? (
+        <div onClick={(e) => e.stopPropagation()}>{children}</div>
+      ) : (
+        <div
+          role={route ? 'button' : undefined}
+          tabIndex={route ? 0 : undefined}
+          onClick={route ? () => go(route) : undefined}
+          onKeyDown={route ? (e) => { if (e.key === 'Enter') go(route); } : undefined}
+          className={`flex-1 min-h-0 overflow-hidden ${route ? 'cursor-pointer' : ''}`}
+          style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+        >
+          <div className="h-full overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+            {children}
+          </div>
         </div>
-      </div>
+      )}
     </DashboardWidgetShell>
   );
 }

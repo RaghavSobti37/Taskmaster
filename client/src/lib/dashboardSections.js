@@ -313,7 +313,8 @@ export function getSectionGridStyle(sectionId, { mobile = false } = {}) {
   };
 }
 
-export function getWidgetMinHeightClass(sectionId) {
+export function getWidgetMinHeightClass(sectionId, { mobile = false } = {}) {
+  if (mobile) return 'h-auto';
   if (sectionId === 'status-strip') return 'min-h-[100px] lg:min-h-[120px]';
   if (sectionId === 'analytics') return 'min-h-[120px] lg:min-h-[140px]';
   if (sectionId === 'team-context') return 'min-h-[140px] lg:min-h-[200px]';

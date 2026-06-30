@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getWidgetGridStyle,
+  getWidgetMinHeightClass,
   filterWidgetsForMobileGrid,
   prepareDailyActionRenderList,
   repackDashboardElements,
@@ -35,6 +36,11 @@ describe('dashboardSections grid layout', () => {
   it('stacks widgets full width on mobile', () => {
     expect(getWidgetGridStyle({ size: '2', col: 3, row: 2 }, 'daily-actions', { mobile: true }))
       .toEqual({ gridColumn: '1 / -1' });
+  });
+
+  it('uses natural height for mobile widget cells', () => {
+    expect(getWidgetMinHeightClass('daily-actions', { mobile: true })).toBe('h-auto');
+    expect(getWidgetMinHeightClass('daily-actions')).toContain('lg:min-h-');
   });
 
   it('omits mark-attendance from mobile grid when MobileAttendanceBar handles it', () => {

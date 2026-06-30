@@ -1016,6 +1016,32 @@ a.tm-hashtag-chip:hover {
   }
 }
 
+/* Mobile dashboard: full-height widgets, page scroll — no cramped inner scroll areas */
+@media (max-width: 1023px) {
+  .dashboard-mobile-stack > div {
+    height: auto;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget > div:last-child {
+    flex: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget .overflow-y-auto,
+  .dashboard-mobile-stack .dashboard-widget .overflow-hidden.flex-1,
+  .dashboard-mobile-stack .dashboard-widget [class*='max-h-'] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+}
+
 .dashboard-widget,
 .dashboard-widget-grid .dashboard-grid-item > .dashboard-widget {
   background: var(--color-bg-surface);

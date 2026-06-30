@@ -65,7 +65,7 @@ function Root() {
 
   const tree = posthogClient ? (
     <PostHogProvider client={posthogClient}>
-      <PostHogErrorBoundary>
+      <PostHogErrorBoundary fallback={appTree}>
         {appTree}
       </PostHogErrorBoundary>
     </PostHogProvider>

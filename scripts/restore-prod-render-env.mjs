@@ -35,6 +35,8 @@ const SOURCE_NAMES = [
   'CoreKnot-subscription-reminders',
   'coreknot-api-staging',
   'coreknot-nest-staging',
+  'erp-backend',
+  'Taskmaster',
 ];
 
 const PROD_DEFAULTS = {
@@ -192,12 +194,40 @@ const local = readLocalRenderEnv();
 const { added: localAdded } = mergeEnv(recovered, local, 'server/.env.render');
 sources.push({ name: 'server/.env.render', count: Object.keys(local).length, added: localAdded });
 
+// Alias keys from legacy services
+if (!recovered.MONGODB_URI_PROD && recovered.MONGO_URI) {
+  recovered.MONGODB_URI_PROD = recovered.MONGO_URI;
+}
+if (!recovered.MONGODB_URI && recovered.MONGODB_URI_PROD) {
+  recovered.MONGODB_URI = recovered.MONGODB_URI_PROD;
+}
+if (recovered.DATABASE_URL && !recovered.SUPABASE_DB_URL) {
+  recovered.SUPABASE_DB_URL = recovered.DATABASE_URL;
+}
+
+// Production Redis from Render Key Value if missing
+if (!recovered.REDIS_URL) {
+  try {
+    const ci = await renderFetch('/key-value/red-d867phojo89c73862j9g/connection-info');
+    if (ci?.internalConnectionString) {
+      recovered.REDIS_URL = ci.internalConnectionString;
+      console.log('\n✓ REDIS_URL from Render Key Value connection-info');
+    }
+  } catch (err) {
+    console.log(`\n⚠ Could not fetch Redis connection-info: ${err.message}`);
+  }
+}
+
 const recoveredKeys = Object.keys(recovered).sort();
 const critical = [
-  'MONGODB_URI_PROD', 'MONGODB_URI', 'JWT_SECRET', 'ENCRYPTION_KEY',
-  'REDIS_URL', 'RESEND_API_KEY', 'GOOGLE_CLIENT_SECRET', 'SUPABASE_URL',
+  'MONGODB_URI_PROD', 'JWT_SECRET', 'REDIS_URL',
+];
+const recommended = [
+  'ENCRYPTION_KEY', 'RESEND_API_KEY', 'GOOGLE_CLIENT_SECRET', 'SUPABASE_URL',
+  'FRONTEND_URL', 'CLIENT_URL',
 ];
 const missingCritical = critical.filter((k) => !recovered[k]);
+const missingRecommended = recommended.filter((k) => !recovered[k]);
 
 console.log(`\n--- Recovery merge ---`);
 console.log(`Recovered ${recoveredKeys.length} unique keys from sources + defaults`);
@@ -206,6 +236,10 @@ for (const s of sources) {
 }
 console.log(`\nCritical still missing (${missingCritical.length}):`);
 console.log(missingCritical.length ? `  ${missingCritical.join(', ')}` : '  (none — ready to apply)');
+if (missingRecommended.length) {
+  console.log(`\nRecommended still missing (${missingRecommended.length}) — add manually after boot:`);
+  console.log(`  ${missingRecommended.join(', ')}`);
+}
 
 if (!apply) {
   console.log('\nDry run only. To restore prod + staging API env:');

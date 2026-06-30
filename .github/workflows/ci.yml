@@ -94,9 +94,32 @@ jobs:
       - name: Public E2E smoke
         run: npm run test:e2e:public
 
+  e2e-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.check.outputs.core }}
+      auth: ${{ steps.check.outputs.auth }}
+    steps:
+      - id: check
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          if [ -n "$E2E_PASSWORD" ]; then
+            echo "core=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "core=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ]; then
+            echo "auth=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "auth=false" >> "$GITHUB_OUTPUT"
+          fi
+
   e2e-core-confidence:
     runs-on: ubuntu-latest
-    if: ${{ secrets.E2E_PASSWORD != '' }}
+    needs: e2e-gate
+    if: needs.e2e-gate.outputs.core == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -129,7 +152,8 @@ jobs:
 
   e2e-auth:
     runs-on: ubuntu-latest
-    if: ${{ secrets.E2E_EMAIL != '' && secrets.E2E_PASSWORD != '' }}
+    needs: e2e-gate
+    if: needs.e2e-gate.outputs.auth == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

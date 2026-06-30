@@ -12,8 +12,7 @@ import { markForceLogout } from '../../utils/authSession';
 import { consumeAuthReturnPath } from '../../lib/authUnauthorized';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { navigateAfterAuth } from '../../utils/authNavigation';
-
-const LoginPage = () => {
+import { formatLoginError } from '../../utils/loginError';
 import { postLogin } from '../../utils/loginRequest';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';

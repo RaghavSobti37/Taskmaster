@@ -13,6 +13,6 @@ const proxyLimiter = rateLimit({
 });
 
 router.all('/:service', protect, proxyAccess, proxyLimiter, handleProxyRequest);
-router.all('/:service/*', protect, proxyAccess, proxyLimiter, handleProxyRequest);
+router.all('/:service/{*path}', protect, proxyAccess, proxyLimiter, handleProxyRequest);
 
 module.exports = router;

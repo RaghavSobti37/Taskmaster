@@ -180,7 +180,7 @@ function registerRoutes(app) {
           }
         },
       }));
-      app.get('*', (req, res) => {
+      app.get('/{*path}', (req, res) => {
         res.sendFile(path.resolve(distPath, 'index.html'));
       });
     } else {

@@ -59,7 +59,7 @@ const corsOptions = {
 
 function applyCors(app) {
   app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions));
+  app.options('/{*path}', cors(corsOptions));
 }
 
 module.exports = {

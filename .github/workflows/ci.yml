@@ -22,7 +22,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Jest
         run: npm test --prefix server -- --coverage
         env:
@@ -43,7 +43,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Lint
         run: npm run lint --prefix client -- --quiet
       - name: Unit tests
@@ -64,7 +64,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Build for preview
         run: npm run build --prefix client
       - name: Lighthouse public a11y gate (≥90)
@@ -87,7 +87,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client
@@ -132,7 +132,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client
@@ -163,7 +163,7 @@ jobs:
         run: |
           corepack enable
           corepack prepare npm@11.13.0 --activate
-          npm ci --legacy-peer-deps
+          corepack npm ci --legacy-peer-deps
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Build client

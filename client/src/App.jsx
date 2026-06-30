@@ -7,6 +7,7 @@ import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootFallback from './components/AppBootFallback';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
+import MobilePullToRefresh from './components/mobile/MobilePullToRefresh';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
 import ExternalAuthRedirect from './components/ExternalAuthRedirect';
 import ExternalLandingRedirect from './components/ExternalLandingRedirect';
@@ -161,6 +162,7 @@ function App() {
   return (
     <Suspense fallback={<AppBootFallback />}>
       <RouteErrorBoundary>
+        <MobilePullToRefresh />
         <Routes>
           {isLandingSite() && (
             <>

@@ -1159,6 +1159,15 @@ a.tm-hashtag-chip:hover {
     padding-top: calc(var(--page-gutter) + env(safe-area-inset-top));
   }
 
+  .mobile-ptr-indicator {
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+    transition: transform 0.2s ease, opacity 0.15s ease;
+  }
+
+  html[data-pwa-standalone] .mobile-ptr-indicator {
+    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+  }
+
   .mobile-desktop-gate {
     animation: mobile-gate-in 0.35s ease-out;
   }

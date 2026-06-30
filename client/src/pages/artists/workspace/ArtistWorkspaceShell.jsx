@@ -136,7 +136,10 @@ export default function ArtistWorkspaceShell({ children }) {
           {sidebar}
         </aside>
 
-        <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
+        <main
+          data-artist-workspace-scroll
+          className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar"
+        >
           <div className="max-w-6xl mx-auto space-y-6">
             {children}
           </div>

@@ -241,17 +241,17 @@ async function runCorsChecks() {
     serverJs &&
     /CORS_ALLOW_VERCEL_PREVIEWS/.test(serverJs) &&
     /allowVercelPreviews/.test(serverJs) &&
-    /NODE_ENV !== 'production'/.test(serverJs);
+    /\.vercel\.app/.test(serverJs);
 
   checks.push(
     makeCheck(
       'cors-vercel-previews-gated',
       'cors',
-      'Vercel preview origins gated in production',
+      'Vercel preview origins allowed with opt-out',
       vercelGated ? 'pass' : 'fail',
       vercelGated
-        ? '*.vercel.app only when CORS_ALLOW_VERCEL_PREVIEWS=true in production'
-        : 'Expected allowVercelPreviews flag tied to NODE_ENV / env opt-in',
+        ? '*.vercel.app allowed by default; set CORS_ALLOW_VERCEL_PREVIEWS=false to block'
+        : 'Expected allowVercelPreviews helper for *.vercel.app origins',
       'server.js corsOptions',
       'high'
     )

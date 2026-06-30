@@ -256,6 +256,13 @@ export function sortSectionWidgets(widgets) {
   );
 }
 
+/** Shown by MobileAttendanceBar above dashboard header — skip in mobile grid. */
+export const MOBILE_EXTERNAL_WIDGETS = new Set(['mark-attendance']);
+
+export function filterWidgetsForMobileGrid(widgets) {
+  return widgets.filter((el) => !MOBILE_EXTERNAL_WIDGETS.has(el.componentId));
+}
+
 /** Mobile stack: action widgets first, then saved order as tiebreaker. */
 export function sortWidgetsForMobileStack(widgets) {
   const mobileOrderKey = (componentId) => {
@@ -306,7 +313,8 @@ export function getSectionGridStyle(sectionId, { mobile = false } = {}) {
   };
 }
 
-export function getWidgetMinHeightClass(sectionId) {
+export function getWidgetMinHeightClass(sectionId, { mobile = false } = {}) {
+  if (mobile) return 'h-auto';
   if (sectionId === 'status-strip') return 'min-h-[100px] lg:min-h-[120px]';
   if (sectionId === 'analytics') return 'min-h-[120px] lg:min-h-[140px]';
   if (sectionId === 'team-context') return 'min-h-[140px] lg:min-h-[200px]';

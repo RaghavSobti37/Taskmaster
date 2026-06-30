@@ -51,6 +51,16 @@ describe('apiBase hybrid routing', () => {
     expect(isCrossOriginRealtime()).toBe(false);
   });
 
+  it('uses same-origin /api on Vercel preview production', () => {
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('VITE_API_URL', 'https://api.example.com');
+    vi.stubGlobal('window', { location: { origin: 'https://team-projects.vercel.app', hostname: 'team-projects.vercel.app' } });
+    vi.mocked(shouldUseSameOriginApi).mockReturnValue(true);
+    expect(getAxiosBaseURL()).toBeUndefined();
+    expect(apiPath('/api/auth/login')).toBe('/api/auth/login');
+  });
+
   it('uses VITE_API_URL for realtime in production when set', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('PROD', true);

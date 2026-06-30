@@ -6,12 +6,14 @@ import {
   groupElementsBySection,
   resolveSectionState,
   prepareDailyActionRenderList,
+  filterWidgetsForMobileGrid,
   sortSectionWidgets,
   sortWidgetsForMobileStack,
   getWidgetGridStyle,
   getSectionGridStyle,
   getWidgetMinHeightClass,
 } from '../../lib/dashboardSections';
+import { DashboardLayoutProvider } from './DashboardLayoutContext';
 
 const DAILY_COMPACT = new Set(['mark-attendance', 'schedule', 'review-queue']);
 
@@ -72,10 +74,14 @@ export default function DashboardTierLayout({
     return renderWidget(el.componentId, { ...widgetProps, compact });
   };
 
-  const renderWidgetCell = (el, sectionId, widgetProps, minH) => (
-    <div key={el.componentId} className={`${minH} min-w-0 w-full h-full`}>
+  const renderWidgetCell = (el, sectionId, widgetProps, minH, { mobile = false } = {}) => (
+    <div
+      key={el.componentId}
+      className={`${minH} min-w-0 w-full ${mobile ? '' : 'h-full'}`}
+    >
       {renderLayoutWidget(el, sectionId, {
         ...widgetProps,
+        compact: mobile ? false : widgetProps.compact,
         maxItems: el.componentId === 'leaderboard' ? 5 : widgetProps.maxItems,
       })}
     </div>
@@ -85,17 +91,20 @@ export default function DashboardTierLayout({
     if (!widgets.length) return null;
 
     const minH = getWidgetMinHeightClass(sectionId);
+    const mobileMinH = getWidgetMinHeightClass(sectionId, { mobile: true });
     const desktopWidgets = sortSectionWidgets(widgets);
-    const mobileWidgets = sortWidgetsForMobileStack(widgets);
+    const mobileWidgets = filterWidgetsForMobileGrid(sortWidgetsForMobileStack(widgets));
 
     return (
       <>
-        <div
-          className="grid w-full min-w-0 gap-3 lg:hidden"
-          style={getSectionGridStyle(sectionId, { mobile: true })}
-        >
-          {mobileWidgets.map((el) => renderWidgetCell(el, sectionId, widgetProps, minH))}
-        </div>
+        <DashboardLayoutProvider value={{ expandContent: true }}>
+          <div
+            className="dashboard-mobile-stack grid w-full min-w-0 gap-3 lg:hidden"
+            style={getSectionGridStyle(sectionId, { mobile: true })}
+          >
+            {mobileWidgets.map((el) => renderWidgetCell(el, sectionId, widgetProps, mobileMinH, { mobile: true }))}
+          </div>
+        </DashboardLayoutProvider>
         <div
           className="hidden w-full min-w-0 gap-3 items-stretch lg:grid"
           style={getSectionGridStyle(sectionId)}

@@ -32,6 +32,13 @@ afterAll(async () => {
   }
 
   try {
+    const { drainGamificationMemoryQueue } = require('../services/backgroundQueue');
+    await drainGamificationMemoryQueue();
+  } catch {
+    // backgroundQueue may not have loaded in this suite
+  }
+
+  try {
     const { shutdownBackgroundQueue } = require('../services/backgroundQueue');
     await shutdownBackgroundQueue();
   } catch {
@@ -60,6 +67,13 @@ afterEach(async () => {
     await drainMemoryQueue();
   } catch {
     // queueService may not have loaded in this suite
+  }
+
+  try {
+    const { drainGamificationMemoryQueue } = require('../services/backgroundQueue');
+    await drainGamificationMemoryQueue();
+  } catch {
+    // backgroundQueue may not have loaded in this suite
   }
 
   try {

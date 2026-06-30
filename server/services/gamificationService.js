@@ -1076,7 +1076,13 @@ class GamificationService {
         user.level = newLevel;
         leveledUp = true;
       }
-      await user.save();
+      try {
+        await user.save();
+      } catch (err) {
+        // Race: Jest afterEach may wipe users while fire-and-forget XP job runs
+        if (err?.name === 'DocumentNotFoundError') return null;
+        throw err;
+      }
 
       const { broadcastRealtimeEvent } = require('../config/realtime');
       await broadcastRealtimeEvent(`user-${userId}`, 'xp_awarded', {

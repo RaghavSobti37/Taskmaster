@@ -95,6 +95,7 @@ let gamificationQueue = null;
 
 // Memory storage for fallback de-duplication
 const pendingHolySheetIds = new Set();
+const pendingGamificationRuns = new Set();
 let csvBackupPending = false;
 let batchTimeout = null;
 const HOLY_SHEET_BATCH_MAX = 100;
@@ -303,34 +304,55 @@ async function executeHolySheetSyncDirect(ids) {
 
 
 
-const queueGamificationEvent = async (eventType, payload) => {
-  const runEvent = async () => {
-    const GamificationService = require('./gamificationService');
-    await GamificationService.handleGamificationEvent(eventType, payload);
-  };
+function trackGamificationRun(promise) {
+  if (!isTestEnv) return;
+  pendingGamificationRuns.add(promise);
+  promise.finally(() => pendingGamificationRuns.delete(promise));
+}
 
-  // QA runs: inline only — avoids Bull waitUntilFinished exceeding HTTP client timeouts
-  const { isQaSyncGamification } = require('../utils/qaProbeContext');
-  if (isQaSyncGamification()) {
-    await runEvent();
-    return;
+/** Wait for fire-and-forget gamification jobs (Jest afterEach, before collection wipe). */
+async function drainGamificationMemoryQueue(timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  while (pendingGamificationRuns.size > 0 && Date.now() < deadline) {
+    await Promise.allSettled([...pendingGamificationRuns]);
+    if (pendingGamificationRuns.size === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
+}
 
-  if (redisAvailable && gamificationQueue) {
-    try {
-      await gamificationQueue.add(
-        eventType,
-        { eventType, payload },
-        { removeOnComplete: true, removeOnFail: true }
-      );
+const queueGamificationEvent = (eventType, payload) => {
+  const job = (async () => {
+    const runEvent = async () => {
+      const GamificationService = require('./gamificationService');
+      await GamificationService.handleGamificationEvent(eventType, payload);
+    };
+
+    // QA runs: inline only — avoids Bull waitUntilFinished exceeding HTTP client timeouts
+    const { isQaSyncGamification } = require('../utils/qaProbeContext');
+    if (isQaSyncGamification()) {
+      await runEvent();
       return;
-    } catch (e) {
-      logger.error('Queue', 'Gamification queue failed — running inline', { error: e.message });
+    }
+
+    if (redisAvailable && gamificationQueue) {
+      try {
+        await gamificationQueue.add(
+          eventType,
+          { eventType, payload },
+          { removeOnComplete: true, removeOnFail: true }
+        );
+        return;
+      } catch (e) {
+        logger.error('Queue', 'Gamification queue failed — running inline', { error: e.message });
+        await runEvent();
+      }
+    } else {
       await runEvent();
     }
-  } else {
-    await runEvent();
-  }
+  })();
+
+  trackGamificationRun(job);
+  return job;
 };
 
 const getManagedQueues = () => {
@@ -370,6 +392,7 @@ module.exports = {
   queueHolySheetSync,
   queueCsvBackup,
   queueGamificationEvent,
+  drainGamificationMemoryQueue,
   isRedisAvailable: () => redisAvailable,
   getManagedQueues,
   shutdownBackgroundQueue,

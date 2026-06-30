@@ -255,7 +255,7 @@ router.post('/', async (req, res) => {
         targetId,
         details: copyDetails,
       });
-      refreshAttendanceAfterLog(copy);
+      awardManualDailyLogXp(oid, copy, copyDetails);
     }
 
     res.status(201).json(primary);

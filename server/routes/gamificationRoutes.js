@@ -5,7 +5,7 @@ const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
-const { getCurrentWeekRange, getPreviousWeekRange } = require('../utils/attendanceDate');
+const { getCurrentWeekRange, getCurrentMonthRange, getPreviousMonthRange } = require('../utils/attendanceDate');
 const { ACTION_LABELS } = require('../../shared/gamificationRules');
 
 const toSimpleMessage = (log) => {
@@ -120,49 +120,49 @@ router.get('/leaderboard', protect, async (req, res) => {
     const User = require('../models/User');
     const XPAuditLog = require('../models/XPAuditLog');
     const GamificationConfig = require('../models/GamificationConfig');
-    const weekly = await GamificationService.getWeeklyLeaderboard();
+    const monthly = await GamificationService.getMonthlyLeaderboard();
     const config = await GamificationService.getConfigPlain();
     const configDoc = await GamificationConfig.findOne()
       .select('lastRecalculatedAt lastRecalcWeeklyPrior')
       .lean();
     const lastRecalculatedAt = configDoc?.lastRecalculatedAt || null;
-    const weeklyPriorSnapshot = configDoc?.lastRecalcWeeklyPrior || null;
+    const monthlyPriorSnapshot = configDoc?.lastRecalcWeeklyPrior || null;
 
     const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
     const tenantUserIds = allUsers.map((u) => u._id);
 
-    const weekLogs = await XPAuditLog.find({
+    const monthLogs = await XPAuditLog.find({
       userId: { $in: tenantUserIds },
-      createdAt: { $gte: weekly.weekStart, $lte: weekly.weekEnd },
+      createdAt: { $gte: monthly.monthStart, $lte: monthly.monthEnd },
     })
       .select('userId action amount details previousAmount recalculatedAt recalcReason')
       .lean();
-    const backfillMaps = await GamificationService.fetchHoursBackfillMaps(weekLogs);
+    const backfillMaps = await GamificationService.fetchHoursBackfillMaps(monthLogs);
     const recalcMetaByUser = GamificationService.buildWeeklyRecalcMetaByUser(
-      weekLogs,
+      monthLogs,
       config,
       backfillMaps,
       lastRecalculatedAt
     );
 
-    const weeklyXpByUserId = new Map(
-      weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    const monthlyXpByUserId = new Map(
+      monthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
     );
 
-    const prevWeek = getPreviousWeekRange();
-    const lastWeekWeekly = await GamificationService.getWeeklyLeaderboard(null, prevWeek.weekStartKey);
-    const lastWeekXpByUserId = new Map(
-      lastWeekWeekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    const prevMonth = getPreviousMonthRange();
+    const lastMonthMonthly = await GamificationService.getMonthlyLeaderboard(null, prevMonth.monthStartKey);
+    const lastMonthXpByUserId = new Map(
+      lastMonthMonthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
     );
-    const lastWeekRankByUserId = new Map(
+    const lastMonthRankByUserId = new Map(
       [...allUsers]
         .map((user) => ({
           _id: user._id,
           name: user.name,
-          weeklyXp: lastWeekXpByUserId.get(String(user._id)) || 0,
+          monthlyXp: lastMonthXpByUserId.get(String(user._id)) || 0,
         }))
         .sort((a, b) => {
-          if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+          if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
           return (a.name || '').localeCompare(b.name || '');
         })
         .map((user, index) => [String(user._id), index + 1])
@@ -171,40 +171,40 @@ router.get('/leaderboard', protect, async (req, res) => {
     const top = allUsers
       .map((user) => ({
         ...user,
-        weeklyXp: weeklyXpByUserId.get(String(user._id)) || 0,
+        monthlyXp: monthlyXpByUserId.get(String(user._id)) || 0,
       }))
       .sort((a, b) => {
-        if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+        if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
         return (a.name || '').localeCompare(b.name || '');
       })
       .map((user, index) => {
         const userKey = String(user._id);
         const meta = recalcMetaByUser.get(userKey);
-        const snapshotPrior = weeklyPriorSnapshot?.[userKey];
-        const useSnapshot = lastRecalculatedAt && weeklyPriorSnapshot && snapshotPrior !== undefined;
-        const weeklyXpPrior = useSnapshot
+        const snapshotPrior = monthlyPriorSnapshot?.[userKey];
+        const useSnapshot = lastRecalculatedAt && monthlyPriorSnapshot && snapshotPrior !== undefined;
+        const monthlyXpPrior = useSnapshot
           ? snapshotPrior
           : (meta?.weeklyXpPrior ?? undefined);
-        const weeklyXpDelta = useSnapshot
-          ? user.weeklyXp - snapshotPrior
+        const monthlyXpDelta = useSnapshot
+          ? user.monthlyXp - snapshotPrior
           : (meta?.weeklyXpDelta ?? 0);
         const hasRecalcDelta = Boolean(
           lastRecalculatedAt
           && (useSnapshot
-            ? weeklyXpDelta !== 0
-            : meta && (weeklyXpDelta !== 0 || (meta.changes?.length ?? 0) > 0))
+            ? monthlyXpDelta !== 0
+            : meta && (monthlyXpDelta !== 0 || (meta.changes?.length ?? 0) > 0))
         );
         return {
           rank: index + 1,
-          weeklyXp: user.weeklyXp,
+          monthlyXp: user.monthlyXp,
           _id: user._id,
           name: user.name,
           avatar: user.avatar,
           exp: user.exp,
           level: user.level,
-          lastWeekRank: lastWeekRankByUserId.get(userKey),
-          weeklyXpPrior: hasRecalcDelta ? weeklyXpPrior : undefined,
-          weeklyXpDelta: hasRecalcDelta ? weeklyXpDelta : undefined,
+          lastMonthRank: lastMonthRankByUserId.get(userKey),
+          monthlyXpPrior: hasRecalcDelta ? monthlyXpPrior : undefined,
+          monthlyXpDelta: hasRecalcDelta ? monthlyXpDelta : undefined,
           recalcChanges: hasRecalcDelta
             ? (meta?.changes?.slice(0, 8) || [])
             : undefined,
@@ -212,16 +212,16 @@ router.get('/leaderboard', protect, async (req, res) => {
       });
 
     logger.debug('Gamification', 'Leaderboard fetch', {
-      weekStart: weekly.weekStartKey,
-      weekEnd: weekly.weekEndKey,
-      logCount: weekly.logCount,
-      storedSum: weekly.storedSum,
-      resolvedSum: weekly.resolvedSum,
-      configTaskCompletion: weekly.configRates?.taskCompletion,
+      monthStart: monthly.monthStartKey,
+      monthEnd: monthly.monthEndKey,
+      logCount: monthly.logCount,
+      storedSum: monthly.storedSum,
+      resolvedSum: monthly.resolvedSum,
+      configTaskCompletion: monthly.configRates?.taskCompletion,
       top3: top.slice(0, 3).map((entry) => ({
         userId: entry._id,
         name: entry.name,
-        weeklyXp: entry.weeklyXp,
+        monthlyXp: entry.monthlyXp,
       })),
       cacheHit: false,
     });
@@ -230,13 +230,13 @@ router.get('/leaderboard', protect, async (req, res) => {
     res.json({
       entries: top,
       meta: {
-        weekStartKey: weekly.weekStartKey,
-        weekEndKey: weekly.weekEndKey,
+        monthStartKey: monthly.monthStartKey,
+        monthEndKey: monthly.monthEndKey,
         lastRecalculatedAt,
-        logCount: weekly.logCount,
-        configRates: weekly.configRates,
-        lastWeekStartKey: prevWeek.weekStartKey,
-        lastWeekEndKey: prevWeek.weekEndKey,
+        logCount: monthly.logCount,
+        configRates: monthly.configRates,
+        lastMonthStartKey: prevMonth.monthStartKey,
+        lastMonthEndKey: prevMonth.monthEndKey,
       },
     });
   } catch (err) {
@@ -254,11 +254,11 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
     const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
     const config = await GamificationService.getConfigPlain();
-    const { weekStart, weekEnd, weekStartKey, weekEndKey } = getCurrentWeekRange();
+    const { monthStart, monthEnd, monthStartKey, monthEndKey } = getCurrentMonthRange();
 
     const logs = await XPAuditLog.find({
       userId,
-      createdAt: { $gte: weekStart, $lte: weekEnd },
+      createdAt: { $gte: monthStart, $lte: monthEnd },
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -277,15 +277,17 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
       (sum, item) => sum + GamificationService.resolveLogAmount(config, item, backfillMaps),
       0
     );
+    const calculationSummary = GamificationService.buildCalculationSummary(groupedBreakdown, totalXp);
 
     res.json({
       user: user || { _id: userId, name: 'Unknown' },
-      weekStart,
-      weekEnd,
-      weekStartKey,
-      weekEndKey,
+      monthStart,
+      monthEnd,
+      monthStartKey,
+      monthEndKey,
       totalXp,
       groupedBreakdown,
+      calculationSummary,
       recentLogs: dedupedLogs.slice(0, 15).map((log) =>
         GamificationService.formatXpLogForApi(log, config, toSimpleMessage)
       ),

@@ -3,14 +3,14 @@ import React from 'react';
 const formatDelta = (n) => (n > 0 ? `+${n}` : String(n));
 
 export const hasLeaderboardRecalcHint = (member) =>
-  member?.weeklyXpPrior != null
-  && (member.weeklyXpDelta !== 0 || (member.recalcChanges?.length ?? 0) > 0);
+  member?.monthlyXpPrior != null
+  && (member.monthlyXpDelta !== 0 || (member.recalcChanges?.length ?? 0) > 0);
 
 /** Compact recalc summary — opens below the row on hover (avoids clipping at top of viewport). */
 export const LeaderboardRecalcHover = ({ member, className = '' }) => {
   if (!hasLeaderboardRecalcHint(member)) return null;
 
-  const { weeklyXpPrior, weeklyXp, weeklyXpDelta, recalcChanges = [] } = member;
+  const { monthlyXpPrior, monthlyXp, monthlyXpDelta, recalcChanges = [] } = member;
   const preview = recalcChanges.slice(0, 6);
   const more = recalcChanges.length - preview.length;
 
@@ -21,7 +21,7 @@ export const LeaderboardRecalcHover = ({ member, className = '' }) => {
     >
       <div className="rounded-lg border border-amber-500/40 bg-[var(--color-bg-primary)] shadow-xl px-3 py-2 text-left min-w-[min(100%,280px)]">
         <p className="text-[10px] font-bold text-amber-500">
-          Was {weeklyXpPrior} XP → now {weeklyXp} XP ({formatDelta(weeklyXpDelta)})
+          Was {monthlyXpPrior} XP → now {monthlyXp} XP ({formatDelta(monthlyXpDelta)})
         </p>
         {preview.length > 0 && (
           <ul className="mt-1.5 space-y-0.5 max-h-40 overflow-y-auto">

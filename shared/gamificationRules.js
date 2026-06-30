@@ -178,7 +178,7 @@ const FAIRNESS_PRINCIPLES = [
   'Task completion XP is once per task per person — no farming the same item.',
   'Auto daily logs from task completion do not grant log XP — task completion XP uses hours × XP/hour instead.',
   'Manual daily logs: up to 5 awards per day (task auto-logs excluded); first 8h × rate, hours above 8 at 1.5× rate (max 12h per log). Task completion = hours × rate. Full-day attendance XP = once per day after ops locks both check-in and check-out.',
-  'Weekly leaderboard uses audit log totals — everyone starts fresh each week.',
+  'Monthly leaderboard uses audit log totals — everyone starts fresh each calendar month.',
 ];
 
 const ROLE_PATHS = [

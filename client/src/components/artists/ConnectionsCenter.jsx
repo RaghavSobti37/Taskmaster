@@ -7,7 +7,7 @@ import {
 import { SiApplemusic, SiBeatport, SiAudiomack, SiTelegram, SiPatreon, SiSubstack, SiWoo, SiX } from 'react-icons/si';
 import { Card, Input, Badge, Button } from '../ui';
 import ConnectAccountButton from './ConnectAccountButton';
-import { formatNumber } from '../../config/integrations.config';
+import { formatNumber, isHubStatusSyncable } from '../../config/integrations.config';
 import {
   useConnectionHub,
   useConnectionHealth,
@@ -80,7 +80,7 @@ function PlatformCard({ platform, artistId, isPreview, onSync, syncingId, onSave
   const badgeKey = healthBadgeKey(platform);
   const badge = STATUS_BADGE[badgeKey] || STATUS_BADGE.disconnected;
   const [manualHandle, setManualHandle] = useState(platform.profile?.accountName || platform.connection?.accountLabel || '');
-  const canSync = platform.hasOAuth && ['connected', 'active'].includes(badgeKey);
+  const canSync = platform.hasOAuth && isHubStatusSyncable(badgeKey);
   const isSyncing = syncingId === platform.id;
 
   return (

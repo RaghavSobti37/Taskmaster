@@ -26,7 +26,10 @@ export default function UnifiedReachCard({
   const platforms = normalized?.platforms || {};
 
   const reach = unified.reach || computeFallbackReach(artist);
-  const connected = connectionCount || unified.connectedCount || Object.keys(platforms).length || 0;
+  const connected = unified.connectedCount
+    || connectionCount
+    || Object.keys(platforms).length
+    || 0;
 
   const expiredConnections = useMemo(
     () => connections.filter((c) => c.status === 'expired' || c.status === 'pending_reauth'),

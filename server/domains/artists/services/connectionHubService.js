@@ -7,10 +7,29 @@ const {
   byId,
 } = require('../../../config/integrations.config');
 const {
-  getConnectionsForArtist,
   sanitizeConnection,
 } = require('./connectionService');
+const { loadConnections } = require('./artistEnrichmentService');
 const { getProvider, isLiveProvider } = require('../providers');
+
+function connectionHasHandle(connection, platformId) {
+  if (!connection) return false;
+  if (connection.accountHandle) return true;
+  const meta = connection.metadata || {};
+  if (platformId === 'instagram') {
+    return !!(meta.igAccountId);
+  }
+  if (platformId === 'spotify') {
+    return !!(meta.artistId);
+  }
+  if (platformId === 'youtube') {
+    return !!(meta.channelId);
+  }
+  if (platformId === 'facebook') {
+    return !!(meta.fbPageId);
+  }
+  return false;
+}
 
 function resolveHubStatus(platform, connection, profile) {
   const config = byId(platform.id);
@@ -22,8 +41,9 @@ function resolveHubStatus(platform, connection, profile) {
   }
   if (connection?.status === 'expired') return 'expired';
   if (connection?.lastError || profile?.status === 'error') return 'error';
-  if (connection?.status === 'pending_reauth' || profile?.status === 'pending') return 'pending';
-  if (connection?.accountHandle || profile?.status === 'connected') return 'connected';
+  if (connection?.status === 'pending_reauth') return 'pending';
+  if (connectionHasHandle(connection, platform.id) || profile?.status === 'connected') return 'connected';
+  if (profile?.lastSync && typeof profile?.followers === 'number') return 'connected';
   if (config?.connectMethod === 'manual') return 'manual';
   return 'disconnected';
 }
@@ -67,7 +87,7 @@ async function buildConnectionHub(artistId) {
   if (!artist) return null;
 
   const [connections, profiles] = await Promise.all([
-    getConnectionsForArtist(artistId),
+    loadConnections(artistId, artist),
     ArtistSocialProfile.find({ artistId }).lean(),
   ]);
 
@@ -139,7 +159,7 @@ async function syncPlatformAnalytics(artistId, platformId) {
   }
 
   const provider = getProvider(platformId);
-  const connections = await getConnectionsForArtist(artistId, { includeTokens: true });
+  const connections = await loadConnections(artistId);
   const connection = findConnectionForPlatform(connections, platformId);
 
   if (!connection) {

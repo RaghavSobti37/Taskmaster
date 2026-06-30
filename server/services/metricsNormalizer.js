@@ -5,6 +5,19 @@ function num(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Map DB provider ids to analytics platform keys (meta → instagram). */
+function analyticsPlatformKey(provider) {
+  if (provider === 'meta') return 'instagram';
+  return provider;
+}
+
+function isLinkedConnection(conn) {
+  if (!conn) return false;
+  if (conn.status === 'active' || conn.accountHandle) return true;
+  const meta = conn.metadata || {};
+  return !!(meta.igAccountId || meta.artistId || meta.channelId || meta.fbPageId);
+}
+
 function normalizePlatform(provider, raw = {}, history = []) {
   const config = byId(provider) || {};
   const followerKey = config.followerField || 'followers';
@@ -71,7 +84,6 @@ function normalizeAll(analytics = {}, analyticsHistory = [], connections = []) {
       followers: analytics.spotify.followers,
       popularity: analytics.spotify.popularity,
       monthlyListeners: analytics.spotify.monthlyListeners,
-      engagementRate: analytics.spotify.popularity,
     }, historyByPlatform.spotify);
   }
 
@@ -88,8 +100,6 @@ function normalizeAll(analytics = {}, analyticsHistory = [], connections = []) {
     platforms.instagram = normalizePlatform('instagram', {
       followers: analytics.instagram.followers,
       engagementRate: analytics.instagram.engagementRate,
-      reach: analytics.instagram.totalShares,
-      totalEngagement: analytics.instagram.totalShares,
     }, historyByPlatform.instagram);
   }
 
@@ -101,28 +111,46 @@ function normalizeAll(analytics = {}, analyticsHistory = [], connections = []) {
     }, historyByPlatform.facebook);
   }
 
-  const activeProviders = connections.length
-    ? [...new Set(connections.filter((c) => c.status === 'active').map((c) => c.provider))]
+  const linkedKeys = connections.length
+    ? [...new Set(
+      connections
+        .filter(isLinkedConnection)
+        .map((c) => analyticsPlatformKey(c.provider))
+        .filter((p) => platforms[p]),
+    )]
     : Object.keys(platforms);
 
-  const unifiedReach = activeProviders.reduce((sum, p) => sum + (platforms[p]?.followers || 0), 0);
-  const avgEngagement = activeProviders.length
-    ? Number((activeProviders.reduce((s, p) => s + (platforms[p]?.engagementRate || 0), 0) / activeProviders.length).toFixed(2))
+  const reachKeys = linkedKeys.length ? linkedKeys : Object.keys(platforms);
+  const unifiedReach = reachKeys.reduce((sum, p) => sum + (platforms[p]?.followers || 0), 0);
+
+  const engagementPlatforms = reachKeys.filter((p) => platforms[p]?.engagementRate > 0);
+  const avgEngagement = engagementPlatforms.length
+    ? Number((engagementPlatforms.reduce((s, p) => s + (platforms[p]?.engagementRate || 0), 0) / engagementPlatforms.length).toFixed(2))
     : 0;
-  const avgTrend = activeProviders.length
-    ? Math.round(activeProviders.reduce((s, p) => s + (platforms[p]?.trendScore || 0), 0) / activeProviders.length)
+  const avgTrend = reachKeys.length
+    ? Math.round(reachKeys.reduce((s, p) => s + (platforms[p]?.trendScore || 0), 0) / reachKeys.length)
     : 0;
+
+  const connectedCount = connections.length
+    ? [...new Set(connections.filter(isLinkedConnection).map((c) => analyticsPlatformKey(c.provider)))].length
+    : Object.keys(platforms).length;
 
   return {
     platforms,
     unified: {
       reach: unifiedReach,
       engagementRate: avgEngagement,
-      growth: activeProviders.reduce((s, p) => s + (platforms[p]?.growth || 0), 0) / (activeProviders.length || 1),
+      growth: reachKeys.reduce((s, p) => s + (platforms[p]?.growth || 0), 0) / (reachKeys.length || 1),
       trendScore: avgTrend,
-      connectedCount: activeProviders.length,
+      connectedCount,
     },
   };
 }
 
-module.exports = { normalizePlatform, normalizeAll, num };
+module.exports = {
+  normalizePlatform,
+  normalizeAll,
+  num,
+  analyticsPlatformKey,
+  isLinkedConnection,
+};

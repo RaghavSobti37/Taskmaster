@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getWidgetGridStyle,
+  filterWidgetsForMobileGrid,
   prepareDailyActionRenderList,
   repackDashboardElements,
   sortWidgetsForMobileStack,
@@ -34,6 +35,14 @@ describe('dashboardSections grid layout', () => {
   it('stacks widgets full width on mobile', () => {
     expect(getWidgetGridStyle({ size: '2', col: 3, row: 2 }, 'daily-actions', { mobile: true }))
       .toEqual({ gridColumn: '1 / -1' });
+  });
+
+  it('omits mark-attendance from mobile grid when MobileAttendanceBar handles it', () => {
+    const filtered = filterWidgetsForMobileGrid([
+      { componentId: 'mark-attendance', order: 1 },
+      { componentId: 'schedule', order: 2 },
+    ]);
+    expect(filtered.map((w) => w.componentId)).toEqual(['schedule']);
   });
 
   it('orders mobile stack with action widgets first', () => {

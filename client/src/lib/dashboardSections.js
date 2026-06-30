@@ -256,6 +256,13 @@ export function sortSectionWidgets(widgets) {
   );
 }
 
+/** Shown by MobileAttendanceBar above dashboard header — skip in mobile grid. */
+export const MOBILE_EXTERNAL_WIDGETS = new Set(['mark-attendance']);
+
+export function filterWidgetsForMobileGrid(widgets) {
+  return widgets.filter((el) => !MOBILE_EXTERNAL_WIDGETS.has(el.componentId));
+}
+
 /** Mobile stack: action widgets first, then saved order as tiebreaker. */
 export function sortWidgetsForMobileStack(widgets) {
   const mobileOrderKey = (componentId) => {

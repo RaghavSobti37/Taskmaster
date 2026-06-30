@@ -6,6 +6,7 @@ import {
   groupElementsBySection,
   resolveSectionState,
   prepareDailyActionRenderList,
+  filterWidgetsForMobileGrid,
   sortSectionWidgets,
   sortWidgetsForMobileStack,
   getWidgetGridStyle,
@@ -86,7 +87,7 @@ export default function DashboardTierLayout({
 
     const minH = getWidgetMinHeightClass(sectionId);
     const desktopWidgets = sortSectionWidgets(widgets);
-    const mobileWidgets = sortWidgetsForMobileStack(widgets);
+    const mobileWidgets = filterWidgetsForMobileGrid(sortWidgetsForMobileStack(widgets));
 
     return (
       <>

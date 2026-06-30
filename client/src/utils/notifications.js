@@ -1,12 +1,13 @@
 import { getNotificationIconUrl } from '../constants/brandIcons';
+import { isStandaloneDisplay } from './displayMode';
 
 const PUSH_PREF_KEY = 'coreknot_push_enabled';
 const OS_NOTIF_DEDUPE_KEY = 'coreknot_os_notif_dedupe';
 const OS_NOTIF_DEDUPE_TTL_MS = 5 * 60 * 1000;
 const NOTIF_BC_CHANNEL = 'coreknot-notif';
+const SW_READY_TIMEOUT_MS = 15000;
 
 let notifBroadcastChannel = null;
-
 
 const readDedupeMap = () => {
   try {
@@ -45,6 +46,39 @@ const getNotifBroadcastChannel = () => {
   return notifBroadcastChannel;
 };
 
+export const isIosDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return (
+    /iPhone|iPad|iPod/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+};
+
+/** Web Push API available on this device (iOS requires installed PWA). */
+export const canUseWebPush = () => {
+  if (typeof window === 'undefined') return false;
+  if (!('serviceWorker' in navigator)) return false;
+  if (!('PushManager' in window)) return false;
+  if (!('Notification' in window)) return false;
+  if (import.meta.env?.DEV) return false;
+  if (isIosDevice() && !isStandaloneDisplay()) return false;
+  return true;
+};
+
+/** Human-readable blocker for Settings UI. */
+export const getPushUnsupportedReason = () => {
+  if (typeof window === 'undefined') return 'Browser not supported';
+  if (import.meta.env?.DEV) return 'Push is disabled in local dev (service worker off)';
+  if (!('Notification' in window)) return 'This browser does not support notifications';
+  if (!('serviceWorker' in navigator)) return 'Service workers are not available';
+  if (!('PushManager' in window)) return 'Web Push is not supported on this browser';
+  if (isIosDevice() && !isStandaloneDisplay()) {
+    return 'On iPhone/iPad, add CoreKnot to your Home Screen first, then enable push here';
+  }
+  return null;
+};
+
 export const wasRecentlyShownOsNotification = (tag) => {
   if (!tag) return false;
   try {
@@ -70,9 +104,9 @@ export const markOsNotificationShown = (tag, broadcast = true) => {
 
 export const isPushPreferenceEnabled = () => {
   try {
-    return localStorage.getItem(PUSH_PREF_KEY) !== 'false';
+    return localStorage.getItem(PUSH_PREF_KEY) === 'true';
   } catch {
-    return true;
+    return false;
   }
 };
 
@@ -139,20 +173,24 @@ export const resolveNotificationDeliveryMode = async () => {
   return subscribed ? 'push' : 'polling';
 };
 
-export const registerServiceWorker = async () => {
+/** Wait for vite-plugin-pwa registration from LocalFirstRoot — no duplicate register. */
+export const waitForPushServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) return null;
-  // VitePWA devOptions.enabled is false — /dev-sw.js would 404 to index.html (text/html MIME).
   if (import.meta.env?.DEV) return null;
+
+  const ready = navigator.serviceWorker.ready;
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Service worker not ready')), SW_READY_TIMEOUT_MS);
+  });
+
   try {
-    return await navigator.serviceWorker.register('/sw.js', {
-      scope: '/',
-      type: 'classic',
-    });
-  } catch (err) {
-    console.error('SW registration failed', err);
+    return await Promise.race([ready, timeout]);
+  } catch {
     return null;
   }
 };
+
+export const registerServiceWorker = async () => waitForPushServiceWorker();
 
 export const getPushSubscription = async () => {
   if (!('serviceWorker' in navigator)) return null;
@@ -176,13 +214,27 @@ const urlBase64ToUint8Array = (base64String) => {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 };
 
-export const subscribeToPush = async () => {
-  if (!isPushPreferenceEnabled()) return false;
+const keysMatch = (a, b) => {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
 
-  const granted = await requestNotificationPermission();
-  if (!granted) return false;
-  const registration = await registerServiceWorker();
-  if (!registration) return false;
+export const subscribeToPush = async ({ skipPermissionRequest = false } = {}) => {
+  if (!canUseWebPush()) return false;
+  if (!isPushPreferenceEnabled() && skipPermissionRequest) return false;
+
+  if (!skipPermissionRequest) {
+    const granted = await requestNotificationPermission();
+    if (!granted) return false;
+  } else if (Notification.permission !== 'granted') {
+    return false;
+  }
+
+  const registration = await waitForPushServiceWorker();
+  if (!registration?.pushManager) return false;
 
   const axios = (await import('axios')).default;
   const { AXIOS_SKIP_TOAST } = await import('../lib/notifications');
@@ -191,11 +243,21 @@ export const subscribeToPush = async () => {
     const { data } = await axios.get('/api/notifications/push/vapid-key', AXIOS_SKIP_TOAST);
     if (!data?.publicKey) return false;
 
+    const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
     let subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      const existingKey = subscription.options?.applicationServerKey;
+      if (existingKey && !keysMatch(existingKey, applicationServerKey)) {
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+    }
+
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+        applicationServerKey,
       });
     }
 
@@ -213,7 +275,7 @@ export const subscribeToPush = async () => {
   }
 };
 
-const unsubscribeFromPush = async () => {
+export const unsubscribeFromPush = async () => {
   const registration = await navigator.serviceWorker?.ready;
   const subscription = await registration?.pushManager?.getSubscription();
   if (subscription) {
@@ -228,16 +290,33 @@ const unsubscribeFromPush = async () => {
   setPushPreferenceEnabled(false);
 };
 
-const getNotificationPushStatus = async () => {
+export const getNotificationPushStatus = async () => {
   const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
   const prefEnabled = isPushPreferenceEnabled();
   const subscribed = await hasActivePushSubscription();
-  return { permission, prefEnabled, subscribed, enabled: prefEnabled && permission === 'granted' && subscribed };
+  const supported = canUseWebPush();
+  const blocker = getPushUnsupportedReason();
+  return {
+    permission,
+    prefEnabled,
+    subscribed,
+    supported,
+    blocker,
+    enabled: prefEnabled && permission === 'granted' && subscribed,
+  };
 };
 
-/** Resolves when push subscribe attempt finishes (success or failure). */
+/** Re-sync server subscription when permission already granted — no permission prompt. */
 export const initPushNotifications = async () => {
   getNotifBroadcastChannel();
   if (!isPushPreferenceEnabled()) return false;
-  return subscribeToPush();
+  if (!canUseWebPush()) return false;
+  if (Notification.permission !== 'granted') return false;
+  return subscribeToPush({ skipPermissionRequest: true });
+};
+
+/** User-gesture entry from Settings — requests permission then subscribes. */
+export const enablePushNotifications = async () => {
+  setPushPreferenceEnabled(true);
+  return subscribeToPush({ skipPermissionRequest: false });
 };

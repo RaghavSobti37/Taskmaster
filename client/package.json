@@ -14,7 +14,7 @@
     "vercel-build:auth": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs && vite build --mode auth",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/generateVercelConfig.test.cjs",
     "test:watch": "vitest",
     "preview": "vite preview",
     "lighthouse": "node scripts/lighthouse-audit.mjs",

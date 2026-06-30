@@ -16,6 +16,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
       - name: Install deps
@@ -34,6 +36,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
       - name: Install deps
@@ -54,6 +58,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Install deps
         run: npm ci --legacy-peer-deps
       - name: Build for preview
@@ -74,6 +80,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Install deps
         run: npm ci --legacy-peer-deps
       - name: Install Playwright browsers
@@ -116,6 +124,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Install deps
         run: npm ci --legacy-peer-deps
       - name: Install Playwright browsers
@@ -144,6 +154,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Use npm from packageManager
+        run: corepack enable && corepack prepare npm@11.13.0 --activate
       - name: Install deps
         run: npm ci --legacy-peer-deps
       - name: Install Playwright browsers

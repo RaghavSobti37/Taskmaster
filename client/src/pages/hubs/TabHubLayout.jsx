@@ -59,7 +59,7 @@ export default function TabHubLayout({ hubPath, panels }) {
         role="tabpanel"
         id={`hub-panel-${resolvedTab}`}
         aria-labelledby={`hub-tab-${resolvedTab}`}
-        className="min-h-0 flex-1"
+        className="tm-hub-panel min-h-0 flex-1 min-w-0"
       >
         <Panel />
       </div>

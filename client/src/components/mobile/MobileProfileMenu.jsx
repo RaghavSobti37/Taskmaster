@@ -15,15 +15,14 @@ import {
   UserPlus,
   Building2,
   CircleDollarSign,
+  Shield,
   Sun,
   Moon,
-  LayoutGrid,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useSidebar } from '../../contexts/SidebarContext';
-import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../../utils/departmentPermissions';
+import { hasPageAccess, hasAnyPageAccess, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { canAccessNavPath, getManagementHubPath } from '../../utils/navPageAccess';
 import { isNavDesktopOnly } from '../../utils/mobilePageSupport';
 import { UserAvatar } from '../ui/UserAvatar';
@@ -37,7 +36,7 @@ const MENU_SECTIONS = [
       { path: '/settings', label: 'Settings & profile', icon: Settings },
       { path: '/projects', label: 'Projects', icon: Briefcase },
       { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
-      { action: 'fullNav', label: 'Browse all navigation', icon: LayoutGrid },
+      { path: '/admin/console', label: 'Admin Console', icon: Shield, adminOnly: true },
     ],
   },
   {
@@ -80,7 +79,6 @@ export default function MobileProfileMenu({ open, onClose }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { toggleMobileSidebar } = useSidebar();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -94,7 +92,10 @@ export default function MobileProfileMenu({ open, onClose }) {
     return MENU_SECTIONS.map((section) => ({
       ...section,
       items: section.items.filter((item) => {
-        if (item.action) return true;
+        if (item.adminOnly) {
+          return isAdminUser(user)
+            && canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess);
+        }
         if (BOTTOM_NAV_PATHS.has(item.path)) return false;
         if (isNavDesktopOnly(item.path)) return false;
         return canAccessNavPath(user, item.path, hasPageAccess, hasAnyPageAccess);
@@ -105,11 +106,6 @@ export default function MobileProfileMenu({ open, onClose }) {
   const goTo = (path) => {
     onClose();
     navigate(path === '/management' ? getManagementHubPath(user, hasPageAccess) : path);
-  };
-
-  const openFullNav = () => {
-    onClose();
-    toggleMobileSidebar();
   };
 
   const handleLogout = async () => {
@@ -178,10 +174,10 @@ export default function MobileProfileMenu({ open, onClose }) {
                   <div className="flex flex-col gap-0.5">
                     {section.items.map((item) => (
                       <MenuRow
-                        key={item.path || item.action}
+                        key={item.path}
                         icon={item.icon}
                         label={item.label}
-                        onClick={() => (item.action === 'fullNav' ? openFullNav() : goTo(item.path))}
+                        onClick={() => goTo(item.path)}
                       />
                     ))}
                   </div>

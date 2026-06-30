@@ -142,8 +142,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--page-stack-gap);
-  padding: var(--page-gutter);
-  padding-bottom: var(--page-scroll-bottom);
+  /* tm-page-shell owns gutters — avoid double padding on mobile and desktop */
+  padding: 0;
+  padding-bottom: 0;
 }
 
 /* TSC brand — marketing / auth pages only */
@@ -1039,6 +1040,20 @@ a.tm-hashtag-chip:hover {
     overflow: visible !important;
     max-height: none !important;
     height: auto !important;
+  }
+}
+
+/* Mobile pages: full-width content, page scroll (no nested gutter doubling) */
+@media (max-width: 1023px) {
+  [role='tabpanel'] {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tm-hub-panel,
+  .list-page-workspace {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 

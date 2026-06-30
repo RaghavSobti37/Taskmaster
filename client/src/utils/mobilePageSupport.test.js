@@ -6,7 +6,7 @@ import {
   MOBILE_PAGE_LEVEL,
 } from './mobilePageSupport';
 
-const FORMER_DESKTOP_PATHS = [
+const APP_PATHS = [
   '/admin/console',
   '/admin/users',
   '/emails',
@@ -20,41 +20,27 @@ const FORMER_DESKTOP_PATHS = [
   '/projects/new',
   '/workspaces/ws-1',
   '/schedule',
+  '/dashboard',
+  '/todo',
+  '/management',
+  '/management?tab=finance',
+  '/projects/proj-1',
+  '/artists/artist-1',
 ];
 
 describe('mobilePageSupport', () => {
-  it('never returns DESKTOP level for any known route', () => {
-    const paths = [
-      ...FORMER_DESKTOP_PATHS,
-      '/dashboard',
-      '/todo',
-      '/management',
-      '/management?tab=finance',
-      '/projects/proj-1',
-      '/artists/artist-1',
-    ];
-
-    for (const raw of paths) {
+  it('treats all app routes as fully mobile-supported', () => {
+    for (const raw of APP_PATHS) {
       const [pathname, search = ''] = raw.includes('?') ? raw.split('?') : [raw, ''];
       const support = getMobilePageSupport(pathname, search ? `?${search}` : '');
-      expect(support.level, raw).not.toBe(MOBILE_PAGE_LEVEL.DESKTOP);
+      expect(support.level, raw).toBe(MOBILE_PAGE_LEVEL.FULL);
+      expect(support.autoBanner, raw).toBe(false);
     }
   });
 
-  it('allows admin and email routes as LIMITED or FULL', () => {
-    expect(getMobilePageSupport('/admin/console').level).toBe(MOBILE_PAGE_LEVEL.FULL);
-    expect(getMobilePageSupport('/admin/users').level).toBe(MOBILE_PAGE_LEVEL.LIMITED);
-    expect(getMobilePageSupport('/emails').level).toBe(MOBILE_PAGE_LEVEL.LIMITED);
-  });
-
-  it('finance hub tab is LIMITED but not hidden', () => {
-    const support = getMobilePageSupport('/management', '?tab=finance');
-    expect(support.level).toBe(MOBILE_PAGE_LEVEL.LIMITED);
-  });
-
-  it('shouldShowMobileBanner respects autoBanner flag', () => {
+  it('never shows desktop-recommended banners', () => {
+    expect(shouldShowMobileBanner('/admin/users')).toBe(false);
     expect(shouldShowMobileBanner('/emails')).toBe(false);
-    expect(shouldShowMobileBanner('/admin/users')).toBe(true);
     expect(shouldShowMobileBanner('/dashboard')).toBe(false);
   });
 

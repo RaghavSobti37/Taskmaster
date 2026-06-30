@@ -98,7 +98,7 @@ export default function ListPageLayout({
             {toolbar}
           </PageToolbar>
         )}
-        {children}
+        <div className="list-page-workspace min-w-0">{children}</div>
       </div>
     </PageContainer>
   );

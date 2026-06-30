@@ -28,7 +28,31 @@ const main = async () => {
     logger.info('SendTestPush', `Connected (${runProd ? 'production' : 'local'})`);
 
     const result = await broadcastTestPush();
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({
+      ok: result.ok,
+      users: result.users,
+      devices: result.devices,
+      sent: result.sent,
+      failed: result.failed,
+      notificationId: result.notificationId,
+      title: result.title,
+      body: result.body,
+      error: result.error,
+    }, null, 2));
+
+    if (result.deliveries?.length) {
+      console.log('\nPer-device results:');
+      for (const row of result.deliveries) {
+        const who = row.email || row.name || row.userId;
+        const status = row.status === 'sent'
+          ? 'SENT'
+          : `FAILED (${row.statusCode || 'n/a'}: ${row.error || 'unknown'})`;
+        console.log(`- ${who} | ${row.bucket} | ${status}`);
+        console.log(`  ${row.endpoint}`);
+      }
+    } else if (result.ok) {
+      console.log('\nNo registered push devices found.');
+    }
 
     if (!result.ok) {
       process.exit(1);

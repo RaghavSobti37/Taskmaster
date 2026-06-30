@@ -93,6 +93,9 @@ describe('broadcastTestPush', () => {
     expect(result.ok).toBe(true);
     expect(result.users).toBe(2);
     expect(result.devices).toBe(2);
+    expect(result.sent).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(result.deliveries).toHaveLength(2);
     expect(webpush.sendNotification).toHaveBeenCalledTimes(2);
     expect(webpush.sendNotification).toHaveBeenCalledWith(
       expect.objectContaining({ endpoint: 'https://push.example/1' }),

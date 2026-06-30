@@ -1,7 +1,7 @@
 const webpush = require('web-push');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-const { dedupePushSubscriptions } = require('../utils/pushSubscriptions');
+const { dedupePushSubscriptions, normalizeUserAgentBucket } = require('../utils/pushSubscriptions');
 
 let configured = false;
 
@@ -64,6 +64,12 @@ const buildTestPushPayload = ({ title, body, actionUrl } = {}) => {
   };
 };
 
+const shortEndpoint = (endpoint = '') => {
+  const value = String(endpoint);
+  if (value.length <= 72) return value;
+  return `${value.slice(0, 36)}…${value.slice(-24)}`;
+};
+
 /** Admin smoke test — web push only (no inbox row or email). */
 const broadcastTestPush = async (overrides = {}) => {
   if (!configured && !configureWebPush()) {
@@ -71,26 +77,71 @@ const broadcastTestPush = async (overrides = {}) => {
   }
 
   const users = await User.find({ 'pushSubscriptions.0': { $exists: true } })
-    .select('_id pushSubscriptions')
+    .select('_id name email pushSubscriptions')
     .lean();
 
   const payload = buildTestPushPayload(overrides);
+  const body = JSON.stringify(payload);
+  const deliveries = [];
   let devices = 0;
+  let sent = 0;
+  let failed = 0;
 
-  for (const user of users) {
-    const targets = dedupePushSubscriptions(user.pushSubscriptions || []);
+  for (const row of users) {
+    const user = await User.findById(row._id).select('pushSubscriptions name email');
+    const targets = dedupePushSubscriptions(user?.pushSubscriptions || []);
     if (!targets.length) continue;
-    devices += targets.length;
-    await sendPushToUser(user._id, payload);
+
+    for (const sub of targets) {
+      devices += 1;
+      const delivery = {
+        userId: String(row._id),
+        name: row.name || user?.name || '',
+        email: row.email || user?.email || '',
+        bucket: normalizeUserAgentBucket(sub.userAgent),
+        endpoint: shortEndpoint(sub.endpoint),
+      };
+
+      const idx = user.pushSubscriptions.findIndex((s) => s.endpoint === sub.endpoint);
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: sub.keys },
+          body,
+        );
+        sent += 1;
+        deliveries.push({ ...delivery, status: 'sent' });
+      } catch (err) {
+        failed += 1;
+        deliveries.push({
+          ...delivery,
+          status: 'failed',
+          statusCode: err.statusCode || null,
+          error: err.message,
+        });
+        if (idx >= 0 && [403, 404, 410].includes(err.statusCode)) {
+          user.pushSubscriptions = user.pushSubscriptions.filter((_, i) => i !== idx);
+          await user.save();
+        } else {
+          logger.error('Push', 'Test broadcast send failed', {
+            userId: row._id,
+            endpoint: delivery.endpoint,
+            error: err.message,
+          });
+        }
+      }
+    }
   }
 
   return {
     ok: true,
     users: users.length,
     devices,
+    sent,
+    failed,
     notificationId: payload.notificationId,
     title: payload.title,
     body: payload.body,
+    deliveries,
   };
 };
 

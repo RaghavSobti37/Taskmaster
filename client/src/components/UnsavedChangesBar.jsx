@@ -52,15 +52,15 @@ export default function UnsavedChangesBar({
               size="sm"
               onClick={onCancel}
               disabled={isSaving}
-              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-h-11 touch-manipulation"
             >
-              Cancel
+              {elevated ? 'Discard' : 'Cancel'}
             </Button>
             <Button
               size="sm"
               onClick={onSave}
               disabled={isSaving}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white min-h-11 touch-manipulation"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { Card, Badge, Button } from '../../../components/ui';
-import { formatNumber } from '../../../config/integrations.config';
+import { formatNumber, isHubStatusSyncable } from '../../../config/integrations.config';
 import {
   useArtistOsOverview,
   useArtistOsTimeline,
@@ -301,7 +301,7 @@ export default function ArtistOverviewPanel({
                         <p className="text-[10px] text-rose-500 truncate">{row.lastError}</p>
                       )}
                     </div>
-                    {canSync && ['connected', 'active'].includes(row.status) && (
+                    {canSync && isHubStatusSyncable(row.status) && (
                       <Button
                         variant="ghost"
                         size="sm"

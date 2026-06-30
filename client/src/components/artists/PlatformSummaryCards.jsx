@@ -2,7 +2,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { Badge, Button } from '../ui';
-import { formatNumber, byId, getProfileUrl } from '../../config/integrations.config';
+import { formatNumber, byId, getProfileUrl, findArtistConnection, isArtistConnectionLinked } from '../../config/integrations.config';
 import ConnectAccountButton from './ConnectAccountButton';
 import AccountSwitcher from './AccountSwitcher';
 
@@ -28,10 +28,9 @@ function PlatformCard({
   const Icon = ICONS[provider];
   const colors = COLORS[provider] || COLORS.spotify;
   const isActive = activeProvider === provider;
-  const conn = connections.find((c) => c.provider === provider && c.isPrimary)
-    || connections.find((c) => c.provider === provider);
-  const hasHandle = !!(conn?.accountHandle);
-  const isConnected = hasHandle || conn?.status === 'active';
+  const conn = findArtistConnection(connections, provider);
+  const hasHandle = isArtistConnectionLinked(conn, provider);
+  const isConnected = hasHandle;
   const needsOAuth = provider === 'instagram' && hasHandle && !conn?.authenticated;
 
   const metrics = normalized?.platforms?.[provider] || {};

@@ -25,8 +25,11 @@ export function useArtistDashboard(id, { isPreview = false } = {}) {
   const normalized = artist?.normalized;
 
   const connectedProviders = useMemo(() => {
-    const active = connections.filter((c) => c.status === 'active' || c.accountHandle).map((c) => c.provider);
-    if (active.length) return active;
+    const mapProvider = (p) => (p === 'meta' ? 'instagram' : p);
+    const active = connections
+      .filter((c) => c.status === 'active' || c.accountHandle || c.metadata?.igAccountId)
+      .map((c) => mapProvider(c.provider));
+    if (active.length) return [...new Set(active)];
     const creds = artist?.oauthCredentials || {};
     const fallback = [];
     if (creds.spotify?.artistId) fallback.push('spotify');

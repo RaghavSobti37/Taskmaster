@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Push VAPID_* env vars from server/.env.render to Render prod + staging API services.
+ * Set VAPID_* on Render WITHOUT wiping other env vars.
+ * Uses per-key PUT — never bulk PUT /env-vars (that replaces the entire list).
+ *
  * Usage: node scripts/push-vapid-to-render.mjs
  */
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -43,27 +44,31 @@ if (!vapid.VAPID_SUBJECT) {
   vapid.VAPID_SUBJECT = 'mailto:support@coreknot.app';
 }
 
-async function patchEnv(serviceId, pairs) {
-  const body = Object.entries(pairs).map(([key, value]) => ({ key, value }));
-  const res = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+async function upsertEnvVar(serviceId, key, value) {
+  const res = await fetch(
+    `https://api.render.com/v1/services/${serviceId}/env-vars/${encodeURIComponent(key)}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ key, value }),
     },
-    body: JSON.stringify(body),
-  });
+  );
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`PUT ${serviceId} → ${res.status}: ${t}`);
+    throw new Error(`PUT ${key} on ${serviceId} → ${res.status}: ${t}`);
   }
-  return (await res.json()).length;
+  return res.json();
 }
 
 for (const svc of SERVICES) {
-  const count = await patchEnv(svc.id, vapid);
-  console.log(`✓ ${svc.name}: set ${count} VAPID env var(s)`);
+  for (const [key, value] of Object.entries(vapid)) {
+    await upsertEnvVar(svc.id, key, value);
+    console.log(`✓ ${svc.name}: ${key}`);
+  }
 }
 
-console.log('\nRedeploy CoreKnot-api and coreknot-api-staging for push to take effect.');
+console.log('\nVAPID keys set (other env vars untouched). Redeploy API services when ready.');

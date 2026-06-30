@@ -15,7 +15,7 @@ function formatDateValue(value) {
   if (!value) return '—';
   const d = parseISO(String(value).slice(0, 10));
   if (!isValid(d)) return String(value);
-  return formatDateKeyForDisplay(d);
+  return formatDateKeyForDisplay(d, { withWeekday: true });
 }
 
 export function formatFieldActivityValue(fieldKey, value) {

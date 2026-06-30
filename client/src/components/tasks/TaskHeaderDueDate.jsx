@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { Badge } from '../ui';
@@ -34,7 +34,7 @@ export default function TaskHeaderDueDate({
     if (!dueDate) return 'Set date';
     const d = new Date(`${dueDate}T12:00:00`);
     if (Number.isNaN(d.getTime())) return dueDate;
-    return formatDisplayDate(d);
+    return formatWeekdayDateLong(d);
   }, [dueDate]);
 
   return (
@@ -46,6 +46,18 @@ export default function TaskHeaderDueDate({
         <span className="text-[8px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">
           Due
         </span>
+        {dueDate ? (
+          <span
+            className={`hidden sm:inline text-[9px] font-semibold tabular-nums truncate max-w-[9rem] ${
+              overdue
+                ? 'text-[var(--color-pastel-rose-text)]'
+                : 'text-[var(--color-text-secondary)]'
+            }`}
+            aria-hidden
+          >
+            {displayLabel}
+          </span>
+        ) : null}
         <input
           type="date"
           value={dueDate || ''}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { Input, Button, Badge } from '../../../components/ui';
 import { NexusModal } from '../../../components/ui/modals';;
+import { formatDateKeyForDisplay } from '../../../utils/dateDisplay';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useApplyLeave, useLeaveRequests } from '../../../hooks/useTaskmasterQueries';
 
@@ -58,8 +59,22 @@ export default function LeaveTab() {
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input type="date" label="Leave From" value={leaveFromDate} onChange={(e) => setLeaveFromDate(e.target.value)} />
-            <Input type="date" label="Leave To" value={leaveToDate} onChange={(e) => setLeaveToDate(e.target.value)} />
+            <div className="space-y-1">
+              <Input type="date" label="Leave From" value={leaveFromDate} onChange={(e) => setLeaveFromDate(e.target.value)} />
+              {leaveFromDate ? (
+                <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
+                  {formatDateKeyForDisplay(leaveFromDate, { withWeekday: true })}
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <Input type="date" label="Leave To" value={leaveToDate} onChange={(e) => setLeaveToDate(e.target.value)} />
+              {leaveToDate ? (
+                <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
+                  {formatDateKeyForDisplay(leaveToDate, { withWeekday: true })}
+                </p>
+              ) : null}
+            </div>
           </div>
           
           <Input label="Reason for Leave" value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} />

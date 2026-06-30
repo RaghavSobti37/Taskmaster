@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDisplayDate, formatWeekdayDate } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Clock, CheckCircle, XCircle } from 'lucide-react';
@@ -18,8 +18,8 @@ const STATUS_STYLES = {
 
 const formatDateRange = (from, to) => {
   if (!from && !to) return '—';
-  const f = from ? formatDisplayDate(new Date(from)) : '?';
-  const t = to ? formatDisplayDate(new Date(to)) : f;
+  const f = from ? formatWeekdayDate(new Date(from)) : '?';
+  const t = to ? formatWeekdayDate(new Date(to)) : f;
   return f === t ? f : `${f} → ${t}`;
 };
 

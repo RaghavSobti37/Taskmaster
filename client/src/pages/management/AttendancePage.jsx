@@ -484,8 +484,8 @@ const AttendancePage = () => {
               </div>
               {leaveRequests.map((request) => {
                 const requester = request.userId?.name || request.username || 'Unknown';
-                const fromLabel = request.fromDate ? formatDisplayDate(new Date(request.fromDate)) : '—';
-                const toLabel = request.toDate ? formatDisplayDate(new Date(request.toDate)) : fromLabel;
+                const fromLabel = request.fromDate ? formatWeekdayDateLong(new Date(request.fromDate)) : '—';
+                const toLabel = request.toDate ? formatWeekdayDateLong(new Date(request.toDate)) : fromLabel;
                 return (
                   <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">

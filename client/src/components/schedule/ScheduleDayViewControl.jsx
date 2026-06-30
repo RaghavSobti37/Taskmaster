@@ -47,7 +47,7 @@ export default function ScheduleDayViewControl({
     const end = parseDateKey(rangeEndKey);
     if (!start || !end) return '';
     if (rangeStartKey === rangeEndKey) return formatWeekdayDate(start);
-    return `${formatDisplayDateShort(start)} – ${formatDisplayDateShort(end)}`;
+    return `${formatWeekdayDate(start)} – ${formatWeekdayDate(end)}`;
   }, [rangeStartKey, rangeEndKey]);
 
   const columnCenterInset = maxDays > 0 ? `calc(100% / ${maxDays} / 2)` : '0px';

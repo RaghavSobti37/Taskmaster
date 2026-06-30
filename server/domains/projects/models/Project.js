@@ -44,31 +44,22 @@ projectSchema.virtual('phases', {
 });
 
 // Cascade deletes to Phase and Task models
-projectSchema.pre('remove', async function(next) {
+projectSchema.pre('deleteOne', { document: true, query: false }, async function () {
   await mongoose.model('Phase').deleteMany({ projectId: this._id });
   await mongoose.model('Task').deleteMany({ projectId: this._id });
-  next();
 });
 
-projectSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
-  await mongoose.model('Phase').deleteMany({ projectId: this._id });
-  await mongoose.model('Task').deleteMany({ projectId: this._id });
-  next();
-});
-
-projectSchema.pre('save', function (next) {
+projectSchema.pre('save', function () {
   if (this.isModified('name') && this.name) {
     this.name = formatProjectName(this.name);
   }
-  next();
 });
 
-projectSchema.pre('findOneAndUpdate', function (next) {
+projectSchema.pre('findOneAndUpdate', function () {
   const update = this.getUpdate() || {};
   if (update.name) update.name = formatProjectName(update.name);
   if (update.$set?.name) update.$set.name = formatProjectName(update.$set.name);
   this.setUpdate(update);
-  next();
 });
 
 ['find', 'findOne'].forEach((hook) => {

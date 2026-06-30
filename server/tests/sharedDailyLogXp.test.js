@@ -45,20 +45,21 @@ describe('shared daily log XP', () => {
 
     expect(createRes.statusCode).toBe(201);
 
+    const waitForXp = async (filter) => {
+      for (let i = 0; i < 60; i += 1) {
+        const row = await XPAuditLog.findOne(filter).lean();
+        if (row) return row;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return null;
+    };
+
     const memberLogs = await Log.find({ userId: member._id, action: 'DAILY_LOG' }).lean();
     expect(memberLogs).toHaveLength(1);
     expect(memberLogs[0].details?.isSharedCopy).toBe(true);
 
-    const authorXp = await XPAuditLog.findOne({
-      userId: author._id,
-      action: 'DAILY_LOG',
-      'details.logId': createRes.body._id,
-    }).lean();
-    const memberXp = await XPAuditLog.findOne({
-      userId: member._id,
-      action: 'DAILY_LOG',
-      'details.logId': memberLogs[0]._id,
-    }).lean();
+    const authorXp = await waitForXp({ userId: author._id, action: 'DAILY_LOG' });
+    const memberXp = await waitForXp({ userId: member._id, action: 'DAILY_LOG' });
 
     expect(authorXp?.amount).toBe(20);
     expect(memberXp?.amount).toBe(20);

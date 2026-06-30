@@ -1,5 +1,5 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { config } = require('../../config');
 const { authRateLimit } = require('../../middleware/rateLimits');
 const { isE2eTestUser } = require('../../utils/e2eTestUsers');
@@ -36,7 +36,7 @@ const authLoginLimiter = rateLimit({
     if (typeof email === 'string' && email.trim()) {
       return `login:${email.trim().toLowerCase()}`;
     }
-    return `login-ip:${req.ip || req.socket?.remoteAddress || 'unknown'}`;
+    return `login-ip:${ipKeyGenerator(req)}`;
   },
 });
 

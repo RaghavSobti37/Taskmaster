@@ -1,5 +1,3 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
 const {
   isVercelAppHost,
   isVercelAppOrigin,
@@ -8,21 +6,18 @@ const {
 
 describe('vercelOrigins', () => {
   it('detects vercel.app hosts and origins', () => {
-    assert.equal(isVercelAppHost('obti37s-projects.vercel.app'), true);
-    assert.equal(isVercelAppHost('tsccoreknot.com'), false);
-    assert.equal(
-      isVercelAppOrigin('https://obti37s-projects.vercel.app'),
-      true,
-    );
+    expect(isVercelAppHost('obti37s-projects.vercel.app')).toBe(true);
+    expect(isVercelAppHost('tsccoreknot.com')).toBe(false);
+    expect(isVercelAppOrigin('https://obti37s-projects.vercel.app')).toBe(true);
   });
 
   it('allows vercel previews unless explicitly disabled', () => {
     const prev = process.env.CORS_ALLOW_VERCEL_PREVIEWS;
     try {
       delete process.env.CORS_ALLOW_VERCEL_PREVIEWS;
-      assert.equal(allowVercelPreviewOrigins(), true);
+      expect(allowVercelPreviewOrigins()).toBe(true);
       process.env.CORS_ALLOW_VERCEL_PREVIEWS = 'false';
-      assert.equal(allowVercelPreviewOrigins(), false);
+      expect(allowVercelPreviewOrigins()).toBe(false);
     } finally {
       if (prev === undefined) delete process.env.CORS_ALLOW_VERCEL_PREVIEWS;
       else process.env.CORS_ALLOW_VERCEL_PREVIEWS = prev;

@@ -64,7 +64,7 @@ const applyTscIdentityFields = (set) => {
   if (set.state && typeof set.state === 'string') set.state = sanitizeLocation(set.state);
 };
 
-TscDataSchema.pre('save', function(next) {
+TscDataSchema.pre('save', function () {
   if (this.isModified('name') || this.name) {
     const { name, nameKey } = normalizePersonName(this.name);
     this.name = name || this.name;
@@ -74,7 +74,6 @@ TscDataSchema.pre('save', function(next) {
   if (this.isModified('phone') && this.phone) this.phone = normalizeTscPhone(this.phone);
   if (this.isModified('city') && this.city) this.city = sanitizeLocation(this.city);
   if (this.isModified('state') && this.state) this.state = sanitizeLocation(this.state);
-  next();
 });
 
 const sanitizeUpdate = (update) => {
@@ -83,19 +82,16 @@ const sanitizeUpdate = (update) => {
   applyTscIdentityFields(set);
 };
 
-TscDataSchema.pre('findOneAndUpdate', function(next) {
+TscDataSchema.pre('findOneAndUpdate', function () {
   sanitizeUpdate(this.getUpdate());
-  next();
 });
 
-TscDataSchema.pre('updateOne', function(next) {
+TscDataSchema.pre('updateOne', function () {
   sanitizeUpdate(this.getUpdate());
-  next();
 });
 
-TscDataSchema.pre('updateMany', function(next) {
+TscDataSchema.pre('updateMany', function () {
   sanitizeUpdate(this.getUpdate());
-  next();
 });
 
 // Uniqueness Constraints

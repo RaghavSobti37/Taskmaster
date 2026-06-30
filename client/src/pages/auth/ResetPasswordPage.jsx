@@ -6,6 +6,7 @@ import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
+import BrandLogo from '../../components/brand/BrandLogo';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 
 const ResetPasswordPage = () => {

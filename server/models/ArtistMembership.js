@@ -37,14 +37,13 @@ ArtistMembershipSchema.index(
   { unique: true, sparse: true, partialFilterExpression: { inviteEmail: { $type: 'string' } } },
 );
 
-ArtistMembershipSchema.pre('validate', function setDefaultPermissions(next) {
+ArtistMembershipSchema.pre('validate', function setDefaultPermissions() {
   if (!this.permissions || Object.values(this.permissions.toObject?.() || this.permissions).every((v) => v === false)) {
     this.permissions = getDefaultPermissionsForRole(this.role);
   }
   if (this.status === 'accepted' && !this.acceptedAt) {
     this.acceptedAt = new Date();
   }
-  next();
 });
 
 ArtistMembershipSchema.plugin(tenantPlugin);

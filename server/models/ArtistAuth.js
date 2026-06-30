@@ -38,7 +38,7 @@ const ArtistAuthSchema = new mongoose.Schema({
 });
 
 // Input sanitization hook
-ArtistAuthSchema.pre('save', function(next) {
+ArtistAuthSchema.pre('save', function () {
   if (this.oauthCredentials?.spotify?.artistId) {
     this.oauthCredentials.spotify.artistId = this.oauthCredentials.spotify.artistId.trim();
   }
@@ -48,7 +48,6 @@ ArtistAuthSchema.pre('save', function(next) {
   if (this.oauthCredentials?.meta?.igAccountId) {
     this.oauthCredentials.meta.igAccountId = this.oauthCredentials.meta.igAccountId.trim();
   }
-  next();
 });
 
 module.exports = mongoose.model('ArtistAuth', ArtistAuthSchema);

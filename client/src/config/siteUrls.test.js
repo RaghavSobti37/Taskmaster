@@ -63,6 +63,6 @@ describe('siteUrls', () => {
     expect(externalAuthRedirectTarget('/login', '?redirect=%2Fdashboard')).toBe(
       'https://auth.tsccoreknot.com/login?redirect=%2Fdashboard',
     );
-    expect(shouldRedirectMarketingRoute('/')).toBe('https://landing.tsccoreknot.com/');
+    expect(shouldRedirectMarketingRoute('/')).toBe('https://landing.tsccoreknot.com');
   });
 });

@@ -1,5 +1,6 @@
 const cors = require('cors');
 const { config } = require('../config');
+const { isVercelAppOrigin, allowVercelPreviewOrigins } = require('../utils/vercelOrigins');
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -24,8 +25,7 @@ const corsAllowlist = new Set([
   ...allowedOrigins,
 ]);
 
-const allowVercelPreviews = config.NODE_ENV !== 'production'
-  || String(config.CORS_ALLOW_VERCEL_PREVIEWS).trim() === 'true';
+const allowVercelPreviews = allowVercelPreviewOrigins();
 
 const isLocalDevOrigin = (origin) =>
   config.NODE_ENV !== 'production'
@@ -36,7 +36,7 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     if (corsAllowlist.has(origin)) return callback(null, true);
     if (isLocalDevOrigin(origin)) return callback(null, true);
-    if (allowVercelPreviews && origin.endsWith('.vercel.app')) return callback(null, true);
+    if (allowVercelPreviews && isVercelAppOrigin(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,

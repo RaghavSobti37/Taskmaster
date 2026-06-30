@@ -4,6 +4,7 @@ const cookie = require('cookie');
 const User = require('../models/User');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { COOKIE_NAME } = require('../utils/authCookie');
+const { isVercelAppOrigin, allowVercelPreviewOrigins } = require('../utils/vercelOrigins');
 
 let io = null;
 const log = () => require('../utils/logger');
@@ -12,14 +13,13 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
   if (io) return io;
 
   const origins = [...corsAllowlist];
-  const allowVercelPreviews = process.env.NODE_ENV !== 'production'
-    || String(process.env.CORS_ALLOW_VERCEL_PREVIEWS).trim() === 'true';
+  const allowVercelPreviews = allowVercelPreviewOrigins();
 
   io = new Server(httpServer, {
     cors: {
       origin: (origin, callback) => {
         if (!origin || origins.includes(origin)) return callback(null, true);
-        if (allowVercelPreviews && origin.endsWith('.vercel.app')) return callback(null, true);
+        if (allowVercelPreviews && isVercelAppOrigin(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
       },
       credentials: true,

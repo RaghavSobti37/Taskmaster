@@ -17,9 +17,15 @@ export function isMobileBrowser() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
 
-/** PWA + mobile browsers — used for UI/layout hints only. */
+/** Vercel preview deployment host — route /api through same-origin proxy. */
+export function isVercelPreviewHost() {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.endsWith('.vercel.app');
+}
+
+/** PWA + mobile browsers + Vercel previews — used for UI/layout hints only. */
 export function shouldUseSameOriginApi() {
-  return isStandaloneDisplay() || isMobileBrowser();
+  return isStandaloneDisplay() || isMobileBrowser() || isVercelPreviewHost();
 }
 
 /** Mouse/trackpad primary — not phone/tablet touch UI */

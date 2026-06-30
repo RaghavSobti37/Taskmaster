@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isMobileBrowser, shouldUseSameOriginApi } from './displayMode';
+import { isMobileBrowser, isVercelPreviewHost, shouldUseSameOriginApi } from './displayMode';
 
 describe('displayMode', () => {
-  const originalNavigator = global.navigator;
-  const originalWindow = global.window;
-
   beforeEach(() => {
     vi.stubGlobal('window', {
+      location: { hostname: 'tsccoreknot.com' },
       navigator: { userAgent: '', platform: 'Win32', maxTouchPoints: 0, standalone: false },
       matchMedia: vi.fn(() => ({ matches: false })),
     });
@@ -15,8 +13,6 @@ describe('displayMode', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    global.navigator = originalNavigator;
-    global.window = originalWindow;
   });
 
   it('detects iPhone user agent as mobile', () => {
@@ -40,5 +36,14 @@ describe('displayMode', () => {
     }));
     expect(isMobileBrowser()).toBe(false);
     expect(shouldUseSameOriginApi()).toBe(false);
+  });
+
+  it('routes Vercel preview hosts through same-origin /api', () => {
+    window.location.hostname = 'obti37s-projects.vercel.app';
+    window.navigator.userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0';
+    window.matchMedia = vi.fn(() => ({ matches: false }));
+    expect(isVercelPreviewHost()).toBe(true);
+    expect(shouldUseSameOriginApi()).toBe(true);
   });
 });

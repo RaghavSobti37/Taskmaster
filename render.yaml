@@ -74,6 +74,12 @@ services:
         sync: false
       - key: UPLOADTHING_SECRET
         sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
 
   # Staging API — PR/preview testing; never points at production DB
   - type: web
@@ -124,6 +130,12 @@ services:
       - key: UPLOADTHING_TOKEN
         sync: false
       - key: UPLOADTHING_SECRET
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
         sync: false
 
   # NestJS staging

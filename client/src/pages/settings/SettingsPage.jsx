@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, LayoutDashboard, Clock, Target, CalendarDays,
-  Receipt, LogOut, ArrowLeft, Shield, Keyboard
+  Receipt, LogOut, ArrowLeft, Shield, Keyboard, Bell
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +16,7 @@ const SETTINGS_TAB_LOADERS = {
   Profile: () => lazyWithRetry(() => import('./tabs/ProfileTab')),
   Security: () => lazyWithRetry(() => import('./tabs/SessionsTab')),
   Keyboard: () => lazyWithRetry(() => import('./tabs/KeyboardShortcutsTab')),
+  Notifications: () => lazyWithRetry(() => import('./tabs/NotificationsTab')),
   Dashboard: () => lazyWithRetry(() => import('./tabs/DashboardCustomizationTab')),
   Attendance: () => lazyWithRetry(() => import('./tabs/AttendanceTab')),
   Progress: () => lazyWithRetry(() => import('./tabs/ProgressTab')),
@@ -41,6 +42,7 @@ const SettingsPage = () => {
     { id: 'Profile', icon: User, label: 'Profile' },
     { id: 'Security', icon: Shield, label: 'Security' },
     { id: 'Keyboard', icon: Keyboard, label: 'Shortcuts' },
+    { id: 'Notifications', icon: Bell, label: 'Notifications' },
     { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard Layout' },
     { id: 'Attendance', icon: Clock, label: 'Attendance' },
     { id: 'Progress', icon: Target, label: 'Progress' },

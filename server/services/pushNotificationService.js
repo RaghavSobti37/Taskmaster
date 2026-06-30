@@ -38,7 +38,7 @@ const sendPushToUser = async (userId, payload) => {
           body
         );
       } catch (err) {
-        if (err.statusCode === 404 || err.statusCode === 410) dead.push(idx);
+        if ([403, 404, 410].includes(err.statusCode)) dead.push(idx);
         else logger.error('Push', 'Send failed', { error: err.message });
       }
     }));

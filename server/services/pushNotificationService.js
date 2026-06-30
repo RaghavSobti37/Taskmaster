@@ -52,4 +52,51 @@ const sendPushToUser = async (userId, payload) => {
   }
 };
 
-module.exports = { configureWebPush, sendPushToUser, getVapidPublicKey: () => process.env.VAPID_PUBLIC_KEY || '' };
+const buildTestPushPayload = ({ title, body, actionUrl } = {}) => {
+  const notificationId = `test-push-${Date.now()}`;
+  return {
+    title: title || '[TEST] CoreKnot Push',
+    body: body || 'Test push — if you see this, notifications are working on your device.',
+    actionUrl: actionUrl || '/settings/notifications',
+    notificationId,
+    category: 'system',
+    iconType: 'system',
+  };
+};
+
+/** Admin smoke test — web push only (no inbox row or email). */
+const broadcastTestPush = async (overrides = {}) => {
+  if (!configured && !configureWebPush()) {
+    return { ok: false, error: 'Web Push disabled — configure VAPID keys on the server' };
+  }
+
+  const users = await User.find({ 'pushSubscriptions.0': { $exists: true } })
+    .select('_id pushSubscriptions')
+    .lean();
+
+  const payload = buildTestPushPayload(overrides);
+  let devices = 0;
+
+  for (const user of users) {
+    const targets = dedupePushSubscriptions(user.pushSubscriptions || []);
+    if (!targets.length) continue;
+    devices += targets.length;
+    await sendPushToUser(user._id, payload);
+  }
+
+  return {
+    ok: true,
+    users: users.length,
+    devices,
+    notificationId: payload.notificationId,
+    title: payload.title,
+    body: payload.body,
+  };
+};
+
+module.exports = {
+  configureWebPush,
+  sendPushToUser,
+  broadcastTestPush,
+  getVapidPublicKey: () => process.env.VAPID_PUBLIC_KEY || '',
+};

@@ -43,6 +43,15 @@ module.exports = [
     args: [],
   },
   {
+    id: 'send-test-push-all',
+    fileName: 'sendTestPushToAll.js',
+    title: 'Send Test Push to All Devices',
+    description: 'Broadcasts a web push test alert to every registered device (no inbox or email).',
+    category: 'Dev & infra',
+    safety: 'caution',
+    args: [],
+  },
+  {
     id: 'test-realtime',
     fileName: 'testRealtime.js',
     title: 'Test Realtime (Socket)',

@@ -4,10 +4,10 @@ const Lead = require('../models/Lead');
 const CalendarEvent = require('../models/CalendarEvent');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 const { startOfDay, endOfDay } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
-const { getVapidPublicKey } = require('../services/pushNotificationService');
+const { getVapidPublicKey, broadcastTestPush } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
 const TaskService = require('../services/TaskService');
 const logger = require('../utils/logger');
@@ -169,6 +169,25 @@ router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), a
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to remove subscription' });
+  }
+});
+
+router.post('/push/test-broadcast', protect, admin, async (req, res) => {
+  try {
+    const result = await broadcastTestPush();
+    if (!result.ok) {
+      return res.status(503).json({ error: result.error || 'Push broadcast unavailable' });
+    }
+    logger.info('Push', 'Test broadcast sent', {
+      actorId: req.user._id,
+      users: result.users,
+      devices: result.devices,
+      notificationId: result.notificationId,
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    logger.error('Push', 'Test broadcast failed', { error: error.message, actorId: req.user?._id });
+    res.status(500).json({ error: 'Failed to send test push broadcast' });
   }
 });
 

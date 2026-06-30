@@ -15,6 +15,7 @@ export async function probeAuthSession() {
   const res = await fetch(apiPath('/api/auth/me'), {
     method: 'GET',
     credentials: 'include',
+    signal: AbortSignal.timeout(5000),
     headers: {
       ...AUTH_SESSION_PROBE_HEADERS,
       'X-Trace-Id': getClientTraceId(),

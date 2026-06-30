@@ -260,6 +260,14 @@ async function main() {
   }
 
   let routes = resolveRoutes({ publicOnly, protectedOnly, extraPaths });
+  const ciRoutes = (process.env.LH_CI_ROUTES || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ciRoutes.length) {
+    const allowed = new Set(ciRoutes.map((p) => (p.startsWith('/') ? p : `/${p}`)));
+    routes = routes.filter((r) => allowed.has(r.path));
+  }
   if (routeFilter) {
     routes = routes.filter((r) => r.path === routeFilter || r.path.startsWith(routeFilter));
     if (!routes.length) {

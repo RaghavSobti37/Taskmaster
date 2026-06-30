@@ -237,6 +237,8 @@ const Dashboard = () => {
         return <RenderLogTargetCard targetId="staging-api" />;
       case 'render-logs-staging-nest':
         return <RenderLogTargetCard targetId="staging-nest" />;
+      case 'posthog-dashboard':
+        return renderLazyWidget('posthog-dashboard');
       case 'attendance-overview':
         return renderLazyWidget('attendance-overview');
       case 'last-backup':

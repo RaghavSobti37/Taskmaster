@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { HUB_CONFIG, ADMIN_CONSOLE_SECTIONS } from '../../utils/navbarConfig';
 import { getRenderLogTarget, openRenderLogs } from '../../config/renderLogs';
+import { getPostHogDashboardUrl, openPostHogDashboard } from '../../config/posthogDashboard';
 
 const ICON_MAP = {
   Users,
@@ -138,6 +139,10 @@ export default function AdminConsole() {
     if (tile.externalLogTarget) {
       const target = getRenderLogTarget(tile.externalLogTarget);
       if (target?.url) openRenderLogs(target.url);
+      return;
+    }
+    if (tile.externalUrl === 'posthog-dashboard') {
+      openPostHogDashboard(getPostHogDashboardUrl());
       return;
     }
     if (tile.externalUrl) {

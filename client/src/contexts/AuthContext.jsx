@@ -16,7 +16,13 @@ import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { probeAuthSession } from '../utils/authSessionProbe';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
-import { setPostHogUser, clearPostHogUser, capturePostHogEvent } from '../lib/posthog';
+import { hasAnalyticsConsent } from '../lib/cookieConsent';
+import {
+  ensurePostHogForConsent,
+  setPostHogUser,
+  clearPostHogUser,
+  capturePostHogEvent,
+} from '../lib/posthog';
 
 const defaultAuthContext = {
   user: null,
@@ -187,6 +193,9 @@ export const AuthProvider = ({ children }) => {
         const newData = probe.user;
         if (userSessionChanged(userRef.current, newData)) {
           setUser(newData);
+        }
+        if (newData && hasAnalyticsConsent()) {
+          ensurePostHogForConsent();
           setPostHogUser(newData);
         }
         if (newData && !userRef.current) {

@@ -22,9 +22,10 @@ import {
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
-import { initPostHog, getPostHogClient } from './lib/posthog';
+import { ensurePostHogForConsent, getPostHogClient } from './lib/posthog';
 import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
+import PostHogConsentBridge from './components/PostHogConsentBridge';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
 import { Analytics } from '@vercel/analytics/react';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
@@ -33,24 +34,33 @@ const AgentationDev = __AGENTATION_ENABLED__
   ? lazy(() => import('./components/dev/AgentationDev'))
   : null;
 
-const bootPostHog = () => {
-  if (!hasAnalyticsConsent()) return;
-  initPostHog();
+const syncPostHogClient = () => {
+  if (!hasAnalyticsConsent()) return getPostHogClient();
+  ensurePostHogForConsent();
+  return getPostHogClient();
 };
 
-bootPostHog();
+syncPostHogClient();
 
 function Root() {
-  const [posthogClient, setPosthogClient] = useState(() => getPostHogClient());
+  const [posthogClient, setPosthogClient] = useState(() => syncPostHogClient());
 
   useEffect(() => {
+    const onReady = () => {
+      const client = syncPostHogClient();
+      if (client) setPosthogClient(client);
+    };
     const onConsent = (event) => {
       if (!event.detail?.analytics) return;
-      bootPostHog();
-      setPosthogClient(getPostHogClient());
+      onReady();
     };
+    window.addEventListener('coreknot:posthog-ready', onReady);
     window.addEventListener('coreknot:cookie-consent', onConsent);
-    return () => window.removeEventListener('coreknot:cookie-consent', onConsent);
+    onReady();
+    return () => {
+      window.removeEventListener('coreknot:posthog-ready', onReady);
+      window.removeEventListener('coreknot:cookie-consent', onConsent);
+    };
   }, []);
 
   const tree = posthogClient ? (
@@ -127,6 +137,7 @@ const appTree = (
                 <ConfirmProvider>
                   <UnsavedChangesProvider>
                     <LocalFirstRoot>
+                      <PostHogConsentBridge />
                       <App />
                     </LocalFirstRoot>
                     <CookieBanner />

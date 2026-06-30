@@ -59,7 +59,16 @@ export const initPostHog = () => {
     __add_tracing_headers: tracingHosts(),
   });
   initialized = true;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('coreknot:posthog-ready'));
+  }
   return true;
+};
+
+/** Boot PostHog when prior consent exists (localStorage or shared cookie). */
+export const ensurePostHogForConsent = () => {
+  if (!hasAnalyticsConsent()) return false;
+  return initPostHog();
 };
 
 export const getPostHogClient = () => (initialized ? posthog : null);

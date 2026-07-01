@@ -17,10 +17,13 @@ const hostFromUrl = (url) => {
   }
 };
 
-/** App host serves workspace routes (prod: tsccoreknot.com). */
+/** App host serves workspace routes (prod: tsccoreknot.com).
+ * Auth site never falls back to its own origin here — split deploy means
+ * auth.tsccoreknot.com is not the app host, so an unset VITE_APP_URL must
+ * resolve to the real prod app origin, not the auth subdomain. */
 export function getAppOrigin() {
   if (import.meta.env.VITE_APP_URL) return trimSlash(import.meta.env.VITE_APP_URL);
-  if ((isAppSite() || isAuthSite()) && browserOrigin()) return browserOrigin();
+  if (isAppSite() && browserOrigin()) return browserOrigin();
   return PROD_APP_ORIGIN;
 }
 

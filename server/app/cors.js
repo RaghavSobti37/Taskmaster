@@ -51,6 +51,8 @@ const corsOptions = {
     'x-trace-id',
     'x-uploadthing-package',
     'x-uploadthing-version',
+    'x-posthog-distinct-id',
+    'x-posthog-session-id',
     'b3',
     'traceparent',
   ],

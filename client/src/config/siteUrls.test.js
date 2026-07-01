@@ -36,6 +36,20 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget()).toBe('/dashboard');
   });
 
+  it('redirects post-login to prod app origin on auth site even when VITE_APP_URL unset', async () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://auth.tsccoreknot.com' },
+    });
+    import.meta.env.VITE_SITE_MODE = 'auth';
+    import.meta.env.VITE_APP_URL = '';
+    import.meta.env.VITE_AUTH_URL = '';
+
+    const { resolveAppNavigationTarget, getAppOrigin } = await import('./siteUrls.js');
+
+    expect(getAppOrigin()).toBe('https://tsccoreknot.com');
+    expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
+  });
+
   it('links landing subdomain auth CTAs to configured auth host', async () => {
     import.meta.env.VITE_SITE_MODE = 'landing';
     import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';

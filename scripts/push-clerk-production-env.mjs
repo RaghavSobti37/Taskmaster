@@ -121,8 +121,7 @@ async function renderUpsert(sk) {
   }
   const upserts = [
     ['CLERK_SECRET_KEY', sk],
-    ['CLERK_FAPI_UPSTREAM', 'https://clerk.tsccoreknot.com'],
-    ['CLERK_FRONTEND_API', 'clerk.tsccoreknot.com'],
+    ['CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services'],
     ['CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk'],
   ];
 
@@ -152,6 +151,16 @@ async function renderUpsert(sk) {
   } else {
     console.warn(`  Render: could not remove CLERK_ORGANIZATION_ID (${del.status})`);
   }
+
+  for (const staleKey of ['CLERK_FRONTEND_API']) {
+    const staleDel = await fetch(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars/${staleKey}`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (staleDel.ok || staleDel.status === 404) {
+      console.log(`  Render production: ${staleKey} removed (if present)`);
+    }
+  }
 }
 
 function deployProjects() {
@@ -180,7 +189,7 @@ for (const { cwd, needsClerkSecret } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', 'https://tsccoreknot.com/__clerk');
   if (needsClerkSecret) {
     vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
-    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://clerk.tsccoreknot.com');
+    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services');
     vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk');
   }
   // Remove legacy org pin from Vercel if present

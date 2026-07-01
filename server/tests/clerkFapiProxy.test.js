@@ -19,6 +19,15 @@ describe('clerkFapiProxy', () => {
       .toBe('https://frontend-api.clerk.services/npm/@clerk/clerk-js@6/dist/clerk.browser.js');
   });
 
+  it('buildTargetUrl ignores CLERK_FRONTEND_API (custom domain is not proxy upstream)', () => {
+    process.env.CLERK_FRONTEND_API = 'clerk.tsccoreknot.com';
+    jest.resetModules();
+    const { buildTargetUrl: build } = require('../middleware/clerkFapiProxy');
+    expect(build({ originalUrl: '/__clerk/v1/environment' }))
+      .toBe('https://frontend-api.clerk.services/v1/environment');
+    delete process.env.CLERK_FRONTEND_API;
+  });
+
   it('returns 503 when CLERK_SECRET_KEY is missing', async () => {
     delete process.env.CLERK_SECRET_KEY;
     const router = require('../middleware/clerkFapiProxy');

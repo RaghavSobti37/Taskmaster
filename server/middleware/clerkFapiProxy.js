@@ -5,7 +5,8 @@
 
 const express = require('express');
 
-const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || process.env.CLERK_FRONTEND_API || '')
+// ponytail: proxy upstream is always generic FAPI — never clerk.tsccoreknot.com (CF error 1000)
+const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || '')
   .trim()
   .replace(/\/$/, '') || 'https://frontend-api.clerk.services';
 const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';

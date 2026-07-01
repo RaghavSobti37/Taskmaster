@@ -79,13 +79,16 @@ describe('Artist portfolio summary and public profile', () => {
   it('GET /api/artists/public/:slug returns sanitized public fields without auth', async () => {
     const stamp = Date.now();
     const slug = `public-artist-${stamp}`;
+    const gigDate = new Date();
+    gigDate.setUTCDate(gigDate.getUTCDate() + 30);
+    const gigDateIso = gigDate.toISOString().slice(0, 10);
     await Artist.create({
       name: 'Public Test Artist',
       slug,
       bio: 'Public bio only',
       website: 'https://example.com',
       socials: { instagram: 'https://instagram.com/test' },
-      events: [{ title: 'Summer Fest', venue: 'Mumbai', date: '2026-07-01', status: 'planned' }],
+      events: [{ title: 'Summer Fest', venue: 'Mumbai', date: gigDateIso, status: 'planned' }],
     });
 
     const res = await request(app).get(`/api/artists/public/${slug}`);
@@ -95,7 +98,7 @@ describe('Artist portfolio summary and public profile', () => {
     expect(res.body.socialLinks).toBeDefined();
     expect(res.body.upcomingGigs).toHaveLength(1);
     expect(res.body.upcomingGigs[0]).toEqual(
-      expect.objectContaining({ venue: 'Mumbai', date: '2026-07-01' }),
+      expect.objectContaining({ venue: 'Mumbai', date: gigDateIso }),
     );
     expect(res.body.upcomingGigs[0].title).toBeUndefined();
     expect(res.body).toHaveProperty('musicLinks');

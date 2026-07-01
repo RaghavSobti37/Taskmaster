@@ -15,9 +15,21 @@ import { navigateAfterAuth } from '../../utils/authNavigation';
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
+/** ponytail: Clerk hooks only under ClerkProvider — CI preview builds omit publishable key */
 export default function LoginPage() {
-  const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
+  if (!isClerkConfigured()) {
+    return <LoginPageView clerkLoaded clerkSignedIn={false} />;
+  }
+  return <LoginPageWithClerk />;
+}
+
+function LoginPageWithClerk() {
   const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
+  return <LoginPageView clerkLoaded={clerkLoaded} clerkSignedIn={clerkSignedIn} />;
+}
+
+function LoginPageView({ clerkLoaded, clerkSignedIn }) {
+  const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
   const navigate = useNavigate();
   const navigatedRef = useRef(false);
   const [installGuideOpen, setInstallGuideOpen] = React.useState(false);

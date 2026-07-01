@@ -56,7 +56,16 @@ describe('clerk config', () => {
     expect(getPinnedClerkOrganizationId()).toBe('');
   });
 
-  it('uses primary app proxy for live keys', () => {
+  it('uses auth origin proxy on auth site (CSP same-origin)', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_SITE_MODE = 'auth';
+    env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
+    env.VITE_CLERK_PROXY_URL = 'https://tsccoreknot.com/__clerk';
+    expect(getClerkProxyUrl()).toBe('https://auth.tsccoreknot.com/__clerk');
+    env.VITE_SITE_MODE = 'app';
+  });
+
+  it('uses primary app proxy for live keys on app site', () => {
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
     env.VITE_APP_URL = 'https://tsccoreknot.com';
     expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');

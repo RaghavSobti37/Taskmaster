@@ -2,7 +2,10 @@
  * Clerk app + dashboard URLs (client). API secret stays on Render only.
  */
 
+import { isAuthSite, isLandingSite } from './siteMode';
+
 const trim = (value) => String(value || '').trim();
+const trimSlash = (url) => trim(url).replace(/\/$/, '');
 
 export function getClerkPublishableKey() {
   return trim(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
@@ -75,15 +78,30 @@ export function getPinnedClerkOrganizationId() {
 }
 
 /**
- * Clerk Frontend API proxy on primary app host (Vercel api/clerk-proxy).
- * Auth subdomain loads clerk-js via tsccoreknot.com/__clerk (Clerk rejects proxy on other hosts).
+ * Clerk Frontend API proxy on primary app host (Render /__clerk).
+ * Auth/landing satellites must load clerk-js same-origin — CSP script-src 'self'
+ * blocks cross-origin script from tsccoreknot.com on auth.tsccoreknot.com.
  */
 export function getClerkProxyUrl() {
+  if (!isClerkLiveKey()) return '';
+
+  if (isAuthSite()) {
+    const authOrigin = trim(import.meta.env.VITE_AUTH_URL)
+      || (typeof window !== 'undefined' ? window.location?.origin : '');
+    if (authOrigin) return `${trimSlash(authOrigin)}/__clerk`;
+  }
+
+  if (isLandingSite()) {
+    const landingOrigin = trim(import.meta.env.VITE_LANDING_URL)
+      || (typeof window !== 'undefined' ? window.location?.origin : '');
+    if (landingOrigin) return `${trimSlash(landingOrigin)}/__clerk`;
+  }
+
   const explicit = trim(import.meta.env.VITE_CLERK_PROXY_URL);
   if (explicit) return explicit;
-  if (!isClerkLiveKey()) return '';
+
   const appOrigin = trim(import.meta.env.VITE_APP_URL) || 'https://tsccoreknot.com';
-  return `${appOrigin.replace(/\/$/, '')}/__clerk`;
+  return `${trimSlash(appOrigin)}/__clerk`;
 }
 
 /** Dashboard links work with default clerk.com host even before publishable key is set. */

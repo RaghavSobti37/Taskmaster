@@ -1,3 +1,11 @@
+/** CoreKnot production hosts — clerk-js on satellites may load via app origin rewrite. */
+const CLERK_SCRIPT_ORIGINS = [
+  'https://tsccoreknot.com',
+  'https://www.tsccoreknot.com',
+  'https://auth.tsccoreknot.com',
+  'https://landing.tsccoreknot.com',
+].join(' ');
+
 /** Shared security headers for Vercel static SPA deployments. */
 const VERCEL_SECURITY_HEADERS = [
   {
@@ -24,7 +32,8 @@ const VERCEL_SECURITY_HEADERS = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
+      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com "
+        + CLERK_SCRIPT_ORIGINS,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",

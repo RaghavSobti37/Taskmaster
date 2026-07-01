@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useQuickAdd } from '../contexts/quickAddContextCore';
 import QuickAddActionPanel from './QuickAddActionPanel';
 
 /** Desktop floating add button — hidden on mobile (bottom nav slot handles add there). */
 const QuickAddMenu = () => {
+  const { pathname } = useLocation();
   const { open, toggleMenu, closeMenu } = useQuickAdd();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      closeMenu();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, closeMenu]);
+
+  // ponytail: Notes keeps compose open — FAB "New note" path is redundant on /notes
+  if (pathname.startsWith('/notes')) {
+    return null;
+  }
 
   return (
     <>

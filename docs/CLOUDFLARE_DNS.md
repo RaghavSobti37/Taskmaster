@@ -182,6 +182,8 @@ Vercel projects must exist first (link repo, root directories from table above).
 
 | Symptom | Likely cause |
 |---------|----------------|
+| `clerk.tsccoreknot.com` / `__clerk` returns **Cloudflare error 1000** | `clerk` DNS record is **orange-cloud proxied**, or an **A record** points at a Cloudflare/Vercel IP. Fix: **CNAME** `clerk` → `frontend-api.clerk.services`, **DNS only** (grey cloud). Delete any `clerk` A record. |
+| `failed_to_load_clerk_js` on auth | Same as above — Clerk JS cannot load until `clerk` DNS is grey CNAME. |
 | Subdomain 404 / Vercel default page | Domain not added to correct Vercel project, or wrong Root Directory |
 | Mobile login 404 on `/api/auth/login` | Missing `RENDER_API_PROXY_URL` on that Vercel project |
 | Login works but dashboard 401 | Cookie domain — confirm API redeployed; check `Set-Cookie` has `Domain=.tsccoreknot.com` |

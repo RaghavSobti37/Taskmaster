@@ -5,10 +5,17 @@
 
 const express = require('express');
 
-// ponytail: proxy upstream is always generic FAPI — never clerk.tsccoreknot.com (CF error 1000)
+// ponytail: upstream is Clerk FAPI host (TLS works); CF error 1000 = fix `clerk` DNS (grey CNAME)
 const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || '')
   .trim()
-  .replace(/\/$/, '') || 'https://frontend-api.clerk.services';
+  .replace(/\/$/, '') || 'https://clerk.tsccoreknot.com';
+const CLERK_FAPI_HOST = (() => {
+  try {
+    return new URL(CLERK_FAPI.startsWith('http') ? CLERK_FAPI : `https://${CLERK_FAPI}`).host;
+  } catch {
+    return 'clerk.tsccoreknot.com';
+  }
+})();
 const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';
 
 const hopByHop = new Set([
@@ -48,12 +55,14 @@ const proxyHandler = async (req, res) => {
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
     if (value == null || hopByHop.has(key.toLowerCase())) continue;
+    if (key.toLowerCase() === 'host') continue;
     if (Array.isArray(value)) {
       value.forEach((entry) => headers.append(key, entry));
     } else {
       headers.set(key, value);
     }
   }
+  headers.set('host', CLERK_FAPI_HOST);
   headers.set('Clerk-Proxy-Url', String(process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL).trim());
   headers.set('Clerk-Secret-Key', secret);
   headers.set('X-Forwarded-For', clientIp(req));

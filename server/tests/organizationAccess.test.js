@@ -34,6 +34,24 @@ describe('organizationAccess', () => {
     })).toBe('org_pinned');
   });
 
+  it('ensureClerkOrganizationAccess is no-op without organization id', async () => {
+    const clerkClient = {
+      users: { getOrganizationMembershipList: jest.fn() },
+      organizations: { createOrganizationMembership: jest.fn() },
+    };
+
+    const result = await ensureClerkOrganizationAccess({
+      clerkClient,
+      clerkUserId: 'user_0',
+      email: 'user@example.com',
+      clerkOrganizationId: null,
+      tenant: null,
+    });
+
+    expect(result.reason).toBe('none');
+    expect(clerkClient.users.getOrganizationMembershipList).not.toHaveBeenCalled();
+  });
+
   it('ensureClerkOrganizationAccess allows existing members', async () => {
     const clerkClient = {
       users: {

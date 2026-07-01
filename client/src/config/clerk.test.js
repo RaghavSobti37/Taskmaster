@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   getClerkDashboardUrl,
+  getClerkProxyUrl,
   getPinnedClerkOrganizationId,
   isClerkConfigured,
   isClerkDashboardReady,
+  isClerkLiveKey,
 } from './clerk';
 
 describe('clerk config', () => {
@@ -13,12 +15,16 @@ describe('clerk config', () => {
     env.VITE_CLERK_PUBLISHABLE_KEY = '';
     env.VITE_CLERK_DASHBOARD_URL = '';
     env.VITE_CLERK_DASHBOARD_APP_PATH = '';
+    env.VITE_CLERK_PROXY_URL = '';
+    env.VITE_APP_URL = '';
   });
 
   afterEach(() => {
     env.VITE_CLERK_PUBLISHABLE_KEY = '';
     env.VITE_CLERK_DASHBOARD_URL = '';
     env.VITE_CLERK_DASHBOARD_APP_PATH = '';
+    env.VITE_CLERK_PROXY_URL = '';
+    env.VITE_APP_URL = '';
   });
 
   it('isClerkConfigured is false without publishable key', () => {
@@ -46,7 +52,25 @@ describe('clerk config', () => {
     expect(isClerkDashboardReady()).toBe(true);
   });
 
-  it('defaults pinned organization id for TSC', () => {
-    expect(getPinnedClerkOrganizationId()).toMatch(/^org_/);
+  it('returns empty pinned organization id when unset', () => {
+    expect(getPinnedClerkOrganizationId()).toBe('');
+  });
+
+  it('uses primary app proxy for live keys', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_APP_URL = 'https://tsccoreknot.com';
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
+  });
+
+  it('respects explicit proxy URL override', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_CLERK_PROXY_URL = 'https://auth.example.com/__clerk';
+    expect(getClerkProxyUrl()).toBe('https://auth.example.com/__clerk');
+  });
+
+  it('skips proxy for test keys', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_test_abc';
+    expect(getClerkProxyUrl()).toBe('');
+    expect(isClerkLiveKey()).toBe(false);
   });
 });

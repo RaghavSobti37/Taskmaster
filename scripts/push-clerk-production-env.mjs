@@ -18,9 +18,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
+// NOTE: the main app's production domain (tsccoreknot.com) is served by the
+// Vercel project named "taskmaster", NOT "tsc-coreknot" (that project serves
+// the unrelated coreknot.in domain). Pushing Clerk keys to "tsc-coreknot" was
+// a prior misconfiguration that caused the auth bridge to see a stale/wrong
+// publishable key on the main app.
 const VERCEL_PROJECTS = [
-  { name: 'coreknot-auth', cwd: path.join(ROOT, 'sites', 'auth') },
-  { name: 'tsc-coreknot', cwd: path.join(ROOT, 'client') },
+  { name: 'coreknot-auth', cwd: path.join(ROOT, 'sites', 'auth'), needsClerkSecret: true },
+  { name: 'taskmaster', cwd: path.join(ROOT, 'client'), needsClerkSecret: true },
 ];
 
 const RENDER_SERVICE_ID = 'srv-d37a5m1r0fns739brt40';
@@ -58,14 +63,7 @@ function loadKeys() {
     || local.CLERK_SECRET_KEY_LIVE
     || server.CLERK_SECRET_KEY_LIVE
     || '';
-  // Note: deliberately NOT falling back to server.CLERK_ORGANIZATION_ID — that's the
-  // *dev* instance org id and does not exist in the production Clerk instance.
-  const orgId =
-    local.VITE_CLERK_ORGANIZATION_ID
-    || local.CLERK_ORGANIZATION_ID_LIVE
-    || server.CLERK_ORGANIZATION_ID_LIVE
-    || '';
-  return { pk, sk, orgId };
+  return { pk, sk };
 }
 
 function assertLiveKeys({ pk, sk }) {
@@ -115,7 +113,7 @@ function loadRenderApiKey() {
   return process.env.RENDER_API_KEY || '';
 }
 
-async function renderUpsert(sk, orgId) {
+async function renderUpsert(sk) {
   const token = loadRenderApiKey();
   if (!token) {
     console.warn('  Render: skipped (no RENDER_API_KEY)');
@@ -123,8 +121,7 @@ async function renderUpsert(sk, orgId) {
   }
   const upserts = [
     ['CLERK_SECRET_KEY', sk],
-    ['CLERK_ORGANIZATION_ID', orgId],
-  ].filter(([, v]) => v);
+  ];
 
   for (const [key, value] of upserts) {
     // Add-or-update single env var: PUT .../env-vars/{key} — POST is not supported here.
@@ -139,6 +136,18 @@ async function renderUpsert(sk, orgId) {
     });
     if (!r.ok) throw new Error(`Render env ${key}: ${r.status} ${await r.text()}`);
     console.log(`  Render production: ${key}`);
+  }
+
+  // ponytail: clear org pin — users-only auth (organizations removed)
+  const delUrl = `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars/CLERK_ORGANIZATION_ID`;
+  const del = await fetch(delUrl, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (del.ok || del.status === 404) {
+    console.log('  Render production: CLERK_ORGANIZATION_ID removed (if present)');
+  } else {
+    console.warn(`  Render: could not remove CLERK_ORGANIZATION_ID (${del.status})`);
   }
 }
 
@@ -162,13 +171,32 @@ const keys = loadKeys();
 assertLiveKeys(keys);
 
 console.log('Pushing Clerk production keys…');
-for (const { cwd } of VERCEL_PROJECTS) {
+for (const { cwd, needsClerkSecret } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
-  if (keys.orgId) vercelUpsert(cwd, 'VITE_CLERK_ORGANIZATION_ID', keys.orgId);
+  if (needsClerkSecret) {
+    vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
+  }
+  // Remove legacy org pin from Vercel if present
+  for (const env of ['production']) {
+    spawnSync('npx', ['--yes', 'vercel@latest', 'env', 'rm', 'VITE_CLERK_ORGANIZATION_ID', env, '--yes'], {
+      cwd,
+      stdio: 'ignore',
+      shell: true,
+    });
+  }
 }
-await renderUpsert(keys.sk, keys.orgId);
-console.log('Done. Redeploy required for warning to disappear.');
+await renderUpsert(keys.sk);
+
+console.log('Applying Clerk Dashboard proxy + origins…');
+const cfg = spawnSync('node', ['server/scripts/configureClerkProduction.mjs'], {
+  cwd: ROOT,
+  stdio: 'inherit',
+  shell: true,
+});
+if (cfg.status !== 0) process.exit(cfg.status || 1);
+
+console.log('Done. Redeploy required for changes to take effect.');
 
 if (deploy) {
   console.log('Redeploying Vercel projects…');

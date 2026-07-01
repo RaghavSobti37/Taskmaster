@@ -4,9 +4,6 @@
 
 const trim = (value) => String(value || '').trim();
 
-/** ponytail: public org pin — env overrides for forks */
-export const CLERK_ORGANIZATION_ID_DEFAULT = 'org_3FtSYDXVVjJQPtOg8LqhPYdeEdH';
-
 export function getClerkPublishableKey() {
   return trim(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
     || trim(import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
@@ -71,11 +68,22 @@ export function getClerkDashboardUrl(subPath = '') {
   return `${base}/last-active?path=${encodeURIComponent(path)}`;
 }
 
-/** Pinned Clerk organization for this deployment (e.g. org_xxx for TSC). */
+/** Optional Clerk org pin — empty when using plain users (no organizations). */
 export function getPinnedClerkOrganizationId() {
   return trim(import.meta.env.VITE_CLERK_ORGANIZATION_ID)
-    || trim(import.meta.env.NEXT_PUBLIC_CLERK_ORGANIZATION_ID)
-    || CLERK_ORGANIZATION_ID_DEFAULT;
+    || trim(import.meta.env.NEXT_PUBLIC_CLERK_ORGANIZATION_ID);
+}
+
+/**
+ * Clerk Frontend API proxy on primary app host (Vercel api/clerk-proxy).
+ * Auth subdomain loads clerk-js via tsccoreknot.com/__clerk (Clerk rejects proxy on other hosts).
+ */
+export function getClerkProxyUrl() {
+  const explicit = trim(import.meta.env.VITE_CLERK_PROXY_URL);
+  if (explicit) return explicit;
+  if (!isClerkLiveKey()) return '';
+  const appOrigin = trim(import.meta.env.VITE_APP_URL) || 'https://tsccoreknot.com';
+  return `${appOrigin.replace(/\/$/, '')}/__clerk`;
 }
 
 /** Dashboard links work with default clerk.com host even before publishable key is set. */

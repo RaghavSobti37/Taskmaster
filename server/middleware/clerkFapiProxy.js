@@ -58,6 +58,7 @@ const proxyHandler = async (req, res) => {
     method: req.method,
     headers,
     redirect: 'manual',
+    signal: AbortSignal.timeout(25_000),
   };
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
     if (req.rawBody) {
@@ -71,7 +72,8 @@ const proxyHandler = async (req, res) => {
   try {
     upstream = await fetch(targetUrl, init);
   } catch (err) {
-    res.status(502).json({ error: 'Clerk upstream unreachable', detail: err.message });
+    const detail = err?.cause?.message || err.message;
+    res.status(502).json({ error: 'Clerk upstream unreachable', detail });
     return;
   }
 

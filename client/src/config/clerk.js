@@ -18,9 +18,9 @@ export function getClerkFrontendApiHost() {
   try {
     let payload = key.replace(/^pk_(test|live)_/, '').replace(/\$/g, '');
     payload += '='.repeat((4 - (payload.length % 4)) % 4);
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    if (decoded.includes('.clerk.accounts.dev')) return decoded;
-    if (decoded) return `${decoded}.clerk.accounts.dev`;
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/')).replace(/\$$/, '').trim();
+    if (decoded.includes('.clerk.accounts.dev') || decoded.includes('clerk.services')) return decoded;
+    if (decoded.includes('.')) return decoded;
   } catch {
     // ignore decode errors
   }

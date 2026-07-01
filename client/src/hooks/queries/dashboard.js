@@ -51,6 +51,18 @@ export const useAttendanceOverview = (timeframe = '7d', enabled = true) => {
   });
 };
 
+export const useTaskActivitySeries = (timeframe = '7d', enabled = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'task-activity', timeframe],
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/dashboard/task-activity?timeframe=${timeframe}`);
+      return data;
+    },
+    enabled,
+    staleTime: 60 * 1000,
+  });
+};
+
 export const parseSavedLayoutOptionValue = (value) => {
   if (!value?.startsWith('saved:')) return null;
   try {

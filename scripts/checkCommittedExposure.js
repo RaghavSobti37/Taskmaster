@@ -28,6 +28,8 @@ const EXT_SCAN = new Set([
 const SKIP_FILES = new Set([
   'vercel.json',
   'client/vercel.json',
+  'sites/auth/vercel.json',
+  'sites/landing/vercel.json',
   'replacements.txt',
   'docs/GIT_HISTORY_REDACTION.md',
   'scripts/auditGitHistoryExposure.js',

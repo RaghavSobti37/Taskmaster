@@ -1,9 +1,9 @@
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { config } = require('../config');
 
 const limitMessage = (message) => ({ ok: false, error: message });
 
-const clientIp = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+const clientIpKey = (req) => ipKeyGenerator(req);
 
 const authRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -16,7 +16,7 @@ const authRateLimit = rateLimit({
     if (typeof email === 'string' && email.trim()) {
       return `auth:${email.trim().toLowerCase()}`;
     }
-    return `auth-ip:${clientIp(req)}`;
+    return `auth-ip:${clientIpKey(req)}`;
   },
 });
 
@@ -29,7 +29,7 @@ const searchRateLimit = rateLimit({
   keyGenerator: (req) => {
     const userId = req.user?._id?.toString?.() || req.user?.id;
     if (userId) return `search:user:${userId}`;
-    return `search-ip:${clientIp(req)}`;
+    return `search-ip:${clientIpKey(req)}`;
   },
 });
 
@@ -39,7 +39,7 @@ const webhookRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: limitMessage('Too many webhook requests.'),
-  keyGenerator: (req) => `webhook:${clientIp(req)}`,
+  keyGenerator: (req) => `webhook:${clientIpKey(req)}`,
 });
 
 const uploadRateLimit = rateLimit({
@@ -51,7 +51,7 @@ const uploadRateLimit = rateLimit({
   keyGenerator: (req) => {
     const userId = req.user?._id?.toString?.() || req.user?.id;
     if (userId) return `upload:user:${userId}`;
-    return `upload-ip:${clientIp(req)}`;
+    return `upload-ip:${clientIpKey(req)}`;
   },
 });
 

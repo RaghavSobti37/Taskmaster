@@ -21,7 +21,7 @@ const {
   MAX_XP_HOURS_PER_EVENT,
 } = require('../../shared/gamificationRules');
 const { MIN_COMPLETION_MINUTES, parseTimeSpentToHours } = require('../../shared/timeSpent');
-const { todayStart, todayEnd, getCurrentWeekRange, getPreviousWeekRange, getDateKey } = require('../utils/attendanceDate');
+const { todayStart, todayEnd, getCurrentWeekRange, getPreviousWeekRange, getCurrentMonthRange, getPreviousMonthRange, getDateKey } = require('../utils/attendanceDate');
 
 /** One XP audit row per user per entity (prevents inflated totals from legacy duplicate awards). */
 const ENTITY_DEDUPE_FIELD = {
@@ -415,11 +415,39 @@ class GamificationService {
         group.amountPerAction = Math.round(group.totalXp / group.count);
         if (group.timeBased) {
           group.avgHours = Math.round((group.totalHours / group.count) * 100) / 100;
+          group.calculationLine = `${group.count} × ${group.avgHours}h avg × ${group.ratePerHour} XP/h`;
+        } else {
+          group.calculationLine = `${group.count} × ${group.amountPerAction} XP`;
         }
       }
     }
 
     return Array.from(groupedMap.values()).sort((a, b) => b.totalXp - a.totalXp);
+  }
+
+  static buildCalculationSummary(groupedBreakdown, totalXp) {
+    const lines = (groupedBreakdown || []).map((item) => ({
+      action: item.action,
+      actionLabel: item.actionLabel || item.sampleMessage,
+      count: item.count,
+      amountPerAction: item.amountPerAction,
+      ratePerHour: item.ratePerHour,
+      avgHours: item.avgHours,
+      timeBased: item.timeBased,
+      formula: item.calculationLine || (
+        item.timeBased
+          ? `${item.count} × ${item.avgHours ?? '?'}h × ${item.ratePerHour} XP/h`
+          : `${item.count} × ${item.amountPerAction} XP`
+      ),
+      subtotal: item.totalXp,
+    }));
+    const subtotalSum = lines.reduce((sum, line) => sum + (Number(line.subtotal) || 0), 0);
+    return {
+      lines,
+      subtotalSum,
+      totalXp: Number(totalXp) || 0,
+      verified: subtotalSum === (Number(totalXp) || 0),
+    };
   }
 
   static async recalculateExpFromAudit(userId, configPlain, backfillMaps) {
@@ -633,6 +661,48 @@ class GamificationService {
     return byUser;
   }
 
+  static async getMonthlyLeaderboard(limit, monthStartInput) {
+    const config = await this.getConfigPlain();
+    const { monthStart, monthEnd, monthStartKey, monthEndKey } = monthStartInput
+      ? getCurrentMonthRange(monthStartInput)
+      : getCurrentMonthRange();
+
+    const tenantFilter = getTenantScopedUserFilter();
+    const tenantUsers = await User.find(tenantFilter).select('_id').lean();
+    const tenantUserIds = tenantUsers.map((u) => u._id);
+    const logQuery = {
+      createdAt: { $gte: monthStart, $lte: monthEnd },
+      ...(tenantUserIds.length ? { userId: { $in: tenantUserIds } } : {}),
+    };
+
+    const logs = await XPAuditLog.find(logQuery)
+      .select('userId action amount details')
+      .lean();
+
+    const backfillMaps = await this.fetchHoursBackfillMaps(logs);
+    const { totalsByUser, storedSum, resolvedSum, logCount } = this.aggregateWeeklyXpFromLogs(
+      logs,
+      config,
+      backfillMaps
+    );
+
+    const sorted = [...totalsByUser.entries()].sort((a, b) => b[1] - a[1]);
+    const entries =
+      typeof limit === 'number' && limit > 0 ? sorted.slice(0, limit) : sorted;
+
+    return {
+      monthStart,
+      monthEnd,
+      monthStartKey,
+      monthEndKey,
+      entries,
+      logCount,
+      storedSum,
+      resolvedSum,
+      configRates: configSnapshot(config),
+    };
+  }
+
   static async getWeeklyLeaderboard(limit, weekStartInput) {
     const config = await this.getConfigPlain();
     const { weekStart, weekEnd, weekStartKey, weekEndKey } = weekStartInput
@@ -675,21 +745,21 @@ class GamificationService {
     };
   }
 
-  static async getLeaderboardTopEntries(limit = 5, weekStartInput) {
-    const weekly = await this.getWeeklyLeaderboard(null, weekStartInput);
+  static async getLeaderboardTopEntries(limit = 5, monthStartInput) {
+    const monthly = await this.getMonthlyLeaderboard(null, monthStartInput);
     const tenantFilter = getTenantScopedUserFilter();
     const allUsers = await User.find(tenantFilter, 'name avatar exp level').sort({ name: 1 }).lean();
-    const weeklyXpByUserId = new Map(
-      weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    const monthlyXpByUserId = new Map(
+      monthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
     );
 
     return allUsers
       .map((user) => ({
         ...user,
-        weeklyXp: weeklyXpByUserId.get(String(user._id)) || 0,
+        monthlyXp: monthlyXpByUserId.get(String(user._id)) || 0,
       }))
       .sort((a, b) => {
-        if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+        if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
         return (a.name || '').localeCompare(b.name || '');
       })
       .slice(0, limit)
@@ -698,7 +768,7 @@ class GamificationService {
         _id: user._id,
         name: user.name,
         avatar: user.avatar,
-        weeklyXp: user.weeklyXp,
+        monthlyXp: user.monthlyXp,
         exp: user.exp,
         level: user.level,
       }));
@@ -806,11 +876,11 @@ class GamificationService {
     const tenantUserIds = users.map((u) => u._id);
     const auditUserFilter = tenantUserIds.length ? { userId: { $in: tenantUserIds } } : {};
 
-    const { weekStart, weekEnd } = getCurrentWeekRange();
-    const weeklyPriorSnapshot = await this.snapshotWeeklyXpFromStoredAmounts(
+    const { monthStart, monthEnd } = getCurrentMonthRange();
+    const monthlyPriorSnapshot = await this.snapshotWeeklyXpFromStoredAmounts(
       tenantUserIds,
-      weekStart,
-      weekEnd
+      monthStart,
+      monthEnd
     );
 
     const { purgeQaGamificationData } = require('./qa/qaTestData');
@@ -860,19 +930,19 @@ class GamificationService {
       }
     }
 
-    const weekly = await this.getWeeklyLeaderboard(3);
+    const monthly = await this.getMonthlyLeaderboard(3);
     const recalculatedAt = new Date();
 
     let configDoc = await GamificationConfig.findOne();
     if (!configDoc) configDoc = await GamificationConfig.create({});
     configDoc.lastRecalculatedAt = recalculatedAt;
-    configDoc.lastRecalcWeeklyPrior = weeklyPriorSnapshot;
+    configDoc.lastRecalcWeeklyPrior = monthlyPriorSnapshot;
     await configDoc.save();
 
     await this.broadcastRecalculationEffects({
       changes,
       auditSync,
-      weeklyPreview: weekly,
+      weeklyPreview: monthly,
     });
 
     logger.info('Gamification', 'Recalculate all users complete', {
@@ -884,10 +954,10 @@ class GamificationService {
       reviewExploitRepair,
       configRates: configSnapshot(config),
       sampleDelta,
-      weeklyTop3: weekly.entries.map(([userId, weeklyXp]) => ({ userId, weeklyXp })),
-      weekRange: { start: weekly.weekStartKey, end: weekly.weekEndKey },
-      weeklyStoredSum: weekly.storedSum,
-      weeklyResolvedSum: weekly.resolvedSum,
+      monthlyTop3: monthly.entries.map(([userId, monthlyXp]) => ({ userId, monthlyXp })),
+      monthRange: { start: monthly.monthStartKey, end: monthly.monthEndKey },
+      monthlyStoredSum: monthly.storedSum,
+      monthlyResolvedSum: monthly.resolvedSum,
     });
 
     return {
@@ -898,7 +968,7 @@ class GamificationService {
       qaGamificationPurge,
       duplicateRepair,
       reviewExploitRepair,
-      weeklyPreview: weekly,
+      weeklyPreview: monthly,
       recalculatedAt,
     };
   }
@@ -1006,7 +1076,13 @@ class GamificationService {
         user.level = newLevel;
         leveledUp = true;
       }
-      await user.save();
+      try {
+        await user.save();
+      } catch (err) {
+        // Race: Jest afterEach may wipe users while fire-and-forget XP job runs
+        if (err?.name === 'DocumentNotFoundError') return null;
+        throw err;
+      }
 
       const { broadcastRealtimeEvent } = require('../config/realtime');
       await broadcastRealtimeEvent(`user-${userId}`, 'xp_awarded', {

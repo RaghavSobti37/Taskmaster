@@ -653,8 +653,8 @@ async function runXpLeaderboardReflect(def, ctx) {
     ? afterRes.data
     : (afterRes.data?.entries || afterRes.data?.leaderboard || []);
   const row = list.find((e) => String(e._id || e.userId || e.id) === adminUser._id.toString());
-  if (row && (row.weeklyXp != null || row.xp != null || row.exp != null)) {
-    return probePass(def, `Leaderboard shows weeklyXp=${row.weeklyXp ?? row.xp ?? row.exp}`);
+  if (row && (row.monthlyXp != null || row.weeklyXp != null || row.xp != null || row.exp != null)) {
+    return probePass(def, `Leaderboard shows monthlyXp=${row.monthlyXp ?? row.weeklyXp ?? row.xp ?? row.exp}`);
   }
 
   const progressRes = await request(def, { method: 'GET', url: '/api/gamification/progress', user: adminUser });

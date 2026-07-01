@@ -17,44 +17,38 @@ module.exports = function tenantPlugin(schema, options) {
   }
 
   // Pre-validate hook to automatically populate tenantId from AsyncLocalStorage context on document creation
-  schema.pre('validate', async function (next) {
+  schema.pre('validate', async function () {
     if (!this.tenantId) {
       const tenantId = getTenantId();
       if (tenantId) {
         this.tenantId = tenantId;
       } else if (isProduction()) {
-        return next(new Error('tenantId required: missing tenant context in production'));
+        throw new Error('tenantId required: missing tenant context in production');
       } else {
-        try {
-          const Tenant = require('../models/Tenant');
-          let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
-          if (!defaultTenant) {
-            defaultTenant = await Tenant.create({
-              name: 'Default Tenant',
-              contactEmail: 'admin@theshakticollective.in',
-            });
-          }
-          this.tenantId = defaultTenant._id;
-        } catch (e) {
-          return next(e);
+        const Tenant = require('../models/Tenant');
+        let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
+        if (!defaultTenant) {
+          defaultTenant = await Tenant.create({
+            name: 'Default Tenant',
+            contactEmail: 'admin@theshakticollective.in',
+          });
         }
+        this.tenantId = defaultTenant._id;
       }
     }
-    next();
   });
 
   // Helper to inject tenantId into query filter
-  const injectTenantId = function (next) {
+  const injectTenantId = function () {
     // Check if query options explicitly bypass tenant scoping
     if (this.options && this.options.bypassTenant) {
-      return next();
+      return;
     }
 
     const tenantId = (this.options && this.options.tenantId) || getTenantId();
     if (tenantId) {
       this.where(tenantIdFilter(tenantId));
     }
-    next();
   };
 
   // Apply to all query methods

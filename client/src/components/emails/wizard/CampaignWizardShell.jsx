@@ -30,7 +30,11 @@ export default function CampaignWizardShell() {
   const [submittingAction, setSubmittingAction] = useState(null);
 
   const { data: profiles = [] } = useMailProfiles();
-  const { data: approvedTemplates = [] } = useMailTemplates('approved');
+  const {
+    data: approvedTemplates = [],
+    refetch: refetchApprovedTemplates,
+    isFetching: approvedTemplatesFetching,
+  } = useMailTemplates('approved');
 
   const methods = useForm({
     defaultValues: WIZARD_DEFAULTS,
@@ -206,7 +210,14 @@ export default function CampaignWizardShell() {
         <WizardProgressBar currentStep={step} onStepClick={(s) => setStep(s)} />
 
         {step === 1 && <StepSetup profiles={profiles} />}
-        {step === 2 && <StepTemplateSelect approvedTemplates={approvedTemplates} />}
+        {step === 2 && (
+          <StepTemplateSelect
+            approvedTemplates={approvedTemplates}
+            onRefreshTemplates={refetchApprovedTemplates}
+            templatesRefreshing={approvedTemplatesFetching}
+            onContinue={handleNext}
+          />
+        )}
         {step === 3 && (
           <StepAudienceMapping
             audience={audience}
@@ -223,6 +234,7 @@ export default function CampaignWizardShell() {
           />
         )}
 
+        {step !== 2 && (
         <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[var(--color-bg-border)]">
           {step < 4 ? (
             <Button variant="primary" onClick={handleNext}>
@@ -247,6 +259,7 @@ export default function CampaignWizardShell() {
             </div>
           )}
         </div>
+        )}
       </Card>
       </div>
     </FormProvider>

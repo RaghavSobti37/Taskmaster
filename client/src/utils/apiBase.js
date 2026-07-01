@@ -1,4 +1,5 @@
 import { shouldUseSameOriginApi } from './displayMode';
+import { isAuthSite } from '../config/siteMode';
 
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
@@ -16,9 +17,11 @@ export function getDirectApiBaseUrl() {
   return getApiBaseUrl() || undefined;
 }
 
-/** Dev + mobile/PWA: Vite/Vercel proxy. Desktop production: Render direct (skips Vercel edge). */
+/** Dev + mobile/PWA: Vite/Vercel proxy. Desktop production: Render direct (skips Vercel edge).
+ * Auth host always same-origin — clerk-establish/session cookies must not cross origins (CORS). */
 export function routeViaSameOriginApi() {
   if (import.meta.env.DEV) return true;
+  if (isAuthSite()) return true;
   if (typeof window !== 'undefined' && shouldUseSameOriginApi()) return true;
   return false;
 }

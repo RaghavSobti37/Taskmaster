@@ -24,21 +24,22 @@ const refreshAttendanceAfterLog = (log) => {
   });
 };
 
-const awardManualDailyLogXp = (userId, log, details) => {
+const awardManualDailyLogXp = async (userId, log, details) => {
   if (log.action !== 'DAILY_LOG' || ['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) return;
   const { clampXpHours } = require('../../shared/gamificationRules');
   const rawHours = parseTimeSpentToHours(details?.timeSpent);
   const hours = clampXpHours(rawHours);
-  GamificationService.awardActionXp(userId, 'DAILY_LOG', {
-    logId: log._id,
-    hours,
-    timeSpent: details?.timeSpent,
-    manualDailyLog: true,
-  })
-    .then(() => GamificationService.progressMission(userId, 'DAILY_LOG', 1))
-    .catch((err) => {
-      logger.error('Log', 'Daily log XP award failed', { error: err.message });
-    });
+  try {
+    await GamificationService.awardActionXp(userId, 'DAILY_LOG', {
+      logId: log._id,
+      hours,
+      timeSpent: details?.timeSpent,
+      manualDailyLog: true,
+    }, { entityKey: 'logId', entityId: log._id });
+    await GamificationService.progressMission(userId, 'DAILY_LOG', 1);
+  } catch (err) {
+    logger.error('Log', 'Daily log XP award failed', { error: err.message });
+  }
 };
 
 const createLogRecord = async ({ userId, actorId, action, targetType, targetId, details }) => {
@@ -234,7 +235,7 @@ router.post('/', async (req, res) => {
       details: normalized,
     });
 
-    awardManualDailyLogXp(req.user._id, primary, normalized);
+    await awardManualDailyLogXp(req.user._id, primary, normalized);
 
     for (const memberId of memberIds) {
       const oid = toObjectId(memberId);
@@ -255,7 +256,7 @@ router.post('/', async (req, res) => {
         targetId,
         details: copyDetails,
       });
-      refreshAttendanceAfterLog(copy);
+      await awardManualDailyLogXp(oid, copy, copyDetails);
     }
 
     res.status(201).json(primary);

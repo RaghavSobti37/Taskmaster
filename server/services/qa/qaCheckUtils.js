@@ -53,6 +53,7 @@ async function readBootstrapSources() {
   const parts = await Promise.all([
     readText('server.js'),
     readText('app/cors.js'),
+    readText('utils/vercelOrigins.js'),
     readText('app/rateLimits.js'),
     readText('app/createApp.js'),
     readText('app/registerRoutes.js'),

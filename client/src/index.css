@@ -129,6 +129,9 @@
   --page-gutter: 0.9rem;
   --page-gutter-desktop: 1.125rem;
   --page-stack-gap: 0.9rem;
+  /* List/hub page vertical rhythm — overview → toolbar → filters → workspace */
+  --list-section-gap: 1rem;
+  --list-section-gap-lg: 1.5rem;
   --page-bottom-nav-clearance: calc(5rem + env(safe-area-inset-bottom, 0px));
   --page-scroll-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   color-scheme: light;
@@ -177,8 +180,57 @@
   display: flex;
   flex-direction: column;
   gap: var(--page-stack-gap);
-  padding: var(--page-gutter);
-  padding-bottom: var(--page-scroll-bottom);
+  /* tm-page-shell owns gutters — avoid double padding on mobile and desktop */
+  padding: 0;
+  padding-bottom: 0;
+}
+
+/* List + hub pages — uniform vertical spacing between major blocks */
+.list-page-stack,
+.hub-page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-section-gap);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .list-page-stack,
+  .hub-page-stack {
+    gap: var(--list-section-gap-lg);
+  }
+}
+
+.list-page-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-section-gap);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .list-page-workspace {
+    gap: var(--list-section-gap-lg);
+    border: 1px solid var(--color-bg-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    overflow: hidden;
+  }
+}
+
+/* List/hub section blocks — parent stack gap owns vertical rhythm (gap-4 / lg:gap-6) */
+.list-page-banner,
+.data-overview-section,
+.list-active-filter-bar {
+  margin: 0;
+}
+
+.list-page-banner {
+  flex-shrink: 0;
+}
+
+.tm-hub-header {
+  margin: 0;
 }
 
 /* TSC brand — marketing / auth pages only */
@@ -197,6 +249,19 @@
   --foreground: var(--brand-teal-deep);
   --card: var(--brand-white);
   --border: color-mix(in srgb, var(--brand-cream) 55%, var(--brand-pumpkin));
+}
+
+/* Auth routes — always cream/teal marketing palette (even in app dark mode) */
+.tm-auth-page {
+  background-color: var(--brand-cream-wash);
+  color: var(--brand-teal-deep);
+}
+
+.dark .tm-auth-page {
+  --background: var(--brand-cream-wash);
+  --foreground: var(--brand-teal-deep);
+  background-color: var(--brand-cream-wash);
+  color: var(--brand-teal-deep);
 }
 
 .dark {
@@ -301,6 +366,154 @@ select option {
 .data-table-row {
   @apply border-b border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)] transition-colors;
   padding: var(--spacing-row-padding);
+}
+
+/* Office hub — desktop table chrome (lg+, hub panels only) */
+@media (min-width: 1024px) {
+  .tm-hub-panel[data-hub='office'] [aria-label='Data overview'] > .grid {
+    gap: 0.75rem;
+  }
+
+  .office-hub-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-bg-surface);
+  }
+
+  .office-hub-table thead th {
+    border-bottom: 1px solid var(--color-bg-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .office-hub-table .data-table--comfortable tbody .data-table-row:nth-child(even) {
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 45%, transparent);
+  }
+
+  .office-hub-table .data-table--comfortable tbody .data-table-row:hover {
+    background-color: var(--color-bg-secondary);
+  }
+
+  .office-hub-table .office-hub-cell-primary {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+
+  .office-hub-table .office-hub-cell-secondary {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: var(--color-text-muted);
+    margin-top: 0.125rem;
+  }
+
+  .office-hub-table .office-hub-cell-meta {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .office-hub-table.table-fixed .office-col-primary {
+    width: 28%;
+  }
+
+  .office-hub-table.table-fixed .office-col-badge {
+    width: 12%;
+    min-width: 6.5rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-meta {
+    width: 16%;
+    min-width: 7rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-numeric {
+    width: 11%;
+    min-width: 6rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-date {
+    width: 12%;
+    min-width: 6.5rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-users {
+    width: 21%;
+    min-width: 8rem;
+  }
+
+  /* Finance hub — bordered desktop table (Management → Finance) */
+  .finance-hub-table {
+    border: 1px solid var(--color-bg-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    overflow: hidden;
+  }
+
+  .finance-hub-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-bg-surface);
+  }
+
+  .finance-hub-table thead th {
+    border-bottom: 1px solid var(--color-bg-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.25;
+    overflow: visible;
+    vertical-align: bottom;
+  }
+
+  .finance-hub-table thead th:not(:last-child),
+  .finance-hub-table tbody td:not(:last-child) {
+    border-right: 1px solid color-mix(in srgb, var(--color-bg-border) 55%, transparent);
+  }
+
+  .finance-hub-table .data-table--comfortable tbody .data-table-row:nth-child(even) {
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 45%, transparent);
+  }
+
+  .finance-hub-table .data-table--comfortable tbody .data-table-row:hover {
+    background-color: var(--color-bg-secondary);
+  }
+
+  .finance-hub-table .finance-col-name {
+    min-width: 10rem;
+  }
+
+  .finance-hub-table .finance-col-ref {
+    min-width: 5.5rem;
+  }
+
+  .finance-hub-table .finance-col-project {
+    min-width: 7.5rem;
+  }
+
+  .finance-hub-table .finance-col-category {
+    min-width: 6.5rem;
+  }
+
+  .finance-hub-table .finance-col-size {
+    min-width: 5rem;
+  }
+
+  .finance-hub-table .finance-col-uploader {
+    min-width: 7rem;
+  }
+
+  .finance-hub-table .finance-col-date {
+    min-width: 7.5rem;
+  }
+
+  .finance-hub-table .finance-col-actions {
+    min-width: 5.5rem;
+    width: 5.5rem;
+  }
 }
 
 .badge-pastel {
@@ -490,11 +703,47 @@ select option {
   line-height: 1.25rem;
 }
 
+/* Sliding tab controls share toolbar height — pill tracks tab offsetTop/height via JS */
+.tm-toolbar-control.t-tabs {
+  align-items: stretch;
+  padding: 3px;
+  border: 1px solid var(--color-bg-border);
+  border-radius: var(--radius-atomic);
+  background: var(--color-bg-secondary);
+}
+
+.tm-toolbar-control.t-tabs .t-tab {
+  height: auto;
+  min-height: 0;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .page-toolbar-row {
   align-items: center;
 }
 
 .page-toolbar-controls {
+  align-items: center;
+}
+
+/* Search slot: grows to fill space left of filters + actions cluster */
+.page-toolbar-search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.page-toolbar-search .tm-toolbar-search,
+.page-toolbar-search .tm-toolbar-search.tm-toolbar-search--grow {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.page-toolbar-right {
   align-items: center;
 }
 
@@ -520,19 +769,26 @@ select option {
   flex-shrink: 1;
 }
 
+.page-toolbar-search > .tm-toolbar-search.tm-toolbar-search--grow {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+}
+
 .page-toolbar-controls.page-toolbar-controls--fill {
   width: 100%;
 }
 
+/* ponytail: natural width for toggles/buttons; grow only labeled fields/search */
 .page-toolbar-controls.page-toolbar-controls--fill > * {
-  flex: 1 1 0;
-  min-width: 5.5rem;
+  flex: 0 0 auto;
 }
 
 .page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-field,
 .page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-search {
-  flex: 1 1 0;
-  width: 100%;
+  flex: 1 1 8.5rem;
+  width: auto;
   min-width: 5.5rem;
   max-width: none;
 }
@@ -712,6 +968,34 @@ a.tm-hashtag-chip:hover {
   .tm-modal-xl { --tm-modal-width: 896px; }
   .tm-modal-2xl { --tm-modal-width: 1024px; }
   .tm-modal-full { --tm-modal-width: 1200px; }
+
+  /* Fullscreen modals — edge-to-edge viewport (default for ModalShell + legacy overlays) */
+  .tm-modal-overlay--fullscreen,
+  .tm-modal-overlay:has(> .tm-modal-panel.tm-modal-fullscreen),
+  .tm-modal-overlay:has(> .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm)) {
+    display: grid !important;
+    place-items: stretch !important;
+    padding: 0 !important;
+  }
+
+  .tm-modal-panel.tm-modal-fullscreen,
+  .tm-modal-overlay > .tm-modal-panel.tm-modal-fullscreen,
+  .tm-modal-overlay > .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm) {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Compact (confirm) modals keep centered floating card */
+  .tm-modal-panel.tm-modal-compact,
+  .tm-modal-panel.tm-modal-sm.tm-modal-compact {
+    border-radius: var(--radius-lg);
+  }
 
   /* Scrollable modal body + pinned footer (form uses flex column on panel) */
   .tm-modal-scroll {
@@ -1084,6 +1368,76 @@ a.tm-hashtag-chip:hover {
   }
 }
 
+/* Mobile dashboard: full-height widgets, page scroll — no cramped inner scroll areas */
+@media (max-width: 1023px) {
+  .dashboard-mobile-stack > div {
+    height: auto;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget > div:last-child {
+    flex: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-mobile-stack .dashboard-widget .overflow-y-auto,
+  .dashboard-mobile-stack .dashboard-widget .overflow-hidden.flex-1,
+  .dashboard-mobile-stack .dashboard-widget [class*='max-h-'] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+}
+
+/* Mobile pages: full-width content, page scroll (no nested gutter doubling) */
+@media (max-width: 1023px) {
+  [role='tabpanel'] {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tm-hub-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .tm-mobile-search-row {
+    width: 100%;
+  }
+
+  .tm-mobile-search-row .tm-toolbar-search,
+  .tm-mobile-search-row .tm-toolbar-field {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .tm-mobile-search-row .tm-toolbar-control,
+  .tm-mobile-search-row input.mobile-form-control {
+    min-height: 2.75rem;
+    height: 2.75rem;
+    max-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .tm-mobile-search-row .t-clear-placeholder,
+  .tm-mobile-search-row .t-clear-mirror {
+    font-size: 1rem;
+  }
+
+  /* P1-1: 44px touch targets for all toolbar controls on mobile */
+  .tm-toolbar-control {
+    min-height: 2.75rem;
+    height: auto;
+    max-height: none;
+  }
+}
+
 .dashboard-widget,
 .dashboard-widget-grid .dashboard-grid-item > .dashboard-widget {
   background: var(--color-bg-surface);
@@ -1184,6 +1538,15 @@ a.tm-hashtag-chip:hover {
   /* Standalone PWA: brand safe-area under status bar */
   html[data-pwa-standalone] main[data-page-root] {
     padding-top: calc(var(--page-gutter) + env(safe-area-inset-top));
+  }
+
+  .mobile-ptr-indicator {
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+    transition: transform 0.2s ease, opacity 0.15s ease;
+  }
+
+  html[data-pwa-standalone] .mobile-ptr-indicator {
+    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
   }
 
   .mobile-desktop-gate {

@@ -25,11 +25,10 @@ const ExlyOfferingSchema = new mongoose.Schema({
 });
 
 // Sanitization hook
-ExlyOfferingSchema.pre('save', function(next) {
+ExlyOfferingSchema.pre('save', function () {
   if (this.isModified('title')) {
     this.title = sanitizeName(this.title);
   }
-  next();
 });
 
 ExlyOfferingSchema.plugin(tenantPlugin);

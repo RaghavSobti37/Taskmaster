@@ -156,7 +156,7 @@ const ComponentsShowcase = () => {
         <ShowcaseSection
           id="buttons"
           title="Buttons"
-          description="Primary system uses primitives Button (CSS vars). Shadcn Button available for future Radix-nova migration."
+          description="Primitives Button only — shadcn removed."
         >
           <VariantRow label="Primitives — variants">
             <Button variant="primary">Primary</Button>
@@ -180,11 +180,6 @@ const ComponentsShowcase = () => {
             <IconButton icon={Edit2} label="Edit" />
             <IconButton icon={Trash2} label="Delete" variant="danger" />
             <IconButton icon={Bell} label="Notify" variant="primary" size="lg" />
-          </VariantRow>
-          <VariantRow label="Shadcn Button">
-            <p className="text-xs text-[var(--color-text-muted)] italic">
-              Removed — use <code className="text-[10px]">Button</code> from <code className="text-[10px]">primitives.jsx</code> only.
-            </p>
           </VariantRow>
         </ShowcaseSection>
 
@@ -710,14 +705,13 @@ const ComponentsShowcase = () => {
         </ShowcaseSection>
       </div>
 
-      {/* Phase 2 note */}
-      <Card className="p-4 border-l-4 border-l-[var(--color-action-primary)] bg-[var(--color-pastel-mint-bg)]/30">
-        <p className="text-xs font-bold text-[var(--color-text-primary)]">Phase 2 migration candidates</p>
+      <Card className="p-4 border-l-4 border-l-[var(--color-pastel-mint-text)] bg-[var(--color-pastel-mint-bg)]/30">
+        <p className="text-xs font-bold text-[var(--color-text-primary)]">Phase 2 — complete</p>
         <ul className="mt-2 text-xs text-[var(--color-text-secondary)] space-y-1 list-disc list-inside">
-          <li>Replace inline search fields with SearchInput (AssetsPage, FinancePage, OfficeAssetsPage)</li>
-          <li>Replace inline empty states with EmptyState (ProjectsView, AdminLogsPage, etc.)</li>
-          <li>Pick one Button system: primitives vs Shadcn</li>
-          <li>Migrate bespoke modals (TaskDetailModal, TaskCreateModal) to ModalShell</li>
+          <li>SearchInput on list/admin toolbars (inline search fields migrated)</li>
+          <li>EmptyState on ProjectsView, NotesPage, ProjectCreate, WorkspaceSettings, admin tables</li>
+          <li>Button system: primitives only</li>
+          <li>TaskCreateModal + TaskDetailModal on ModalShell + standard footer buttons</li>
         </ul>
       </Card>
     </PageContainer>

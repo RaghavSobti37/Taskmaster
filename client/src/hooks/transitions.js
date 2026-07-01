@@ -56,16 +56,20 @@ export function useSlidingTabs(activeSelector = '[aria-selected="true"], .is-act
       const tab =
         bar.querySelector(activeSelector) || bar.querySelector('.t-tab');
       if (!tab) return;
+      const apply = () => {
+        pill.style.transform = `translateX(${tab.offsetLeft}px)`;
+        pill.style.width = `${tab.offsetWidth}px`;
+        pill.style.top = `${tab.offsetTop}px`;
+        pill.style.height = `${tab.offsetHeight}px`;
+      };
       if (!animate) {
         const prev = pill.style.transition;
         pill.style.transition = 'none';
-        pill.style.transform = `translateX(${tab.offsetLeft}px)`;
-        pill.style.width = `${tab.offsetWidth}px`;
+        apply();
         void pill.offsetWidth;
         pill.style.transition = prev;
       } else {
-        pill.style.transform = `translateX(${tab.offsetLeft}px)`;
-        pill.style.width = `${tab.offsetWidth}px`;
+        apply();
       }
     },
     [activeSelector],

@@ -7,11 +7,17 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import MemberSelect from '../../components/forms/MemberSelect';
-import { Button, Input, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel } from '../../components/ui';
+import { Button, Input, Badge, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import SubscriptionMobileRow from '../../components/office/SubscriptionMobileRow';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
-import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficePrimaryCell,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 
 const SUBSCRIPTION_TYPES = ['Software', 'SaaS', 'Hosting', 'Domain', 'Service', 'Other'];
 const PERIODICITY_OPTIONS = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'One-time'];
@@ -203,54 +209,97 @@ const SubscriptionsPage = () => {
     return { totalMonthlyInr: monthly, totalYearlyInr: monthly * 12 };
   }, [subscriptions]);
 
-  const typeChart = useMemo(
-    () => distributionFromField(subscriptions, 'type'),
-    [subscriptions]
-  );
-
-  const subscriptionColumns = [
-    { header: 'Name', sortKey: 'name', render: (sub) => <span className="font-bold">{sub.name}</span> },
-    {
-      header: 'Amount',
-      sortKey: 'amount',
-      sortFn: (sub) => Number(sub.amount) || 0,
-      render: (sub) => formatInr(sub.amount),
-    },
-    {
-      header: 'Due Date',
-      sortKey: 'dueDate',
-      sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
-      render: (sub) => formatDate(sub.dueDate),
-    },
-    { header: 'Type', sortKey: 'type', render: (sub) => sub.type },
-    { header: 'Periodicity', sortKey: 'periodicity', render: (sub) => sub.periodicity },
-    {
-      header: 'Used By',
-      sortKey: 'usedBy',
-      sortFn: (sub) =>
-        normalizeUsedByUsers(sub.usedBy)
-          .map((user) => user?.name || '')
-          .join(', '),
-      render: (sub) => {
-        const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
-        if (!users.length) {
-          return <span className="text-[var(--color-text-muted)]">—</span>;
-        }
-        return (
-          <div className="flex flex-wrap gap-2">
-            {users.map((user) => (
-              <UserLabel
-                key={user._id || user.name}
-                user={user}
-                size="xs"
-                nameClassName="font-bold text-xs"
-              />
-            ))}
-          </div>
-        );
+  const subscriptionColumns = useMemo(
+    () => [
+      {
+        header: 'Subscription',
+        sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
+        render: (sub) => (
+          <OfficePrimaryCell title={sub.name} subtitle={sub.notes || undefined} />
+        ),
       },
-    },
-  ];
+      {
+        header: 'Amount',
+        sortKey: 'amount',
+        sortFn: (sub) => Number(sub.amount) || 0,
+        numeric: true,
+        align: 'right',
+        headerClassName: OFFICE_TABLE_COL.numeric,
+        cellClassName: OFFICE_TABLE_COL.numeric,
+        render: (sub) => (
+          <span className="office-hub-cell-meta tabular-nums" title={formatInr(sub.amount)}>
+            {formatInr(sub.amount)}
+          </span>
+        ),
+      },
+      {
+        header: 'Due Date',
+        sortKey: 'dueDate',
+        sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
+        headerClassName: OFFICE_TABLE_COL.date,
+        cellClassName: OFFICE_TABLE_COL.date,
+        render: (sub) => (
+          <OfficeMetaCell
+            value={sub.dueDate ? formatDate(sub.dueDate) : undefined}
+            className="tabular-nums text-[var(--color-text-muted)] font-normal"
+          />
+        ),
+      },
+      {
+        header: 'Type',
+        sortKey: 'type',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (sub) => (
+          <Badge variant="info" className="max-w-full truncate" title={sub.type}>
+            {sub.type}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Periodicity',
+        sortKey: 'periodicity',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (sub) => (
+          <Badge variant="mint" className="max-w-full truncate" title={sub.periodicity}>
+            {sub.periodicity}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Used By',
+        sortKey: 'usedBy',
+        sortFn: (sub) =>
+          normalizeUsedByUsers(sub.usedBy)
+            .map((user) => user?.name || '')
+            .join(', '),
+        headerClassName: OFFICE_TABLE_COL.users,
+        cellClassName: OFFICE_TABLE_COL.users,
+        render: (sub) => {
+          const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
+          if (!users.length) {
+            return <span className="text-[var(--color-text-muted)]">—</span>;
+          }
+          const label = users.map((user) => user.name).filter(Boolean).join(', ');
+          return (
+            <div className="flex flex-wrap gap-1.5 min-w-0" title={label}>
+              {users.map((user) => (
+                <UserLabel
+                  key={user._id || user.name}
+                  user={user}
+                  size="xs"
+                />
+              ))}
+            </div>
+          );
+        },
+      },
+    ],
+    []
+  );
 
   return (
     <PageLoadGuard
@@ -294,28 +343,38 @@ const SubscriptionsPage = () => {
           },
         ],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder="Search subscriptions..."
+          variant="toolbar"
+          placeholder="Search subscription name, vendor…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <Button size="sm" onClick={openCreate}>
           <Plus size={14} /> Add Subscription
         </Button>
       }
     >
+      {isError && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load subscriptions')}
+          onRetry={() => refetch()}
+        />
+      )}
       <DataTable
         columns={subscriptionColumns}
         data={filtered}
         onRowClick={openEdit}
         getRowId={(sub) => sub._id}
-        isLoading={isLoading}
-        emptyTitle="No subscriptions"
-        emptyDescription="Add one to get started."
+        mobileRowRender={(row) => <SubscriptionMobileRow subscription={row} />}
+        mobileRowClassName="!py-2.5 !px-3"
+        emptyTitle="No subscriptions found"
+        emptyDescription="Try a different search or add a new subscription."
+        {...OFFICE_TABLE_PROPS}
       />
 
       <NexusModal
@@ -384,9 +443,9 @@ const SubscriptionsPage = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs mb-1">Type</label>
+              <label className="block tm-section-label mb-2">Type</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
@@ -398,9 +457,9 @@ const SubscriptionsPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1">Periodicity</label>
+              <label className="block tm-section-label mb-2">Periodicity</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.periodicity}
                 onChange={(e) => setFormData({ ...formData, periodicity: e.target.value })}
               >
@@ -412,9 +471,9 @@ const SubscriptionsPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1">Payment Mode</label>
+              <label className="block tm-section-label mb-2">Payment Mode</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={formData.paymentMode}
                 onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
               >

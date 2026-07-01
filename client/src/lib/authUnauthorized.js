@@ -1,4 +1,5 @@
 import { markForceLogout } from '../utils/authSession';
+import { authUrl, usesExternalAuthHost } from '../config/siteUrls';
 
 export const AUTH_RETURN_KEY = 'coreknot_auth_return_to';
 
@@ -46,7 +47,11 @@ export function triggerUnauthorized(error) {
     } catch {
       /* fall through */
     }
-    window.location.assign('/login');
+    const returnPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const loginTarget = usesExternalAuthHost()
+      ? `${authUrl('/login')}?redirect=${encodeURIComponent(returnPath)}`
+      : '/login';
+    window.location.assign(loginTarget);
   };
 
   run().finally(() => {

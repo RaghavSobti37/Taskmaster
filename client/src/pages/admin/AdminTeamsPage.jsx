@@ -67,7 +67,7 @@ const AdminTeamsPage = () => {
           },
         ],
         charts: deptChart.length
-          ? [{ id: 'dept', title: 'By department', type: 'donut', data: deptChart }]
+          ? [{ id: 'dept', title: 'By department', type: 'bar', data: deptChart, height: 120 }]
           : [],
       }}
     >
@@ -81,11 +81,7 @@ const AdminTeamsPage = () => {
           }}
         />
       )}
-      {!loadError && (
-      <div className="max-w-2xl">
-        <DepartmentsPanel users={users} departments={departments} />
-      </div>
-      )}
+      {!loadError && <DepartmentsPanel users={users} departments={departments} />}
     </ListPageLayout>
   );
 };

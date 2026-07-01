@@ -18,7 +18,8 @@ Global UI rules for `client/src`. Aligns with [design_guidelines.md](../client/d
 | **User display** | `UserAvatar` / `UserLabel` from `components/ui` whenever a user name appears in lists, tables, or detail chrome. Pass `user` object with `name` + `avatar`. |
 | **Loading** | `PageLoadGuard` at route level + `PageSkeleton` or `DashboardSkeleton`. `DataLoading` / `Spinner` inside panels only. |
 | **Selects** | `NexusDropdown` or thin wrappers (`PrioritySelect`, `ProjectSelect`, …). |
-| **Buttons** | `Button` from `primitives.jsx` only. |
+| **Buttons** | `Button` from `primitives.jsx` only (shadcn removed). |
+| **Search / empty** | `SearchInput` on toolbars; `EmptyState` for no-results / empty lists (no inline dashed blocks). |
 | **Confirms** | `globalConfirm` from `confirmContext` (uses `NexusModal`). No `window.alert` / `confirm`. |
 | **Toasts** | `useToast()` from `ToastContext`. |
 

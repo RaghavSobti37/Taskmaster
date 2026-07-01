@@ -93,6 +93,29 @@ describe('Artist OS team member HTTP access', () => {
     expect(patchedInquiry.statusCode).toBe(200);
     expect(patchedInquiry.body.status).toBe('contacted');
 
+    const confirmed = await teamAgent
+      .patch(`/api/artists/${artist._id}/os/inquiries/${created.body._id}`)
+      .send({ status: 'confirmed' });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.body.status).toBe('confirmed');
+
+    const gigs = await teamAgent.get(`/api/artists/${artist._id}/os/gigs`);
+    expect(gigs.statusCode).toBe(200);
+    const promotedGig = gigs.body.find((g) => String(g.inquiryId) === String(created.body._id));
+    expect(promotedGig).toBeTruthy();
+    expect(promotedGig.name).toBe('Wedding');
+    expect(promotedGig.rate).toBe(0);
+
+    const reconfirm = await teamAgent
+      .patch(`/api/artists/${artist._id}/os/inquiries/${created.body._id}`)
+      .send({ status: 'confirmed' });
+    expect(reconfirm.statusCode).toBe(200);
+    const gigsAfterReconfirm = await teamAgent.get(`/api/artists/${artist._id}/os/gigs`);
+    const gigsForInquiry = gigsAfterReconfirm.body.filter(
+      (g) => String(g.inquiryId) === String(created.body._id)
+    );
+    expect(gigsForInquiry).toHaveLength(1);
+
     const calendar = await teamAgent.get(`/api/artists/${artist._id}/os/calendar`);
     expect(calendar.statusCode).toBe(200);
     expect(Array.isArray(calendar.body)).toBe(true);

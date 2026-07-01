@@ -11,6 +11,7 @@ import { notificationsQueryKey } from '../hooks/queries/notifications';
 import { fetchCalendarEvents, getCalendarPrefetchRange } from '../hooks/queries/calendar';
 
 import { normalizeProjects } from '../utils/projectUtils';
+import { normalizeUserDirectory } from '../hooks/queries/logs';
 
 import { crmQueryParamsForUser } from '../utils/crmScope';
 
@@ -147,7 +148,9 @@ export function prefetchNavRoute(path, userId, user = null) {
   }
 
   if (path === '/admin/console' || path.startsWith('/admin')) {
-    prefetchOnce('user-directory', ['userDirectory'], async () => (await axios.get('/api/users/directory?limit=1000')).data.users);
+    prefetchOnce('user-directory', ['userDirectory'], async () =>
+      normalizeUserDirectory((await axios.get('/api/users/directory?limit=1000')).data),
+    );
     prefetchOnce('teams', ['teams'], async () => (await axios.get('/api/teams')).data);
   }
 }

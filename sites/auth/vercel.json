@@ -1,0 +1,101 @@
+{
+  "buildCommand": "cd ../../client && npm run vercel-build:auth",
+  "outputDirectory": "../../client/dist",
+  "installCommand": "cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js",
+  "framework": null,
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/about",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/contact",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/wp-admin/:path*",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/wp-login.php",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/xmlrpc.php",
+      "destination": "/404",
+      "statusCode": 404
+    },
+    {
+      "source": "/.env",
+      "destination": "/404",
+      "statusCode": 404
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
+    },
+    {
+      "source": "/socket.io/(.*)",
+      "destination": "https://taskmaster-jfw0.onrender.com/socket.io/$1"
+    },
+    {
+      "source": "/ph/static/:path*",
+      "destination": "https://us-assets.i.posthog.com/static/:path*"
+    },
+    {
+      "source": "/ph/array/:path*",
+      "destination": "https://us-assets.i.posthog.com/array/:path*"
+    },
+    {
+      "source": "/ph/:path*",
+      "destination": "https://us.i.posthog.com/:path*"
+    },
+    {
+      "source": "/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+  }
+}

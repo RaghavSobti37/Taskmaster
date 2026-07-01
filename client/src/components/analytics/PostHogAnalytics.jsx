@@ -2,17 +2,15 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  capturePostHogPageview,
-  identifyPostHogUser,
-  initPostHog,
-  resetPostHogUser,
-  syncPostHogConsent,
-} from '../../lib/posthogClient';
+  capturePostHogEvent,
+  clearPostHogUser,
+  ensurePostHogForConsent,
+  isPostHogEnabled,
+  setPostHogUser,
+} from '../../lib/posthog';
 import { isPostHogConfigured } from '../../config/posthog';
 
-/**
- * Initializes PostHog after analytics consent; tracks pageviews and identifies signed-in users.
- */
+/** Pageview + identify bridge for dashboard widgets (PostHogProvider lives in main.jsx). */
 export default function PostHogAnalytics() {
   const { pathname } = useLocation();
   const { user } = useAuth();
@@ -21,8 +19,7 @@ export default function PostHogAnalytics() {
     if (!isPostHogConfigured()) return undefined;
 
     const onConsent = () => {
-      initPostHog();
-      syncPostHogConsent();
+      ensurePostHogForConsent();
     };
 
     onConsent();
@@ -31,16 +28,17 @@ export default function PostHogAnalytics() {
   }, []);
 
   useEffect(() => {
-    if (!isPostHogConfigured()) return;
+    if (!isPostHogConfigured() || !isPostHogEnabled()) return;
     if (user) {
-      identifyPostHogUser(user);
+      setPostHogUser(user);
     } else {
-      resetPostHogUser();
+      clearPostHogUser();
     }
   }, [user]);
 
   useEffect(() => {
-    capturePostHogPageview(pathname);
+    if (!isPostHogConfigured() || !isPostHogEnabled()) return;
+    capturePostHogEvent('$pageview', { $current_url: pathname });
   }, [pathname]);
 
   return null;

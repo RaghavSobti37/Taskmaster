@@ -3,7 +3,7 @@ export function normalizeTimeSeriesRows(rows, xKey = 'date') {
   if (!Array.isArray(rows)) return [];
   return rows.map((row, index) => {
     const raw = row?.[xKey];
-    let date = raw;
+    let date;
     if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
       date = raw;
     } else if (typeof raw === 'string' || typeof raw === 'number') {

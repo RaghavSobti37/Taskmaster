@@ -4,6 +4,7 @@ import { DataLoading } from '../ui';
 import { LOADING_SHOW_PHRASE_DASHBOARD } from '../../lib/loadingDisplay';
 import DashboardWidgetFrame from './DashboardWidgetFrame';
 import DashboardTaskRow from './DashboardTaskRow';
+import { useDashboardLayout } from './DashboardLayoutContext';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterTasksByTimeframe, sortTasksByDate, isTaskOverdue, filterOverdueTasks } from '../../utils/dashboardTasks';
 
@@ -20,6 +21,7 @@ export default function MyTasksDashboardCard({
   onComplete,
   completingTaskId,
 }) {
+  const { expandContent } = useDashboardLayout();
   const { todayItems, overdueCount } = useMemo(() => {
     const today = sortTasksByDate(filterTasksByTimeframe(tasks, '1d'), 'asc');
     const overdue = filterOverdueTasks(tasks);
@@ -41,8 +43,8 @@ export default function MyTasksDashboardCard({
       componentId="my-tasks"
       href="/todo"
       viewAllHref="/todo"
-      compact
-      maxBodyHeight={200}
+      compact={!expandContent}
+      maxBodyHeight={expandContent ? undefined : 200}
       title={`My tasks (${subtitle})`}
       icon={ListTodo}
     >

@@ -1,13 +1,15 @@
-import { formatDisplayDateShort } from '../../utils/dateDisplay';
 import React, { useState, useMemo } from 'react';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { DashboardWidgetShell, TimeframeFilter, InfoButton, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { ChartSurface } from '../ui/charts';
 import { BklitAreaSeriesChart, BklitCategoryBarChart } from '../charts/bklitInsightsCharts';
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
-import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
+import { useDashboardTasks, useMailStats, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatTimeframeLabel } from '../../utils/displayLabels';
+import { chartTicksForTimeframe } from '../../utils/chartTimeSeries';
+
+const COMPACT_BAR_HEIGHT = 140;
 
 const GenericDashboardCard = React.memo(function GenericDashboardCard({ componentId, tasks: tasksProp }) {
   const [timeframe, setTimeframe] = useState('7d');
@@ -23,14 +25,7 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
     isError: mailStatsError,
     error: mailStatsErr,
     refetch: refetchMailStats,
-  } = useMailStats(componentId === 'campaign-metrics');
-  const {
-    data: activityData,
-    isLoading: activityLoading,
-    isError: activityError,
-    error: activityErr,
-    refetch: refetchActivity,
-  } = useActivityGrid(componentId === 'team-activity');
+  } = useMailStats(componentId === 'campaign-metrics', { timeframe });
   const {
     data: deptStats,
     isLoading: deptStatsLoading,
@@ -41,12 +36,10 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
 
   const queryError =
     componentId === 'campaign-metrics' && mailStatsError ? mailStatsErr
-      : componentId === 'team-activity' && activityError ? activityErr
-        : componentId === 'dept-stats' && deptStatsError ? deptStatsErr
-          : null;
+      : componentId === 'dept-stats' && deptStatsError ? deptStatsErr
+        : null;
   const handleQueryRetry = () => {
     if (componentId === 'campaign-metrics' && mailStatsError) refetchMailStats();
-    else if (componentId === 'team-activity' && activityError) refetchActivity();
     else if (componentId === 'dept-stats' && deptStatsError) refetchDeptStats();
   };
 
@@ -68,26 +61,6 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
       };
     }
 
-    if (componentId === 'team-activity' && activityData?.length) {
-      const recent = activityData.slice(-days);
-      return {
-        type: 'area',
-        loading: activityLoading,
-        chartData: recent.map((d) => {
-          const rawDate = d.date || d._id || d.label;
-          let label = String(rawDate).slice(5) || 'Unknown';
-          try {
-            if (rawDate) label = formatDisplayDateShort(parseISO(String(rawDate)));
-          } catch {
-            // fallback gracefully
-          }
-          return { label, value: d.count || d.value || 0, sortKey: String(rawDate) };
-        })
-          .sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''))
-          .map(({ label, value }) => ({ label, value })),
-      };
-    }
-
     if (componentId === 'dept-stats' && deptStats?.metrics) {
       const m = deptStats.metrics;
       return {
@@ -104,23 +77,26 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
     const dataMap = new Map();
     for (let i = days - 1; i >= 0; i--) {
       const d = subDays(now, i);
-      dataMap.set(formatDisplayDateShort(d), 0);
+      dataMap.set(format(d, 'yyyy-MM-dd'), 0);
     }
     tasks.forEach((t) => {
       const day = t.scheduleDate || t.dueDate || t.createdAt;
       if (!day) return;
-      const fmt = formatDisplayDateShort(new Date(day));
-      if (dataMap.has(fmt)) {
-        dataMap.set(fmt, dataMap.get(fmt) + 1);
+      const key = format(new Date(day), 'yyyy-MM-dd');
+      if (dataMap.has(key)) {
+        dataMap.set(key, dataMap.get(key) + 1);
       }
     });
 
     return {
       type: 'area',
       loading: false,
-      chartData: Array.from(dataMap.entries()).map(([label, value]) => ({ label, value })),
+      chartData: Array.from(dataMap.entries()).map(([date, value]) => ({
+        date,
+        value,
+      })),
     };
-  }, [tasks, timeframe, componentId, mailStats, mailStatsLoading, activityData, activityLoading, deptStats, deptStatsLoading]);
+  }, [tasks, timeframe, componentId, mailStats, mailStatsLoading, deptStats, deptStatsLoading]);
 
   const hasData = chartData.some((d) => d.value > 0);
   const emptyLabel = `No data to display for the last ${formatTimeframeLabel(timeframe)}`;
@@ -134,16 +110,18 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
     </>
   );
 
+  const isBarWidget = componentId === 'campaign-metrics' || componentId === 'dept-stats';
+
   return (
     <DashboardWidgetShell
       className="h-full overflow-hidden"
-      bodyClassName="p-4 flex flex-col flex-1 min-h-0"
-      title={titleContent}
-      actions={
-        componentId !== 'campaign-metrics' ? (
-          <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-        ) : null
+      bodyClassName={
+        isBarWidget
+          ? 'px-3 py-2 flex flex-col flex-1 min-h-0 justify-center'
+          : 'p-4 flex flex-col flex-1 min-h-0'
       }
+      title={titleContent}
+      actions={<TimeframeFilter value={timeframe} onChange={setTimeframe} />}
     >
       {queryError && (
         <QueryErrorBanner
@@ -152,11 +130,15 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
           className="mb-3"
         />
       )}
-      <ChartSurface className="flex-1" height={200}>
+      <ChartSurface
+        className={isBarWidget ? 'w-full shrink-0' : 'flex-1 min-h-0'}
+        height={isBarWidget ? COMPACT_BAR_HEIGHT : 200}
+      >
         {type === 'bar' ? (
           <BklitCategoryBarChart
             emptyLabel={emptyLabel}
-            height={200}
+            fillHeight
+            height={COMPACT_BAR_HEIGHT}
             labelKey="label"
             loading={loading}
             series={hasData ? chartData : []}
@@ -170,7 +152,9 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
             height={200}
             loading={loading}
             series={hasData ? chartData : []}
-            xKey="label"
+            tickMode="domain"
+            numTicks={chartTicksForTimeframe(timeframe)}
+            xKey="date"
           />
         )}
       </ChartSurface>

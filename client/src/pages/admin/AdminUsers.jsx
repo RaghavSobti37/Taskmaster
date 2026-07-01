@@ -14,6 +14,8 @@ import {
   ListPageLayout,
   SearchInput,
   UserAvatar,
+  QueryErrorBanner,
+  getQueryErrorMessage,
 } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { distributionFromField } from '../../utils/buildChartSeries';
@@ -56,7 +58,14 @@ const AdminUsers = () => {
   const [editUserBaseline, setEditUserBaseline] = useState(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
 
-  const { data: users = [], isLoading: usersLoading, isError: usersError, error: usersErr } = useUserDirectory();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    isError: usersError,
+    error: usersErr,
+    refetch: refetchUsers,
+  } = useUserDirectory();
+  const userList = useMemo(() => (Array.isArray(users) ? users : []), [users]);
   const deferAdminRibbon = useDeferredQueryEnabled(!usersLoading);
   const { data: departments = [] } = useDepartments(false, deferAdminRibbon);
   const { data: platformExclusions = {} } = usePlatformExclusions(deferAdminRibbon);
@@ -153,18 +162,18 @@ const AdminUsers = () => {
   );
 
   const filteredUsers = useMemo(() => {
-    return users.filter(u =>
+    return userList.filter(u =>
       u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [users, searchTerm]);
+  }, [userList, searchTerm]);
 
   const deptChart = useMemo(
     () =>
-      distributionFromField(users, 'departmentId', {
+      distributionFromField(userList, 'departmentId', {
         labelFn: (d) => d?.name || 'Unassigned',
       }),
-    [users]
+    [userList]
   );
 
   const userColumns = [
@@ -212,7 +221,7 @@ const AdminUsers = () => {
           {
             id: 'users',
             label: 'Total Users',
-            value: users.length,
+            value: userList.length,
             icon: Users,
             variant: 'info',
             info: 'Total number of registered user accounts.',
@@ -246,13 +255,16 @@ const AdminUsers = () => {
           ? [{ id: 'dept', title: 'By department', type: 'donut', data: deptChart }]
           : [],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder="Search users by name or email..."
+          variant="toolbar"
+          placeholder="Search name, email…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <Button onClick={() => setShowCreateUser(true)} size="sm" className="gap-2 shrink-0">
           <UserPlus size={14} />
@@ -261,9 +273,11 @@ const AdminUsers = () => {
       }
     >
       {usersError && (
-        <p className="text-sm text-rose-500 mb-4">
-          {usersErr?.response?.data?.error || usersErr?.message || 'Failed to load user directory.'}
-        </p>
+        <QueryErrorBanner
+          className="mb-4"
+          message={getQueryErrorMessage(usersErr, 'Failed to load user directory')}
+          onRetry={() => refetchUsers()}
+        />
       )}
       {!usersError && (
       <DataTable

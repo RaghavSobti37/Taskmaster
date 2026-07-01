@@ -93,6 +93,44 @@ describe('GET /connections/hub data shape', () => {
     const apple = hub.platforms.find((p) => p.id === 'apple-music');
     expect(apple.hubStatus).toBe('coming_soon');
   });
+
+  it('returns connected hub status for instagram with metadata igAccountId only', async () => {
+    const artist = await Artist.create({ name: 'IG Meta Provider Artist' });
+    await ArtistConnection.create({
+      artistId: artist._id,
+      provider: 'meta',
+      accountHandle: '',
+      accountLabel: '@testartist',
+      status: 'active',
+      metadata: { igAccountId: '17841400000000000', igUsername: 'testartist' },
+    });
+
+    const hub = await buildConnectionHub(artist._id);
+    const instagram = hub.platforms.find((p) => p.id === 'instagram');
+    expect(instagram.hubStatus).toBe('connected');
+    expect(instagram.connection.provider).toBe('meta');
+  });
+
+  it('migrates legacy oauthCredentials when building hub', async () => {
+    const artist = await Artist.create({ name: 'Legacy OAuth Artist' });
+    const ArtistAuth = require('../models/ArtistAuth');
+    await ArtistAuth.create({
+      artistId: artist._id,
+      oauthCredentials: {
+        meta: {
+          accessToken: 'legacy-token',
+          igAccountId: '17841400000000001',
+          igUsername: 'legacyig',
+          tokenExpiry: new Date(Date.now() + 86400000),
+        },
+      },
+    });
+
+    const hub = await buildConnectionHub(artist._id);
+    const instagram = hub.platforms.find((p) => p.id === 'instagram');
+    expect(instagram.hubStatus).toBe('connected');
+    expect(instagram.connection?.accountHandle).toBe('17841400000000001');
+  });
 });
 
 describe('connection hub routes registered', () => {

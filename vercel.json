@@ -46,7 +46,19 @@
       "destination": "https://taskmaster-jfw0.onrender.com/socket.io/$1"
     },
     {
-      "source": "/((?!api/)(?!.*\\.[^/]+$).*)",
+      "source": "/ph/static/:path*",
+      "destination": "https://us-assets.i.posthog.com/static/:path*"
+    },
+    {
+      "source": "/ph/array/:path*",
+      "destination": "https://us-assets.i.posthog.com/array/:path*"
+    },
+    {
+      "source": "/ph/:path*",
+      "destination": "https://us.i.posthog.com/:path*"
+    },
+    {
+      "source": "/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }
   ],

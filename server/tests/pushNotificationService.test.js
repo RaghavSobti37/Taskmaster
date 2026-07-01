@@ -20,9 +20,15 @@ describe('pushNotificationService', () => {
     configureWebPush();
   });
 
+  const mockUserFind = (userDoc) => {
+    User.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue(userDoc),
+    });
+  };
+
   test('sendPushToUser sends to deduped subscriptions', async () => {
     const save = jest.fn().mockResolvedValue(undefined);
-    User.findById.mockResolvedValue({
+    mockUserFind({
       pushSubscriptions: [
         {
           endpoint: 'https://push.example/1',
@@ -64,7 +70,7 @@ describe('pushNotificationService', () => {
       ],
       save,
     };
-    User.findById.mockResolvedValue(user);
+    mockUserFind(user);
 
     webpush.sendNotification.mockImplementation((sub) => {
       if (sub.endpoint === 'https://push.example/dead') {

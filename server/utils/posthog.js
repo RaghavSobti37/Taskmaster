@@ -1,19 +1,50 @@
-const { PostHog } = require('posthog-node');
-
 let client = null;
+let initialized = false;
+
+const initPostHog = () => {
+  const apiKey = process.env.POSTHOG_PROJECT_API_KEY?.trim();
+  const host = process.env.POSTHOG_HOST?.trim() || 'https://us.i.posthog.com';
+  if (!apiKey || initialized || process.env.NODE_ENV === 'test') return false;
+
+  try {
+    const { PostHog } = require('posthog-node');
+    client = new PostHog(apiKey, { host, flushAt: 10, flushInterval: 5000 });
+    initialized = true;
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[PostHog] Init skipped:', err.message);
+    return false;
+  }
+};
 
 function getPostHogClient() {
-  const apiKey = String(process.env.POSTHOG_PROJECT_API_KEY || '').trim();
-  if (!apiKey) return null;
-  if (!client) {
-    client = new PostHog(apiKey, {
-      host: String(process.env.POSTHOG_HOST || 'https://us.i.posthog.com').trim(),
-      flushAt: 10,
-      flushInterval: 5000,
-    });
-  }
+  if (!client) initPostHog();
   return client;
 }
+
+const getDistinctId = (req) => {
+  const headerId = req?.headers?.['x-posthog-distinct-id'];
+  if (headerId) return String(headerId);
+  if (req?.user?._id) return String(req.user._id);
+  return null;
+};
+
+const captureEvent = (req, event, properties = {}) => {
+  const ph = getPostHogClient();
+  if (!ph) return;
+  const distinctId = getDistinctId(req);
+  if (!distinctId) return;
+
+  const sessionId = req?.headers?.['x-posthog-session-id'];
+  const payload = sessionId ? { ...properties, $session_id: String(sessionId) } : properties;
+
+  try {
+    ph.capture({ distinctId, event, properties: payload });
+  } catch {
+    /* optional */
+  }
+};
 
 function captureServerEvent(distinctId, event, properties = {}) {
   const ph = getPostHogClient();
@@ -39,15 +70,37 @@ function identifyServerUser(user) {
   });
 }
 
-async function shutdownPostHog() {
+const captureException = (error, req, context = {}) => {
+  const ph = getPostHogClient();
+  if (!ph || !error) return;
+  const distinctId = getDistinctId(req) || 'server';
+
+  try {
+    ph.captureException(error, distinctId, context);
+  } catch {
+    /* optional */
+  }
+};
+
+const shutdownPostHog = async () => {
   if (!client) return;
-  await client.shutdown();
-  client = null;
-}
+  try {
+    await client.shutdown();
+  } catch {
+    /* optional */
+  } finally {
+    client = null;
+    initialized = false;
+  }
+};
 
 module.exports = {
+  initPostHog,
+  captureEvent,
+  captureException,
   captureServerEvent,
   getPostHogClient,
   identifyServerUser,
   shutdownPostHog,
+  isPostHogEnabled: () => initialized,
 };

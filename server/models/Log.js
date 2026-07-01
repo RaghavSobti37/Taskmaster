@@ -24,7 +24,7 @@ const logSchema = new mongoose.Schema({
 });
 
 // Middleware for backward compatibility (map old fields to new fields and vice versa)
-logSchema.pre('validate', function (next) {
+logSchema.pre('validate', function () {
   if (this.userId) {
     if (!this.actorId) this.actorId = this.userId.toString();
     if (!this.origin) this.origin = 'HUMAN_USER';
@@ -72,7 +72,6 @@ logSchema.pre('validate', function (next) {
   if (!this.status) {
     this.status = 'SUCCESS';
   }
-  next();
 });
 
 logSchema.index({ userId: 1, action: 1, createdAt: -1 });

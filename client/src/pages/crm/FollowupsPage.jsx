@@ -407,18 +407,6 @@ export default function FollowupsPage() {
             info: "The percentage of today's calls you have finished.",
           },
         ],
-        charts: [
-          {
-            id: 'queue',
-            title: 'Follow-up queue',
-            type: 'donut',
-            data: [
-              { label: 'Today', value: stats.today },
-              { label: 'Overdue', value: stats.overdue },
-              { label: 'Upcoming', value: stats.upcoming },
-            ],
-          },
-        ],
       }}
       toolbar={
         <TabSwitcher

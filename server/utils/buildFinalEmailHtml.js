@@ -1,4 +1,3 @@
-const juice = require('juice');
 const logger = require('./logger');
 const { normalizeOutboundEmailHtml, wrapEmailShell, isFullHtmlDocument } = require('./normalizeOutboundEmailHtml');
 const { appendSignatureIfMissing } = require('./emailSignature');
@@ -43,10 +42,19 @@ const ensureAbsoluteImageUrls = (html, { baseUrl } = {}) => {
   });
 };
 
-const inlineCss = (html) => {
+let juiceLoader;
+const loadJuice = async () => {
+  if (!juiceLoader) {
+    juiceLoader = import('juice').then((mod) => mod.default ?? mod);
+  }
+  return juiceLoader;
+};
+
+const inlineCss = async (html) => {
   const hasNonQuillStyles = /<style[\s>]/i.test(html) && !/\.ql-|quill/i.test(html);
   if (!hasNonQuillStyles) return html;
   try {
+    const juice = await loadJuice();
     return juice(html, {
       extraCss: JUICE_RESET_CSS,
       applyStyleTags: true,
@@ -124,7 +132,7 @@ const buildFinalEmailHtml = async ({
 
   if (!isRawFragment) {
     out = normalizeOutboundEmailHtml(out);
-    out = inlineCss(out);
+    out = await inlineCss(out);
     out = normalizeOutboundEmailHtml(out);
   }
 

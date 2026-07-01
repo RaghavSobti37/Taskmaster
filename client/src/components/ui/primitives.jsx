@@ -7,6 +7,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useInputErrorShake, useSlidingTabs } from '../../hooks/transitions';
 import NumberPopIn from './NumberPopIn';
 import DeltaBadge from './DeltaBadge';
+import { useIsMobile } from '../../hooks/useBreakpoint';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
 /** Default rows per page for DataTable and TablePagination */
@@ -116,7 +117,7 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => {
     <div
       ref={barRef}
       role="tablist"
-      className={`t-tabs tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 bg-[var(--color-bg-secondary)] px-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}
+      className={`t-tabs tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}
     >
       <div ref={pillRef} className="t-tabs-pill" aria-hidden />
       {tabs.map((tab) => (
@@ -126,7 +127,7 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => {
           role="tab"
           aria-selected={activeTab === tab.id}
           onClick={() => onChange(tab.id)}
-          className={`t-tab inline-flex items-center gap-1.5 px-2.5 h-7 text-[10px] font-bold uppercase tracking-wider rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
+          className={`t-tab inline-flex items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${
             activeTab === tab.id
               ? 'is-active text-[var(--color-action-primary)]'
               : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -376,8 +377,8 @@ export const TablePagination = ({
   const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
 
   return (
-    <div className="p-3 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
-      <div className="flex items-center gap-2">
+    <div className="shrink-0 p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
         <span>Show</span>
         <select
           value={pageSize}
@@ -394,12 +395,12 @@ export const TablePagination = ({
           <option value={100}>100</option>
         </select>
         <span>entries</span>
-        <span className="text-[10px] font-bold opacity-60 ml-2">
+        <span className="text-[10px] font-bold opacity-60 sm:ml-2">
           (Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems})
         </span>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1">
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
@@ -459,9 +460,11 @@ export const DataTable = ({
   sortState: controlledSortState,
   onSortChange,
   mobileRowRender,
+  mobileRowClassName = '',
   rowEstimateSize = 52,
   tableMaxHeight = '600px',
   virtualize = true,
+  density = 'default',
 }) => {
   const [localSortState, setLocalSortState] = useState(null);
   const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
@@ -562,20 +565,26 @@ export const DataTable = ({
     overscan: 8,
   });
 
+  const isMobile = useIsMobile();
   const mobileColumns = columns.filter((c) => !c.mobileHidden);
   const primaryCol = columns.find((c) => c.mobilePrimary) || mobileColumns[0];
-  const detailColumns = mobileColumns.filter((c) => c !== primaryCol);
+  const detailColumns = mobileColumns.filter((c) => c !== primaryCol && !c.mobileAction);
   const actionColumns = columns.filter((c) => c.mobileAction);
+
+  const isComfortable = density === 'comfortable';
+  const thCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-2.5' : 'px-4 py-2';
+  const tdCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-3' : 'px-4 py-2';
+  const tableDensityClass = isComfortable ? 'data-table--comfortable' : '';
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
       <div
         ref={parentRef}
-        className={`w-full max-lg:overflow-visible lg:overflow-y-auto custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
-        style={{ maxHeight: tableMaxHeight }}
+        className={`w-full ${isMobile ? 'overflow-visible' : 'overflow-y-auto'} custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
+        style={isMobile ? undefined : { maxHeight: tableMaxHeight }}
       >
         <table
-          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}
+          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'} ${tableDensityClass}`}
         >
           <thead className="border-b border-[var(--color-bg-border)]">
             <tr>
@@ -594,7 +603,7 @@ export const DataTable = ({
                 return (
                   <th
                     key={i}
-                    className={`px-4 py-2 tm-widget-label whitespace-nowrap ${alignClass} ${col.headerClassName || ''} ${
+                    className={`${thCellPad} tm-widget-label whitespace-nowrap leading-normal overflow-visible ${alignClass} ${col.headerClassName || ''} ${
                       sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
                     }`}
                     onClick={sortable ? () => handleSortClick(col) : undefined}
@@ -660,7 +669,7 @@ export const DataTable = ({
                     return (
                     <td
                       key={j}
-                      className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                      className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
                     >
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
@@ -691,7 +700,7 @@ export const DataTable = ({
                       return (
                         <td
                           key={j}
-                          className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                          className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
                         >
                           {col.render ? col.render(row) : row[col.key]}
                         </td>
@@ -723,7 +732,7 @@ export const DataTable = ({
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 onRowClick?.(row);
               }}
-              className="tm-data-row cursor-pointer min-w-0"
+              className={`tm-data-row cursor-pointer min-w-0 ${mobileRowClassName}`.trim()}
             >
               {mobileRowRender ? (
                 mobileRowRender(row)
@@ -744,7 +753,7 @@ export const DataTable = ({
                     </div>
                   )}
                   {detailColumns.length > 0 && (
-                    <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-[var(--color-bg-border)] pt-2.5">
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--color-bg-border)] pt-2 lg:mt-2.5 lg:gap-y-2.5 lg:pt-2.5">
                       {detailColumns.map((col, j) => (
                         <div
                           key={j}
@@ -762,11 +771,11 @@ export const DataTable = ({
                   )}
                   {actionColumns.length > 0 && (
                     <div
-                      className="mt-2.5 flex flex-wrap gap-2 pt-2.5 border-t border-[var(--color-bg-border)]"
+                      className="mt-2 flex items-center justify-end gap-1.5 lg:mt-2.5 lg:gap-2 lg:pt-2.5 lg:border-t lg:border-[var(--color-bg-border)]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {actionColumns.map((col, j) => (
-                        <div key={j} className="flex-1 min-w-[120px]">
+                        <div key={j} className="shrink-0">
                           {col.render ? col.render(row) : row[col.key]}
                         </div>
                       ))}

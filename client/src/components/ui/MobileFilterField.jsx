@@ -47,13 +47,4 @@ export default function MobileFilterField({ children, label: labelOverride }) {
   );
 }
 
-export function isSearchInputElement(child) {
-  if (!isValidElement(child)) return false;
-  const name = child.type?.displayName || child.type?.name;
-  return name === 'SearchInput';
-}
-
-export function isMobileInlineElement(child) {
-  if (!isValidElement(child)) return false;
-  return Boolean(child.props?.['data-mobile-inline']);
-}
+export { isSearchInputElement, isMobileInlineElement } from './toolbarMobilePartition';

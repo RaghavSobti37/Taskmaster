@@ -70,8 +70,8 @@ export interface BarChartProps {
   enterTransition?: Transition;
   /** Signature of motion URL state — triggers enter replay when it changes. */
   revealSignature?: string;
-  /** Aspect ratio as "width / height". Default: "2 / 1" */
-  aspectRatio?: string;
+  /** Aspect ratio as "width / height". Default: "2 / 1". Pass `false` to fill parent height. */
+  aspectRatio?: string | false;
   /** Additional class name for the container */
   className?: string;
   /** Gap between bar groups as a fraction of band width (0-1). Default: 0.2 */
@@ -666,11 +666,16 @@ export function BarChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const margin = { ...DEFAULT_MARGIN, ...marginProp };
 
+  const containerStyle =
+    aspectRatio === false
+      ? { height: "100%", minHeight: 0 }
+      : { aspectRatio: aspectRatio ?? "2 / 1" };
+
   return (
     <div
       className={cn("relative w-full overflow-visible", className)}
       ref={containerRef}
-      style={{ aspectRatio }}
+      style={containerStyle}
     >
       <ParentSize debounceTime={10}>
         {({ width, height }) => (

@@ -1,11 +1,12 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Trash2, CheckCircle2,
   Database, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus, Mail
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { Modal } from '../../components/ui/modals';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -30,6 +31,7 @@ import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
 import { isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
 import { isLockedByOther, formatLockToast, closeLeadEditor } from '../../utils/crmLeadLock';
+import { buildLeadsActiveFilterChips } from '../../utils/activeFilterChips';
 
 const CRM_LEADS_FILTERS_KEY = 'crm-leads-filters';
 
@@ -313,6 +315,62 @@ export default function LeadsPage() {
     }));
   };
 
+  const handleClearAllFilters = useCallback(() => {
+    setStatFilter(null);
+    setSearchTerm('');
+    setFilters({
+      leadStatus: 'all',
+      meaningfulConnect: 'all',
+      warmPipeline: false,
+      source: 'all',
+      leadQuality: 'all',
+      assignedRepId: 'all',
+      ...(artistCrmView ? { artistProject: 'all', contactCategory: 'all', emailStatus: 'all' } : {}),
+    });
+  }, [artistCrmView]);
+
+  const handleActiveFilterRemove = useCallback((id) => {
+    switch (id) {
+      case 'searchTerm':
+        setSearchTerm('');
+        break;
+      case 'statFilter':
+        clearStatFilters();
+        break;
+      case 'leadStatus':
+        setFilters((prev) => ({ ...prev, leadStatus: 'all' }));
+        setStatFilter(null);
+        break;
+      case 'meaningfulConnect':
+        setFilters((prev) => ({ ...prev, meaningfulConnect: 'all' }));
+        setStatFilter(null);
+        break;
+      case 'source':
+        setFilters((prev) => ({ ...prev, source: 'all' }));
+        break;
+      case 'leadQuality':
+        setFilters((prev) => ({ ...prev, leadQuality: 'all' }));
+        break;
+      case 'assignedRepId':
+        setFilters((prev) => ({ ...prev, assignedRepId: 'all' }));
+        break;
+      case 'artistProject':
+        setFilters((prev) => ({ ...prev, artistProject: 'all' }));
+        break;
+      case 'contactCategory':
+        setFilters((prev) => ({ ...prev, contactCategory: 'all' }));
+        break;
+      case 'emailStatus':
+        setFilters((prev) => ({ ...prev, emailStatus: 'all' }));
+        break;
+      case 'warmPipeline':
+        setFilters((prev) => ({ ...prev, warmPipeline: false }));
+        break;
+      default:
+        break;
+    }
+  }, []);
+
   const toggleMeaningfulStatFilter = () => {
     if (statFilter === 'meaningful') {
       clearStatFilters();
@@ -414,10 +472,147 @@ export default function LeadsPage() {
 
     return options;
   }, [crmConfig?.sources, artistImportSheets]);
+
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
   const meaningfulConnectList = crmConfig?.meaningfulConnectStatuses || ['YES', 'NO', 'PENDING'];
+
+  const activeFilterChips = useMemo(
+    () => buildLeadsActiveFilterChips(
+      { searchTerm, statFilter, filters },
+      { sourceOptions: sourceFilterOptions, filterTeam, artistMode },
+    ),
+    [searchTerm, statFilter, filters, sourceFilterOptions, filterTeam, artistMode],
+  );
+
+  const filterFields = useMemo(() => {
+    const fields = [
+      {
+        id: 'leadStatus',
+        label: 'Interest Level',
+        type: 'radio',
+        value: filters.leadStatus,
+        defaultValue: 'all',
+        options: [
+          { value: 'all', label: 'All Interest Levels' },
+          ...leadStatusesList.map((s) => ({ value: s, label: s })),
+        ],
+        onChange: (v) => {
+          setStatFilter(null);
+          setFilters((prev) => ({ ...prev, leadStatus: v, warmPipeline: false }));
+        },
+      },
+      {
+        id: 'meaningfulConnect',
+        label: 'Meaningful Connect',
+        type: 'radio',
+        value: filters.meaningfulConnect,
+        defaultValue: 'all',
+        options: [
+          { value: 'all', label: 'All' },
+          ...meaningfulConnectList.map((s) => ({ value: s, label: s })),
+        ],
+        onChange: (v) => {
+          setStatFilter(v === 'YES' ? 'meaningful' : null);
+          setFilters((prev) => ({ ...prev, meaningfulConnect: v, warmPipeline: false }));
+        },
+      },
+      {
+        id: 'source',
+        label: 'Source',
+        type: sourceFilterOptions.length > 9 ? 'searchable' : 'radio',
+        value: filters.source,
+        defaultValue: 'all',
+        options: sourceFilterOptions,
+        onChange: (v) => setFilters((prev) => ({ ...prev, source: v })),
+      },
+      {
+        id: 'leadQuality',
+        label: 'Quality',
+        type: 'radio',
+        value: filters.leadQuality,
+        defaultValue: 'all',
+        options: [
+          { value: 'all', label: 'All Quality' },
+          ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` })),
+        ],
+        onChange: (v) => setFilters((prev) => ({ ...prev, leadQuality: v })),
+      },
+      {
+        id: 'assignedRepId',
+        label: artistMode ? 'Manager' : 'Agent',
+        type: 'searchable',
+        value: filters.assignedRepId,
+        defaultValue: 'all',
+        options: [
+          { value: 'all', label: artistMode ? 'All Managers' : 'All Agents' },
+          { value: 'unassigned', label: 'Unassigned' },
+          ...filterTeam.map((r) => ({ value: r._id, label: r.name })),
+        ],
+        onChange: (v) => setFilters((prev) => ({ ...prev, assignedRepId: v })),
+      },
+    ];
+
+    if (artistCrmView) {
+      fields.push(
+        {
+          id: 'artistProject',
+          label: 'Artist / Project',
+          type: 'radio',
+          value: filters.artistProject || 'all',
+          defaultValue: 'all',
+          options: [
+            { value: 'all', label: 'All Artists' },
+            { value: 'YUGM', label: 'YUGM' },
+            { value: 'Harshad Duhita', label: 'Harshad Duhita' },
+            { value: 'shared', label: 'Shared Event DB' },
+          ],
+          onChange: (v) => setFilters((prev) => ({ ...prev, artistProject: v })),
+        },
+        {
+          id: 'contactCategory',
+          label: 'Category',
+          type: 'radio',
+          value: filters.contactCategory || 'all',
+          defaultValue: 'all',
+          options: [
+            { value: 'all', label: 'All Categories' },
+            { value: 'press_media', label: 'Press / Media' },
+            { value: 'event_organizer', label: 'Event Organizer' },
+            { value: 'event_database', label: 'Event Database' },
+          ],
+          onChange: (v) => setFilters((prev) => ({ ...prev, contactCategory: v })),
+        },
+        {
+          id: 'emailStatus',
+          label: 'Email Status',
+          type: 'radio',
+          value: filters.emailStatus || 'all',
+          defaultValue: 'all',
+          options: [
+            { value: 'all', label: 'All Email Status' },
+            { value: 'Active', label: 'Active' },
+            { value: 'Pending', label: 'Pending' },
+            { value: 'Invalid', label: 'Invalid' },
+            { value: 'Unsubscribed', label: 'Unsubscribed' },
+          ],
+          onChange: (v) => setFilters((prev) => ({ ...prev, emailStatus: v })),
+        },
+      );
+    }
+
+    return fields;
+  }, [
+    artistCrmView,
+    artistMode,
+    filterTeam,
+    filters,
+    leadStatusesList,
+    meaningfulConnectList,
+    qualitiesList,
+    sourceFilterOptions,
+  ]);
 
   const isDefaultSort = sortField === 'createdAt' && sortOrder === 'desc';
   const tableSortState = useMemo(
@@ -551,8 +746,23 @@ export default function LeadsPage() {
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      toolbarFill
       overviewMobileMaxStats={2}
+      filterFields={filterFields}
+      filterSheetTitle={artistMode ? 'Contact filters' : 'Lead filters'}
+      mobileFilterCount={countActiveFilters(filterFields) + (statFilter ? 1 : 0) + (searchTerm.trim() ? 1 : 0)}
+      activeFilterChips={activeFilterChips}
+      onActiveFilterRemove={handleActiveFilterRemove}
+      onActiveFiltersClear={handleClearAllFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          label="Search"
+          placeholder={artistMode ? 'Search contacts…' : 'Search name or phone...'}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
       overview={{
         stats: [
           {
@@ -596,110 +806,14 @@ export default function LeadsPage() {
         ],
        
       }}
-      toolbarActions={
+      toolbarActions={(
         <>
           {artistCrmView && <ArtistCrmImportPanel compact />}
-          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)} data-mobile-primary>
             <Plus size={14} /> {artistMode ? 'Add Contact' : 'Add Lead'}
           </Button>
         </>
-      }
-      toolbar={
-        <>
-          <SearchInput
-            label="Search"
-            placeholder={artistMode ? 'Search contacts…' : 'Search name or phone...'}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <NexusDropdown
-            label="Interest"
-            placeholder="Interest Level"
-            options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
-            value={filters.leadStatus}
-            onChange={(v) => {
-              setStatFilter(null);
-              setFilters({ ...filters, leadStatus: v, warmPipeline: false });
-            }}
-          />
-          <NexusDropdown
-            label="Meaningful Connect"
-            placeholder="Meaningful Connect"
-            options={[{ value: 'all', label: 'All' }, ...meaningfulConnectList.map((s) => ({ value: s, label: s }))]}
-            value={filters.meaningfulConnect}
-            onChange={(v) => {
-              setStatFilter(v === 'YES' ? 'meaningful' : null);
-              setFilters({ ...filters, meaningfulConnect: v, warmPipeline: false });
-            }}
-          />
-          <NexusDropdown
-            label="Source"
-            placeholder="Source"
-            options={sourceFilterOptions}
-            value={filters.source}
-            onChange={(v) => setFilters({ ...filters, source: v })}
-          />
-          <NexusDropdown
-            label="Quality"
-            placeholder="Quality"
-            options={[{ value: 'all', label: 'All Quality' }, ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` }))]}
-            value={filters.leadQuality}
-            onChange={(v) => setFilters({ ...filters, leadQuality: v })}
-          />
-          <NexusDropdown
-            label={artistMode ? 'Manager' : 'Agent'}
-            placeholder={artistMode ? 'Manager' : 'Agent'}
-            options={[
-              { value: 'all', label: artistMode ? 'All Managers' : 'All Agents' },
-              { value: 'unassigned', label: 'Unassigned' },
-              ...filterTeam.map((r) => ({ value: r._id, label: r.name })),
-            ]}
-            value={filters.assignedRepId}
-            onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
-          />
-          {artistCrmView && (
-            <>
-              <NexusDropdown
-                label="Project"
-                placeholder="Artist"
-                options={[
-                  { value: 'all', label: 'All Artists' },
-                  { value: 'YUGM', label: 'YUGM' },
-                  { value: 'Harshad Duhita', label: 'Harshad Duhita' },
-                  { value: 'shared', label: 'Shared Event DB' },
-                ]}
-                value={filters.artistProject || 'all'}
-                onChange={(v) => setFilters({ ...filters, artistProject: v })}
-              />
-              <NexusDropdown
-                label="Category"
-                placeholder="Category"
-                options={[
-                  { value: 'all', label: 'All Categories' },
-                  { value: 'press_media', label: 'Press / Media' },
-                  { value: 'event_organizer', label: 'Event Organizer' },
-                  { value: 'event_database', label: 'Event Database' },
-                ]}
-                value={filters.contactCategory || 'all'}
-                onChange={(v) => setFilters({ ...filters, contactCategory: v })}
-              />
-              <NexusDropdown
-                label="Email"
-                placeholder="Email status"
-                options={[
-                  { value: 'all', label: 'All Email Status' },
-                  { value: 'Active', label: 'Active' },
-                  { value: 'Pending', label: 'Pending' },
-                  { value: 'Invalid', label: 'Invalid' },
-                  { value: 'Unsubscribed', label: 'Unsubscribed' },
-                ]}
-                value={filters.emailStatus || 'all'}
-                onChange={(v) => setFilters({ ...filters, emailStatus: v })}
-              />
-            </>
-          )}
-        </>
-      }
+      )}
     >
       {isError && (
         <QueryErrorBanner

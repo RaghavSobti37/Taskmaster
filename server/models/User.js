@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema({
   exp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   dailyStreak: { type: Number, default: 0 },
+  /** Clerk user id (optional SSO) */
+  clerkId: { type: String, unique: true, sparse: true },
   // Google OAuth fields
   googleId: { type: String },
   googleAccessToken: { type: String },
@@ -50,11 +52,10 @@ const userSchema = new mongoose.Schema({
   }],
 });
 
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password') || !this.password) return next();
-  if (/^\$2[aby]\$/.test(this.password)) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('password') || !this.password) return;
+  if (/^\$2[aby]\$/.test(this.password)) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword) {

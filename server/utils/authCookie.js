@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { isVercelAppHost } = require('./vercelOrigins');
 
 /** Current session cookie — sliding inactivity sessions (Jun 2026+). */
 const COOKIE_NAME = 'coreknot_token_v3';
@@ -107,6 +108,9 @@ const isFirstPartyProxiedRequest = (req) => {
 
   const forwardedHost = normalizeHost(readHeader(req, 'x-forwarded-host'));
   if (forwardedHost && hostsMatchFrontend(forwardedHost, allowed)) {
+    return true;
+  }
+  if (forwardedHost && isVercelAppHost(forwardedHost)) {
     return true;
   }
 

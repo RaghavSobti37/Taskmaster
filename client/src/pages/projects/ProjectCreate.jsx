@@ -5,7 +5,7 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase } from 'lucide-react';
-import { Badge, PageHeader, PageContainer, Button } from "../../components/ui";
+import { Badge, PageHeader, PageContainer, Button, EmptyState } from "../../components/ui";
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { useToast } from '../../contexts/ToastContext';
 import WorkspaceSelect from '../../components/forms/WorkspaceSelect';
@@ -242,10 +242,12 @@ const ProjectCreate = () => {
                 </div>
               ))}
               {members.length === 0 && (
-                <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
-                  <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">No Members Added</p>
-                </div>
+                <EmptyState
+                  icon={UserPlus}
+                  title="No Members Added"
+                  variant="dashed"
+                  className="col-span-full opacity-80"
+                />
               )}
             </div>
           </div>

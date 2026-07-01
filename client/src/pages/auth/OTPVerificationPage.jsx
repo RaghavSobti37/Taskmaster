@@ -4,6 +4,7 @@ import { Mail, Phone, ArrowRight, Check, Copy, AlertCircle } from 'lucide-react'
 import axios from 'axios';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
+import { navigateAfterAuth } from '../../utils/authNavigation';
 
 const OTPVerificationPage = () => {
   const [verificationMode, setVerificationMode] = useState('email'); // 'email' or 'phone'
@@ -73,7 +74,7 @@ const OTPVerificationPage = () => {
 
       // Could redirect or store verification state
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        navigateAfterAuth(() => {}, '/dashboard');
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid OTP. Please try again.');

@@ -9,16 +9,16 @@ const PODIUM_BORDER = {
   3: 'tm-leaderboard-podium--bronze',
 };
 
-const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId, lastWeekLabel }) => {
+const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId, lastMonthLabel }) => {
   const showHint = hasLeaderboardRecalcHint(member);
   const podiumClass = PODIUM_BORDER[member.rank] || '';
   const xpToNext = useMemo(() => {
     if (!currentUserId || member._id !== currentUserId || member.rank <= 1) return null;
     const above = entries.find((entry) => entry.rank === member.rank - 1);
     if (!above) return null;
-    const gap = (above.weeklyXp || 0) - (member.weeklyXp || 0);
+    const gap = (above.monthlyXp || 0) - (member.monthlyXp || 0);
     return gap > 0 ? gap : null;
-  }, [entries, currentUserId, member._id, member.rank, member.weeklyXp]);
+  }, [entries, currentUserId, member._id, member.rank, member.monthlyXp]);
 
   const rowInner = (
     <>
@@ -32,12 +32,12 @@ const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId, lastWee
       </div>
       <div className="min-w-0 flex-1 flex items-center gap-2">
         <span className="tm-data-primary text-xs truncate min-w-0">{member.name}</span>
-        <LeaderboardLastWeekRank rank={member.lastWeekRank} weekLabel={lastWeekLabel} />
+        <LeaderboardLastWeekRank rank={member.lastMonthRank} weekLabel={lastMonthLabel} />
         <span className="ml-auto shrink-0 text-[10px] font-bold tabular-nums text-amber-500 whitespace-nowrap">
-          {member.weeklyXp || 0} XP
-          {showHint && member.weeklyXpDelta !== 0 && (
+          {member.monthlyXp || 0} XP
+          {showHint && member.monthlyXpDelta !== 0 && (
             <span className="ml-1 text-[9px] text-sky-400 font-semibold">
-              ({member.weeklyXpDelta > 0 ? '+' : ''}{member.weeklyXpDelta})
+              ({member.monthlyXpDelta > 0 ? '+' : ''}{member.monthlyXpDelta})
             </span>
           )}
           {xpToNext != null && (

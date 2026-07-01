@@ -80,8 +80,17 @@ export default function DataOverviewSection({
   const hiddenStatsCount = showCollapsedMobile && !insightsOpen ? Math.max(0, stats.length - mobileMaxStats) : 0;
   const showCharts = hasCharts && chartsReady && (!showCollapsedMobile || insightsOpen);
 
+  const chartGridCols =
+    charts.length >= 4
+      ? 'lg:grid-cols-4'
+      : charts.length === 3
+        ? 'lg:grid-cols-3'
+        : charts.length === 2
+          ? 'lg:grid-cols-2'
+          : 'grid-cols-1';
+
   return (
-    <section ref={sectionRef} className={`space-y-3 mb-8 ${className}`} aria-label="Data overview">
+    <section ref={sectionRef} className={`data-overview-section space-y-4 ${className}`} aria-label="Data overview">
       {hasStats && (
         <div
           className={`grid w-full gap-3 ${
@@ -110,20 +119,22 @@ export default function DataOverviewSection({
         </div>
       )}
       {showCharts && (
-        <div
-          className={`grid gap-3 ${
-            charts.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
-          }`}
-        >
+        <div className={`grid w-full grid-cols-1 gap-4 ${chartGridCols}`}>
           {charts.map((c) => (
-            <Suspense key={c.id || c.title} fallback={<ChartFallback />}>
-              <DataMiniChart
-                title={c.title}
-                type={c.type || 'bar'}
-                data={c.data}
-                height={c.height}
-              />
-            </Suspense>
+            <div
+              key={c.id || c.title}
+              className="min-w-0 min-h-[168px] overflow-hidden rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]"
+            >
+              <Suspense fallback={<ChartFallback />}>
+                <DataMiniChart
+                  title={c.title}
+                  type={c.type || 'bar'}
+                  data={c.data}
+                  height={c.height}
+                  className="h-full"
+                />
+              </Suspense>
+            </div>
           ))}
         </div>
       )}

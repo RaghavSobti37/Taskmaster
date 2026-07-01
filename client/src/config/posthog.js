@@ -27,8 +27,19 @@ export function getPostHogAppUrl(path = '') {
   return suffix ? `${base.replace(/\/$/, '')}/${suffix}` : base;
 }
 
-export function isPostHogConfigured() {
+/** Browser event capture (needs phc_ token). */
+export function isPostHogCaptureConfigured() {
   return Boolean(getPostHogProjectToken());
+}
+
+/** @deprecated use isPostHogCaptureConfigured */
+export function isPostHogConfigured() {
+  return isPostHogCaptureConfigured();
+}
+
+/** Dashboard deep links work with baked-in CoreKnot project id + app URL defaults. */
+export function isPostHogDashboardReady() {
+  return Boolean(getPostHogAppUrl());
 }
 
 export function openPostHogDashboard(path = '') {

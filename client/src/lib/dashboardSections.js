@@ -55,6 +55,7 @@ export const WIDGET_SECTION_MAP = {
   'last-backup': 'status-strip',
   'render-logs': 'status-strip',
   posthog: 'status-strip',
+  clerk: 'status-strip',
   'leave-alerts': 'status-strip',
   'invoice-alerts': 'status-strip',
   'attendance-overview': 'status-strip',
@@ -102,6 +103,7 @@ export const WIDGET_ROUTES = {
   'last-backup': '/admin/console',
   'render-logs': '/admin/console',
   posthog: 'https://us.posthog.com/project/468825',
+  clerk: 'https://dashboard.clerk.com/last-active',
   'leave-alerts': '/settings?tab=leave',
   'invoice-alerts': '/settings?tab=invoice',
   'attendance-overview': '/attendance/all',
@@ -113,7 +115,8 @@ export const WIDGET_ROUTES = {
 export const DAILY_ACTION_ORDER = [
   'mark-attendance',
   'schedule',
-  'my-tasks',
+  'todos-today',
+  'todos-overdue',
   'review-queue',
 ];
 
@@ -132,6 +135,7 @@ const DEFAULT_VISIBLE = new Set([
   'last-backup',
   'render-logs',
   'posthog',
+  'clerk',
   'pipeline-summary',
   'campaign-metrics',
   'dept-stats',
@@ -273,6 +277,13 @@ export function sortSectionWidgets(widgets) {
   );
 }
 
+/** Shown by MobileAttendanceBar above dashboard header — skip in mobile grid. */
+export const MOBILE_EXTERNAL_WIDGETS = new Set(['mark-attendance']);
+
+export function filterWidgetsForMobileGrid(widgets) {
+  return widgets.filter((el) => !MOBILE_EXTERNAL_WIDGETS.has(el.componentId));
+}
+
 /** Mobile stack: action widgets first, then saved order as tiebreaker. */
 export function sortWidgetsForMobileStack(widgets) {
   const mobileOrderKey = (componentId) => {
@@ -323,7 +334,8 @@ export function getSectionGridStyle(sectionId, { mobile = false } = {}) {
   };
 }
 
-export function getWidgetMinHeightClass(sectionId) {
+export function getWidgetMinHeightClass(sectionId, { mobile = false } = {}) {
+  if (mobile) return 'h-auto';
   if (sectionId === 'status-strip') return 'min-h-[100px] lg:min-h-[120px]';
   if (sectionId === 'analytics') return 'min-h-[120px] lg:min-h-[140px]';
   if (sectionId === 'team-context') return 'min-h-[140px] lg:min-h-[200px]';
@@ -403,36 +415,9 @@ export function repackDashboardElements(elements) {
 
 const TASK_WIDGET_IDS = new Set(['todos-today', 'todos-overdue']);
 
-/** Daily row: collapse today + overdue into my-tasks while keeping saved widths/order */
+/** Daily row: keep today + overdue as separate widgets (settings preview matches dashboard). */
 export function prepareDailyActionRenderList(sectionElements) {
-  const sorted = sortSectionWidgets(sectionElements);
-  const ids = new Set(sectionElements.map((e) => e.componentId));
-  const hasTasks = ids.has('todos-today') || ids.has('todos-overdue');
-  const today = sorted.find((e) => e.componentId === 'todos-today');
-  const overdue = sorted.find((e) => e.componentId === 'todos-overdue');
-  const result = [];
-  let tasksMerged = false;
-
-  for (const el of sorted) {
-    if (TASK_WIDGET_IDS.has(el.componentId)) {
-      if (!tasksMerged && hasTasks) {
-        tasksMerged = true;
-        result.push({
-          componentId: 'my-tasks',
-          section: 'daily-actions',
-          order: Math.min(today?.order ?? overdue?.order ?? 0, overdue?.order ?? today?.order ?? 0),
-          row: Math.min(today?.row ?? overdue?.row ?? 1, overdue?.row ?? today?.row ?? 1),
-          col: today?.col ?? overdue?.col ?? 1,
-          size: today?.size || overdue?.size || '2',
-          visible: true,
-        });
-      }
-      continue;
-    }
-    result.push(el);
-  }
-
-  return sortSectionWidgets(result);
+  return sortSectionWidgets(sectionElements);
 }
 
 /** Daily row: merge today + overdue into one slot; order follows saved grid order */

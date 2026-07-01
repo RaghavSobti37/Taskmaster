@@ -1,4 +1,4 @@
-import { formatDisplayDate } from '../../utils/dateDisplay';
+import { formatWeekdayDate } from '../../utils/dateDisplay';
 import React, { useMemo, useEffect, useState } from 'react';
 import {
   format,
@@ -108,7 +108,7 @@ export default function DailyLogActivityCalendar({
               type="button"
               disabled={isFuture}
               onClick={() => handleDayClick(day)}
-              title={isFuture ? undefined : `${formatDisplayDate(day)}: ${count} logs`}
+              title={isFuture ? undefined : `${formatWeekdayDate(day)}: ${count} logs`}
               className={[
                 'aspect-square rounded-sm text-[10px] font-bold tabular-nums transition-all',
                 'flex items-center justify-center relative overflow-hidden',

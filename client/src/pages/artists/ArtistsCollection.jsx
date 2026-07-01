@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, TrendingUp, RefreshCw, Globe, BarChart3,
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
-import { Badge, DataTable, Button, TabSwitcher, PageSkeleton, Input, ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { Badge, DataTable, Button, PageSkeleton, Input, ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
@@ -39,7 +41,10 @@ export default function ArtistsCollection() {
 
   const handleAddArtistSubmit = async (e) => {
     e.preventDefault();
-    if (!newArtist.name) return alert('Artist Name is required');
+    if (!newArtist.name) {
+      toast.error('Artist name is required');
+      return;
+    }
     try {
       const payload = {
         name: newArtist.name,
@@ -55,7 +60,7 @@ export default function ArtistsCollection() {
       setIsAddModalOpen(false);
       setNewArtist({ name: '', bio: '', website: '', spotifyId: '', youtubeId: '', instaId: '' });
     } catch (err) {
-      alert('Failed to create artist: ' + err.message);
+      toast.error(`Failed to create artist: ${err.message}`);
     }
   };
 
@@ -67,7 +72,7 @@ export default function ArtistsCollection() {
       setSyncingId(null);
     } catch (err) {
       setSyncingId(null);
-      alert(`Sync failed: ${err.response?.data?.message || err.message}`);
+      toast.error(`Sync failed: ${err.response?.data?.message || err.message}`);
     }
   };
 
@@ -80,6 +85,26 @@ export default function ArtistsCollection() {
       return matchesSearch;
     });
   }, [artists, searchTerm, activeTab]);
+
+  const handleClearArtistFilters = useCallback(() => {
+    setActiveTab('all');
+  }, []);
+
+  const artistFilterFields = useMemo(() => [
+    {
+      id: 'sync',
+      label: 'Sync status',
+      type: 'radio',
+      value: activeTab,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'All artists' },
+        { value: 'synced', label: 'Synced' },
+        { value: 'pending', label: 'Needs API key' },
+      ],
+      onChange: setActiveTab,
+    },
+  ], [activeTab]);
 
   const stats = useMemo(() => {
     let totalReach = 0;
@@ -196,24 +221,19 @@ export default function ArtistsCollection() {
           { id: 'youtube', label: 'YouTube Views', value: formatNumberLocal(stats.totalViews), icon: FaYoutube, variant: 'rose' },
         ],
       }}
-      toolbar={(
-        <>
-          <TabSwitcher
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            tabs={[
-              { id: 'all', label: 'All Artists' },
-              { id: 'synced', label: 'Synced' },
-              { id: 'pending', label: 'Needs API Key' },
-            ]}
-          />
-          <SearchInput
-            placeholder="Search artist name or bio..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="!w-56 shrink-0"
-          />
-        </>
+      toolbarFill
+      filterFields={artistFilterFields}
+      filterSheetTitle="Artist filters"
+      mobileFilterCount={countActiveFilters(artistFilterFields)}
+      onActiveFiltersClear={handleClearArtistFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search artist name or bio..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-full"
+        />
       )}
       toolbarActions={(
         <>
@@ -239,12 +259,6 @@ export default function ArtistsCollection() {
           onRowClick={(row) => navigate(`/artists/${row?._id}`)}
           emptyTitle="No artists found in roster"
         />
-
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-            Showing {filteredArtists.length} of {artists.length} artists
-          </p>
-        </div>
       </div>
     </ListPageLayout>
 

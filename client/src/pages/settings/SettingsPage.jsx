@@ -86,7 +86,12 @@ const SettingsPage = () => {
       {/* Mobile tab pills */}
       <div className="lg:hidden shrink-0 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-3">
         <div className="flex items-center gap-2 mb-3">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-[var(--color-bg-secondary)] rounded-lg transition-colors shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] hover:bg-[var(--color-bg-secondary)] rounded-lg transition-colors shrink-0"
+            aria-label="Back"
+          >
             <ArrowLeft size={16} className="text-[var(--color-text-secondary)]" />
           </button>
           <h2 className="text-sm font-black uppercase tracking-widest text-[var(--color-text-primary)]">Settings</h2>

@@ -34,9 +34,17 @@ export const useLogs = (userId, options = {}, enabled = true) => {
   });
 };
 
+/** Always return an array — guards stale cache / partial API payloads. */
+export function normalizeUserDirectory(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.users)) return payload.users;
+  return [];
+}
+
 export const useUserDirectory = (enabled = true) => useQuery({
   queryKey: ['userDirectory'],
-  queryFn: async () => (await axios.get('/api/users/directory?limit=1000')).data.users,
+  queryFn: async () =>
+    normalizeUserDirectory((await axios.get('/api/users/directory?limit=1000')).data),
   enabled,
   staleTime: 1000 * 60 * 30,
   gcTime: 1000 * 60 * 60,

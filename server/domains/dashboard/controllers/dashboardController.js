@@ -1,4 +1,5 @@
 const Task = require('../../tasks/models/Task');
+const TaskActivity = require('../../tasks/models/TaskActivity');
 const TaskAssignment = require('../../tasks/models/TaskAssignment');
 const Lead = require('../../../models/Lead');
 const Log = require('../../../models/Log');
@@ -419,5 +420,63 @@ exports.getAttendanceOverview = async (req, res) => {
   } catch (error) {
     logger.error('dashboardController', 'getAttendanceOverview', { error: error.message });
     res.status(500).json({ error: 'Failed to load attendance overview' });
+  }
+};
+
+/** Daily team task activity (timeline events) for dashboard widget (ops/admin). */
+exports.getTaskActivitySeries = async (req, res) => {
+  try {
+    if (!isAdminUser(req.user) && !isOpsUser(req.user)) {
+      return res.status(403).json({ error: 'Operations or admin access required' });
+    }
+
+    const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
+    const { start, end } = rangeForTimeframe(timeframe);
+    const cacheKey = `dashboard:task-activity:v1:${timeframe}:${getDateKey()}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      res.set('Cache-Control', PRIVATE_CACHE_60);
+      return res.json(cached);
+    }
+
+    const dateKeys = enumerateDateKeysBetween(start, end);
+    const counts = new Map(dateKeys.map((key) => [key, 0]));
+
+    const grouped = await aggregateWithTenant(TaskActivity, [
+      { $match: { createdAt: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt',
+              timezone: 'Asia/Kolkata',
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    for (const row of grouped) {
+      const dayKey = row?._id;
+      if (dayKey && counts.has(dayKey)) {
+        counts.set(dayKey, row.count || 0);
+      }
+    }
+
+    const series = dateKeys.map((key) => ({
+      date: key,
+      label: formatChartDayLabel(key),
+      count: counts.get(key) || 0,
+    }));
+
+    const payload = { timeframe, series };
+    await setCache(cacheKey, payload, 60);
+    res.set('Cache-Control', PRIVATE_CACHE_60);
+    res.json(payload);
+  } catch (error) {
+    logger.error('dashboardController', 'getTaskActivitySeries', { error: error.message });
+    res.status(500).json({ error: 'Failed to load task activity' });
   }
 };

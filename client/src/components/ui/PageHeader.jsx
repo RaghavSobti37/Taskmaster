@@ -18,40 +18,28 @@ const PageHeader = ({
 }) => {
   const staggerRef = useStaggerReveal([title, showTitle]);
 
-  const mergedLeading = backTo || leadingActions ? (
-    <>
-      {backTo && <AdminConsoleBackButton to={backTo} />}
-      {leadingActions}
-    </>
-  ) : null;
-
   return (
     <header
       ref={staggerRef}
-      className="t-stagger flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4"
+      className="t-stagger flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4"
     >
-      <div className="flex items-start gap-3 min-w-0 flex-1">
-        {mergedLeading && (
-          <div className="flex items-center gap-2 shrink-0 self-center">
-            {mergedLeading}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {backTo && <AdminConsoleBackButton to={backTo} />}
+        {leadingActions}
+        {Icon && (
+          <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10">
+            <Icon size={18} strokeWidth={2.5} />
           </div>
         )}
-        <div className="space-y-1 min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           {showTitle && title && (
-            <div className="t-stagger-line flex items-center gap-3 min-w-0">
-              {Icon && (
-                <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
-                  <Icon size={18} strokeWidth={2.5} />
-                </div>
-              )}
-              <h1 className="tm-page-title uppercase min-w-0">{title}</h1>
-            </div>
+            <h1 className="t-stagger-line tm-page-title uppercase min-w-0 m-0">{title}</h1>
           )}
           {children && <div className="t-stagger-line t-stagger-line--2">{children}</div>}
         </div>
       </div>
       {actions && (
-        <div className="t-stagger-line flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start md:self-center">
+        <div className="t-stagger-line flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
           {actions}
         </div>
       )}

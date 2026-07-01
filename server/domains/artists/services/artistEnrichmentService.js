@@ -101,4 +101,5 @@ module.exports = {
   enrichArtistById,
   enrichAllArtists,
   enrichOne,
+  loadConnections,
 };

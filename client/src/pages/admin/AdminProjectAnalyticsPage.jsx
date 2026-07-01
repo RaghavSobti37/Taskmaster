@@ -10,12 +10,13 @@ import {
   ProgressCell,
   formatProjectInr,
 } from '../../components/project/ProjectAnalyticsTableBits';
+import { SpendCategorySummary } from '../../components/project/ProjectFinanceSpendBreakdown';
 import {
   Badge,
   Card,
   DataLoading,
   DataTable,
-  Input,
+  SearchInput,
   PageContainer,
   PageHeader,
   StatCard,
@@ -92,6 +93,7 @@ const AdminProjectAnalyticsPage = () => {
           revenueInRange: stats.revenueInRange || 0,
           remaining: stats.remaining || 0,
           budgetUsedPct: stats.budgetUsedPct ?? null,
+          spendByCategory: stats.spendByCategory || {},
         };
       })
       .filter((row) => {
@@ -191,15 +193,29 @@ const AdminProjectAnalyticsPage = () => {
     {
       key: 'spentInRange',
       header: 'Spent',
+      render: (row) => {
+        const primary = row.spentInRange > 0 ? row.spentInRange : row.spentTotal;
+        const showTotalNote = row.spentTotal > 0 && row.spentInRange !== row.spentTotal;
+        return (
+          <div title={`In range · All-time ${formatProjectInr(row.spentTotal)}`}>
+            <span className="tabular-nums text-xs">{formatProjectInr(primary)}</span>
+            {showTotalNote && (
+              <p className="text-[9px] text-[var(--color-text-muted)]">
+                {row.spentInRange > 0 ? `${formatProjectInr(row.spentTotal)} total` : 'all-time'}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'spendByCategory',
+      header: 'Spend mix',
       render: (row) => (
-        <div title={`In range · All-time ${formatProjectInr(row.spentTotal)}`}>
-          <span className="tabular-nums text-xs">{formatProjectInr(row.spentInRange)}</span>
-          {row.spentTotal !== row.spentInRange && (
-            <p className="text-[9px] text-[var(--color-text-muted)]">
-              {formatProjectInr(row.spentTotal)} total
-            </p>
-          )}
-        </div>
+        <SpendCategorySummary
+          spendByCategory={row.spendByCategory}
+          mode={row.spentInRange > 0 ? 'inRange' : 'total'}
+        />
       ),
     },
     {
@@ -365,12 +381,12 @@ const AdminProjectAnalyticsPage = () => {
                 All projects ({rows.length})
               </p>
               <div className="w-full max-w-xs">
-                <Input
-                  icon={Search}
+                <SearchInput
+                  variant="toolbar"
                   placeholder="Search projects..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="!py-1 !text-[11px]"
+                  className="!w-full"
                 />
               </div>
             </div>

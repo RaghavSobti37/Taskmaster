@@ -1,9 +1,11 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useIsMobile } from '../hooks/useBreakpoint';
 
 export default function GChordHint() {
   const { gChordPending, gChordFlash } = useKeyboardShortcuts();
+  const isMobile = useIsMobile();
 
   const message = gChordFlash || (gChordPending ? 'G — press a letter…' : null);
 
@@ -14,7 +16,11 @@ export default function GChordHint() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
-          className="fixed bottom-20 left-1/2 z-[2100] -translate-x-1/2 pointer-events-none"
+          className={
+            isMobile
+              ? 'fixed bottom-20 left-1/2 z-[2100] -translate-x-1/2 pointer-events-none'
+              : 'fixed bottom-6 right-6 z-[2100] pointer-events-none'
+          }
           role="status"
           aria-live="polite"
         >

@@ -10,6 +10,7 @@ import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
 import { useProjects } from '../hooks/useTaskmasterQueries';
 import { extractEventRange, normalizeMeetingLink } from '../utils/calendarEventTime';
 import { getTodayDateKey, validateCalendarEventRange } from '../utils/dateValidation';
+import { formatDateKeyForDisplay } from '../utils/dateDisplay';
 import { useSystemToast } from '../lib/systemLogBridge';
 
 const CalendarEntryModal = ({
@@ -156,6 +157,13 @@ const CalendarEntryModal = ({
         <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
           <CalIcon size={18} className="text-[var(--color-action-primary)]" />
           {initialData ? 'Edit Event' : 'New Calendar Event'}
+          {startDate ? (
+            <span className="text-[11px] font-semibold text-[var(--color-text-muted)] normal-case tracking-normal">
+              · {startDate !== endDate && endDate
+                ? `${formatDateKeyForDisplay(startDate, { withWeekday: true })} – ${formatDateKeyForDisplay(endDate, { withWeekday: true })}`
+                : formatDateKeyForDisplay(startDate, { withWeekday: true })}
+            </span>
+          ) : null}
         </h3>
         <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
           <X size={20} />
@@ -222,6 +230,11 @@ const CalendarEntryModal = ({
                   className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
                   required
                 />
+                {startDate ? (
+                  <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
+                    {formatDateKeyForDisplay(startDate, { withWeekday: true })}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Start Time</label>
@@ -254,6 +267,11 @@ const CalendarEntryModal = ({
                   className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
                   required
                 />
+                {endDate && endDate !== startDate ? (
+                  <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
+                    {formatDateKeyForDisplay(endDate, { withWeekday: true })}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">End Time</label>

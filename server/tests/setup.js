@@ -1,4 +1,7 @@
 process.env.NODE_ENV = 'test';
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'jest-test-jwt-secret';
+}
 
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -26,6 +29,13 @@ afterAll(async () => {
     await drainMemoryQueue();
   } catch {
     // queueService may not have loaded in this suite
+  }
+
+  try {
+    const { drainGamificationMemoryQueue } = require('../services/backgroundQueue');
+    await drainGamificationMemoryQueue();
+  } catch {
+    // backgroundQueue may not have loaded in this suite
   }
 
   try {
@@ -57,6 +67,13 @@ afterEach(async () => {
     await drainMemoryQueue();
   } catch {
     // queueService may not have loaded in this suite
+  }
+
+  try {
+    const { drainGamificationMemoryQueue } = require('../services/backgroundQueue');
+    await drainGamificationMemoryQueue();
+  } catch {
+    // backgroundQueue may not have loaded in this suite
   }
 
   try {

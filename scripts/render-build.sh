@@ -17,11 +17,11 @@ fi
 case "$TARGET" in
   api)
     # Render Node 22 bundles npm 10; monorepo overrides/lockfile require npm 11 for `npm ci`.
-    npx --yes npm@11.4.2 ci --omit=dev --workspace=coreknot-server
+    npx --yes npm@11.13.0 ci --omit=dev --workspace=coreknot-server
     ;;
   nest)
     # Nest runtime imports ../server/* (legacy bridge) — install server workspace too.
-    NODE_ENV=development npx --yes npm@11.4.2 ci \
+    NODE_ENV=development npx --yes npm@11.13.0 ci \
       --workspace=@coreknot/nestjs-server \
       --workspace=coreknot-server
     npm run build --workspace=@coreknot/nestjs-server

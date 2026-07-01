@@ -15,7 +15,7 @@
     "packages/ui-components"
   ],
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
+    "install:all": "npx --yes npm@11.13.0 ci",
     "preflight": "node server/scripts/preflightEnv.js",
     "audit:exposure": "node scripts/checkCommittedExposure.js",
     "audit:deadcode": "node scripts/auditDeadCode.js",
@@ -55,6 +55,9 @@
     "render:sync-build:deploy": "node scripts/syncRenderBuildCommands.js --deploy --clear-cache",
     "migration:readiness": "node scripts/migrationReadiness.js",
     "staging:readiness": "node scripts/stagingReadiness.js",
+    "production:deploy": "node scripts/deploy-production-render.js --wait",
+    "production:setup": "node scripts/setup-production-full.js --all",
+    "production:dns": "node scripts/provision-subdomain-dns.cjs",
     "staging:deploy": "node scripts/deploy-staging-render.js --wait",
     "staging:deploy:loop": "node scripts/deploy-staging-render.js --loop --clear-cache",
     "staging:create": "node scripts/create-staging-render-services.js",
@@ -68,16 +71,18 @@
     "artist-crm:bulk:prod": "node server/scripts/bulkPushArtistCrmToProd.js --prod --fix-index"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "concurrently": "^9.1.2",
-    "dependency-cruiser": "^16.10.4",
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^10.0.3",
+    "dependency-cruiser": "^18.0.0",
     "husky": "^9.1.7",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"
   },
   "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "form-data": "^4.0.4",
     "minimist": "^1.2.8",
     "shell-quote": "^1.8.3",
@@ -160,5 +165,9 @@
     "@opentelemetry/exporter-metrics-otlp-http": "^0.219.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
     "@opentelemetry/host-metrics": "^0.38.1"
+  },
+  "dependencies": {
+    "mongoose": "^9.7.3",
+    "node-fetch": "^3.3.2"
   }
 }

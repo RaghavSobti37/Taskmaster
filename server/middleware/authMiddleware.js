@@ -4,6 +4,11 @@ const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
 const { loadAuthUser } = require('../utils/authUserLookup');
 const { idFilter } = require('../utils/mongoId');
+const {
+  isClerkConfigured,
+  verifyClerkSessionToken,
+  resolveUserFromClerkProfile,
+} = require('../utils/clerkAuth');
 
 const authContext = (req, user) => ({
   tenantId: user.tenantId,
@@ -24,6 +29,20 @@ const { clearAuthCookie } = require('../utils/authCookie');
 
 const populateDepartment = (query) =>
   query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
+
+const isRegistrationAllowedForClerk = (emailLower) => {
+  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
+  if (process.env.REGISTRATION_DISABLED === 'true' && process.env.NODE_ENV === 'production') {
+    return { ok: false, error: 'Registration is disabled. Contact an administrator.' };
+  }
+  if (process.env.NODE_ENV !== 'production') return { ok: true };
+  const domain = emailLower.split('@')[1] || '';
+  if (ALLOWED_DOMAIN && domain !== ALLOWED_DOMAIN && emailLower !== ADMIN_EMAIL) {
+    return { ok: false, error: 'Registration restricted to authorized email domain' };
+  }
+  return { ok: true };
+};
 
 const lastOnlineWrites = new Map();
 const LAST_ONLINE_INTERVAL_MS = 5 * 60 * 1000;
@@ -48,12 +67,13 @@ const isDebugBypassEnabled = () => {
     && String(process.env.DEBUG_BYPASS || '').trim() === 'true';
 };
 
-const protect = async (req, res, next) => {
+/**
+ * Resolve CoreKnot user from cookie/JWT without writing HTTP responses.
+ * @returns {Promise<{ user: object|null, suspended?: boolean, bypassUnavailable?: boolean }>}
+ */
+const resolveRequestUser = async (req) => {
   const token = getTokenFromRequest(req);
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authorized, no token' });
-  }
+  if (!token) return { user: null };
 
   try {
     const isBypassEnabled = isDebugBypassEnabled();
@@ -64,48 +84,82 @@ const protect = async (req, res, next) => {
       const adminUser = adminDept
         ? await populateDepartment(User.findOne({ departmentId: adminDept._id }).select('-password'))
         : null;
-      if (adminUser) {
-        req.user = adminUser;
-        req.tenantId = adminUser.tenantId;
-        return runWithContext(authContext(req, adminUser), next);
+      if (adminUser) return { user: adminUser };
+      return { user: null, bypassUnavailable: true };
+    }
+
+    if (isClerkConfigured()) {
+      const clerkProfile = await verifyClerkSessionToken(token);
+      if (clerkProfile) {
+        const dbUser = await resolveUserFromClerkProfile(clerkProfile, {
+          isRegistrationAllowed: isRegistrationAllowedForClerk,
+        });
+        if (dbUser?.suspended) return { user: null, suspended: true };
+        if (dbUser) {
+          touchLastOnline(dbUser._id);
+          return { user: dbUser };
+        }
       }
-      return res.status(503).json({ error: 'No admin user available for bypass' });
     }
 
     const decoded = verifySessionToken(token);
-    if (decoded.purpose) {
-      return res.status(401).json({ error: 'Not authorized, token failed' });
-    }
-    const { isTokenRevoked } = require('../utils/tokenRevocation');
-    if (await isTokenRevoked(decoded)) {
-      return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
-    }
-    if (isAbsoluteSessionExpired(decoded)) {
-      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-    }
+    if (decoded.purpose) return { user: null };
 
-    req.user = await loadAuthUser(decoded.id);
+    const { isTokenRevoked } = require('../utils/tokenRevocation');
+    if (await isTokenRevoked(decoded)) return { user: null };
+    if (isAbsoluteSessionExpired(decoded)) return { user: null };
+
+    const user = await loadAuthUser(decoded.id);
     const isPageViewTelemetry = String(req.headers['x-telemetry'] || '').toLowerCase() === 'page-view';
-    if (req.user && decoded.jti && !isPageViewTelemetry) {
+    if (user && decoded.jti && !isPageViewTelemetry) {
       const { touchSession } = require('../utils/sessionRegistry');
       await touchSession(decoded.id, decoded.jti, req);
     }
 
-    if (!req.user) {
-      return res.status(401).json({ error: 'User no longer exists' });
-    }
-    if (req.user.suspended) {
-      clearAuthCookie(res, req);
-      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
-    }
+    if (!user) return { user: null };
+    if (user.suspended) return { user: null, suspended: true };
 
-    touchLastOnline(req.user._id);
-
-    req.tenantId = req.user.tenantId;
-    return runWithContext(authContext(req, req.user), next);
-  } catch (error) {
-    res.status(401).json({ error: 'Not authorized, token failed' });
+    touchLastOnline(user._id);
+    return { user };
+  } catch {
+    return { user: null };
   }
+};
+
+/** Sets req.user when a valid session exists; never 401 for missing/invalid session. */
+const optionalAuthenticate = async (req, res, next) => {
+  const { user, suspended } = await resolveRequestUser(req);
+  if (suspended) {
+    req.sessionSuspended = true;
+    return next();
+  }
+  if (!user) return next();
+  req.user = user;
+  req.tenantId = user.tenantId;
+  return runWithContext(authContext(req, user), next);
+};
+
+const protect = async (req, res, next) => {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Not authorized, no token' });
+  }
+
+  const { user, suspended, bypassUnavailable } = await resolveRequestUser(req);
+  if (bypassUnavailable) {
+    return res.status(503).json({ error: 'No admin user available for bypass' });
+  }
+  if (suspended) {
+    clearAuthCookie(res, req);
+    return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
+  }
+  if (!user) {
+    return res.status(401).json({ error: 'Not authorized, token failed' });
+  }
+
+  req.user = user;
+  req.tenantId = user.tenantId;
+  return runWithContext(authContext(req, user), next);
 };
 
 const admin = (req, res, next) => {
@@ -233,6 +287,8 @@ const orgAccountsAccess = (req, res, next) => {
 
 module.exports = {
   protect,
+  optionalAuthenticate,
+  resolveRequestUser,
   isDebugBypassEnabled,
   admin,
   opsOrAdmin,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Building2, Plus, Contact, Phone, Mail, Database, Shield, RefreshCw } from 'lucide-react';
+import { Building2, Plus, Contact, Phone, Mail, Wrench } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { Button, Input, Badge, TabSwitcher, SearchInput, DataTable, PageLoadGuard, PageSkeleton, ListPageLayout } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
@@ -9,6 +9,14 @@ import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
+import EquipmentMobileRow, { equipmentStatusVariant } from '../../components/office/EquipmentMobileRow';
+import ContactMobileRow from '../../components/office/ContactMobileRow';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficePrimaryCell,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 
 const OfficeAssetsPage = () => {
   const { confirm } = useConfirm();
@@ -98,12 +106,6 @@ const OfficeAssetsPage = () => {
     }
   });
 
-  const handleAssetSubmit = (e) => {
-    if (e) e.preventDefault();
-    if (editingAsset) return;
-    saveAssetMutation.mutate(assetFormData);
-  };
-
   const handleContactSubmit = (e) => {
     if (e) e.preventDefault();
     if (editingContact) return;
@@ -145,14 +147,6 @@ const OfficeAssetsPage = () => {
     enabled: false,
     isSaving: saveContactMutation.isPending,
   });
-
-  const getStatusBadgeVariant = (status) => {
-    switch (status) {
-      case 'Available': return 'success';
-      case 'In Use': return 'warning';
-      default: return 'danger';
-    }
-  };
 
   const filteredAssets = assets.filter(a => 
     a.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -197,25 +191,104 @@ const OfficeAssetsPage = () => {
 
   const assetColumns = useMemo(
     () => [
-      { header: 'Asset Name', sortKey: 'name', render: (a) => <span className="text-xs font-black uppercase">{a.name}</span> },
-      { header: 'Category', sortKey: 'category', render: (a) => <span className="text-[10px] font-black uppercase">{a.category}</span> },
+      {
+        header: 'Equipment',
+        sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
+        render: (a) => (
+          <OfficePrimaryCell title={a.name} subtitle={a.description || undefined} />
+        ),
+      },
+      {
+        header: 'Category',
+        sortKey: 'category',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (a) => (
+          <Badge variant="info" className="max-w-full truncate" title={a.category}>
+            {a.category}
+          </Badge>
+        ),
+      },
       {
         header: 'Status',
         sortKey: 'status',
-        render: (a) => <Badge variant={getStatusBadgeVariant(a.status)}>{a.status}</Badge>,
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (a) => (
+          <Badge variant={equipmentStatusVariant(a.status)} className="max-w-full truncate" title={a.status}>
+            {a.status}
+          </Badge>
+        ),
       },
-      { header: 'Currently With', sortKey: 'currentlyWith', render: (a) => <span className="text-xs font-bold text-[var(--color-action-primary)]">{a.currentlyWith}</span> },
-      { header: 'Serial Number', sortKey: 'serialNumber', render: (a) => <span className="text-[10px] font-mono uppercase">{a.serialNumber || 'N/A'}</span> },
+      {
+        header: 'Assigned To',
+        sortKey: 'currentlyWith',
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (a) => <OfficeMetaCell value={a.currentlyWith} />,
+      },
+      {
+        header: 'Serial Number',
+        sortKey: 'serialNumber',
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (a) => (
+          <OfficeMetaCell
+            value={a.serialNumber}
+            className="tabular-nums text-[var(--color-text-muted)] font-normal"
+          />
+        ),
+      },
     ],
     []
   );
 
   const contactColumns = useMemo(
     () => [
-      { header: 'Name', sortKey: 'name', render: (c) => <span className="text-xs font-black uppercase">{c.name}</span> },
-      { header: 'Role / Position', sortKey: 'role', render: (c) => <span className="text-[10px] font-black uppercase text-[var(--color-action-primary)]">{c.role}</span> },
-      { header: 'Phone', sortKey: 'phone', render: (c) => <span className="text-[10px] font-bold">{c.phone}</span> },
-      { header: 'Email', sortKey: 'email', render: (c) => <span className="text-[10px] text-[var(--color-text-muted)]">{c.email || 'N/A'}</span> },
+      {
+        header: 'Contact',
+        sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
+        render: (c) => (
+          <span
+            className="block min-w-0 truncate office-hub-cell-primary"
+            title={[c.name, c.notes].filter(Boolean).join(' — ')}
+          >
+            <span className="tm-data-primary">{c.name}</span>
+            {c.notes ? (
+              <span className="office-hub-cell-secondary font-medium"> · {c.notes}</span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        header: 'Role',
+        sortKey: 'role',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (c) => (
+          <Badge variant="info" className="max-w-full truncate" title={c.role}>
+            {c.role}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Phone',
+        sortKey: 'phone',
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (c) => <OfficeMetaCell value={c.phone} />,
+      },
+      {
+        header: 'Email',
+        sortKey: 'email',
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (c) => <OfficeMetaCell value={c.email} className="text-[var(--color-text-muted)] font-normal" />,
+      },
     ],
     []
   );
@@ -277,14 +350,16 @@ const OfficeAssetsPage = () => {
           ? [{ id: 'assetStatus', title: 'Asset status', type: 'donut', data: assetStatusChart }]
           : [],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder={activeTab === 'assets' ? 'Search assets or users...' : 'Search contacts by name or role...'}
+          variant="toolbar"
+          placeholder={activeTab === 'assets' ? 'Search asset name, assignee…' : 'Search contact name, role…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <>
           <TabSwitcher
@@ -314,7 +389,11 @@ const OfficeAssetsPage = () => {
           onRowClick={openAssetRow}
           getRowId={(a) => a._id}
           isLoading={assetsLoading}
-          emptyTitle="No assets found"
+          mobileRowRender={(row) => <EquipmentMobileRow asset={row} />}
+          mobileRowClassName="!py-2.5 !px-3"
+          emptyTitle="No equipment found"
+          emptyDescription="Try a different search or add a new asset."
+          {...OFFICE_TABLE_PROPS}
         />
       ) : (
         <DataTable
@@ -323,17 +402,20 @@ const OfficeAssetsPage = () => {
           onRowClick={openContactRow}
           getRowId={(c) => c._id}
           isLoading={contactsLoading}
+          mobileRowRender={(row) => <ContactMobileRow contact={row} />}
+          mobileRowClassName="!py-2.5 !px-3"
           emptyTitle="No contacts found"
+          emptyDescription="Try a different search or add a new contact."
+          {...OFFICE_TABLE_PROPS}
         />
       )}
 
-      {/* Immersive Asset Workspace Drawer Modal (70-30 split layout) */}
       <NexusModal
         isOpen={isAssetModalOpen}
         onClose={() => setIsAssetModalOpen(false)}
-        title={editingAsset ? `Asset Workspace: ${assetFormData.name}` : "Create New Asset"}
+        title={editingAsset ? 'Edit Equipment' : 'Add Equipment'}
         showFooter={false}
-        width="max-w-4xl"
+        width="max-w-3xl"
         footer={
           editingAsset ? (
             <ModalFooter>
@@ -359,153 +441,126 @@ const OfficeAssetsPage = () => {
           ) : null
         }
       >
-        <form onSubmit={handleAssetSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
-          {/* Left 70% Primary Data Fields */}
-          <div className="md:col-span-7 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Primary Fields</h3>
-            
-            <Input 
-              label="Asset Name" 
-              value={assetFormData.name} 
-              onChange={e => setAssetFormData({...assetFormData, name: e.target.value})} 
-              icon={Building2}
-              required 
-            />
-
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingAsset) saveAssetMutation.mutate(assetFormData);
+          }}
+        >
+          <Input
+            label="Name"
+            value={assetFormData.name}
+            onChange={(e) => setAssetFormData({ ...assetFormData, name: e.target.value })}
+            icon={Wrench}
+            required
+          />
+          <Input
+            label="Description"
+            value={assetFormData.description}
+            onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Description</label>
-              <textarea 
-                value={assetFormData.description} 
-                onChange={e => setAssetFormData({...assetFormData, description: e.target.value})} 
-                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] transition-colors min-h-[100px]" 
-                placeholder="Describe the asset..."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Category</label>
-                <select 
-                  value={assetFormData.category} 
-                  onChange={e => setAssetFormData({...assetFormData, category: e.target.value})} 
-                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)]"
-                >
-                  <option>Hardware</option>
-                  <option>Furniture</option>
-                  <option>Software</option>
-                  <option>Misc</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Status</label>
-                <select 
-                  value={assetFormData.status} 
-                  onChange={e => setAssetFormData({...assetFormData, status: e.target.value})} 
-                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)]"
-                >
-                  <option>Available</option>
-                  <option>In Use</option>
-                  <option>Maintenance</option>
-                  <option>Lost</option>
-                  <option>Damaged</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Currently With</label>
-              <select 
-                value={assetFormData.currentlyWith} 
-                onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} 
-                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)]"
+              <label className="block tm-section-label mb-2">Category</label>
+              <select
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
+                value={assetFormData.category}
+                onChange={(e) => setAssetFormData({ ...assetFormData, category: e.target.value })}
               >
-                <option value="Office">Office (In Storage / Available)</option>
-                {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.departmentId?.name || 'Unassigned'})</option>)}
+                <option>Hardware</option>
+                <option>Furniture</option>
+                <option>Software</option>
+                <option>Misc</option>
+              </select>
+            </div>
+            <div>
+              <label className="block tm-section-label mb-2">Status</label>
+              <select
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
+                value={assetFormData.status}
+                onChange={(e) => setAssetFormData({ ...assetFormData, status: e.target.value })}
+              >
+                <option>Available</option>
+                <option>In Use</option>
+                <option>Maintenance</option>
+                <option>Lost</option>
+                <option>Damaged</option>
               </select>
             </div>
           </div>
-
-          {/* Right 30% Metadata & Action Panel */}
-          <div className="md:col-span-3 border-t md:border-t-0 md:border-l border-[var(--color-bg-border)] pt-6 md:pt-0 md:pl-6 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Metadata & Actions</h3>
-            
-            <Input 
-              label="Serial Number (S/N)" 
-              placeholder="e.g. SN-12345" 
-              value={assetFormData.serialNumber || ''} 
-              onChange={e => setAssetFormData({...assetFormData, serialNumber: e.target.value})} 
-              icon={Database}
+          <div>
+            <label className="block tm-section-label mb-2">Currently With</label>
+            <select
+              className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
+              value={assetFormData.currentlyWith}
+              onChange={(e) => setAssetFormData({ ...assetFormData, currentlyWith: e.target.value })}
+            >
+              <option value="Office">Office</option>
+              {users.map((u) => (
+                <option key={u._id} value={u.name}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Serial Number"
+            placeholder="e.g. SN-12345"
+            value={assetFormData.serialNumber || ''}
+            onChange={(e) => setAssetFormData({ ...assetFormData, serialNumber: e.target.value })}
+          />
+          <Input
+            label="Purchase Date"
+            type="date"
+            value={assetFormData.purchaseDate || ''}
+            onChange={(e) => setAssetFormData({ ...assetFormData, purchaseDate: e.target.value })}
+          />
+          {editingAsset && (
+            <Input
+              label="Update Notes"
+              multiline
+              rows={3}
+              autoGrow
+              placeholder="e.g., Handed to John"
+              value={assetFormData.updateNotes || ''}
+              onChange={(e) => setAssetFormData({ ...assetFormData, updateNotes: e.target.value })}
             />
-
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Purchase Date</label>
-              <input 
-                type="date" 
-                value={assetFormData.purchaseDate || ''} 
-                onChange={e => setAssetFormData({...assetFormData, purchaseDate: e.target.value})} 
-                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)]" 
-                placeholder="Purchase Date"
-              />
-            </div>
-
-            {editingAsset && (
-              <Input 
-                label="Update Remark / Notes" 
-                multiline
-                rows={3}
-                autoGrow
-                placeholder="e.g., Handed to John" 
-                value={assetFormData.updateNotes || ''} 
-                onChange={e => setAssetFormData({...assetFormData, updateNotes: e.target.value})} 
-              />
-            )}
-
-            <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
-              {!editingAsset && (
-                <Button type="submit" className="w-full" disabled={saveAssetMutation.isPending}>
-                  {saveAssetMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Add Asset'}
-                </Button>
-              )}
-              {editingAsset && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="w-full !text-rose-500 hover:!bg-rose-500/10" 
-                  onClick={async () => {
-                    const ok = await confirm({
-                      title: 'Delete asset?',
-                      message: 'Delete asset permanently?',
-                      confirmLabel: 'Delete',
-                      type: 'danger',
-                    });
-                    if (ok) deleteAssetMutation.mutate(editingAsset._id);
-                  }}
-                >
-                  Delete Asset
-                </Button>
-              )}
-              
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="w-full text-[var(--color-text-secondary)]" 
-                onClick={() => setIsAssetModalOpen(false)}
-              >
-                Close (Esc)
+          )}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {!editingAsset && (
+              <Button type="submit" disabled={saveAssetMutation.isPending}>
+                {saveAssetMutation.isPending ? 'Saving...' : 'Add Asset'}
               </Button>
-            </div>
+            )}
+            {editingAsset && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="!text-rose-500 hover:!bg-rose-500/10"
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Delete asset?',
+                    message: 'Delete asset permanently?',
+                    confirmLabel: 'Delete',
+                    type: 'danger',
+                  });
+                  if (ok) deleteAssetMutation.mutate(editingAsset._id);
+                }}
+              >
+                Delete Asset
+              </Button>
+            )}
           </div>
         </form>
       </NexusModal>
 
-      {/* Immersive Contact Workspace Drawer Modal (70-30 split layout) */}
       <NexusModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
-        title={editingContact ? `Contact Workspace: ${contactFormData.name}` : "Create New Contact"}
+        title={editingContact ? 'Edit Contact' : 'Add Contact'}
         showFooter={false}
-        width="max-w-4xl"
+        width="max-w-2xl"
         footer={
           editingContact ? (
             <ModalFooter>
@@ -531,92 +586,72 @@ const OfficeAssetsPage = () => {
           ) : null
         }
       >
-        <form onSubmit={handleContactSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
-          {/* Left 70% Primary Data Fields */}
-          <div className="md:col-span-7 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Primary Fields</h3>
-            
-            <Input 
-              label="Contact Name" 
-              value={contactFormData.name} 
-              onChange={e => setContactFormData({...contactFormData, name: e.target.value})} 
-              icon={Contact}
-              required 
-            />
-
-            <Input 
-              label="Role / Position" 
-              value={contactFormData.role} 
-              onChange={e => setContactFormData({...contactFormData, role: e.target.value})} 
-              icon={Shield}
-              required 
-            />
-
-            <div>
-              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Internal Remarks / Notes</label>
-              <textarea 
-                value={contactFormData.notes} 
-                onChange={e => setContactFormData({...contactFormData, notes: e.target.value})} 
-                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] transition-colors min-h-[120px] resize-y" 
-                placeholder="Add special notes..."
-              />
-            </div>
-          </div>
-
-          {/* Right 30% Metadata & Action Panel */}
-          <div className="md:col-span-3 border-t md:border-t-0 md:border-l border-[var(--color-bg-border)] pt-6 md:pt-0 md:pl-6 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Details & Actions</h3>
-            
-            <Input 
-              label="Phone Number" 
-              value={contactFormData.phone} 
-              onChange={e => setContactFormData({...contactFormData, phone: e.target.value})} 
-              icon={Phone}
-              required 
-            />
-
-            <Input 
-              label="Email Address" 
-              type="email"
-              value={contactFormData.email || ''} 
-              onChange={e => setContactFormData({...contactFormData, email: e.target.value})} 
-              icon={Mail}
-            />
-
-            <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
-              {!editingContact && (
-                <Button type="submit" className="w-full" disabled={saveContactMutation.isPending}>
-                  {saveContactMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Add Contact'}
-                </Button>
-              )}
-              {editingContact && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="w-full !text-rose-500 hover:!bg-rose-500/10" 
-                  onClick={async () => {
-                    const ok = await confirm({
-                      title: 'Delete contact?',
-                      message: 'Delete contact permanently?',
-                      confirmLabel: 'Delete',
-                      type: 'danger',
-                    });
-                    if (ok) deleteContactMutation.mutate(editingContact._id);
-                  }}
-                >
-                  Delete Contact
-                </Button>
-              )}
-              
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="w-full text-[var(--color-text-secondary)]" 
-                onClick={() => setIsContactModalOpen(false)}
-              >
-                Close (Esc)
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingContact) saveContactMutation.mutate(contactFormData);
+          }}
+        >
+          <Input
+            label="Name"
+            value={contactFormData.name}
+            onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })}
+            icon={Contact}
+            required
+          />
+          <Input
+            label="Role"
+            value={contactFormData.role}
+            onChange={(e) => setContactFormData({ ...contactFormData, role: e.target.value })}
+            required
+          />
+          <Input
+            label="Phone"
+            value={contactFormData.phone}
+            onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+            icon={Phone}
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={contactFormData.email || ''}
+            onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+            icon={Mail}
+          />
+          <Input
+            label="Notes"
+            multiline
+            rows={3}
+            autoGrow
+            value={contactFormData.notes || ''}
+            onChange={(e) => setContactFormData({ ...contactFormData, notes: e.target.value })}
+          />
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {!editingContact && (
+              <Button type="submit" disabled={saveContactMutation.isPending}>
+                {saveContactMutation.isPending ? 'Saving...' : 'Add Contact'}
               </Button>
-            </div>
+            )}
+            {editingContact && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="!text-rose-500 hover:!bg-rose-500/10"
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Delete contact?',
+                    message: 'Delete contact permanently?',
+                    confirmLabel: 'Delete',
+                    type: 'danger',
+                  });
+                  if (ok) deleteContactMutation.mutate(editingContact._id);
+                }}
+              >
+                Delete Contact
+              </Button>
+            )}
           </div>
         </form>
       </NexusModal>

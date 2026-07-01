@@ -178,7 +178,13 @@ const deleteOrgRole = async (id) => {
 
   if (SYSTEM_SLUGS.has(dept.slug)) {
     const err = new Error('Cannot delete a system role');
-    err.status = 400;
+    err.status = 403;
+    throw err;
+  }
+
+  if (departmentHasAdminAccess(dept)) {
+    const err = new Error('Cannot delete an admin role');
+    err.status = 403;
     throw err;
   }
 
@@ -187,18 +193,6 @@ const deleteOrgRole = async (id) => {
     const err = new Error(`Cannot delete role with ${memberCount} assigned user(s)`);
     err.status = 400;
     throw err;
-  }
-
-  if (departmentHasAdminAccess(dept)) {
-    const adminDepts = await Department.find({}).lean();
-    const otherAdminCount = adminDepts.filter(
-      (d) => d._id.toString() !== dept._id.toString() && departmentHasAdminAccess(d)
-    ).length;
-    if (otherAdminCount === 0) {
-      const err = new Error('Cannot delete the last admin role');
-      err.status = 400;
-      throw err;
-    }
   }
 
   await dept.deleteOne();

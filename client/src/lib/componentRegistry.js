@@ -59,6 +59,15 @@ export const COMPONENT_REGISTRY = {
     mobileTier: 'analytics',
     mobileOrder: 34,
   },
+  clerk: {
+    label: 'Clerk',
+    description: 'Open Clerk Dashboard — users, sessions, JWT templates, webhooks',
+    access: ['admin'],
+    defaultSize: '1',
+    icon: '🔐',
+    mobileTier: 'analytics',
+    mobileOrder: 35,
+  },
   // ── Artist Management ──
   'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨', mobileTier: 'action', mobileOrder: 8 },
 };

@@ -11,6 +11,7 @@ import {
   FinanceSizeCell,
   FinanceUploaderCell,
 } from './FinanceDocumentRow';
+import { FINANCE_TABLE_COL } from './financeHubTableClasses';
 
 export function buildProjectFinanceTableColumns({
   onViewDoc,
@@ -91,6 +92,8 @@ export function buildFinanceTableColumns({
       key: 'title',
       sortKey: 'title',
       header: 'Name',
+      headerClassName: FINANCE_TABLE_COL.name,
+      cellClassName: FINANCE_TABLE_COL.name,
       mobilePrimary: true,
       render: (row) => {
         if (row._isDivider) return <FinanceDividerLabel label={row.label} />;
@@ -101,6 +104,8 @@ export function buildFinanceTableColumns({
     {
       key: 'referenceNumber',
       header: 'Ref #',
+      headerClassName: FINANCE_TABLE_COL.ref,
+      cellClassName: FINANCE_TABLE_COL.ref,
       mobileHidden: true,
       render: (row) => (
         row._isDivider || row.isFolder ? null : (
@@ -113,6 +118,8 @@ export function buildFinanceTableColumns({
     {
       key: 'project',
       header: 'Project',
+      headerClassName: FINANCE_TABLE_COL.project,
+      cellClassName: FINANCE_TABLE_COL.project,
       mobileHidden: true,
       render: (row) => (row._isDivider ? null : <FinanceProjectCell doc={row} />),
     },
@@ -120,6 +127,8 @@ export function buildFinanceTableColumns({
       key: 'category',
       sortKey: 'category',
       header: 'Category',
+      headerClassName: FINANCE_TABLE_COL.category,
+      cellClassName: FINANCE_TABLE_COL.category,
       render: (row) => (row._isDivider ? null : <FinanceCategoryBadge category={row.category} isFolder={row.isFolder} />),
     },
     {
@@ -127,12 +136,16 @@ export function buildFinanceTableColumns({
       sortKey: 'fileSize',
       header: 'Size',
       numeric: true,
+      headerClassName: FINANCE_TABLE_COL.size,
+      cellClassName: FINANCE_TABLE_COL.size,
       mobileHidden: true,
       render: (row) => <FinanceSizeCell doc={row} />,
     },
     {
       key: 'uploadedBy',
       header: 'Uploaded By',
+      headerClassName: FINANCE_TABLE_COL.uploader,
+      cellClassName: FINANCE_TABLE_COL.uploader,
       mobileHidden: true,
       render: (row) => <FinanceUploaderCell doc={row} />,
     },
@@ -140,6 +153,8 @@ export function buildFinanceTableColumns({
       key: 'docDate',
       sortKey: 'docDate',
       header: 'Payment Date',
+      headerClassName: FINANCE_TABLE_COL.date,
+      cellClassName: FINANCE_TABLE_COL.date,
       mobileHidden: true,
       render: (row) => <FinanceDocDateCell doc={row} />,
     },
@@ -147,6 +162,8 @@ export function buildFinanceTableColumns({
       key: 'actions',
       header: '',
       sortable: false,
+      headerClassName: FINANCE_TABLE_COL.actions,
+      cellClassName: FINANCE_TABLE_COL.actions,
       mobileAction: true,
       align: 'right',
       render: (row) => (

@@ -198,7 +198,7 @@ exports.approve = async (req, res) => {
     if (template.status !== 'pending_approval') {
       return res.status(400).json({ error: 'Template is not pending approval' });
     }
-    const { content, subject } = req.body;
+    const { content, subject } = req.body || {};
     const isRawHtml = template.format === 'rawHtml';
     let approvedBody;
     if (content !== undefined) {

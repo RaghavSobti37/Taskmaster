@@ -1,12 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StickyNote, Clock, Lock, Users } from 'lucide-react';
-import { PageContainer, PageHeader, DataListRow, PageSkeleton, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import {
+  ListPageLayout,
+  DataListRow,
+  PageSkeleton,
+  QueryErrorBanner,
+  getQueryErrorMessage,
+  EmptyState,
+  SearchInput,
+} from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import NoteComposer from '../../components/notes/NoteComposer';
 import { useUserNotes } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllNoteDrafts, isNoteDraftStale } from '../../utils/noteDraftStorage';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const stripHtml = (html) => (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -23,10 +33,35 @@ const visibilityLabel = (note) => {
   return { icon: Users, text: 'Shared' };
 };
 
+const VISIBILITY_OPTIONS = [
+  { value: 'all', label: 'All notes' },
+  { value: 'private', label: 'Private only' },
+  { value: 'shared', label: 'Shared only' },
+];
+
+function noteMatchesVisibility(note, visibilityFilter) {
+  if (visibilityFilter === 'all') return true;
+  const isPrivate = note.visibility === 'private' || !note.shareWithTeam;
+  return visibilityFilter === 'private' ? isPrivate : !isPrivate;
+}
+
+function noteMatchesSearch(note, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  const title = (note.title || '').toLowerCase();
+  const body = stripHtml(note.content).toLowerCase();
+  const project = (note.projectId?.name || '').toLowerCase();
+  const event = (note.calendarEventId?.title || '').toLowerCase();
+  return title.includes(q) || body.includes(q) || project.includes(q) || event.includes(q);
+}
+
 export default function NotesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: notes = [], isLoading, isError, error, refetch } = useUserNotes();
+  const [search, setSearch] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
+  const debouncedSearch = useDebounce(search, 200);
 
   const noteById = useMemo(
     () => new Map(notes.map((note) => [String(note._id), note])),
@@ -43,13 +78,48 @@ export default function NotesPage() {
     [notes]
   );
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Notes"
-        subtitle="Write up top — saved notes below"
-      />
+  const filteredNotes = useMemo(
+    () => sortedNotes.filter(
+      (note) => noteMatchesSearch(note, debouncedSearch.trim())
+        && noteMatchesVisibility(note, visibilityFilter)
+    ),
+    [sortedNotes, debouncedSearch, visibilityFilter]
+  );
 
+  const handleClearNoteFilters = useCallback(() => {
+    setVisibilityFilter('all');
+  }, []);
+
+  const notesFilterFields = useMemo(() => [
+    {
+      id: 'visibility',
+      label: 'Visibility',
+      type: 'radio',
+      value: visibilityFilter,
+      defaultValue: 'all',
+      options: VISIBILITY_OPTIONS,
+      onChange: setVisibilityFilter,
+    },
+  ], [visibilityFilter]);
+
+  return (
+    <ListPageLayout
+      containerClassName="!py-4"
+      toolbarFill
+      filterFields={notesFilterFields}
+      filterSheetTitle="Note filters"
+      mobileFilterCount={countActiveFilters(notesFilterFields)}
+      onActiveFiltersClear={handleClearNoteFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search title, body, project…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
+    >
       <NoteComposer className="mb-8" />
 
       {isError && (
@@ -93,17 +163,20 @@ export default function NotesPage() {
         <h2 className="tm-section-label mb-2">Saved notes</h2>
         {isLoading ? (
           <PageSkeleton />
-        ) : sortedNotes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center rounded-[var(--radius-atomic)] border border-dashed border-[var(--color-bg-border)]">
-            <StickyNote size={32} className="text-[var(--color-text-muted)] mb-3" />
-            <p className="text-sm font-semibold text-[var(--color-text-primary)]">No saved notes yet</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-xs">
-              Use the editor above — your work is saved when you click Save.
-            </p>
-          </div>
+        ) : filteredNotes.length === 0 ? (
+          <EmptyState
+            icon={StickyNote}
+            title={notes.length === 0 ? 'No saved notes yet' : 'No notes match filters'}
+            description={
+              notes.length === 0
+                ? 'Use the editor above — your work is saved when you click Save.'
+                : 'Try clearing search or visibility filter.'
+            }
+            variant="dashed"
+          />
         ) : (
           <div className="rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] overflow-hidden">
-            {sortedNotes.map((note) => {
+            {filteredNotes.map((note) => {
               const isOwner = String(note.userId?._id || note.userId) === String(user?._id);
               const vis = visibilityLabel(note);
               const VisIcon = vis.icon;
@@ -144,6 +217,6 @@ export default function NotesPage() {
           </div>
         )}
       </section>
-    </PageContainer>
+    </ListPageLayout>
   );
 }

@@ -6,8 +6,14 @@ import {
   ChartEmptyState,
 } from '../charts/bklitInsightsCharts';
 
+const CHART_HEIGHT = 220;
+
 const EmptyChart = ({ message }) => (
-  <ChartEmptyState height={200} label={message} />
+  <ChartEmptyState height={CHART_HEIGHT} label={message} />
+);
+
+const ChartPlot = ({ children }) => (
+  <div className="h-full w-full min-h-0 overflow-hidden">{children}</div>
 );
 
 export const TaskStatusPie = ({ byStatus }) => {
@@ -19,22 +25,38 @@ export const TaskStatusPie = ({ byStatus }) => {
   ].filter((d) => d.value > 0);
 
   return (
-    <ChartSurface title="Task Status" height={200}>
+    <ChartSurface title="Task Status" height={CHART_HEIGHT}>
       {data.length === 0 ? (
         <EmptyChart message="No tasks in range" />
       ) : (
-        <BklitBreakdownBars emptyLabel="No tasks in range" height={200} items={data} />
+        <ChartPlot>
+          <BklitBreakdownBars
+            aspectRatio={false}
+            emptyLabel="No tasks in range"
+            height={CHART_HEIGHT}
+            items={data}
+          />
+        </ChartPlot>
       )}
     </ChartSurface>
   );
 };
 
 export const HoursMixPie = ({ hoursMix = [] }) => (
-  <ChartSurface title="Hours Mix" height={200}>
+  <ChartSurface title="Hours Mix" height={CHART_HEIGHT}>
     {hoursMix.length === 0 ? (
       <EmptyChart message="No hours logged" />
     ) : (
-      <BklitBreakdownBars emptyLabel="No hours logged" height={200} items={hoursMix} nameKey="name" valueKey="value" />
+      <ChartPlot>
+        <BklitBreakdownBars
+          aspectRatio={false}
+          emptyLabel="No hours logged"
+          height={CHART_HEIGHT}
+          items={hoursMix}
+          nameKey="name"
+          valueKey="value"
+        />
+      </ChartPlot>
     )}
   </ChartSurface>
 );
@@ -48,18 +70,22 @@ export const PriorityBarChart = ({ byPriority }) => {
   ].filter((d) => d.value > 0);
 
   return (
-    <ChartSurface title="Tasks by Priority" height={200}>
+    <ChartSurface title="Tasks by Priority" height={CHART_HEIGHT}>
       {data.length === 0 ? (
         <EmptyChart message="No tasks in range" />
       ) : (
-        <BklitCategoryBarChart
-          emptyLabel="No tasks in range"
-          fill="#f59e0b"
-          height={200}
-          labelKey="label"
-          series={data}
-          valueKey="value"
-        />
+        <ChartPlot>
+          <BklitCategoryBarChart
+            aspectRatio={false}
+            emptyLabel="No tasks in range"
+            fill="#f59e0b"
+            fillHeight
+            height={CHART_HEIGHT}
+            labelKey="label"
+            series={data}
+            valueKey="value"
+          />
+        </ChartPlot>
       )}
     </ChartSurface>
   );

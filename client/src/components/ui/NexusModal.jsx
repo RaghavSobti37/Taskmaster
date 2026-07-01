@@ -10,6 +10,7 @@ const MODAL_SIZES = {
   xl: 'xl',
   '2xl': '2xl',
   full: 'full',
+  fullscreen: 'fullscreen',
 };
 
 const LEGACY_WIDTH_MAP = {
@@ -38,12 +39,13 @@ export const NexusModal = ({
   isConfirm = false,
   showFooter = true,
   footer,
-  size = 'lg',
+  size = 'fullscreen',
   width,
   bodyClassName = '',
   children,
 }) => {
   const resolvedSize = (width && LEGACY_WIDTH_MAP[width]) || (width && MODAL_WIDTH_PX[width] ? width : null) || size;
+  const shellSize = isConfirm ? 'sm' : resolvedSize;
 
   const typeConfig = {
     info: {
@@ -72,7 +74,7 @@ export const NexusModal = ({
   const Icon = config.icon;
 
   return (
-    <ModalShell isOpen={isOpen} onClose={onClose} size={resolvedSize}>
+    <ModalShell isOpen={isOpen} onClose={onClose} size={shellSize}>
       <ModalHeader
         title={title}
         subtitle={subtitle}

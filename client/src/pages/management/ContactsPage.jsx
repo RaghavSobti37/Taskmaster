@@ -6,6 +6,12 @@ import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
+import ContactMobileRow from '../../components/office/ContactMobileRow';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
@@ -97,11 +103,16 @@ const ContactsPage = () => {
       {
         header: 'Contact',
         sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
         render: (row) => (
-          <span className="block min-w-0 truncate text-xs" title={[row.name, row.notes].filter(Boolean).join(' — ')}>
+          <span
+            className="block min-w-0 truncate office-hub-cell-primary"
+            title={[row.name, row.notes].filter(Boolean).join(' — ')}
+          >
             <span className="tm-data-primary">{row.name}</span>
             {row.notes ? (
-              <span className="text-[var(--color-text-muted)] font-medium"> · {row.notes}</span>
+              <span className="office-hub-cell-secondary font-medium"> · {row.notes}</span>
             ) : null}
           </span>
         ),
@@ -109,6 +120,8 @@ const ContactsPage = () => {
       {
         header: 'Role',
         sortKey: 'role',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
         render: (row) => (
           <Badge variant="info" className="max-w-full truncate" title={row.role}>
             {row.role}
@@ -118,20 +131,16 @@ const ContactsPage = () => {
       {
         header: 'Phone',
         sortKey: 'phone',
-        render: (row) => (
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)] truncate block" title={row.phone}>
-            {row.phone}
-          </span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (row) => <OfficeMetaCell value={row.phone} />,
       },
       {
         header: 'Email',
         sortKey: 'email',
-        render: (row) => (
-          <span className="text-[11px] text-[var(--color-text-muted)] truncate block" title={row.email || undefined}>
-            {row.email || '—'}
-          </span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (row) => <OfficeMetaCell value={row.email} className="text-[var(--color-text-muted)] font-normal" />,
       },
     ],
     []
@@ -162,14 +171,16 @@ const ContactsPage = () => {
           },
         ],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder="Search contacts..."
+          variant="toolbar"
+          placeholder="Search name, role, phone, email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <Button size="sm" onClick={openAddModal}>
           <Plus size={14} /> Add Contact
@@ -187,11 +198,11 @@ const ContactsPage = () => {
         data={filtered}
         onRowClick={openContactEditor}
         getRowId={(row) => row._id}
-        fitWidth
-        rowEstimateSize={52}
-        tableMaxHeight="70vh"
+        mobileRowRender={(row) => <ContactMobileRow contact={row} />}
+        mobileRowClassName="!py-2.5 !px-3"
         emptyTitle="No contacts found"
         emptyDescription="Try a different search or add a new contact."
+        {...OFFICE_TABLE_PROPS}
       />
 
       <NexusModal

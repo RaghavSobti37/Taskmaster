@@ -12,7 +12,7 @@ import { CAMPAIGN_ENGAGEMENT_FILTER_OPTIONS } from './useCampaignAudience';
 
 const ALL_SOURCE_TILES = [
   { id: 'csv', label: 'CSV Upload', icon: Upload },
-  { id: 'holysheet', label: 'HolySheet', icon: Sheet, adminOnly: true },
+  { id: 'holysheet', label: 'Media List', icon: Sheet, adminOnly: true },
   { id: 'datahub', label: 'Data Hub', icon: Database, adminOnly: true },
   { id: 'crm', label: 'CRM', icon: Users },
   { id: 'exly', label: 'Exly', icon: ShoppingBag },
@@ -154,7 +154,7 @@ export default function StepAudienceMapping({
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
           <Button onClick={audience.fetchHolySheetData} disabled={audience.loadingHolySheet}>
             <RefreshCw size={14} className={audience.loadingHolySheet ? 'animate-spin' : ''} />
-            {audience.loadingHolySheet ? 'Loading…' : 'Fetch HolySheet Data'}
+            {audience.loadingHolySheet ? 'Loading…' : 'Fetch Media List Data'}
           </Button>
           {audience.csvRecipients.length > 0 && (
             <div className="mt-4 space-y-3">

@@ -21,16 +21,16 @@ export default function ChartSurface({ title, info, actions, children, className
   const chartAreaStyle = height ? { height, minHeight: height } : undefined;
 
   return (
-    <div className={`flex flex-col min-h-0 ${className}`}>
+    <div className={`flex h-full w-full min-w-0 flex-col overflow-hidden ${className}`}>
       {(title || actions) && (
-        <div className="flex items-center justify-between mb-3 shrink-0">
-          {title && <p className="tm-widget-label mb-0">{title}</p>}
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
+        <div className="flex items-center justify-between gap-3 mb-3 shrink-0 min-h-[1.25rem]">
+          {title && <p className="tm-widget-label mb-0 leading-none">{title}</p>}
+          {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
         </div>
       )}
       {info}
       <div
-        className={`w-full ${height ? 'shrink-0' : 'flex-1 min-h-0'}`}
+        className={`relative w-full min-w-0 overflow-hidden ${height ? 'shrink-0' : 'flex-1 min-h-0'}`}
         style={chartAreaStyle}
       >
         {children}

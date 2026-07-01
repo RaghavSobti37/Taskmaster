@@ -19,7 +19,7 @@ export const DASHBOARD_WIDGET_LOADERS = {
   'invoice-alerts': () => import('../components/dashboard/ReimbursementsCard'),
   'booked-calls': () => import('../components/dashboard/GenericDashboardCard'),
   'followups-today': () => import('../components/dashboard/GenericDashboardCard'),
-  'team-activity': () => import('../components/dashboard/GenericDashboardCard'),
+  'team-activity': () => import('../components/dashboard/TeamActivityCard'),
   'dept-stats': () => import('../components/dashboard/GenericDashboardCard'),
   'campaign-metrics': () => import('../components/dashboard/GenericDashboardCard'),
   'system-health': () => import('../components/dashboard/SystemHealthCard'),
@@ -28,6 +28,7 @@ export const DASHBOARD_WIDGET_LOADERS = {
   'last-backup': () => import('../components/dashboard/LastBackupCard'),
   'render-logs': () => import('../components/dashboard/RenderLogsCard'),
   posthog: () => import('../components/dashboard/PostHogCard'),
+  clerk: () => import('../components/dashboard/ClerkCard'),
 };
 
 const lazyWidgetCache = new Map();

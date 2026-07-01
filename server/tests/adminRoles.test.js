@@ -3,6 +3,7 @@ const app = require('../server');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const adminRolesService = require('../services/adminRolesService');
+const { seedDepartments } = require('../services/departmentService');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
 
@@ -85,11 +86,26 @@ describe('Admin roles API', () => {
     expect(deleteRes.body.success).toBe(true);
   });
 
-  it('blocks deleting system roles and roles with assigned users', async () => {
+  it('blocks deleting system roles, admin roles, and roles with assigned users', async () => {
+    await seedDepartments();
+
     const adminDept = await Department.findOne({ slug: 'admin' });
     const systemDelete = await agent.delete(`/api/admin/roles/${adminDept._id}`);
-    expect(systemDelete.statusCode).toBe(400);
+    expect(systemDelete.statusCode).toBe(403);
     expect(systemDelete.body.error).toMatch(/system role/i);
+
+    const salesDept = await Department.findOne({ slug: 'sales' });
+    const salesDelete = await agent.delete(`/api/admin/roles/${salesDept._id}`);
+    expect(salesDelete.statusCode).toBe(403);
+    expect(salesDelete.body.error).toMatch(/system role/i);
+
+    const customAdmin = await adminRolesService.createOrgRole({
+      name: 'Custom Admin Role',
+      permissionPreset: 'admin',
+    });
+    const adminDelete = await agent.delete(`/api/admin/roles/${customAdmin.id}`);
+    expect(adminDelete.statusCode).toBe(403);
+    expect(adminDelete.body.error).toMatch(/admin role/i);
 
     const custom = await adminRolesService.createOrgRole({ name: 'Assigned Role Test' });
     const memberEmail = `roles-member-${Date.now()}@coreknot-test.local`;

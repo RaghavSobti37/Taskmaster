@@ -1,5 +1,5 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -31,7 +31,8 @@ import {
   refreshGoogleAccounts,
 } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage, IconButton } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { format } from 'date-fns';
@@ -287,6 +288,61 @@ const AssetsPage = () => {
     return filteredAssets.slice(start, start + pageSize);
   }, [filteredAssets, currentPage, pageSize]);
 
+  const handleClearAssetsFilters = useCallback(() => {
+    setWorkspaceFilter('all');
+    setProjectFilter('all');
+    setTypeFilter('all');
+    setSortBy('newest');
+    setCurrentPage(1);
+  }, []);
+
+  const assetsFilterFields = useMemo(() => [
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      type: 'searchable',
+      value: workspaceFilter,
+      defaultValue: 'all',
+      options: workspaceFilterOptions,
+      onChange: (value) => {
+        setWorkspaceFilter(value);
+        setProjectFilter('all');
+      },
+    },
+    {
+      id: 'project',
+      label: 'Project',
+      type: 'searchable',
+      value: projectFilter,
+      defaultValue: 'all',
+      options: projectFilterOptions,
+      onChange: setProjectFilter,
+    },
+    {
+      id: 'type',
+      label: 'File type',
+      type: 'radio',
+      value: typeFilter,
+      defaultValue: 'all',
+      options: ASSET_TYPE_FILTER_OPTIONS,
+      onChange: setTypeFilter,
+    },
+    {
+      id: 'sort',
+      label: 'Sort',
+      type: 'radio',
+      value: sortBy,
+      defaultValue: 'newest',
+      options: [
+        { value: 'newest', label: 'Newest' },
+        { value: 'name', label: 'Name' },
+        { value: 'project', label: 'Project' },
+        { value: 'type', label: 'File type' },
+      ],
+      onChange: setSortBy,
+    },
+  ], [workspaceFilter, projectFilter, typeFilter, sortBy, workspaceFilterOptions, projectFilterOptions]);
+
   const renderProjectCell = (projectIds) => {
     if (!projectIds?.length) {
       return <Badge variant="slate" className="text-[8px] shrink-0">ROOT</Badge>;
@@ -372,54 +428,20 @@ const AssetsPage = () => {
         ],
        
       }}
-      toolbar={
-        <>
-          <SearchInput
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Filter assets..."
-            className="tm-toolbar-search--grow"
-          />
-          <div className="flex flex-nowrap items-center gap-2 shrink-0">
-            <NexusDropdown
-              options={workspaceFilterOptions}
-              value={workspaceFilter}
-              onChange={(value) => {
-                setWorkspaceFilter(value);
-                setProjectFilter('all');
-              }}
-              placeholder="Workspace"
-              className="!w-32 shrink-0"
-            />
-            <NexusDropdown
-              options={projectFilterOptions}
-              value={projectFilter}
-              onChange={setProjectFilter}
-              placeholder="Project"
-              className="!w-32 shrink-0"
-            />
-            <NexusDropdown
-              options={ASSET_TYPE_FILTER_OPTIONS}
-              value={typeFilter}
-              onChange={setTypeFilter}
-              placeholder="File type"
-              className="!w-28 shrink-0"
-            />
-            <NexusDropdown
-              options={[
-                { value: 'newest', label: 'Newest' },
-                { value: 'name', label: 'Name' },
-                { value: 'project', label: 'Project' },
-                { value: 'type', label: 'File Type' },
-              ]}
-              value={sortBy}
-              onChange={setSortBy}
-              placeholder="Sort"
-              className="!w-28 shrink-0"
-            />
-          </div>
-        </>
-      }
+      toolbarFill
+      filterFields={assetsFilterFields}
+      filterSheetTitle="Asset filters"
+      mobileFilterCount={countActiveFilters(assetsFilterFields)}
+      onActiveFiltersClear={handleClearAssetsFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search title, file name, project…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
       toolbarActions={
         <Button size="sm" onClick={openAddDrawer}>
           <Plus size={14} /> Add asset
@@ -460,11 +482,11 @@ const AssetsPage = () => {
                    }
                    meta={renderProjectCell(asset.projectIds)}
                    actions={
-                     <Button
-                       type="button"
-                       size="sm"
-                       variant="secondary"
-                       className="w-full min-h-[44px]"
+                     <IconButton
+                       icon={Edit2}
+                       label="Edit asset"
+                       size="md"
+                       className="!p-2.5"
                        onClick={(e) => {
                          e.stopPropagation();
                          const loaded = {
@@ -479,9 +501,7 @@ const AssetsPage = () => {
                          setAssetEditBaseline(cloneSnapshot(loaded));
                          setIsDrawerOpen(true);
                        }}
-                     >
-                       <Edit2 size={14} /> Edit
-                     </Button>
+                     />
                    }
                  />
                );

@@ -26,6 +26,7 @@ const COMPONENT_ACCESS = {
   'last-backup': ['admin'],
   'render-logs': ['admin'],
   posthog: ['admin'],
+  clerk: ['admin'],
   'artist-calendar': ['artist-management'],
 };
 

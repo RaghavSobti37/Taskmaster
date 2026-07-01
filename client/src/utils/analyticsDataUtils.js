@@ -10,7 +10,7 @@ export const formatChartData = (history, platform) => {
       : '';
 
     const metrics = item.metrics || item;
-    let value = 0;
+    let value;
 
     if (platform === 'spotify') {
       value = metrics.followers ?? metrics.value ?? 0;

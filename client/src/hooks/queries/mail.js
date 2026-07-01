@@ -1,14 +1,20 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const useMailStats = (enabled = true, options = {}) => useQuery({
-  queryKey: ['mail', 'stats'],
-  queryFn: async () => (await axios.get('/api/mail/stats')).data,
-  enabled,
-  staleTime: options.staleTime ?? 1000 * 60 * 5,
-  refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
-  refetchOnMount: options.refetchOnMount,
-});
+export const useMailStats = (enabled = true, options = {}) => {
+  const timeframe = options.timeframe;
+  return useQuery({
+    queryKey: ['mail', 'stats', timeframe ?? 'all'],
+    queryFn: async () => {
+      const params = timeframe ? { timeframe } : {};
+      return (await axios.get('/api/mail/stats', { params })).data;
+    },
+    enabled,
+    staleTime: options.staleTime ?? 1000 * 60 * 5,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
+    refetchOnMount: options.refetchOnMount,
+  });
+};
 
 export const useMailCampaigns = (enabled = true) => useQuery({
   queryKey: ['mail', 'campaigns'],
@@ -265,6 +271,37 @@ export const useDeleteMailTemplate = () => {
   return useMutation({
     mutationFn: (id) => axios.delete(`/api/mail/templates/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] }),
+  });
+};
+
+export const fetchMailTemplateById = async (id) => {
+  return (await axios.get(`/api/mail/templates/${id}`)).data;
+};
+
+/** Patch a single template into every cached templates list (all + status filters). */
+export const patchMailTemplateInCaches = (queryClient, updated) => {
+  if (!updated?._id) return;
+  const statusKeys = ['all', 'approved', 'draft', 'pending_approval', 'rejected', 'pending'];
+  for (const statusKey of statusKeys) {
+    queryClient.setQueryData(['mail', 'templates', statusKey], (old) => {
+      if (!Array.isArray(old)) return old;
+      const idx = old.findIndex((t) => String(t._id) === String(updated._id));
+      if (idx === -1) return old;
+      const next = [...old];
+      next[idx] = { ...next[idx], ...updated };
+      return next;
+    });
+  }
+};
+
+export const useRefreshMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fetchMailTemplateById,
+    onSuccess: (data) => {
+      patchMailTemplateInCaches(queryClient, data);
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    },
   });
 };
 

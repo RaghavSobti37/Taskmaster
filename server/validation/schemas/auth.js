@@ -32,6 +32,11 @@ const oauthEstablishBody = z.object({
   ticket: z.string().min(1),
 });
 
+const clerkEstablishBody = z.object({
+  token: z.string().min(1),
+  organizationId: z.string().optional(),
+});
+
 module.exports = {
   registerBody,
   loginBody,
@@ -39,4 +44,5 @@ module.exports = {
   resetPasswordBody,
   changeRequiredPasswordBody,
   oauthEstablishBody,
+  clerkEstablishBody,
 };

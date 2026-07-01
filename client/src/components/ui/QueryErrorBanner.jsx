@@ -12,7 +12,7 @@ export function getQueryErrorMessage(error, fallback = 'Failed to load data') {
 export default function QueryErrorBanner({ message, onRetry, className = '' }) {
   return (
     <div
-      className={`mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${className}`}
+      className={`list-page-banner rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${className}`}
       role="alert"
     >
       <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-300 min-w-0">

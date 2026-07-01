@@ -10,7 +10,7 @@ export const isRootAdminEmail = (email) =>
   ROOT_ADMIN_EMAILS.has(String(email || '').toLowerCase().trim());
 
 export const isRootAdminUserId = (userId, rootAdminUserIds = []) =>
-  rootAdminUserIds.map(String).includes(String(userId || ''));
+  (Array.isArray(rootAdminUserIds) ? rootAdminUserIds : []).map(String).includes(String(userId || ''));
 
 export const getDeleteUserBlockReason = (requester, targetUser, options = {}) => {
   const { rootAdminUserIds = [] } = options;

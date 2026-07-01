@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Plus } from 'lucide-react';
-import { ModalShell, ModalFooter } from './ui/ModalShell';
+import { CheckCircle2, Plus } from 'lucide-react';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter } from './ui/modals';
+import { Button } from './ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useCreateTask, useProjects, useUserDirectory } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
@@ -53,15 +54,6 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, project
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -110,19 +102,16 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, project
   };
 
   return (
-    <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
-      <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
-        <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-          <Plus size={18} className="text-[var(--color-action-primary)]" />
-          Create New Task
-        </h3>
-        <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
-          <X size={20} />
-        </button>
-      </header>
+    <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100} ariaLabel="Create new task">
+      <ModalHeader
+        title="Create New Task"
+        onClose={onClose}
+        icon={Plus}
+        iconStyle={{ color: 'var(--color-action-primary)' }}
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="tm-modal-scroll p-6 space-y-4">
+        <ModalBody>
           <TaskFormFields
             values={formValues}
             onChange={setFormValues}
@@ -140,19 +129,18 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, project
             onDescriptionChange={setDesc}
             mentionSessionKey={isOpen ? 'create' : undefined}
           />
-        </div>
+        </ModalBody>
 
         <ModalFooter className="justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)]">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={!title.trim() || createTaskMutation.isPending}
-            className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
           >
             <CheckCircle2 size={18} /> Create Task
-          </button>
+          </Button>
         </ModalFooter>
       </form>
     </ModalShell>

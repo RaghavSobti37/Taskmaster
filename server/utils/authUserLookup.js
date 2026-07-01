@@ -29,8 +29,16 @@ const serializeAuthUserForCache = (user) => {
 
 const hydrateAuthUserFromCache = async (cached) => {
   const user = User.hydrate(cached);
-  if (!user.departmentId?.slug) {
+  if (user.departmentId && !user.departmentId?.slug) {
     await user.populate('departmentId', DEPARTMENT_POPULATE);
+  }
+  if (!user.departmentId?.slug && cached?.departmentId) {
+    const fresh = await findUserById(user._id)
+      .select('departmentId')
+      .populate('departmentId', DEPARTMENT_POPULATE);
+    if (fresh?.departmentId?.slug) {
+      user.departmentId = fresh.departmentId;
+    }
   }
   return user;
 };

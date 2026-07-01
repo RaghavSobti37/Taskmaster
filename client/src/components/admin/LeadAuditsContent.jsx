@@ -7,7 +7,7 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import {
   History, Search, RefreshCw, Calendar, ArrowRight, Trash2,
 } from 'lucide-react';
-import { Badge, DataTable, Button, Input, UserLabel } from '../ui';
+import { Badge, DataTable, Button, SearchInput, UserLabel, EmptyState } from '../ui';
 import { useConfirm } from '../../contexts/confirmContext';
 import { format } from 'date-fns';
 
@@ -183,12 +183,12 @@ const LeadAuditsContent = () => {
       <div className="p-3 sm:p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <div className="w-full sm:flex-1 sm:max-w-xs min-w-0">
-            <Input
-              icon={Search}
+            <SearchInput
+              variant="toolbar"
               placeholder="Search lead, user, field..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="!py-1.5 !text-sm w-full"
+              className="!w-full"
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -237,10 +237,12 @@ const LeadAuditsContent = () => {
           mobileRowRender={(row) => <LeadAuditMobileCard row={row} />}
         />
         {filteredLogs.length === 0 && !isLoading && (
-          <div className="p-16 sm:p-20 text-center opacity-30">
-            <History size={48} className="mx-auto mb-4" />
-            <p className="text-xs font-black uppercase tracking-widest">No lead change logs found</p>
-          </div>
+          <EmptyState
+            icon={History}
+            title="No lead change logs found"
+            variant="subtle"
+            className="opacity-80"
+          />
         )}
       </div>
     </section>

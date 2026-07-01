@@ -45,6 +45,59 @@ const BANNED_PROXY_HOSTS = new Set([
   'your-render-service.onrender.com',
 ]);
 
+const POSTHOG_PROXY_PREFIX = '/ph';
+/** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
+const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)';
+
+const resolvePostHogRegion = (host = '') => (
+  String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
+);
+
+const isPostHogRewrite = (rule) => String(rule?.source || '').startsWith(`${POSTHOG_PROXY_PREFIX}/`);
+
+const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
+  rules
+    .filter((rule) => !isPostHogRewrite(rule))
+    .map((rule) => {
+      if (rule.source === '/api/(.*)') {
+        return { ...rule, destination: apiDestination };
+      }
+      if (rule.source === '/socket.io/(.*)') {
+        return { ...rule, destination: socketDestination };
+      }
+      if (String(rule.source || '').includes('(?!api/)')) {
+        return { ...rule, source: SPA_CATCHALL_SOURCE };
+      }
+      return rule;
+    })
+);
+
+/** PostHog rewrites must precede SPA catch-all — first Vercel match wins. */
+const composeRewrites = (templateRewrites, apiDestination, socketDestination) => {
+  const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
+  const posthog = buildPostHogRewrites();
+  const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
+  if (catchallIdx === -1) return [...mapped, ...posthog];
+  return [
+    ...mapped.slice(0, catchallIdx),
+    ...posthog,
+    ...mapped.slice(catchallIdx),
+  ];
+};
+
+/** PostHog same-origin proxy — static/array before catch-all (cache headers). */
+const buildPostHogRewrites = () => {
+  const region = resolvePostHogRegion(process.env.VITE_POSTHOG_HOST);
+  const apiBase = `https://${region}.i.posthog.com`;
+  const assetsBase = `https://${region}-assets.i.posthog.com`;
+  const prefix = POSTHOG_PROXY_PREFIX;
+  return [
+    { source: `${prefix}/static/:path*`, destination: `${assetsBase}/static/:path*` },
+    { source: `${prefix}/array/:path*`, destination: `${assetsBase}/array/:path*` },
+    { source: `${prefix}/:path*`, destination: `${apiBase}/:path*` },
+  ];
+};
+
 const normalizeProxyUrl = (raw) => String(raw || '').trim().replace(/\/$/, '');
 
 const pickProxyUrl = () => {
@@ -138,22 +191,26 @@ const existingRewritesLookValid = (existing) => {
   }
 };
 
+const main = () => {
 const proxyUrl = pickProxyUrl();
 const nestProxyUrl = pickNestProxyUrl();
 const onVercel = process.env.VERCEL === '1';
 
-if (onVercel && !proxyUrl) {
+if (!proxyUrl) {
   const existing = readExistingClientVercelJson();
   if (existingRewritesLookValid(existing)) {
-    console.warn(
-      '[generateVercelConfig] RENDER_API_PROXY_URL unset on Vercel — keeping committed client/vercel.json rewrites',
-    );
+    const msg = onVercel
+      ? '[generateVercelConfig] RENDER_API_PROXY_URL unset on Vercel — keeping committed client/vercel.json rewrites'
+      : '[generateVercelConfig] keeping committed client/vercel.json rewrites (postinstall must not clobber prod proxy)';
+    console.warn(msg);
     process.exit(0);
   }
-  console.error(
-    '[generateVercelConfig] RENDER_API_PROXY_URL required on Vercel — mobile login /api proxy will 404.'
-  );
-  process.exit(1);
+  if (onVercel) {
+    console.error(
+      '[generateVercelConfig] RENDER_API_PROXY_URL required on Vercel — mobile login /api proxy will 404.'
+    );
+    process.exit(1);
+  }
 }
 
 const templatePath = path.join(CLIENT_ROOT, 'vercel.json.example');
@@ -207,6 +264,12 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
   process.exit(1);
 }
 
+if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.VITE_POSTHOG_PROJECT_TOKEN || '').trim()) {
+  console.warn(
+    '[generateVercelConfig] VITE_POSTHOG_PROJECT_TOKEN missing on Vercel production — PostHog will not capture until set and redeployed',
+  );
+}
+
 const payload = {
   ...(template.redirects ? { redirects: template.redirects } : {}),
   rewrites: [
@@ -222,15 +285,7 @@ const payload = {
           },
         ]
       : []),
-    ...template.rewrites.map((rule) => {
-    if (rule.source === '/api/(.*)') {
-      return { ...rule, destination: apiDestination };
-    }
-    if (rule.source === '/socket.io/(.*)') {
-      return { ...rule, destination: socketDestination };
-    }
-    return rule;
-  }),
+    ...composeRewrites(template.rewrites, apiDestination, socketDestination),
   ],
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
@@ -238,9 +293,34 @@ const payload = {
   ...(template.headers ? { headers: template.headers } : {}),
 };
 
-const targets = [path.join(REPO_ROOT, 'vercel.json'), path.join(CLIENT_ROOT, 'vercel.json')];
-const payloadText = `${JSON.stringify(payload, null, 2)}\n`;
+const buildSitePayload = (buildCommand) => ({
+  buildCommand,
+  outputDirectory: '../../client/dist',
+  installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
+  framework: null,
+  ...(payload.redirects ? { redirects: payload.redirects } : {}),
+  rewrites: payload.rewrites,
+  ...(payload.headers ? { headers: payload.headers } : {}),
+  env: payload.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
+});
+
+const targets = [
+  path.join(REPO_ROOT, 'vercel.json'),
+  path.join(CLIENT_ROOT, 'vercel.json'),
+  path.join(REPO_ROOT, 'sites/landing/vercel.json'),
+  path.join(REPO_ROOT, 'sites/auth/vercel.json'),
+];
+
+const payloadsByTarget = new Map([
+  [path.join(REPO_ROOT, 'vercel.json'), payload],
+  [path.join(CLIENT_ROOT, 'vercel.json'), payload],
+  [path.join(REPO_ROOT, 'sites/landing/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:landing')],
+  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:auth')],
+]);
+
 for (const file of targets) {
+  const filePayload = payloadsByTarget.get(file);
+  const payloadText = `${JSON.stringify(filePayload, null, 2)}\n`;
   let existing = '';
   try {
     existing = fs.readFileSync(file, 'utf8');
@@ -261,4 +341,17 @@ if (proxyUrl) {
 }
 if (nestAttendanceDestination) {
   console.log(`[generateVercelConfig] /api/attendance strangler → ${nestAttendanceDestination}`);
+}
+};
+
+module.exports = {
+  SPA_CATCHALL_SOURCE,
+  composeRewrites,
+  buildPostHogRewrites,
+  mapTemplateRewrites,
+  existingRewritesLookValid,
+};
+
+if (require.main === module) {
+  main();
 }

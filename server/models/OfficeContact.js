@@ -11,13 +11,8 @@ const OfficeContactSchema = new mongoose.Schema({
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-OfficeContactSchema.pre('save', function (next) {
-  try {
-    applyPersonIdentityToDoc(this);
-    next();
-  } catch (err) {
-    next(err);
-  }
+OfficeContactSchema.pre('save', function () {
+  applyPersonIdentityToDoc(this);
 });
 
 OfficeContactSchema.index({ name: 'text', email: 'text', phone: 'text' });

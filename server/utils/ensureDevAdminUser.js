@@ -16,7 +16,9 @@ const Department = require('../models/Department');
 
 const { seedDepartments } = require('../services/departmentService');
 
-const { ADMIN_SLUG, isAdminUser } = require('./departmentPermissions');
+const { ADMIN_SLUG } = require('./departmentPermissions');
+const { ROOT_ADMIN_EMAILS } = require('../../shared/rootAdminEmails');
+const { getRootAdminUserIds, getPlatformOwnerUserId } = require('../../shared/platformUserIds');
 
 
 
@@ -57,6 +59,16 @@ function resolveDevAccounts() {
     if (!byEmail.has(email)) {
 
       byEmail.set(email, { email, name: 'Dev User' });
+
+    }
+
+  }
+
+  for (const email of ROOT_ADMIN_EMAILS) {
+
+    if (!byEmail.has(email)) {
+
+      byEmail.set(email, { email, name: 'Dev Admin' });
 
     }
 
@@ -191,6 +203,25 @@ async function ensureDevAdminUser() {
 
     }
 
+  }
+
+  const rootUserIds = [...new Set([
+    ...getRootAdminUserIds(),
+    getPlatformOwnerUserId(),
+  ].filter(Boolean))];
+
+  for (const userId of rootUserIds) {
+    // eslint-disable-next-line no-await-in-loop
+    const user = await User.findById(userId).setOptions({ bypassTenant: true });
+    if (!user) continue;
+    if (user.departmentId?.toString() === adminDept._id.toString()) continue;
+    user.departmentId = adminDept._id;
+    // eslint-disable-next-line no-await-in-loop
+    await user.save();
+    logger.info('authBootstrap', 'Assigned admin department to root admin user', {
+      userId: user._id.toString(),
+      email: user.email,
+    });
   }
 
 }

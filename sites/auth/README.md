@@ -2,7 +2,23 @@
 
 Deploy this folder as a **separate Vercel project** on `auth.tsccoreknot.com`.
 
-Auth routes (same slugs as the main app):
+**Quick deploy (from `coreknot/Taskmaster`):**
+
+```bash
+node scripts/deploy-coreknot-auth.mjs
+```
+
+**Vercel settings**
+
+| Setting | Value |
+|---------|--------|
+| Root Directory | `sites/auth` |
+| Build Command | *(from `vercel.json`)* `cd ../../client && npm run vercel-build:auth` |
+| Output Directory | `../../client/dist` |
+
+**Required env (Production):** `RENDER_API_PROXY_URL`, `VITE_API_URL` — same Render API as main app.
+
+Auth routes:
 
 - `/login`
 - `/register`
@@ -12,3 +28,7 @@ Auth routes (same slugs as the main app):
 - `/auth/google/success`
 
 After login, users redirect to `https://tsccoreknot.com/dashboard` (session cookie domain: `.tsccoreknot.com`).
+
+**Troubleshooting `DEPLOYMENT_NOT_FOUND`:** domain pointed at Vercel but `coreknot-auth` had no production deploy, or domain was on wrong project (`sync-couple`). Run `node scripts/deploy-coreknot-auth.mjs` and confirm Vercel → **coreknot-auth** → Domains lists `auth.tsccoreknot.com`.
+
+DNS + Cloudflare: see `docs/CLOUDFLARE_DNS.md`.

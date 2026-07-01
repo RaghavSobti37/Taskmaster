@@ -17,7 +17,6 @@ import {
 import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import DashboardTierLayout from '../components/dashboard/DashboardTierLayout';
-import PostHogCard from '../components/dashboard/PostHogCard';
 const TaskCompletionModal = lazy(() => import('../components/TaskCompletionModal'));
 const MobileAttendanceBar = lazy(() => import('../components/mobile/MobileAttendanceBar'));
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
@@ -221,9 +220,10 @@ const Dashboard = () => {
         return renderLazyWidget('leave-alerts');
       case 'invoice-alerts':
         return renderLazyWidget('invoice-alerts');
+      case 'team-activity':
+        return renderLazyWidget('team-activity');
       case 'booked-calls':
       case 'followups-today':
-      case 'team-activity':
       case 'dept-stats':
       case 'campaign-metrics':
       case 'system-health':
@@ -232,7 +232,9 @@ const Dashboard = () => {
       case 'render-logs':
         return renderLazyWidget('render-logs');
       case 'posthog':
-        return <PostHogCard />;
+        return renderLazyWidget('posthog');
+      case 'clerk':
+        return renderLazyWidget('clerk');
       case 'attendance-overview':
         return renderLazyWidget('attendance-overview');
       case 'last-backup':

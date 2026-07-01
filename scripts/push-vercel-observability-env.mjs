@@ -13,6 +13,7 @@ const VARS = [
   ['VITE_RENDER_SERVICE_ID_STAGING_NEST', 'srv-d8vm9gbsq97s738h8plg'],
   ['VITE_POSTHOG_PROJECT_ID', '468825'],
   ['VITE_POSTHOG_APP_URL', 'https://us.posthog.com/project/468825'],
+  ['VITE_CLERK_ORGANIZATION_ID', 'org_3FtSYDXVVjJQPtOg8LqhPYdeEdH'],
 ];
 
 function upsert(key, value, envs = ['production', 'preview', 'development']) {

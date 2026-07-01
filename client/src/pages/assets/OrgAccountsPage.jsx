@@ -8,9 +8,10 @@ import ProjectMultiSelect from '../../components/forms/ProjectMultiSelect';
 import MemberSelect from '../../components/forms/MemberSelect';
 import { WorkspaceDot } from '../../components/forms/WorkspaceSelect';
 import {
-  Badge, Button, Input, ListPageLayout, NexusDropdown, PageLoadGuard, PageSkeleton,
+  Badge, Button, Input, ListPageLayout, PageLoadGuard, PageSkeleton,
   SearchInput, DataTable, UserLabel,
 } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -365,6 +366,42 @@ const OrgAccountsPage = () => {
     []
   );
 
+  const handleClearOrgAccountFilters = useCallback(() => {
+    setCategoryFilter('all');
+    setProjectFilter('all');
+    setStatusFilter('all');
+  }, []);
+
+  const orgAccountsFilterFields = useMemo(() => [
+    {
+      id: 'category',
+      label: 'Category',
+      type: 'radio',
+      value: categoryFilter,
+      defaultValue: 'all',
+      options: categoryFilterOptions,
+      onChange: setCategoryFilter,
+    },
+    {
+      id: 'project',
+      label: 'Project',
+      type: 'searchable',
+      value: projectFilter,
+      defaultValue: 'all',
+      options: projectFilterOptions,
+      onChange: setProjectFilter,
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      type: 'radio',
+      value: statusFilter,
+      defaultValue: 'all',
+      options: statusFilterOptions,
+      onChange: setStatusFilter,
+    },
+  ], [categoryFilter, projectFilter, statusFilter, categoryFilterOptions, projectFilterOptions, statusFilterOptions]);
+
   const accountColumns = [
     {
       header: 'Label',
@@ -493,39 +530,20 @@ const OrgAccountsPage = () => {
         queryErrorFallback="Failed to load organization accounts"
         containerClassName="!py-0"
         overview={{ stats: overviewStats }}
-        toolbar={
-          <>
-            <SearchInput
-              placeholder="Search accounts..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="tm-toolbar-search--grow"
-            />
-            <div className="flex flex-nowrap items-center gap-2 shrink-0">
-              <NexusDropdown
-                options={categoryFilterOptions}
-                value={categoryFilter}
-                onChange={setCategoryFilter}
-                placeholder="Category"
-                className="!w-32 shrink-0"
-              />
-              <NexusDropdown
-                options={projectFilterOptions}
-                value={projectFilter}
-                onChange={setProjectFilter}
-                placeholder="Project"
-                className="!w-32 shrink-0"
-              />
-              <NexusDropdown
-                options={statusFilterOptions}
-                value={statusFilter}
-                onChange={setStatusFilter}
-                placeholder="Status"
-                className="!w-28 shrink-0"
-              />
-            </div>
-          </>
-        }
+        toolbarFill
+        filterFields={orgAccountsFilterFields}
+        filterSheetTitle="Account filters"
+        mobileFilterCount={countActiveFilters(orgAccountsFilterFields)}
+        onActiveFiltersClear={handleClearOrgAccountFilters}
+        searchBar={(
+          <SearchInput
+            variant="toolbar"
+            placeholder="Search label, platform, email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-full"
+          />
+        )}
         toolbarActions={
           <div className="flex items-center gap-2">
             <Button

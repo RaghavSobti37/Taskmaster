@@ -79,7 +79,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
           <Settings size={18} className="text-[var(--color-action-primary)]" />
           Project Settings
         </h3>
-        <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
+        <button type="button" onClick={onClose} aria-label="Close project settings" className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors touch-manipulation">
           <X size={20} />
         </button>
       </header>

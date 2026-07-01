@@ -9,10 +9,21 @@ const browserOrigin = () => {
   return trimSlash(window.location.origin);
 };
 
-/** App host serves workspace routes (prod: tsccoreknot.com). */
+const hostFromUrl = (url) => {
+  try {
+    return new URL(url).host.toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+/** App host serves workspace routes (prod: tsccoreknot.com).
+ * Auth site never falls back to its own origin here — split deploy means
+ * auth.tsccoreknot.com is not the app host, so an unset VITE_APP_URL must
+ * resolve to the real prod app origin, not the auth subdomain. */
 export function getAppOrigin() {
   if (import.meta.env.VITE_APP_URL) return trimSlash(import.meta.env.VITE_APP_URL);
-  if ((isAppSite() || isAuthSite()) && browserOrigin()) return browserOrigin();
+  if (isAppSite() && browserOrigin()) return browserOrigin();
   return PROD_APP_ORIGIN;
 }
 
@@ -32,6 +43,41 @@ export function getLandingOrigin() {
 
 /** Login/register live on the same SPA as the app (not a cross-origin hop). */
 export const hasSameOriginAuthRoutes = () => isAppSite() || isAuthSite();
+
+/** Split deploy: auth on auth.tsccoreknot.com while app stays on tsccoreknot.com. */
+export const usesExternalAuthHost = () => {
+  if (!isAppSite() && !isLandingSite()) return false;
+  const configured = import.meta.env.VITE_AUTH_URL?.trim();
+  if (!configured) return false;
+  const appHost = hostFromUrl(getAppOrigin());
+  const authHost = hostFromUrl(configured);
+  return Boolean(appHost && authHost && appHost !== authHost);
+};
+
+/** Split deploy: marketing on landing.tsccoreknot.com. */
+export const usesExternalLandingHost = () => {
+  if (!isAppSite()) return false;
+  const configured = import.meta.env.VITE_LANDING_URL?.trim();
+  if (!configured) return false;
+  const appHost = hostFromUrl(getAppOrigin());
+  const landingHost = hostFromUrl(configured);
+  return Boolean(appHost && landingHost && appHost !== landingHost);
+};
+
+const AUTH_ROUTE_PATHS = new Set([
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/relegends',
+  '/auth/google/success',
+]);
+
+/** App host → external auth subdomain (keeps query string e.g. ?ticket=). */
+export const externalAuthRedirectTarget = (pathname, search = '') => {
+  if (!usesExternalAuthHost() || !AUTH_ROUTE_PATHS.has(pathname)) return null;
+  return `${authUrl(pathname)}${search || ''}`;
+};
 
 const joinOrigin = (origin, path = '/') => {
   const clean = path.startsWith('/') ? path : `/${path}`;
@@ -66,7 +112,8 @@ export const marketingLinkTarget = (path) => {
 
 export const shouldRedirectMarketingRoute = (pathname) => {
   if (!isAppSite()) return null;
-  if (pathname === '/') return landingUrl('/');
+  if (pathname === '/' && usesExternalLandingHost()) return landingUrl('/');
+  if (pathname === '/landing' && usesExternalLandingHost()) return landingUrl('/');
   return null;
 };
 

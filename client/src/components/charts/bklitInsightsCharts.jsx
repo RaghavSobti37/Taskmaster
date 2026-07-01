@@ -30,13 +30,18 @@ const EMPTY_CLASS =
   'flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider text-center px-3';
 
 function chartStyle({ height, aspectRatio }) {
+  if (aspectRatio === false) return { height, minHeight: height };
   if (aspectRatio) return undefined;
   return { height, minHeight: height };
 }
 
 export function ChartEmptyState({ label, height = 192, aspectRatio }) {
+  const resolvedAspectRatio = aspectRatio === false ? undefined : aspectRatio;
   return (
-    <div className={EMPTY_CLASS} style={{ ...chartStyle({ height, aspectRatio }), aspectRatio }}>
+    <div
+      className={EMPTY_CLASS}
+      style={{ ...chartStyle({ height, aspectRatio }), aspectRatio: resolvedAspectRatio }}
+    >
       {label}
     </div>
   );
@@ -90,7 +95,7 @@ export function BklitLineSeriesChart({
       {keys.map((ds) => (
         <Line key={ds.key} dataKey={ds.key} stroke={resolveStroke(ds)} strokeWidth={2} />
       ))}
-      <XAxis tickMode="data" />
+      <XAxis numTicks={6} tickMode="data" />
       <ChartTooltip />
     </LineChart>
   );
@@ -108,7 +113,11 @@ export function BklitAreaSeriesChart({
   strokeWidth = 2,
   curve,
   emptyLabel = 'No data recorded for this period',
+  numTicks = 6,
+  tickMode = 'data',
+  chartMargin,
 }) {
+  const margin = chartMargin || INSIGHT_MARGIN;
   const chartData = useMemo(() => normalizeTimeSeriesRows(series, xKey), [series, xKey]);
   const hasData = chartData.length > 0 && seriesHasValues(chartData, dataKey);
 
@@ -118,7 +127,7 @@ export function BklitAreaSeriesChart({
         aspectRatio={aspectRatio}
         gridShimmerSync
         label="Loading"
-        margin={INSIGHT_MARGIN}
+        margin={margin}
         stroke="var(--foreground)"
         strokeOpacity={0.5}
         style={chartStyle({ height, aspectRatio })}
@@ -132,7 +141,7 @@ export function BklitAreaSeriesChart({
     <AreaChart
       aspectRatio={aspectRatio}
       data={chartData}
-      margin={INSIGHT_MARGIN}
+      margin={margin}
       status="ready"
       style={chartStyle({ height, aspectRatio })}
       xDataKey={xKey}
@@ -146,7 +155,7 @@ export function BklitAreaSeriesChart({
         stroke={fill}
         strokeWidth={strokeWidth}
       />
-      <XAxis tickMode="data" />
+      <XAxis numTicks={numTicks} tickMode={tickMode} />
       <ChartTooltip />
     </AreaChart>
   );
@@ -201,7 +210,7 @@ export function BklitMultiLineChart({
           strokeWidth={line.strokeWidth ?? 2}
         />
       ))}
-      <XAxis tickMode="data" />
+      <XAxis numTicks={6} tickMode="data" />
       <ChartTooltip />
     </LineChart>
   );
@@ -215,36 +224,49 @@ export function BklitCategoryBarChart({
   loading,
   height = 200,
   aspectRatio = '2 / 1',
+  fillHeight = false,
   emptyLabel = 'No data recorded for this period',
   fill = 'var(--chart-line-primary)',
   stacked = false,
 }) {
+  const resolvedAspectRatio = fillHeight ? false : aspectRatio;
+  const chartShellStyle = fillHeight ? { height, minHeight: height } : undefined;
   const chartData = useMemo(() => toCategoryBarRows(series, labelKey, valueKey), [series, labelKey, valueKey]);
   const keys = dataKeys?.length ? dataKeys : [{ key: valueKey, fill }];
   const valueFields = keys.map((k) => k.key);
   const hasData = chartData.length > 0 && seriesHasValues(chartData, valueFields);
 
   if (loading) {
-    return (
+    const loadingChart = (
       <BarChartLoading
-        aspectRatio={aspectRatio}
-        className="w-full"
+        aspectRatio={resolvedAspectRatio}
+        className={fillHeight ? 'h-full' : 'w-full'}
         margin={COMPACT_MARGIN}
+      />
+    );
+    return fillHeight ? <div className="w-full" style={chartShellStyle}>{loadingChart}</div> : loadingChart;
+  }
+
+  if (!hasData) {
+    return (
+      <ChartEmptyState
+        aspectRatio={resolvedAspectRatio}
+        height={height}
+        label={emptyLabel}
       />
     );
   }
 
-  if (!hasData) return <ChartEmptyState aspectRatio={aspectRatio} height={height} label={emptyLabel} />;
-
-  return (
+  const chart = (
     <BarChart
-      aspectRatio={aspectRatio}
+      aspectRatio={resolvedAspectRatio}
       barGap={0.25}
+      className={fillHeight ? 'h-full' : undefined}
       data={chartData}
       margin={COMPACT_MARGIN}
       stacked={stacked}
       status="ready"
-      style={chartStyle({ height, aspectRatio })}
+      style={chartStyle({ height, aspectRatio: resolvedAspectRatio })}
       xDataKey="name"
     >
       <Grid horizontal />
@@ -260,6 +282,8 @@ export function BklitCategoryBarChart({
       <ChartTooltip />
     </BarChart>
   );
+
+  return fillHeight ? <div className="h-full w-full min-w-0 overflow-hidden" style={chartShellStyle}>{chart}</div> : chart;
 }
 
 export function BklitHorizontalBarChart({
@@ -342,8 +366,11 @@ export function BklitBreakdownBars({
   valueKey = 'value',
   height = 200,
   aspectRatio = '2 / 1',
+  fillHeight = false,
   emptyLabel = 'No data',
 }) {
+  const resolvedAspectRatio = fillHeight ? false : aspectRatio;
+  const chartShellStyle = fillHeight ? { height, minHeight: height } : undefined;
   const chartData = useMemo(
     () => (items || []).filter((d) => Number(d[valueKey]) > 0).map((d) => ({
       ...d,
@@ -354,25 +381,34 @@ export function BklitBreakdownBars({
   );
 
   if (!chartData.length) {
-    return <ChartEmptyState aspectRatio={aspectRatio} height={height} label={emptyLabel} />;
+    return (
+      <ChartEmptyState
+        aspectRatio={resolvedAspectRatio}
+        height={height}
+        label={emptyLabel}
+      />
+    );
   }
 
-  return (
+  const chart = (
     <BarChart
-      aspectRatio={aspectRatio}
+      aspectRatio={resolvedAspectRatio}
       barGap={0.25}
+      className={fillHeight ? 'h-full' : undefined}
       data={chartData}
       margin={COMPACT_MARGIN}
       status="ready"
-      style={chartStyle({ height, aspectRatio })}
+      style={chartStyle({ height, aspectRatio: resolvedAspectRatio })}
       xDataKey="name"
     >
       <Grid horizontal />
       <Bar dataKey="value" fill="var(--chart-line-primary)" />
-      <BarXAxis showAllLabels />
+      <BarXAxis showAllLabels maxLabels={8} />
       <ChartTooltip />
     </BarChart>
   );
+
+  return fillHeight ? <div className="h-full w-full min-w-0 overflow-hidden" style={chartShellStyle}>{chart}</div> : chart;
 }
 
 export { curveMonotoneX, BK_LINE_COLORS, normalizeTimeSeriesRows, toCategoryBarRows };

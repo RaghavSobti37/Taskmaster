@@ -133,4 +133,34 @@ describe('Authentication API', () => {
       expect(String(meRes.body.error || '')).toMatch(/suspended/i);
     });
   });
+
+  describe('GET /api/auth/session', () => {
+    it('returns 200 authenticated false when logged out', async () => {
+      const res = await request(app).get('/api/auth/session');
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toEqual({ authenticated: false });
+    });
+
+    it('returns authenticated true with user when logged in', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Session User',
+          email: 'session@example.com',
+          password: TEST_PASSWORD,
+          gender: 'male',
+        });
+
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({
+        email: 'session@example.com',
+        password: TEST_PASSWORD,
+      });
+
+      const res = await agent.get('/api/auth/session');
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.authenticated).toBe(true);
+      expect(res.body.user.email).toEqual('session@example.com');
+    });
+  });
 });

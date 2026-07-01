@@ -16,7 +16,7 @@ export default function NeedsAttentionAccordion({
   if (!pendingInvoices.length) return null;
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+    <div className="list-page-banner rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

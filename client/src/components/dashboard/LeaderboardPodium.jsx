@@ -15,8 +15,8 @@ const LeaderboardPodium = () => {
   const entries = data?.entries ?? [];
   const meta = data?.meta;
   const topFive = useMemo(() => entries.slice(0, TOP_N), [entries]);
-  const lastWeekLabel = meta?.lastWeekStartKey && meta?.lastWeekEndKey
-    ? `${meta.lastWeekStartKey} – ${meta.lastWeekEndKey}`
+  const lastMonthLabel = meta?.lastMonthStartKey && meta?.lastMonthEndKey
+    ? `${meta.lastMonthStartKey} – ${meta.lastMonthEndKey}`
     : null;
   const [selectedMember, setSelectedMember] = useState(null);
   const { data: breakdown, isLoading: breakdownLoading } = useLeaderboardBreakdown(
@@ -31,7 +31,7 @@ const LeaderboardPodium = () => {
         bodyClassName="p-0 flex flex-col"
         title={
           <>
-            Weekly Leaderboard
+            Monthly Leaderboard
             <LeaderboardUpdatedBadge lastRecalculatedAt={meta?.lastRecalculatedAt} />
           </>
         }
@@ -49,7 +49,7 @@ const LeaderboardPodium = () => {
                 member={member}
                 entries={entries}
                 currentUserId={user?._id}
-                lastWeekLabel={lastWeekLabel}
+                lastMonthLabel={lastMonthLabel}
                 onSelect={setSelectedMember}
               />
             ))}

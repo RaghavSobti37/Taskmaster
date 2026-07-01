@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Layers, Mail, MapPin, Newspaper, Phone, Users } from 'lucide-react';
@@ -8,6 +8,7 @@ import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Badge, DataTable } from '../../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
 const MediaListPage = () => {
@@ -148,6 +149,58 @@ const MediaListPage = () => {
     [],
   );
 
+  const handleClearMediaFilters = useCallback(() => {
+    setSheetFilter('');
+    setPublicationFilter('');
+    setNicheFilter('');
+  }, []);
+
+  const mediaFilterFields = useMemo(() => [
+    {
+      id: 'sheet',
+      label: 'Spreadsheet tab',
+      type: 'searchable',
+      value: sheetFilter,
+      defaultValue: '',
+      options: [
+        { value: '', label: `All sheets (${filterOptions?.sheets?.reduce((n, s) => n + s.count, 0) || 0})` },
+        ...(filterOptions?.sheets || []).map((sheet) => ({
+          value: sheet.name,
+          label: `${sheet.name} (${sheet.count})`,
+        })),
+      ],
+      onChange: (v) => {
+        setSheetFilter(v);
+        setPublicationFilter('');
+        setNicheFilter('');
+      },
+    },
+    {
+      id: 'publication',
+      label: 'Publication / outlet',
+      type: 'searchable',
+      value: publicationFilter,
+      defaultValue: '',
+      options: [
+        { value: '', label: 'All outlets' },
+        ...(filterOptions?.publications || []).map((pub) => ({ value: pub, label: pub })),
+      ],
+      onChange: setPublicationFilter,
+    },
+    {
+      id: 'niche',
+      label: 'Beat / theme',
+      type: 'searchable',
+      value: nicheFilter,
+      defaultValue: '',
+      options: [
+        { value: '', label: 'All beats' },
+        ...(filterOptions?.niches || []).map((niche) => ({ value: niche, label: niche })),
+      ],
+      onChange: setNicheFilter,
+    },
+  ], [sheetFilter, publicationFilter, nicheFilter, filterOptions]);
+
   if (isLoading && !contacts.length) return <PageSkeleton />;
 
   return (
@@ -156,6 +209,20 @@ const MediaListPage = () => {
       title="Media List"
       icon={Newspaper}
       backTo={ADMIN_CONSOLE_PATH}
+      toolbarFill
+      filterFields={mediaFilterFields}
+      filterSheetTitle="Media filters"
+      mobileFilterCount={countActiveFilters(mediaFilterFields)}
+      onActiveFiltersClear={handleClearMediaFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search contacts..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
       overview={{
         stats: [
           {
@@ -197,55 +264,6 @@ const MediaListPage = () => {
           },
         ],
       }}
-      toolbar={
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <select
-            value={sheetFilter}
-            onChange={(e) => {
-              setSheetFilter(e.target.value);
-              setPublicationFilter('');
-              setNicheFilter('');
-            }}
-            className="h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-text-primary)] max-w-[14rem] truncate font-semibold"
-            aria-label="Filter by spreadsheet tab"
-          >
-            <option value="">All sheets ({filterOptions?.sheets?.reduce((n, s) => n + s.count, 0) || 0})</option>
-            {(filterOptions?.sheets || []).map((sheet) => (
-              <option key={sheet.name} value={sheet.name}>
-                {sheet.name} ({sheet.count})
-              </option>
-            ))}
-          </select>
-          <SearchInput
-            placeholder="Search contacts..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="!w-44 shrink min-w-[9rem]"
-          />
-          <select
-            value={publicationFilter}
-            onChange={(e) => setPublicationFilter(e.target.value)}
-            className="h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-text-primary)] max-w-[12rem] truncate"
-            aria-label="Filter by publication"
-          >
-            <option value="">All outlets</option>
-            {(filterOptions?.publications || []).map((pub) => (
-              <option key={pub} value={pub}>{pub}</option>
-            ))}
-          </select>
-          <select
-            value={nicheFilter}
-            onChange={(e) => setNicheFilter(e.target.value)}
-            className="h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-text-primary)] max-w-[12rem] truncate"
-            aria-label="Filter by beat"
-          >
-            <option value="">All beats</option>
-            {(filterOptions?.niches || []).map((niche) => (
-              <option key={niche} value={niche}>{niche}</option>
-            ))}
-          </select>
-        </div>
-      }
       toolbarActions={
         <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
           <Newspaper size={14} />

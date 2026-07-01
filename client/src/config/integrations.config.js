@@ -430,3 +430,28 @@ export function computeFallbackReach(artist) {
     + (Number(a.instagram?.followers) || 0)
     + (Number(a.facebook?.followers) || 0);
 }
+
+/** Resolve primary connection for a platform (instagram includes legacy meta provider). */
+export function findArtistConnection(connections = [], provider) {
+  const match = (c) => c.provider === provider
+    || (provider === 'instagram' && c.provider === 'meta');
+  return connections.find((c) => match(c) && c.isPrimary)
+    || connections.find((c) => match(c));
+}
+
+export function isArtistConnectionLinked(conn, provider) {
+  if (!conn) return false;
+  if (conn.status === 'active' || conn.accountHandle) return true;
+  const meta = conn.metadata || {};
+  if (provider === 'instagram' || conn.provider === 'meta') return !!meta.igAccountId;
+  if (provider === 'spotify') return !!meta.artistId;
+  if (provider === 'youtube') return !!meta.channelId;
+  if (provider === 'facebook') return !!meta.fbPageId;
+  return false;
+}
+
+const SYNCABLE_HUB_STATUSES = new Set(['connected', 'active', 'pending']);
+
+export function isHubStatusSyncable(status) {
+  return SYNCABLE_HUB_STATUSES.has(status);
+}

@@ -7,8 +7,10 @@ export function createLazyWithRetry(componentImport) {
       return await componentImport();
     } catch (error) {
       if (isStaleChunkError(error)) {
-        await recoverFromStaleChunks();
-        return new Promise(() => {});
+        const recovered = await recoverFromStaleChunks();
+        if (recovered) {
+          return new Promise(() => {});
+        }
       }
       throw error;
     }

@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-
 import { useParams, useNavigate } from 'react-router-dom';
-
-import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc } from 'lucide-react';
-
+import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc, Link2 } from 'lucide-react';
 import { PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
-
 import { useConfirm } from '../../contexts/confirmContext';
-
 import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
+
+import ArtistShareModal from '../../components/artists/ArtistShareModal';
+import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { buildArtistEditForm } from '../../utils/artistEditForm';
 
 import ClaimWorkspaceBanner from '../../components/artists/ClaimWorkspaceBanner';
 
@@ -31,9 +30,8 @@ export default function ArtistDetail({ isPreview = false }) {
   const {
 
     artist,
-
     isArtistLoading,
-
+    previewInvalid,
     shareToken,
 
     connections,
@@ -62,7 +60,10 @@ export default function ArtistDetail({ isPreview = false }) {
 
   const [isEditing, setIsEditing] = useState(false);
 
+  const [isShareOpen, setIsShareOpen] = useState(false);
+
   const [editedArtist, setEditedArtist] = useState(null);
+  const [editBaseline, setEditBaseline] = useState(null);
 
 
 
@@ -70,21 +71,9 @@ export default function ArtistDetail({ isPreview = false }) {
 
     if (!artist) return;
 
-    setEditedArtist({
-
-      name: artist.name || '',
-
-      bio: artist.bio || '',
-
-      website: artist.website || '',
-
-      spotifyId: artist.oauthCredentials?.spotify?.artistId || connections.find((c) => c.provider === 'spotify')?.accountHandle || '',
-
-      youtubeId: artist.oauthCredentials?.youtube?.channelId || connections.find((c) => c.provider === 'youtube')?.accountHandle || '',
-
-      instaId: artist.oauthCredentials?.meta?.igAccountId || connections.find((c) => c.provider === 'instagram')?.accountHandle || '',
-
-    });
+    const snapshot = buildArtistEditForm(artist, connections);
+    setEditedArtist(snapshot);
+    setEditBaseline(cloneSnapshot(snapshot));
 
     setIsEditing(true);
 
@@ -154,30 +143,6 @@ export default function ArtistDetail({ isPreview = false }) {
 
 
 
-  const handleShare = async () => {
-
-    try {
-
-      const { url } = await shareLinkMutation.mutateAsync(id);
-
-      await navigator.clipboard.writeText(url);
-
-      alert(`Share link copied:\n${url}`);
-
-    } catch {
-
-      const fallback = `${window.location.origin}/preview/artist/${id}`;
-
-      await navigator.clipboard.writeText(fallback);
-
-      alert(`Preview link copied:\n${fallback}`);
-
-    }
-
-  };
-
-
-
   const handleSetPrimary = async (connectionId) => {
 
     if (!connectionId) return;
@@ -192,28 +157,28 @@ export default function ArtistDetail({ isPreview = false }) {
 
   if (isArtistLoading) return <PageSkeleton />;
 
-
+  if (previewInvalid) {
+    return (
+      <PageContainer className="!py-16 text-center">
+        <Link2 size={48} className="mx-auto mb-4 text-amber-500 opacity-50" />
+        <h2 className="text-lg font-black uppercase text-amber-600">Invalid Share Link</h2>
+        <p className="text-sm text-[var(--color-text-muted)] mt-2 max-w-md mx-auto">
+          This preview URL is missing a token. Ask your manager for a fresh share link.
+        </p>
+      </PageContainer>
+    );
+  }
 
   if (!artist) {
-
     return (
-
       <PageContainer className="!py-16 text-center">
-
         <Disc size={48} className="mx-auto mb-4 text-rose-500 opacity-50" />
-
         <h2 className="text-lg font-black uppercase text-rose-500">Artist Not Found</h2>
-
         <Button variant="secondary" className="mt-6 mx-auto" onClick={() => navigate('/artists')}>
-
           <ArrowLeft size={16} /> Back to Roster
-
         </Button>
-
       </PageContainer>
-
     );
-
   }
 
 
@@ -272,7 +237,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
             {!isPreview && (
 
-              <Button size="sm" onClick={handleShare}>
+              <Button size="sm" onClick={() => setIsShareOpen(true)}>
 
                 <Share2 size={14} /> Share
 
@@ -326,11 +291,29 @@ export default function ArtistDetail({ isPreview = false }) {
 
         setEditedArtist={setEditedArtist}
 
+        editBaseline={editBaseline}
+
         onSave={saveArtist}
 
         onDelete={handleDelete}
 
         isPreview={isPreview}
+
+      />
+
+      <ArtistShareModal
+
+        isOpen={isShareOpen}
+
+        onClose={() => setIsShareOpen(false)}
+
+        artistId={id}
+
+        artistName={artist.name}
+
+        artistSlug={artist.slug}
+
+        shareLinkMutation={shareLinkMutation}
 
       />
 

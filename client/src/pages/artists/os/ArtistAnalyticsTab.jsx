@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button, Input, FullScreenWorkspace, SectionCard, MetricCard } from '../../../components/ui';
 import { useArtistAnalytics } from '../../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../../utils/analyticsDataUtils';
-import { formatNumber } from '../../../config/integrations.config';
+import { formatNumber, isArtistConnectionLinked } from '../../../config/integrations.config';
 import UnifiedReachCard from '../../../components/artists/UnifiedReachCard';
 import PlatformSummaryCards from '../../../components/artists/PlatformSummaryCards';
 import PlatformAnalyticsSection from '../../../components/artists/PlatformAnalyticsSection';
@@ -235,7 +236,9 @@ function ArtistAnalyticsTabInner({
       <SectionCard title="Overview" bodyClassName="!py-4">
         <UnifiedReachCard
           normalized={normalized || analyticsData?.normalized}
-          connectionCount={connections.filter((c) => c.accountHandle).length}
+          connectionCount={
+            connections.filter((c) => isArtistConnectionLinked(c, c.provider === 'meta' ? 'instagram' : c.provider)).length
+          }
           artist={artist}
           connections={connections}
           onReconnect={onSync}
@@ -303,7 +306,10 @@ function ArtistAnalyticsTabInner({
           hasChanges={showAddVideo && !!(newVideo.url || newVideo.title || newVideo.channelName)}
           onCancel={() => setNewVideo({ url: '', title: '', channelName: '' })}
           onSave={async () => {
-            if (!newVideo.url) return alert('YouTube URL required');
+            if (!newVideo.url) {
+              toast.error('YouTube URL required');
+              return;
+            }
             await addVideoMutation.mutateAsync({ id: artistId, data: newVideo });
             setShowAddVideo(false);
             setNewVideo({ url: '', title: '', channelName: '' });

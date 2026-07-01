@@ -65,8 +65,8 @@ export function formatEventRangeLabel(startRaw, endRaw) {
     return `${formatTimeFromParts(start.time)} – ${formatTimeFromParts(end.time)}`;
   }
 
-  const startDateLabel = formatDateKeyForDisplay(start.date);
-  const endDateLabel = formatDateKeyForDisplay(end.date);
+  const startDateLabel = formatDateKeyForDisplay(start.date, { withWeekday: true });
+  const endDateLabel = formatDateKeyForDisplay(end.date, { withWeekday: true });
   return `${startDateLabel} ${formatTimeFromParts(start.time)} – ${endDateLabel} ${formatTimeFromParts(end.time)}`;
 }
 

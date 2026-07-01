@@ -3,15 +3,66 @@ const MailEvent = require('../models/MailEvent');
 const Campaign = require('../models/Campaign');
 const { scanBounces, updateEmailTags } = require('../services/mailService');
 const { getCache, setCache } = require('../../../services/cacheService');
+const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
+const { todayEnd, getDateKey, startOfDayFromKey } = require('../../../utils/attendanceDate');
 
 const MAIL_STATS_CACHE_KEY = 'mail:stats:v1';
 const MAIL_STATS_TTL_SECONDS = 60;
+const TIMEFRAME_DAYS = { '1d': 1, '7d': 7, '30d': 30 };
+
+const rangeForTimeframe = (timeframe) => {
+  const days = TIMEFRAME_DAYS[timeframe] || 7;
+  const end = todayEnd();
+  const todayKey = getDateKey();
+  const anchor = new Date(`${todayKey}T12:00:00+05:30`);
+  anchor.setDate(anchor.getDate() - (days - 1));
+  const start = startOfDayFromKey(getDateKey(anchor));
+  return { start, end, days };
+};
+
+const sumEventCounts = (rows) => {
+  const map = Object.fromEntries(rows.map((row) => [row._id, row.count]));
+  return {
+    totalSent: (map.Send || 0) + (map.Delivery || 0),
+    totalOpened: map.Open || 0,
+    totalClicked: map.Click || 0,
+    totalBounced: map.Bounce || 0,
+  };
+};
+
+async function getMailStatsForRange(start, end) {
+  const rows = await aggregateWithTenant(MailEvent, [
+    {
+      $match: {
+        timestamp: { $gte: start, $lte: end },
+        eventType: { $in: ['Send', 'Delivery', 'Open', 'Click', 'Bounce'] },
+      },
+    },
+    { $group: { _id: '$eventType', count: { $sum: 1 } } },
+  ]);
+  return sumEventCounts(rows);
+}
 
 exports.getStats = async (req, res) => {
   try {
-    const cached = await getCache(MAIL_STATS_CACHE_KEY);
+    const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : null;
+    const cacheKey = timeframe ? `${MAIL_STATS_CACHE_KEY}:${timeframe}:${getDateKey()}` : MAIL_STATS_CACHE_KEY;
+    const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
+    }
+
+    if (timeframe) {
+      const { start, end } = rangeForTimeframe(timeframe);
+      const ranged = await getMailStatsForRange(start, end);
+      const payload = {
+        timeframe,
+        totalCampaigns: 0,
+        ...ranged,
+        totalUnsubscribed: 0,
+      };
+      await setCache(cacheKey, payload, MAIL_STATS_TTL_SECONDS);
+      return res.json(payload);
     }
 
     const [mailCampaigns, coreCampaigns, totalUnsubscribed] = await Promise.all([

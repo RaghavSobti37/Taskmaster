@@ -5,11 +5,11 @@ const mongoose = require('mongoose');
  * Tracks changes to specified fields and logs them to CRMAudit.
  */
 const auditPlugin = (schema, options = {}) => {
-  schema.pre('save', async function(next) {
-    if (this.isNew) return next();
+  schema.pre('save', async function () {
+    if (this.isNew) return;
 
     const modifiedPaths = this.modifiedPaths();
-    if (modifiedPaths.length === 0) return next();
+    if (modifiedPaths.length === 0) return;
 
     const userId = this._updatedBy || 'SYSTEM';
     const userRole = this._updatedByRole || 'SYSTEM';
@@ -43,15 +43,14 @@ const auditPlugin = (schema, options = {}) => {
         console.error('Audit Log Error:', err);
       }
     }
-    next();
   });
 
   // Support for findOneAndUpdate/findByIdAndUpdate
-  schema.pre('findOneAndUpdate', async function(next) {
+  schema.pre('findOneAndUpdate', async function () {
     try {
       const update = this.getUpdate();
       const oldDoc = await this.model.findOne(this.getQuery());
-      if (!oldDoc) return next();
+      if (!oldDoc) return;
 
       const options = this.getOptions ? this.getOptions() : {};
       const userId = this.options.userId || options.userId || 'SYSTEM';
@@ -97,7 +96,6 @@ const auditPlugin = (schema, options = {}) => {
     } catch (err) {
       console.error('Audit Middleware Error:', err);
     }
-    next();
   });
 
   schema.post('init', function() {

@@ -432,6 +432,38 @@ describe('GamificationService XP resolution', () => {
     expect(manual).not.toBeNull();
   });
 
+  test('buildCalculationSummary sums grouped subtotals to total', async () => {
+    const groups = [
+      { action: 'LEAD_CAPTURE', actionLabel: 'Lead capture', count: 2, amountPerAction: 50, totalXp: 100, timeBased: false, calculationLine: '2 × 50 XP' },
+      { action: 'COMPLETE_TASK', actionLabel: 'Task completion', count: 1, amountPerAction: 30, totalXp: 30, timeBased: true, ratePerHour: 10, avgHours: 3, calculationLine: '1 × 3h avg × 10 XP/h' },
+    ];
+    const summary = GamificationService.buildCalculationSummary(groups, 130);
+    expect(summary.lines).toHaveLength(2);
+    expect(summary.subtotalSum).toBe(130);
+    expect(summary.totalXp).toBe(130);
+    expect(summary.verified).toBe(true);
+    expect(summary.lines[0].formula).toBe('2 × 50 XP');
+  });
+
+  test('getMonthlyLeaderboard resolves time-based amounts from stored hours', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    await GamificationConfig.create({ taskCompletion: 10 });
+    const { monthStart } = require('../utils/attendanceDate').getCurrentMonthRange();
+
+    await XPAuditLog.create({
+      userId,
+      action: 'COMPLETE_TASK',
+      amount: 5,
+      details: { hours: 3 },
+      createdAt: monthStart,
+    });
+
+    const monthly = await GamificationService.getMonthlyLeaderboard(10);
+    expect(monthly.entries).toEqual([[String(userId), 30]]);
+    expect(monthly.resolvedSum).toBe(30);
+    expect(monthly.storedSum).toBe(5);
+  });
+
   test('getWeeklyLeaderboard resolves time-based amounts from stored hours', async () => {
     const userId = new mongoose.Types.ObjectId();
     await GamificationConfig.create({ taskCompletion: 10 });

@@ -36,6 +36,20 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget()).toBe('/dashboard');
   });
 
+  it('redirects post-login to prod app origin on auth site even when VITE_APP_URL unset', async () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://auth.tsccoreknot.com' },
+    });
+    import.meta.env.VITE_SITE_MODE = 'auth';
+    import.meta.env.VITE_APP_URL = '';
+    import.meta.env.VITE_AUTH_URL = '';
+
+    const { resolveAppNavigationTarget, getAppOrigin } = await import('./siteUrls.js');
+
+    expect(getAppOrigin()).toBe('https://tsccoreknot.com');
+    expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
+  });
+
   it('links landing subdomain auth CTAs to configured auth host', async () => {
     import.meta.env.VITE_SITE_MODE = 'landing';
     import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';
@@ -45,5 +59,24 @@ describe('siteUrls', () => {
 
     expect(hasSameOriginAuthRoutes()).toBe(false);
     expect(authUrl('/login')).toBe('https://auth.tsccoreknot.com/login');
+  });
+
+  it('redirects app host auth slugs to auth subdomain when configured', async () => {
+    import.meta.env.VITE_SITE_MODE = 'app';
+    import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';
+    import.meta.env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
+    import.meta.env.VITE_LANDING_URL = 'https://landing.tsccoreknot.com';
+
+    const {
+      usesExternalAuthHost,
+      externalAuthRedirectTarget,
+      shouldRedirectMarketingRoute,
+    } = await import('./siteUrls.js');
+
+    expect(usesExternalAuthHost()).toBe(true);
+    expect(externalAuthRedirectTarget('/login', '?redirect=%2Fdashboard')).toBe(
+      'https://auth.tsccoreknot.com/login?redirect=%2Fdashboard',
+    );
+    expect(shouldRedirectMarketingRoute('/')).toBe('https://landing.tsccoreknot.com');
   });
 });

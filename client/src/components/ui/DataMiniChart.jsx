@@ -15,11 +15,14 @@ const DataMiniChart = React.memo(function DataMiniChart({
     [data],
   );
 
+  const shellClass = `p-3 min-w-0 overflow-hidden ${className}`;
+
   if (!loading && series.length === 0) {
     return (
-      <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
+      <ChartSurface title={title} className={shellClass} height={height}>
         <ChartEmptyState
           height={height}
+          aspectRatio={false}
           label="No location data yet — opens and clicks from real devices will populate city geo."
         />
       </ChartSurface>
@@ -27,11 +30,11 @@ const DataMiniChart = React.memo(function DataMiniChart({
   }
 
   return (
-    <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
+    <ChartSurface title={title} className={shellClass} height={height}>
       {type === 'donut' ? (
         <BklitBreakdownBars
-          aspectRatio="2.2 / 1"
           emptyLabel="No location data yet"
+          fillHeight
           height={height}
           items={series}
           nameKey="label"
@@ -39,9 +42,9 @@ const DataMiniChart = React.memo(function DataMiniChart({
         />
       ) : (
         <BklitCategoryBarChart
-          aspectRatio="2.2 / 1"
           emptyLabel="No location data yet"
           fill="var(--color-action-primary)"
+          fillHeight
           height={height}
           labelKey="label"
           loading={loading}

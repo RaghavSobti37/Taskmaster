@@ -5,9 +5,14 @@ import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
-import AppBootFallback from './components/AppBootFallback';
+import AppBootError from './components/AppBootError';
+import BootScreen from './components/BootScreen';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
+import MobilePullToRefresh from './components/mobile/MobilePullToRefresh';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
+import ExternalAuthRedirect from './components/ExternalAuthRedirect';
+import ExternalLandingRedirect from './components/ExternalLandingRedirect';
+import { usesExternalAuthHost, usesExternalLandingHost } from './config/siteUrls';
 
 const lazyWithRetry = createLazyWithRetry;
 
@@ -113,16 +118,33 @@ const LegacyArtistAnalyticsRedirect = () => {
 };
 
 function AppRootRedirect() {
-  const { user, loading } = useAuth();
-  if (loading) return <AppBootFallback />;
+  const { user, loading, bootError, retryBoot } = useAuth();
+  if (bootError) {
+    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
+  }
+  if (loading) return <BootScreen onRefresh={() => retryBoot()} />;
   if (user) return <Navigate to="/dashboard" replace />;
+  if (usesExternalLandingHost()) {
+    return <ExternalLandingRedirect />;
+  }
   return <Navigate to="/landing" replace />;
 }
 
+const externalAuthRouteElements = (
+  <>
+    <Route path="/login" element={<ExternalAuthRedirect />} />
+    <Route path="/register" element={<ExternalAuthRedirect />} />
+    <Route path="/forgot-password" element={<ExternalAuthRedirect />} />
+    <Route path="/reset-password" element={<ExternalAuthRedirect />} />
+    <Route path="/relegends" element={<ExternalAuthRedirect />} />
+    <Route path="/auth/google/success" element={<ExternalAuthRedirect />} />
+  </>
+);
+
 const marketingAuthRoutes = (
   <>
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/login/*" element={<LoginPage />} />
+    <Route path="/register/*" element={<RegisterPage />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/relegends" element={<OTPVerificationPage />} />
@@ -142,8 +164,9 @@ function App() {
   }, []);
 
   return (
-    <Suspense fallback={<AppBootFallback />}>
+    <Suspense fallback={<BootScreen />}>
       <RouteErrorBoundary>
+        <MobilePullToRefresh />
         <Routes>
           {isLandingSite() && (
             <>
@@ -165,8 +188,20 @@ function App() {
           {isAppSite() && (
             <>
           <Route path="/" element={<AppRootRedirect />} />
-          <Route path="/landing" element={<LandingPage />} />
-          {marketingAuthRoutes}
+          {usesExternalLandingHost() ? (
+            <Route path="/landing" element={<ExternalLandingRedirect />} />
+          ) : (
+            <Route path="/landing" element={<LandingPage />} />
+          )}
+          {usesExternalAuthHost() ? (
+            <>
+              {externalAuthRouteElements}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/userdata" element={<UserDataDeletion />} />
+            </>
+          ) : (
+            marketingAuthRoutes
+          )}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />

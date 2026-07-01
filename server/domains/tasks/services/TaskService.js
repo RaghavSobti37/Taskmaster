@@ -117,7 +117,7 @@ const queueTaskCompletedGamification = async (userId, task) => {
       plannedHours: task.plannedHours,
     },
   });
-  if (isQaSyncGamification()) await job;
+  if (isQaSyncGamification() || process.env.NODE_ENV === 'test') await job;
 };
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);

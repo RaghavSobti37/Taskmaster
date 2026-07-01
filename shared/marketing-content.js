@@ -75,8 +75,7 @@ export const landingFeaturePillars = [
 ];
 
 export const loginCopy = {
-  subtitle:
-    'Sign in to manage projects, tasks, CRM lists, attendance, and team operations in one workspace.',
+  subtitle: 'Projects, CRM, attendance, and team ops in one workspace.',
   installCta: 'Install CoreKnot app',
   installCtaInstalled: 'App install guide',
 };

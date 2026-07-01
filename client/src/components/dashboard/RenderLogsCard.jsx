@@ -1,25 +1,11 @@
 import React, { useMemo } from 'react';
-import { ExternalLink, ScrollText, Server } from 'lucide-react';
+import { ScrollText, Server } from 'lucide-react';
 import { DashboardWidgetShell } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useStaggerReveal } from '../../hooks/transitions';
 import { getRenderLogTargets, openRenderLogs } from '../../config/renderLogs';
-
-const ENV_TONE = {
-  production: {
-    label: 'Production',
-    badge: 'badge-mint',
-    accent: 'border-l-[var(--color-pastel-mint-text)]',
-    chip: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)]',
-  },
-  staging: {
-    label: 'Staging',
-    badge: 'badge-apricot',
-    accent: 'border-l-[var(--color-pastel-apricot-text)]',
-    chip: 'bg-[var(--color-pastel-apricot-bg)] text-[var(--color-pastel-apricot-text)]',
-  },
-};
+import IntegrationLinkRow, { INTEGRATION_TONES, IntegrationLinkGroup } from './IntegrationLinkRow';
 
 function groupByEnvironment(targets) {
   const groups = { production: [], staging: [] };
@@ -30,58 +16,24 @@ function groupByEnvironment(targets) {
   return groups;
 }
 
-function LogStreamRow({ target, tone }) {
-  return (
-    <button
-      type="button"
-      onClick={() => openRenderLogs(target.url)}
-      className={[
-        'group w-full text-left rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]',
-        'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]',
-        'border-l-[3px] transition-colors',
-        tone.accent,
-      ].join(' ')}
-    >
-      <span className="flex items-center gap-3 p-2.5 min-h-[44px]">
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tone.chip}`}
-          aria-hidden
-        >
-          <Server size={15} strokeWidth={2.25} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-bold text-[var(--color-text-primary)] truncate group-hover:text-[var(--color-action-primary)] transition-colors">
-            {target.label}
-          </span>
-          <span className="block text-[10px] text-[var(--color-text-muted)] font-mono truncate mt-0.5">
-            {target.serviceName}
-          </span>
-        </span>
-        <ExternalLink
-          size={14}
-          className="shrink-0 text-[var(--color-text-muted)] opacity-50 group-hover:opacity-100 transition-opacity"
-          aria-hidden
-        />
-      </span>
-    </button>
-  );
-}
-
 function EnvironmentGroup({ envKey, targets }) {
-  const tone = ENV_TONE[envKey];
+  const tone = INTEGRATION_TONES[envKey];
   if (!targets.length) return null;
 
   return (
-    <div className="space-y-1.5">
-      <p className="tm-section-label px-0.5">{tone.label}</p>
-      <ul className="space-y-1.5">
-        {targets.map((target) => (
-          <li key={target.id}>
-            <LogStreamRow target={target} tone={tone} />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <IntegrationLinkGroup title={tone.label}>
+      {targets.map((target) => (
+        <li key={target.id}>
+          <IntegrationLinkRow
+            label={target.label}
+            subtitle={target.serviceName}
+            icon={Server}
+            tone={tone}
+            onClick={() => openRenderLogs(target.url)}
+          />
+        </li>
+      ))}
+    </IntegrationLinkGroup>
   );
 }
 

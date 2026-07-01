@@ -20,7 +20,18 @@ const { attachProfileCompletion } = require('../../../utils/profileCompleteness'
 const { getDefaultSeedPassword } = require('../../../utils/defaultPassword');
 const { sendSystemEmail } = require('../../../utils/sendSystemEmail');
 const { apiError } = require('../../../utils/apiResponse');
-const { captureServerEvent, identifyServerUser } = require('../../../utils/posthog');
+const { captureEvent: capturePostHogEvent, identifyServerUser } = require('../../../utils/posthog');
+const {
+  isClerkConfigured,
+  verifyClerkSessionToken,
+  resolveUserFromClerkProfile,
+} = require('../../../utils/clerkAuth');
+const { clerkClient } = require('@clerk/clerk-sdk-node');
+const {
+  resolveClerkOrganizationId,
+  resolveTenantForOrganization,
+  ensureClerkOrganizationAccess,
+} = require('../../../utils/organizationAccess');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
 
@@ -40,7 +51,7 @@ const verifyOAuthTicket = (ticket) => {
   return decoded.id;
 };
 
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+const { resolveAuthFrontendUrl } = require('../../../utils/oauthEnv');
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
 const PASSWORD_RESET_CC = ADMIN_EMAIL || 'REDACTED_ADMIN@example.com';
@@ -72,10 +83,7 @@ const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
   if (authMethod) {
     const userObj = populated.toObject ? populated.toObject() : populated;
     identifyServerUser(userObj);
-    captureServerEvent(userObj._id, 'user_logged_in', {
-      auth_method: authMethod,
-      source: 'server',
-    });
+    capturePostHogEvent(req, 'user_logged_in', { method: authMethod, source: 'server' });
   }
   return res.json(formatAuthUser(populated));
 };
@@ -159,6 +167,7 @@ exports.register = async (req, res) => {
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
     await finishAuthSession(req, res, populated._id);
+    capturePostHogEvent(req, 'user_registered', { method: 'email' });
     return res.status(201).json(formatAuthUser(populated));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -215,6 +224,7 @@ exports.login = async (req, res) => {
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
       await finishAuthSession(req, res, populated._id);
+      capturePostHogEvent(req, 'user_logged_in', { method: 'email_password' });
       return res.json(formatAuthUser(populated));
     }
 
@@ -293,6 +303,7 @@ exports.logout = async (req, res) => {
     /* revocation is best-effort */
   }
   clearAuthCookie(res, req);
+  capturePostHogEvent(req, 'user_logged_out');
   res.json({ success: true, hadCookie: hadAuthCookie(req) });
 };
 
@@ -301,10 +312,41 @@ exports.getMe = async (req, res) => {
     if (!req.user) {
       return apiError(res, 'Not authorized', 401);
     }
+    if (req.user.departmentId && !req.user.departmentId.slug) {
+      const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
+      await req.user.populate('departmentId', DEPARTMENT_POPULATE);
+    }
     return res.json(attachProfileCompletion(req.user));
   } catch (error) {
     logger.error('authController', 'getMe failed', { error: error.message || error });
     return apiError(res, 'Failed to load user profile', 500);
+  }
+};
+
+/** Silent session bootstrap — 200 with authenticated:false when logged out (no 401 noise in DevTools). */
+exports.getSession = async (req, res) => {
+  try {
+    if (req.sessionSuspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({
+        authenticated: false,
+        error: 'Account suspended. Contact an administrator.',
+      });
+    }
+    if (!req.user) {
+      return res.json({ authenticated: false });
+    }
+    if (req.user.departmentId && !req.user.departmentId.slug) {
+      const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
+      await req.user.populate('departmentId', DEPARTMENT_POPULATE);
+    }
+    return res.json({
+      authenticated: true,
+      user: attachProfileCompletion(req.user),
+    });
+  } catch (error) {
+    logger.error('authController', 'getSession failed', { error: error.message || error });
+    return apiError(res, 'Failed to load session', 500);
   }
 };
 
@@ -428,11 +470,11 @@ exports.googleAuthCallback = async (req, res) => {
         user.googleCalendarLinked = true;
         await user.save();
       }
-      return res.redirect(`${FRONTEND_URL}/auth/google/success?link=success`);
+      return res.redirect(`${resolveAuthFrontendUrl()}/auth/google/success?link=success`);
     }
 
     if (process.env.NODE_ENV === 'production' && emailLower !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && state !== 'connect') {
-      return res.redirect(`${FRONTEND_URL}/login?error=unauthorized_domain`);
+      return res.redirect(`${resolveAuthFrontendUrl()}/login?error=unauthorized_domain`);
     }
 
     let user = await User.findOne({ email: emailLower });
@@ -459,10 +501,10 @@ exports.googleAuthCallback = async (req, res) => {
 
     const ticket = generateOAuthTicket(user._id);
 
-    res.redirect(`${FRONTEND_URL}/auth/google/success?ticket=${encodeURIComponent(ticket)}`);
+    res.redirect(`${resolveAuthFrontendUrl()}/auth/google/success?ticket=${encodeURIComponent(ticket)}`);
   } catch (error) {
     logger.error('authController', 'Google Auth ', { error: error.message || error });
-    res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
+    res.redirect(`${resolveAuthFrontendUrl()}/login?error=auth_failed`);
   }
 };
 
@@ -487,9 +529,65 @@ exports.oauthEstablishSession = async (req, res) => {
     }
 
     await finishAuthSession(req, res, populated._id);
+    capturePostHogEvent(req, 'user_logged_in', { method: 'google_oauth' });
     return res.json(formatAuthUser(populated));
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });
+  }
+};
+
+exports.clerkEstablishSession = async (req, res) => {
+  if (!isClerkConfigured()) {
+    return res.status(503).json({ error: 'Clerk authentication is not configured' });
+  }
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (!token) {
+      return res.status(400).json({ error: 'Missing Clerk session token' });
+    }
+
+    const profile = await verifyClerkSessionToken(token);
+    if (!profile) {
+      return res.status(401).json({ error: 'Invalid Clerk session' });
+    }
+
+    const clerkOrganizationId = resolveClerkOrganizationId({
+      bodyOrganizationId: req.body?.organizationId,
+      tokenOrganizationId: profile.clerkOrganizationId,
+    });
+    const tenant = await resolveTenantForOrganization(clerkOrganizationId);
+    let orgAccessGranted = false;
+
+    if (clerkOrganizationId) {
+      await ensureClerkOrganizationAccess({
+        clerkClient,
+        clerkUserId: profile.clerkUserId,
+        email: profile.email,
+        clerkOrganizationId,
+        tenant,
+      });
+      orgAccessGranted = true;
+    }
+
+    const populated = await resolveUserFromClerkProfile(profile, {
+      isRegistrationAllowed: (emailLower) => {
+        if (orgAccessGranted) return { ok: true };
+        return isRegistrationAllowed(emailLower);
+      },
+      tenantId: tenant?._id,
+    });
+    if (!populated) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+    if (populated.suspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
+    }
+
+    return sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
+  } catch (error) {
+    const status = error.status || 401;
+    return res.status(status).json({ error: error.message || 'Clerk sign-in failed' });
   }
 };
 
@@ -607,7 +705,7 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
     await user.save();
 
-    const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${resolveAuthFrontendUrl()}/reset-password?token=${resetToken}`;
 
     const { resolvePasswordResetCcEmails } = require('../../../utils/platformNotificationRecipients');
     const ccList = await resolvePasswordResetCcEmails();

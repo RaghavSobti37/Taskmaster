@@ -38,7 +38,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/(?!clerk-proxy)(.*)",
       "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/$1"
     },
     {

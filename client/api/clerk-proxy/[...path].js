@@ -1,10 +1,11 @@
 /**
- * Vercel serverless proxy for Clerk Frontend API.
- * Bypasses Cloudflare-blocked clerk.tsccoreknot.com CNAME (orange-cloud).
+ * Vercel serverless proxy for Clerk Frontend API (taskmaster / tsccoreknot.com).
  * @see https://clerk.com/docs/guides/dashboard/dns-domains/proxy-fapi
  */
+/* global Buffer, module */
 
 const CLERK_FAPI = 'https://frontend-api.clerk.services';
+const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';
 
 const hopByHop = new Set([
   'connection',
@@ -23,12 +24,6 @@ function clientIp(req) {
   if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
   if (Array.isArray(xff) && xff[0]) return String(xff[0]).trim();
   return req.socket?.remoteAddress || '127.0.0.1';
-}
-
-function buildProxyUrl(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  return `${proto}://${host}/__clerk`;
 }
 
 async function readBody(req) {
@@ -61,7 +56,7 @@ module.exports = async function handler(req, res) {
     if (value === undefined) continue;
     headers[key] = value;
   }
-  headers['Clerk-Proxy-Url'] = buildProxyUrl(req);
+  headers['Clerk-Proxy-Url'] = process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL;
   headers['Clerk-Secret-Key'] = secret;
   headers['X-Forwarded-For'] = clientIp(req);
 

@@ -5,6 +5,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { buildVercelHeaders } = require('./vercelSecurityHeaders.cjs');
 
 const CLIENT_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(CLIENT_ROOT, '..');
@@ -59,7 +60,7 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
   rules
     .filter((rule) => !isPostHogRewrite(rule))
     .map((rule) => {
-      if (rule.source === '/api/(.*)') {
+      if (rule.source === '/api/(.*)' || rule.source === '/api/(?!clerk-proxy)(.*)') {
         return { ...rule, destination: apiDestination };
       }
       if (rule.source === '/socket.io/(.*)') {
@@ -85,16 +86,21 @@ const composeRewrites = (templateRewrites, apiDestination, socketDestination) =>
   ];
 };
 
-/** PostHog same-origin proxy — static/array before catch-all (cache headers). */
+/**
+ * PostHog same-origin proxy — static/array before catch-all (cache headers).
+ * Uses `:path(.*)` (not `:path*`) because Vercel's wildcard segment matcher drops the
+ * trailing slash on paths like `/ph/decide/` and `/ph/e/`, which PostHog's SDK always
+ * sends with a trailing slash — see https://github.com/PostHog/posthog/issues/17596.
+ */
 const buildPostHogRewrites = () => {
   const region = resolvePostHogRegion(process.env.VITE_POSTHOG_HOST);
   const apiBase = `https://${region}.i.posthog.com`;
   const assetsBase = `https://${region}-assets.i.posthog.com`;
   const prefix = POSTHOG_PROXY_PREFIX;
   return [
-    { source: `${prefix}/static/:path*`, destination: `${assetsBase}/static/:path*` },
-    { source: `${prefix}/array/:path*`, destination: `${assetsBase}/array/:path*` },
-    { source: `${prefix}/:path*`, destination: `${apiBase}/:path*` },
+    { source: `${prefix}/static/:path(.*)`, destination: `${assetsBase}/static/:path` },
+    { source: `${prefix}/array/:path(.*)`, destination: `${assetsBase}/array/:path` },
+    { source: `${prefix}/:path(.*)`, destination: `${apiBase}/:path` },
   ];
 };
 
@@ -180,7 +186,9 @@ const readExistingClientVercelJson = () => {
 };
 
 const existingRewritesLookValid = (existing) => {
-  const apiRule = existing?.rewrites?.find((rule) => rule.source === '/api/(.*)');
+  const apiRule = existing?.rewrites?.find(
+    (rule) => rule.source === '/api/(.*)' || rule.source === '/api/(?!clerk-proxy)(.*)',
+  );
   const dest = String(apiRule?.destination || '');
   if (!dest.includes('.onrender.com') || dest.includes('YOUR-RENDER-SERVICE')) return false;
   try {
@@ -290,7 +298,7 @@ const payload = {
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
   ...(template.env ? { env: template.env } : {}),
-  ...(template.headers ? { headers: template.headers } : {}),
+  headers: buildVercelHeaders(template.headers),
 };
 
 const buildSitePayload = (buildCommand) => ({
@@ -300,7 +308,7 @@ const buildSitePayload = (buildCommand) => ({
   framework: null,
   ...(payload.redirects ? { redirects: payload.redirects } : {}),
   rewrites: payload.rewrites,
-  ...(payload.headers ? { headers: payload.headers } : {}),
+  headers: buildVercelHeaders(payload.headers),
   env: payload.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
 });
 
@@ -350,6 +358,7 @@ module.exports = {
   buildPostHogRewrites,
   mapTemplateRewrites,
   existingRewritesLookValid,
+  buildVercelHeaders,
 };
 
 if (require.main === module) {

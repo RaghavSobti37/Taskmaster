@@ -42,7 +42,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/(?!clerk-proxy)(.*)",
       "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
     },
     {
@@ -62,15 +62,40 @@
       "destination": "https://us.i.posthog.com/:path"
     },
     {
-      "source": "/__clerk/:path*",
-      "destination": "/api/clerk-proxy/:path*"
-    },
-    {
-      "source": "/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)",
+      "source": "/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com; worker-src 'self' blob:"
+        }
+      ]
+    },
     {
       "source": "/",
       "headers": [

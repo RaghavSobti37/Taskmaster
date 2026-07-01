@@ -73,11 +73,12 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
     })
 );
 
-/** Clerk FAPI proxy on main app host (Vercel serverless — avoids Render→Clerk TLS issues). */
-const buildClerkProxyRewriteMainApp = () => ({
-  source: '/__clerk/:path*',
-  destination: '/api/clerk/:path*',
-});
+/** Clerk FAPI proxy on primary app — forwarded to Render (Vercel api/ breaks monorepo npm install). */
+const buildClerkProxyRewriteMainApp = (apiDestination) => {
+  const origin = String(apiDestination || '').replace(/\/api\/\$1$/, '');
+  if (!origin || !origin.includes('.onrender.com')) return null;
+  return { source: '/__clerk/:path*', destination: `${origin}/__clerk/:path*` };
+};
 
 /** Auth/landing satellites forward Clerk to primary app host (Clerk rejects proxy on other hosts). */
 const buildClerkProxyRewriteSatellite = () => {
@@ -88,23 +89,19 @@ const buildClerkProxyRewriteSatellite = () => {
   return { source: '/__clerk/:path*', destination: `${appOrigin}/__clerk/:path*` };
 };
 
-/** @deprecated use buildClerkProxyRewriteMainApp — kept for tests */
-const buildClerkProxyRewrite = (apiDestination) => {
-  const origin = String(apiDestination || '').replace(/\/api\/\$1$/, '');
-  if (!origin || !origin.includes('.onrender.com')) return buildClerkProxyRewriteMainApp();
-  return buildClerkProxyRewriteMainApp();
-};
+/** @deprecated alias */
+const buildClerkProxyRewrite = (apiDestination) => buildClerkProxyRewriteMainApp(apiDestination);
 
 const composeRewrites = (templateRewrites, apiDestination, socketDestination, clerkProxy) => {
   const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
   const posthog = buildPostHogRewrites();
-  const clerkRewrite = clerkProxy || buildClerkProxyRewriteMainApp();
+  const clerkRewrite = clerkProxy || buildClerkProxyRewriteMainApp(apiDestination);
   const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
   const beforeCatchall = catchallIdx === -1 ? mapped : mapped.slice(0, catchallIdx);
   const afterCatchall = catchallIdx === -1 ? [] : mapped.slice(catchallIdx);
   return [
     ...beforeCatchall,
-    clerkRewrite,
+    ...(clerkRewrite ? [clerkRewrite] : []),
     ...posthog,
     ...afterCatchall,
   ];
@@ -315,7 +312,7 @@ const payload = {
           },
         ]
       : []),
-    ...composeRewrites(template.rewrites, apiDestination, socketDestination, buildClerkProxyRewriteMainApp()),
+    ...composeRewrites(template.rewrites, apiDestination, socketDestination),
   ],
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
@@ -329,7 +326,7 @@ const buildSitePayload = (buildCommand) => {
     template.rewrites,
     apiDestination,
     socketDestination,
-    satelliteClerk || buildClerkProxyRewriteMainApp(),
+    satelliteClerk,
   );
   return {
     buildCommand,

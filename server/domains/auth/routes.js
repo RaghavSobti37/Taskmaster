@@ -10,6 +10,7 @@ const {
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword,
   listSessions, revokeSession, revokeOtherSessions, getRealtimeToken,
 } = require('./controllers/authController');
+const { clerkExchange } = require('./controllers/clerkController');
 const {
   registerOptions, registerVerify, loginOptions,
 } = require('./controllers/webauthnController');
@@ -51,6 +52,7 @@ const authSignupLimiter = rateLimit({
 
 router.post('/register', authSignupLimiter, validateBody(registerBody), register);
 router.post('/login', authLoginLimiter, validateBody(loginBody), login);
+router.post('/clerk-exchange', authLoginLimiter, clerkExchange);
 router.post('/forgot-password', authForgotPasswordLimiter, validateBody(forgotPasswordBody), forgotPassword);
 router.post('/reset-password', authForgotPasswordLimiter, validateBody(resetPasswordBody), resetPassword);
 router.post('/logout', logout);

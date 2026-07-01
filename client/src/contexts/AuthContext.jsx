@@ -16,6 +16,7 @@ import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { probeAuthSession } from '../utils/authSessionProbe';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
+import { clerkSignOutIfNeeded } from '../lib/clerkSession';
 import { hasAnalyticsConsent } from '../lib/cookieConsent';
 import {
   ensurePostHogForConsent,
@@ -130,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // Cookie may already be cleared
     }
+    await clerkSignOutIfNeeded();
     clearAttendanceSessionLogin();
     disconnectAuthenticatedRealtime();
     queryClient.clear();

@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema({
   dailyStreak: { type: Number, default: 0 },
   // Google OAuth fields
   googleId: { type: String },
+  clerkId: { type: String, unique: true, sparse: true, index: true },
   googleAccessToken: { type: String },
   googleRefreshToken: { type: String },
   googleCalendarLinked: { type: Boolean, default: false },

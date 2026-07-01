@@ -1,3 +1,4 @@
+const { startOfDay } = require('date-fns');
 const Artist = require('../../../models/Artist');
 const ArtistMetrics = require('../../../models/ArtistMetrics');
 const ArtistAuth = require('../../../models/ArtistAuth');
@@ -281,13 +282,13 @@ function parsePublicDate(value) {
 }
 
 function sanitizePublicGigs(events = [], gigs = []) {
-  const now = new Date();
+  const todayStart = startOfDay(new Date());
   const rows = [];
 
   events.forEach((event) => {
     if (!event || event.status === 'cancelled' || event.status === 'private') return;
     const date = parsePublicDate(event.date);
-    if (date && date < now) return;
+    if (date && startOfDay(date) < todayStart) return;
     rows.push({
       date: event.date,
       venue: event.venue || 'TBA',
@@ -296,7 +297,7 @@ function sanitizePublicGigs(events = [], gigs = []) {
 
   gigs.forEach((gig) => {
     const date = parsePublicDate(gig.gigDate);
-    if (!date || date < now) return;
+    if (!date || startOfDay(date) < todayStart) return;
     rows.push({
       date: gig.gigDate,
       venue: gig.location || 'TBA',

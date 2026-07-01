@@ -14,6 +14,15 @@ jest.mock('../utils/qaExcludedUsers', () => ({
   shouldSuppressNotificationForRecipient: jest.fn().mockResolvedValue(false),
 }));
 
+jest.mock('../utils/workerTenantContext', () => ({
+  runWithWorkerTenant: jest.fn((_tenantId, fn) => fn()),
+}));
+
+jest.mock('../utils/defaultTenant', () => ({
+  resolveDefaultTenantId: jest.fn().mockResolvedValue('507f1f77bcf86cd799439099'),
+}));
+
+const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { createNotification } = require('../services/notificationDispatcher');
 const { broadcastRealtimeEvent } = require('../config/realtime');
@@ -22,6 +31,13 @@ describe('createNotification persistence (BUG-T11)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Notification.create = jest.fn().mockResolvedValue({ _id: 'notif-uuid-1' });
+    User.findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        setOptions: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ tenantId: '507f1f77bcf86cd799439099' }),
+        }),
+      }),
+    });
   });
 
   test('persists assign notification to Notification collection', async () => {

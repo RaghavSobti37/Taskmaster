@@ -6,6 +6,9 @@ const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const { sendPushToUser } = require('./pushNotificationService');
 const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
+const { getTenantId } = require('../utils/tenantContext');
+const { resolveDefaultTenantId } = require('../utils/defaultTenant');
+const { runWithWorkerTenant } = require('../utils/workerTenantContext');
 
 const escapeHtml = (str) => String(str || '')
   .replace(/&/g, '&amp;')
@@ -65,6 +68,20 @@ const resolveIconType = ({ iconType, actorId, relatedTaskId, category }) => {
   return 'system';
 };
 
+/** Cron/webhooks lack request tenant — derive from recipient so production validate() passes. */
+const resolveRecipientTenantId = async (recipientId) => {
+  const fromContext = getTenantId();
+  if (fromContext) return fromContext;
+
+  const recipient = await User.findById(recipientId)
+    .select('tenantId')
+    .setOptions({ bypassTenant: true })
+    .lean();
+  if (recipient?.tenantId) return recipient.tenantId;
+
+  return resolveDefaultTenantId();
+};
+
 const createNotification = async ({
   recipientId,
   title,
@@ -108,48 +125,64 @@ const createNotification = async ({
   const { broadcastRealtimeEvent } = require('../config/realtime');
   broadcastRealtimeEvent(`user-${recipientId}`, 'notification', notification);
 
+  let tenantId;
   try {
-    await Notification.create({
-      _id: notificationId,
-      recipient: recipientId,
-      title,
-      message,
-      type,
-      category,
-      relatedLeadId: relatedLeadId || undefined,
-      relatedTaskId: relatedTaskId || undefined,
-      relatedProjectId: relatedProjectId || undefined,
-      actionUrl: actionUrl || '',
-      actorId: actorId || undefined,
-      iconType: resolvedIconType,
-      read: false,
-      emailSent: false,
-    });
+    tenantId = await resolveRecipientTenantId(recipientId);
   } catch (err) {
-    logger.error('Notification', 'Persist failed', { error: err.message, recipientId });
+    logger.error('Notification', 'Tenant resolve failed', { error: err.message, recipientId });
+    return notification;
   }
 
-  if (sendEmail) {
-    const user = await User.findById(recipientId).select('name email');
-    if (user) {
-      const sent = await sendNotificationEmail(user, { title, message, category, actionUrl });
-      if (sent) {
-        notification.emailSent = true;
-        Notification.updateOne({ _id: notificationId }, { emailSent: true }).catch(() => {});
+  const deliver = async () => {
+    try {
+      await Notification.create({
+        _id: notificationId,
+        recipient: recipientId,
+        title,
+        message,
+        type,
+        category,
+        relatedLeadId: relatedLeadId || undefined,
+        relatedTaskId: relatedTaskId || undefined,
+        relatedProjectId: relatedProjectId || undefined,
+        actionUrl: actionUrl || '',
+        actorId: actorId || undefined,
+        iconType: resolvedIconType,
+        read: false,
+        emailSent: false,
+      });
+    } catch (err) {
+      logger.error('Notification', 'Persist failed', { error: err.message, recipientId });
+    }
+
+    if (sendEmail) {
+      const user = await User.findById(recipientId)
+        .select('name email')
+        .setOptions({ bypassTenant: true });
+      if (user) {
+        const sent = await sendNotificationEmail(user, { title, message, category, actionUrl });
+        if (sent) {
+          notification.emailSent = true;
+          Notification.updateOne({ _id: notificationId }, { emailSent: true })
+            .setOptions({ bypassTenant: true })
+            .catch(() => {});
+        }
       }
     }
-  }
 
-  await sendPushToUser(recipientId, {
-    title,
-    body: message,
-    actionUrl: actionUrl || '/inbox',
-    notificationId,
-    category,
-    iconType: resolvedIconType
-  });
+    await sendPushToUser(recipientId, {
+      title,
+      body: message,
+      actionUrl: actionUrl || '/inbox',
+      notificationId,
+      category,
+      iconType: resolvedIconType,
+    });
 
-  return notification;
+    return notification;
+  };
+
+  return runWithWorkerTenant(tenantId, () => deliver());
 };
 
 module.exports = { createNotification, sendNotificationEmail, buildNotificationHtml };

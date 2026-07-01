@@ -1,0 +1,31 @@
+---
+description: CoreKnot inherits platform agent governance — verify before memory writes
+alwaysApply: true
+---
+
+# Agent Governance (CoreKnot)
+
+Inherits platform rule: `../../../../.cursor/rules/agent-governance.mdc`
+
+## Boot
+
+1. Read `AGENTS.md` in this package root
+2. Run `.cursor/skills/coreknot-session-boot/SKILL.md` for non-trivial edits
+3. Pick agency agent via agent-menu; record on ledger slice
+
+## Verify bundle (before done / memory patch)
+
+```bash
+npm test --prefix client
+npm test --prefix server
+npm run build --prefix client
+```
+
+```bash
+node ../../../../.cursor/scripts/agent-memory-gate.mjs verify-and-patch \
+  --ledger .cursor/loop-engineering/<slug>-ledger.json \
+  --patch '{"satisfaction":"pass","phase":"complete"}' \
+  -- "npm test --prefix client && npm test --prefix server"
+```
+
+Paths relative to `coreknot/Taskmaster/`.

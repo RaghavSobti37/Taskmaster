@@ -46,10 +46,6 @@
       "destination": "https://YOUR-RENDER-SERVICE.onrender.com/socket.io/$1"
     },
     {
-      "source": "/__clerk/:path*",
-      "destination": "/api/clerk-proxy/:path*"
-    },
-    {
       "source": "/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }

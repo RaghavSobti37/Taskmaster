@@ -1,6 +1,5 @@
 /**
- * Edge proxy for Clerk Frontend API (tsccoreknot.com/__clerk).
- * @see https://clerk.com/docs/guides/dashboard/dns-domains/proxy-fapi
+ * Edge middleware: Clerk Frontend API proxy at /__clerk/*
  */
 
 const CLERK_FAPI = 'https://frontend-api.clerk.services';
@@ -25,10 +24,10 @@ function clientIp(request) {
 }
 
 export const config = {
-  runtime: 'edge',
+  matcher: '/__clerk/:path*',
 };
 
-export default async function handler(request) {
+export default async function middleware(request) {
   const secret = process.env.CLERK_SECRET_KEY;
   if (!secret) {
     return new Response(JSON.stringify({ error: 'Clerk proxy not configured' }), {
@@ -38,7 +37,7 @@ export default async function handler(request) {
   }
 
   const incoming = new URL(request.url);
-  const path = incoming.pathname.replace(/^\/api\/clerk-proxy\/?/, '');
+  const path = incoming.pathname.replace(/^\/__clerk\/?/, '');
   const targetUrl = `${CLERK_FAPI}/${path}${incoming.search}`;
 
   const headers = new Headers();

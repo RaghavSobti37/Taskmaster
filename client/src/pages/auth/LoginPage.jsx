@@ -5,7 +5,8 @@ import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import BrandLogo from '../../components/brand/BrandLogo';
-import AppBootFallback from '../../components/AppBootFallback';
+import AppBootError from '../../components/AppBootError';
+import BootScreen from '../../components/BootScreen';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
@@ -21,7 +22,7 @@ import { brand, loginCopy } from '../../constants/marketingContent';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, user, loading: authLoading } = useAuth();
+  const { login, user, loading: authLoading, bootError, retryBoot } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,8 +58,12 @@ const LoginPage = () => {
     }
   }, [location]);
 
+  if (bootError) {
+    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
+  }
+
   if (authLoading) {
-    return <AppBootFallback />;
+    return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
   const handleGoogleLogin = () => {

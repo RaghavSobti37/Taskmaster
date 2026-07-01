@@ -1,5 +1,6 @@
 import { apiPath } from './apiBase';
 import { getClientTraceId } from '../lib/systemLogBridge';
+import { fetchWithTimeout } from './fetchWithTimeout';
 
 /** Headers for initial session probe — skip toasts and error telemetry. */
 export const AUTH_SESSION_PROBE_HEADERS = {
@@ -7,19 +8,25 @@ export const AUTH_SESSION_PROBE_HEADERS = {
   'x-silent-auth-probe': 'true',
 };
 
+const SESSION_PROBE_TIMEOUT_MS = 12000;
+
 /**
  * Silent GET /api/auth/me for session bootstrap.
  * Uses fetch (not axios) so expected 401 when logged out does not surface as a rejected XHR in DevTools.
  */
 export async function probeAuthSession() {
-  const res = await fetch(apiPath('/api/auth/me'), {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      ...AUTH_SESSION_PROBE_HEADERS,
-      'X-Trace-Id': getClientTraceId(),
+  const res = await fetchWithTimeout(
+    apiPath('/api/auth/me'),
+    {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        ...AUTH_SESSION_PROBE_HEADERS,
+        'X-Trace-Id': getClientTraceId(),
+      },
     },
-  });
+    SESSION_PROBE_TIMEOUT_MS,
+  );
 
   if (res.status === 401 || res.status === 403) {
     return { status: res.status, user: null };

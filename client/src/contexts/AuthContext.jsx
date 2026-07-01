@@ -15,6 +15,7 @@ import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { probeAuthSession } from '../utils/authSessionProbe';
+import { formatBootErrorMessage } from '../utils/bootErrorMessage';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
 import { hasAnalyticsConsent } from '../lib/cookieConsent';
 import {
@@ -28,10 +29,12 @@ const defaultAuthContext = {
   user: null,
   loading: true,
   sessionReady: false,
+  bootError: null,
   login: async () => {},
   logout: () => {},
   refreshUser: () => {},
   applySessionUser: () => {},
+  retryBoot: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContext);
@@ -101,6 +104,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
+  const [bootError, setBootError] = useState(null);
   const userRef = useRef(user);
   const sessionReadyRef = useRef(sessionReady);
   const authEpochRef = useRef(0);
@@ -135,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     setSessionReady(false);
     setUser(null);
+    setBootError(null);
     capturePostHogEvent('user_logged_out');
     clearPostHogUser();
     setLoading(false);
@@ -156,6 +161,7 @@ export const AuthProvider = ({ children }) => {
 
     const run = async () => {
       const epoch = authEpochRef.current;
+      let lastError = null;
 
       for (let attempt = 0; attempt < retries; attempt += 1) {
         if (epoch !== authEpochRef.current) return null;
@@ -167,13 +173,20 @@ export const AuthProvider = ({ children }) => {
         let probe;
         try {
           probe = await probeAuthSession();
-        } catch {
+          lastError = null;
+        } catch (err) {
+          lastError = err;
           if (attempt < retries - 1) continue;
+          setBootError(formatBootErrorMessage(err));
+          setUser(null);
+          setSessionReady(false);
           setLoading(false);
           return null;
         }
 
         if (epoch !== authEpochRef.current) return null;
+
+        setBootError(null);
 
         if (probe.status === 401) {
           if (clearOn401) {
@@ -206,6 +219,11 @@ export const AuthProvider = ({ children }) => {
         return newData;
       }
 
+      if (lastError) {
+        setBootError(formatBootErrorMessage(lastError));
+      }
+      setUser(null);
+      setSessionReady(false);
       setLoading(false);
       return null;
     };
@@ -312,15 +330,24 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  const retryBoot = useCallback(() => {
+    loggingOutRef.current = false;
+    setBootError(null);
+    setLoading(true);
+    return fetchUser();
+  }, [fetchUser]);
+
   const value = useMemo(() => ({
     user,
     loading,
     sessionReady,
+    bootError,
     login,
     logout,
     refreshUser: fetchUser,
     applySessionUser,
-  }), [user, loading, sessionReady, login, logout, fetchUser, applySessionUser]);
+    retryBoot,
+  }), [user, loading, sessionReady, bootError, login, logout, fetchUser, applySessionUser, retryBoot]);
 
   return (
     <AuthContext.Provider value={value}>

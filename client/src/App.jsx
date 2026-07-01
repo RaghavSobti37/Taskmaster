@@ -5,7 +5,8 @@ import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
-import AppBootFallback from './components/AppBootFallback';
+import AppBootError from './components/AppBootError';
+import BootScreen from './components/BootScreen';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import MobilePullToRefresh from './components/mobile/MobilePullToRefresh';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
@@ -117,8 +118,11 @@ const LegacyArtistAnalyticsRedirect = () => {
 };
 
 function AppRootRedirect() {
-  const { user, loading } = useAuth();
-  if (loading) return <AppBootFallback />;
+  const { user, loading, bootError, retryBoot } = useAuth();
+  if (bootError) {
+    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
+  }
+  if (loading) return <BootScreen onRefresh={() => retryBoot()} />;
   if (user) return <Navigate to="/dashboard" replace />;
   if (usesExternalLandingHost()) {
     return <ExternalLandingRedirect />;
@@ -160,7 +164,7 @@ function App() {
   }, []);
 
   return (
-    <Suspense fallback={<AppBootFallback />}>
+    <Suspense fallback={<BootScreen />}>
       <RouteErrorBoundary>
         <MobilePullToRefresh />
         <Routes>

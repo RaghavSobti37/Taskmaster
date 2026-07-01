@@ -6,6 +6,7 @@ import BootScreen from '../../components/BootScreen';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
+import { isClerkConfigured } from '../../config/clerk';
 
 const GoogleSuccessPage = () => {
   const navigate = useNavigate();
@@ -34,6 +35,11 @@ const GoogleSuccessPage = () => {
     };
 
     if (ticket) {
+      if (isClerkConfigured()) {
+        processedKeyRef.current = authKey;
+        navigate('/login', { replace: true });
+        return;
+      }
       processedKeyRef.current = authKey;
       (async () => {
         try {
@@ -48,6 +54,11 @@ const GoogleSuccessPage = () => {
     }
 
     if (userStr) {
+      if (isClerkConfigured()) {
+        processedKeyRef.current = authKey;
+        navigate('/login', { replace: true });
+        return;
+      }
       processedKeyRef.current = authKey;
       (async () => {
         try {

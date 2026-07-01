@@ -13,7 +13,9 @@ import { getAxiosBaseURL } from '../utils/apiBase';
 import { isStandaloneDisplay } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
+import { runClerkSignOut } from '../lib/clerkLogoutRegistry';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
+import { enrichUserDepartment } from '../utils/enrichUserDepartment';
 import { probeAuthSession } from '../utils/authSessionProbe';
 import { formatBootErrorMessage } from '../utils/bootErrorMessage';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
@@ -129,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     loggingOutRef.current = true;
     authEpochRef.current += 1;
     markForceLogout();
+    await runClerkSignOut();
     try {
       await axios.post('/api/auth/logout');
     } catch {
@@ -203,7 +206,7 @@ export const AuthProvider = ({ children }) => {
           return userRef.current;
         }
 
-        const newData = probe.user;
+        const newData = await enrichUserDepartment(probe.user);
         if (userSessionChanged(userRef.current, newData)) {
           setUser(newData);
         }
@@ -328,6 +331,15 @@ export const AuthProvider = ({ children }) => {
       setPostHogUser(merged);
       return merged;
     });
+    enrichUserDepartment(nextUser).then((enriched) => {
+      if (!enriched) return;
+      setUser((prev) => {
+        const merged = mergeSessionUser(prev, enriched);
+        if (!userSessionChanged(prev, merged)) return prev;
+        setPostHogUser(merged);
+        return merged;
+      });
+    }).catch(() => {});
   }, []);
 
   const retryBoot = useCallback(() => {

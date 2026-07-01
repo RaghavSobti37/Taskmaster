@@ -26,6 +26,8 @@ import { ensurePostHogForConsent, getPostHogClient } from './lib/posthog';
 import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
 import PostHogConsentBridge from './components/PostHogConsentBridge';
+import ClerkAppProvider from './components/providers/ClerkAppProvider';
+import ClerkAuthEffects from './components/auth/ClerkAuthEffects';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
 import { Analytics } from '@vercel/analytics/react';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
@@ -127,35 +129,38 @@ const MotionConfigBridge = ({ children }) => {
 };
 
 const appTree = (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        <ThemeProvider>
-          <MotionConfigBridge>
-            <SidebarProvider>
-              <ToastProvider>
-                <ConfirmProvider>
-                  <UnsavedChangesProvider>
-                    <LocalFirstRoot>
-                      <PostHogConsentBridge />
-                      <App />
-                    </LocalFirstRoot>
-                    <CookieBanner />
-                    {import.meta.env.PROD ? <Analytics /> : null}
-                    {AgentationDev ? (
-                      <Suspense fallback={null}>
-                        <AgentationDev />
-                      </Suspense>
-                    ) : null}
-                  </UnsavedChangesProvider>
-                </ConfirmProvider>
-              </ToastProvider>
-            </SidebarProvider>
-          </MotionConfigBridge>
-        </ThemeProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+  <ClerkAppProvider>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          <ClerkAuthEffects />
+          <ThemeProvider>
+            <MotionConfigBridge>
+              <SidebarProvider>
+                <ToastProvider>
+                  <ConfirmProvider>
+                    <UnsavedChangesProvider>
+                      <LocalFirstRoot>
+                        <PostHogConsentBridge />
+                        <App />
+                      </LocalFirstRoot>
+                      <CookieBanner />
+                      {import.meta.env.PROD ? <Analytics /> : null}
+                      {AgentationDev ? (
+                        <Suspense fallback={null}>
+                          <AgentationDev />
+                        </Suspense>
+                      ) : null}
+                    </UnsavedChangesProvider>
+                  </ConfirmProvider>
+                </ToastProvider>
+              </SidebarProvider>
+            </MotionConfigBridge>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ClerkAppProvider>
 );
 
 ReactDOM.createRoot(document.getElementById('root')).render(

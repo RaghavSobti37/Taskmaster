@@ -1,0 +1,29 @@
+import React from 'react';
+import { ClerkProvider } from '@clerk/react';
+import { getClerkFrontendApiHost, getClerkPublishableKey, isClerkConfigured } from '../../config/clerk';
+import { clerkAuthAppearance, clerkAuthLocalization } from '../../config/clerkAppearance';
+
+const publishableKey = getClerkPublishableKey();
+const frontendApi = getClerkFrontendApiHost();
+
+export default function ClerkAppProvider({ children }) {
+  if (!isClerkConfigured()) {
+    return children;
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={publishableKey}
+      {...(frontendApi ? { frontendApi } : {})}
+      appearance={clerkAuthAppearance}
+      localization={clerkAuthLocalization}
+      signInUrl="/login"
+      signUpUrl="/register"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
+      afterSignOutUrl="/login"
+    >
+      {children}
+    </ClerkProvider>
+  );
+}

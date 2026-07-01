@@ -18,6 +18,14 @@ const isOneDriveWorkspace = /OneDrive/i.test(__dirname)
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
+  const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
+  const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
+  if (vercelProduction && clerkPk.startsWith('pk_test_')) {
+    throw new Error(
+      'Clerk production build uses pk_test_ (development). Create a Clerk production instance, '
+      + 'set pk_live_ on Vercel, then redeploy. See scripts/push-clerk-production-env.mjs',
+    )
+  }
   const agentationEnabled =
     mode === 'development' && env.VITE_ENABLE_AGENTATION === 'true'
   // Strangler: VITE_NEST_ATTENDANCE / VITE_NEST_TASKS → NestJS :5001

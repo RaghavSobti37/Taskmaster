@@ -57,6 +57,7 @@
     "staging:readiness": "node scripts/stagingReadiness.js",
     "production:deploy": "node scripts/deploy-production-render.js --wait",
     "production:setup": "node scripts/setup-production-full.js --all",
+    "production:dns": "node scripts/provision-subdomain-dns.cjs",
     "staging:deploy": "node scripts/deploy-staging-render.js --wait",
     "staging:deploy:loop": "node scripts/deploy-staging-render.js --loop --clear-cache",
     "staging:create": "node scripts/create-staging-render-services.js",
@@ -164,5 +165,9 @@
     "@opentelemetry/exporter-metrics-otlp-http": "^0.219.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.219.0",
     "@opentelemetry/host-metrics": "^0.38.1"
+  },
+  "dependencies": {
+    "mongoose": "^9.7.3",
+    "node-fetch": "^3.3.2"
   }
 }

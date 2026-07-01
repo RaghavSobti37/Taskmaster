@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "@coreknot/design-tokens";
 @import "./styles/tokens/index.css";
+@import "./styles/transitions.css";
 
 /* Shadow policy: shadows allowed only on floating elements (.tm-floating). Static surfaces use rule dividers. */
 
@@ -48,6 +49,13 @@
 
   --color-action-primary: var(--brand-green);
   --color-action-hover: var(--brand-teal-deep);
+
+  /* Chart series — funnel + insights */
+  --chart-1: var(--brand-teal-deep);
+  --chart-2: var(--brand-teal-mid);
+  --chart-3: var(--brand-pumpkin);
+  --chart-4: var(--brand-burgundy);
+  --chart-5: var(--brand-green);
 
   /* Analytics delta tokens */
   --color-delta-positive-text: var(--brand-green);
@@ -121,9 +129,39 @@
   --page-gutter: 0.9rem;
   --page-gutter-desktop: 1.125rem;
   --page-stack-gap: 0.9rem;
+  /* List/hub page vertical rhythm — overview → toolbar → filters → workspace */
+  --list-section-gap: 1rem;
+  --list-section-gap-lg: 1.5rem;
   --page-bottom-nav-clearance: calc(5rem + env(safe-area-inset-bottom, 0px));
   --page-scroll-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   color-scheme: light;
+  --chart-1: var(--color-pastel-mint-text);
+  --chart-2: var(--color-pastel-apricot-text);
+  --chart-3: var(--color-pastel-blue-text);
+  --chart-4: var(--color-pastel-rose-text);
+  --chart-5: var(--color-brand-teal);
+  --chart-background: oklch(1 0 0);
+  --chart-foreground: oklch(0.145 0.004 285);
+  --chart-foreground-muted: oklch(0.55 0.014 260);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.4 0.1828 274.34);
+  --chart-grid: oklch(0.9 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);
+  --chart-tooltip-foreground: oklch(0.985 0 0);
+  --chart-tooltip-muted: oklch(0.65 0.01 260);
+  --chart-marker-background: oklch(0.97 0.005 260);
+  --chart-marker-border: oklch(0.85 0.01 260);
+  --chart-marker-foreground: oklch(0.3 0.01 260);
+  --chart-label: oklch(0.45 0.01 260);
+  --chart-scale-01: oklch(0.98 0.003 106);
+  --chart-scale-02: oklch(0.92 0.008 106);
+  --chart-scale-03: oklch(0.82 0.015 106);
+  --chart-scale-04: oklch(0.68 0.02 106);
+  --chart-scale-05: oklch(0.55 0.025 106);
+  --chart-scale-pattern-color: oklch(0.96 0.005 106);
+  --muted-foreground: var(--color-text-muted);
 }
 
 .tm-page-shell {
@@ -147,6 +185,54 @@
   padding-bottom: 0;
 }
 
+/* List + hub pages — uniform vertical spacing between major blocks */
+.list-page-stack,
+.hub-page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-section-gap);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .list-page-stack,
+  .hub-page-stack {
+    gap: var(--list-section-gap-lg);
+  }
+}
+
+.list-page-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-section-gap);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .list-page-workspace {
+    gap: var(--list-section-gap-lg);
+    border: 1px solid var(--color-bg-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    overflow: hidden;
+  }
+}
+
+/* List/hub section blocks — parent stack gap owns vertical rhythm (gap-4 / lg:gap-6) */
+.list-page-banner,
+.data-overview-section,
+.list-active-filter-bar {
+  margin: 0;
+}
+
+.list-page-banner {
+  flex-shrink: 0;
+}
+
+.tm-hub-header {
+  margin: 0;
+}
+
 /* TSC brand — marketing / auth pages only */
 .tm-marketing-page,
 .tm-marketing {
@@ -163,6 +249,19 @@
   --foreground: var(--brand-teal-deep);
   --card: var(--brand-white);
   --border: color-mix(in srgb, var(--brand-cream) 55%, var(--brand-pumpkin));
+}
+
+/* Auth routes — always cream/teal marketing palette (even in app dark mode) */
+.tm-auth-page {
+  background-color: var(--brand-cream-wash);
+  color: var(--brand-teal-deep);
+}
+
+.dark .tm-auth-page {
+  --background: var(--brand-cream-wash);
+  --foreground: var(--brand-teal-deep);
+  background-color: var(--brand-cream-wash);
+  color: var(--brand-teal-deep);
 }
 
 .dark {
@@ -190,6 +289,12 @@
   --color-action-primary: var(--brand-green);
   --color-action-hover: color-mix(in srgb, var(--brand-green) 82%, #ffffff);
 
+  --chart-1: var(--brand-green-muted);
+  --chart-2: var(--brand-teal-mid);
+  --chart-3: color-mix(in srgb, var(--brand-amber) 82%, #ffffff);
+  --chart-4: #e08a7a;
+  --chart-5: var(--brand-green);
+
   /* Semantic Pastel System - Dark */
   --color-pastel-mint-bg: color-mix(in srgb, var(--brand-green) 14%, transparent);
   --color-pastel-mint-text: var(--brand-green-muted);
@@ -210,6 +315,22 @@
   --border: var(--global-hairline);
   --input: var(--global-surface-2);
   color-scheme: dark;
+  --chart-background: oklch(0.145 0 0);
+  --chart-foreground: oklch(0.45 0 0);
+  --chart-foreground-muted: oklch(0.65 0.01 260);
+  --chart-crosshair: oklch(0.45 0 0);
+  --chart-grid: oklch(0.25 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-marker-background: oklch(0.25 0.01 260);
+  --chart-marker-border: oklch(0.4 0.01 260);
+  --chart-marker-foreground: oklch(0.9 0 0);
+  --chart-label: oklch(0.75 0.01 260);
+  --chart-scale-01: oklch(0.28 0.03 270);
+  --chart-scale-02: oklch(0.38 0.04 270);
+  --chart-scale-03: oklch(0.48 0.05 270);
+  --chart-scale-04: oklch(0.58 0.06 270);
+  --chart-scale-05: oklch(0.68 0.07 270);
+  --chart-scale-pattern-color: oklch(0.145 0 0);
 }
 
 select option {
@@ -245,6 +366,154 @@ select option {
 .data-table-row {
   @apply border-b border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)] transition-colors;
   padding: var(--spacing-row-padding);
+}
+
+/* Office hub — desktop table chrome (lg+, hub panels only) */
+@media (min-width: 1024px) {
+  .tm-hub-panel[data-hub='office'] [aria-label='Data overview'] > .grid {
+    gap: 0.75rem;
+  }
+
+  .office-hub-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-bg-surface);
+  }
+
+  .office-hub-table thead th {
+    border-bottom: 1px solid var(--color-bg-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .office-hub-table .data-table--comfortable tbody .data-table-row:nth-child(even) {
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 45%, transparent);
+  }
+
+  .office-hub-table .data-table--comfortable tbody .data-table-row:hover {
+    background-color: var(--color-bg-secondary);
+  }
+
+  .office-hub-table .office-hub-cell-primary {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+
+  .office-hub-table .office-hub-cell-secondary {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: var(--color-text-muted);
+    margin-top: 0.125rem;
+  }
+
+  .office-hub-table .office-hub-cell-meta {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .office-hub-table.table-fixed .office-col-primary {
+    width: 28%;
+  }
+
+  .office-hub-table.table-fixed .office-col-badge {
+    width: 12%;
+    min-width: 6.5rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-meta {
+    width: 16%;
+    min-width: 7rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-numeric {
+    width: 11%;
+    min-width: 6rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-date {
+    width: 12%;
+    min-width: 6.5rem;
+  }
+
+  .office-hub-table.table-fixed .office-col-users {
+    width: 21%;
+    min-width: 8rem;
+  }
+
+  /* Finance hub — bordered desktop table (Management → Finance) */
+  .finance-hub-table {
+    border: 1px solid var(--color-bg-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    overflow: hidden;
+  }
+
+  .finance-hub-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-bg-surface);
+  }
+
+  .finance-hub-table thead th {
+    border-bottom: 1px solid var(--color-bg-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.25;
+    overflow: visible;
+    vertical-align: bottom;
+  }
+
+  .finance-hub-table thead th:not(:last-child),
+  .finance-hub-table tbody td:not(:last-child) {
+    border-right: 1px solid color-mix(in srgb, var(--color-bg-border) 55%, transparent);
+  }
+
+  .finance-hub-table .data-table--comfortable tbody .data-table-row:nth-child(even) {
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 45%, transparent);
+  }
+
+  .finance-hub-table .data-table--comfortable tbody .data-table-row:hover {
+    background-color: var(--color-bg-secondary);
+  }
+
+  .finance-hub-table .finance-col-name {
+    min-width: 10rem;
+  }
+
+  .finance-hub-table .finance-col-ref {
+    min-width: 5.5rem;
+  }
+
+  .finance-hub-table .finance-col-project {
+    min-width: 7.5rem;
+  }
+
+  .finance-hub-table .finance-col-category {
+    min-width: 6.5rem;
+  }
+
+  .finance-hub-table .finance-col-size {
+    min-width: 5rem;
+  }
+
+  .finance-hub-table .finance-col-uploader {
+    min-width: 7rem;
+  }
+
+  .finance-hub-table .finance-col-date {
+    min-width: 7.5rem;
+  }
+
+  .finance-hub-table .finance-col-actions {
+    min-width: 5.5rem;
+    width: 5.5rem;
+  }
 }
 
 .badge-pastel {
@@ -341,7 +610,7 @@ select option {
 .tm-data-row {
   border-bottom: 1px solid var(--color-bg-border);
   padding: 0.625rem 0.875rem;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-quick) var(--ease-out);
 }
 
 @media (min-width: 1024px) {
@@ -434,11 +703,47 @@ select option {
   line-height: 1.25rem;
 }
 
+/* Sliding tab controls share toolbar height — pill tracks tab offsetTop/height via JS */
+.tm-toolbar-control.t-tabs {
+  align-items: stretch;
+  padding: 3px;
+  border: 1px solid var(--color-bg-border);
+  border-radius: var(--radius-atomic);
+  background: var(--color-bg-secondary);
+}
+
+.tm-toolbar-control.t-tabs .t-tab {
+  height: auto;
+  min-height: 0;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .page-toolbar-row {
   align-items: center;
 }
 
 .page-toolbar-controls {
+  align-items: center;
+}
+
+/* Search slot: grows to fill space left of filters + actions cluster */
+.page-toolbar-search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.page-toolbar-search .tm-toolbar-search,
+.page-toolbar-search .tm-toolbar-search.tm-toolbar-search--grow {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.page-toolbar-right {
   align-items: center;
 }
 
@@ -464,19 +769,26 @@ select option {
   flex-shrink: 1;
 }
 
+.page-toolbar-search > .tm-toolbar-search.tm-toolbar-search--grow {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+}
+
 .page-toolbar-controls.page-toolbar-controls--fill {
   width: 100%;
 }
 
+/* ponytail: natural width for toggles/buttons; grow only labeled fields/search */
 .page-toolbar-controls.page-toolbar-controls--fill > * {
-  flex: 1 1 0;
-  min-width: 5.5rem;
+  flex: 0 0 auto;
 }
 
 .page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-field,
 .page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-search {
-  flex: 1 1 0;
-  width: 100%;
+  flex: 1 1 8.5rem;
+  width: auto;
   min-width: 5.5rem;
   max-width: none;
 }
@@ -588,7 +900,7 @@ a.tm-hashtag-chip:hover {
   background-image: linear-gradient(to top right, var(--tm-workspace-tint), transparent);
   border-bottom: 1px solid var(--color-bg-border);
   border-left: 3px solid var(--workspace-accent, #64748b);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-quick) var(--ease-out);
 }
 .tm-task-row:hover {
   background-color: transparent !important;
@@ -611,31 +923,13 @@ a.tm-hashtag-chip:hover {
   --tm-workspace-tint: color-mix(in srgb, var(--workspace-accent, var(--brand-green)) 38%, transparent);
 }
 
-@keyframes tm-modal-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes tm-modal-panel-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.tm-modal-backdrop {
-  animation: tm-modal-backdrop-in 0.15s ease-out;
-}
-
-.tm-modal-panel-enter {
-  animation: tm-modal-panel-in 0.15s ease-out;
-}
-
 @keyframes tm-unsaved-bar-in {
   from { opacity: 0; transform: translate(-50%, 100%); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .tm-unsaved-bar-enter {
-  animation: tm-unsaved-bar-in 0.2s ease-out;
+  animation: tm-unsaved-bar-in var(--duration-fast) var(--ease-smooth-out);
 }
 
 /* Modal layout system — flex-centered panels collapse to min-content without explicit width */
@@ -674,6 +968,34 @@ a.tm-hashtag-chip:hover {
   .tm-modal-xl { --tm-modal-width: 896px; }
   .tm-modal-2xl { --tm-modal-width: 1024px; }
   .tm-modal-full { --tm-modal-width: 1200px; }
+
+  /* Fullscreen modals — edge-to-edge viewport (default for ModalShell + legacy overlays) */
+  .tm-modal-overlay--fullscreen,
+  .tm-modal-overlay:has(> .tm-modal-panel.tm-modal-fullscreen),
+  .tm-modal-overlay:has(> .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm)) {
+    display: grid !important;
+    place-items: stretch !important;
+    padding: 0 !important;
+  }
+
+  .tm-modal-panel.tm-modal-fullscreen,
+  .tm-modal-overlay > .tm-modal-panel.tm-modal-fullscreen,
+  .tm-modal-overlay > .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm) {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Compact (confirm) modals keep centered floating card */
+  .tm-modal-panel.tm-modal-compact,
+  .tm-modal-panel.tm-modal-sm.tm-modal-compact {
+    border-radius: var(--radius-lg);
+  }
 
   /* Scrollable modal body + pinned footer (form uses flex column on panel) */
   .tm-modal-scroll {
@@ -866,7 +1188,10 @@ a.tm-hashtag-chip:hover {
   padding: 0.5rem 0.55rem 0.5rem 0.45rem;
   color: var(--color-text-muted);
   font-weight: 700;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out);
 }
 
 .tm-sidebar-nav-label {
@@ -967,6 +1292,32 @@ a.tm-hashtag-chip:hover {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-primary: var(--color-action-primary);
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --chart-line-secondary: var(--chart-line-secondary);
+  --chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
 }
 
 .dashboard-widget-grid {
@@ -1050,10 +1401,40 @@ a.tm-hashtag-chip:hover {
     width: 100%;
   }
 
-  .tm-hub-panel,
-  .list-page-workspace {
+  .tm-hub-panel {
     min-width: 0;
     max-width: 100%;
+  }
+
+  .tm-mobile-search-row {
+    width: 100%;
+  }
+
+  .tm-mobile-search-row .tm-toolbar-search,
+  .tm-mobile-search-row .tm-toolbar-field {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .tm-mobile-search-row .tm-toolbar-control,
+  .tm-mobile-search-row input.mobile-form-control {
+    min-height: 2.75rem;
+    height: 2.75rem;
+    max-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .tm-mobile-search-row .t-clear-placeholder,
+  .tm-mobile-search-row .t-clear-mirror {
+    font-size: 1rem;
+  }
+
+  /* P1-1: 44px touch targets for all toolbar controls on mobile */
+  .tm-toolbar-control {
+    min-height: 2.75rem;
+    height: auto;
+    max-height: none;
   }
 }
 
@@ -1169,13 +1550,13 @@ a.tm-hashtag-chip:hover {
   }
 
   .mobile-desktop-gate {
-    animation: mobile-gate-in 0.35s ease-out;
+    animation: mobile-gate-in var(--duration-medium) var(--ease-smooth-out);
   }
 
   @keyframes mobile-gate-in {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(var(--distance-medium));
     }
     to {
       opacity: 1;

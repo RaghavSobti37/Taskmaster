@@ -124,7 +124,7 @@ function BottomNavSlot({
             <NavBadge count={badge} />
           </span>
         )}
-        <span className={`relative max-w-full truncate px-0.5 text-[9px] font-medium tracking-wide ${isHighlighted ? 'text-white' : 'text-white/80'}`}>
+        <span className={`relative max-w-full truncate px-0.5 text-[10px] font-medium tracking-wide ${isHighlighted ? 'text-white' : 'text-white/80'}`}>
           {slot.label}
         </span>
       </span>

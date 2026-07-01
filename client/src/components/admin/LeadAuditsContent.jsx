@@ -1,15 +1,21 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatDisplayDateTimeSeconds, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useMemo, useState } from 'react';
 import { useLeadAudits } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
-import { isAdminUser } from '../../utils/departmentPermissions';
 import {
-  History, Search, RefreshCw, Calendar, ArrowRight, Trash2,
+  History, Calendar, RefreshCw, Database, Users, Clock,
 } from 'lucide-react';
-import { Badge, DataTable, Button, Input, UserLabel } from '../ui';
-import { useConfirm } from '../../contexts/confirmContext';
-import { format } from 'date-fns';
+import {
+  Badge,
+  DataTable,
+  Button,
+  SearchInput,
+  UserLabel,
+  EmptyState,
+  DataOverviewSection,
+  ValueChange,
+} from '../ui';
+import { formatDisplayDateTimeSeconds } from '../../utils/dateDisplay';
+import { isSameDay, startOfDay } from 'date-fns';
 
 function LeadAuditMobileCard({ row }) {
   const timestamp = row.timestamp
@@ -52,15 +58,7 @@ function LeadAuditMobileCard({ row }) {
 
       <div className="rounded-lg bg-[var(--color-bg-secondary)]/60 border border-[var(--color-bg-border)] px-2.5 py-2 min-w-0">
         <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Change</p>
-        <div className="flex items-center gap-1.5 text-[11px] min-w-0">
-          <span className="text-[var(--color-text-muted)] line-through truncate min-w-0 flex-1">
-            {row.oldValue || '(empty)'}
-          </span>
-          <ArrowRight size={12} className="text-slate-500 shrink-0" />
-          <span className="text-emerald-400 font-bold truncate min-w-0 flex-1 text-right">
-            {row.newValue || '(empty)'}
-          </span>
-        </div>
+        <ValueChange oldValue={row.oldValue} newValue={row.newValue} size="md" />
       </div>
     </div>
   );
@@ -68,11 +66,9 @@ function LeadAuditMobileCard({ row }) {
 
 const LeadAuditsContent = () => {
   const { user } = useAuth();
-  const { confirm } = useConfirm();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const [purging, setPurging] = useState(false);
 
   const { data, isLoading, refetch, isFetching } = useLeadAudits({
     page,
@@ -82,6 +78,53 @@ const LeadAuditsContent = () => {
   const logs = data?.logs || [];
   const total = data?.total || 0;
   const pages = data?.pages || 1;
+
+  const statsLimit = Math.min(Math.max(total, 1), 2000);
+  const { data: statsData, isLoading: statsLoading } = useLeadAudits(
+    { page: 1, limit: statsLimit },
+    total > 0,
+  );
+
+  const overviewStats = useMemo(() => {
+    const batch = statsData?.logs || [];
+    const todayStart = startOfDay(new Date());
+    const entriesToday = batch.filter(
+      (log) => log.timestamp && isSameDay(new Date(log.timestamp), todayStart),
+    ).length;
+    const activeUsers = new Set(
+      batch.map((log) => {
+        const id = log.userId?._id || log.userId;
+        return id ? String(id) : null;
+      }).filter(Boolean),
+    ).size;
+
+    return [
+      {
+        id: 'total',
+        label: 'Total entries',
+        value: total.toLocaleString(),
+        icon: Database,
+        variant: 'info',
+        info: 'All lead field changes recorded in the audit log.',
+      },
+      {
+        id: 'today',
+        label: 'Entries today',
+        value: statsLoading ? '—' : entriesToday.toLocaleString(),
+        icon: Clock,
+        variant: 'mint',
+        info: 'Changes logged since midnight (local time).',
+      },
+      {
+        id: 'users',
+        label: 'Active users',
+        value: statsLoading ? '—' : activeUsers.toLocaleString(),
+        icon: Users,
+        variant: 'slate',
+        info: 'Distinct users with changes in the loaded audit window.',
+      },
+    ];
+  }, [total, statsData?.logs, statsLoading]);
 
   const filteredLogs = logs.filter((log) => {
     const term = searchTerm.toLowerCase();
@@ -145,65 +188,29 @@ const LeadAuditsContent = () => {
       header: 'Modification Delta',
       mobileFullWidth: true,
       render: (row) => (
-        <div className="flex items-center gap-2 text-[10px] max-w-md min-w-0">
-          <span className="text-[var(--color-text-muted)] line-through truncate min-w-0 flex-1">
-            {row.oldValue || '(empty)'}
-          </span>
-          <ArrowRight size={12} className="text-slate-500 shrink-0" />
-          <span className="text-emerald-400 font-bold truncate min-w-0 flex-1">
-            {row.newValue || '(empty)'}
-          </span>
-        </div>
+        <ValueChange oldValue={row.oldValue} newValue={row.newValue} />
       ),
     },
   ];
 
-  const handlePurgeLogs = async () => {
-    const ok = await confirm({
-      title: 'Delete all logs?',
-      message: 'Are you sure you want to permanently delete all lead change logs? This cannot be undone.',
-      confirmLabel: 'Delete all',
-      type: 'danger',
-    });
-    if (!ok) return;
-    try {
-      setPurging(true);
-      await axios.delete('/api/crm/leads/audit-logs/purge');
-      refetch();
-    } catch (err) {
-      console.error('Failed to purge logs:', err);
-      alert(err.response?.data?.error || 'Failed to clear logs.');
-    } finally {
-      setPurging(false);
-    }
-  };
-
   return (
     <section className="flex flex-col h-full border-t border-[var(--color-bg-border)]">
+      <div className="p-3 sm:p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/30">
+        <DataOverviewSection stats={overviewStats} mobileMaxStats={3} />
+      </div>
+
       <div className="p-3 sm:p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <div className="w-full sm:flex-1 sm:max-w-xs min-w-0">
-            <Input
-              icon={Search}
+            <SearchInput
+              variant="toolbar"
               placeholder="Search lead, user, field..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="!py-1.5 !text-sm w-full"
+              className="!w-full"
             />
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {isAdminUser(user) && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handlePurgeLogs}
-                disabled={purging}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 font-bold uppercase text-[10px] bg-red-600 hover:bg-red-700 text-white min-h-[40px]"
-              >
-                <Trash2 size={12} className={purging ? 'animate-pulse' : ''} />
-                <span className="truncate">Clear logs</span>
-              </Button>
-            )}
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
             <Button
               variant="secondary"
               size="sm"
@@ -237,10 +244,12 @@ const LeadAuditsContent = () => {
           mobileRowRender={(row) => <LeadAuditMobileCard row={row} />}
         />
         {filteredLogs.length === 0 && !isLoading && (
-          <div className="p-16 sm:p-20 text-center opacity-30">
-            <History size={48} className="mx-auto mb-4" />
-            <p className="text-xs font-black uppercase tracking-widest">No lead change logs found</p>
-          </div>
+          <EmptyState
+            icon={History}
+            title="No lead change logs found"
+            variant="subtle"
+            className="opacity-80"
+          />
         )}
       </div>
     </section>

@@ -1,4 +1,4 @@
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parse, parseISO, isValid } from 'date-fns';
 import { DEFAULT_TZ } from './dateValidation';
 
 /** User-facing date convention: DD/MM/YYYY (date-fns tokens). */
@@ -103,4 +103,28 @@ export function formatDisplayDateTime12hComma(value, { emptyLabel = EMPTY } = {}
   const d = coerceDate(value);
   if (!d) return emptyLabel;
   return format(d, 'dd/MM/yyyy, hh:mm a');
+}
+
+/** Profile DOB text field — display as DD/MM/YYYY. */
+export function formatDobInput(value) {
+  const d = coerceDate(value);
+  if (!d) return '';
+  return format(d, DATE_DISPLAY_FORMAT);
+}
+
+/** Parse DD/MM/YYYY (or yyyy-MM-dd) for API payloads. */
+export function parseDobInput(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return { ok: true, value: null };
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const iso = parseISO(raw);
+    return isValid(iso) ? { ok: true, value: raw } : { ok: false, error: 'Invalid date' };
+  }
+
+  const parsed = parse(raw, DATE_DISPLAY_FORMAT, new Date());
+  if (!isValid(parsed)) {
+    return { ok: false, error: 'Use DD/MM/YYYY' };
+  }
+  return { ok: true, value: format(parsed, 'yyyy-MM-dd') };
 }

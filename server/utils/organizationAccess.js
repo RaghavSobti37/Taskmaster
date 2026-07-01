@@ -94,9 +94,7 @@ const ensureClerkOrganizationAccess = async ({
   adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
 }) => {
   if (!clerkOrganizationId) {
-    const err = new Error('Organization context required. Select your workspace and try again.');
-    err.status = 403;
-    throw err;
+    return { joined: false, reason: 'none' };
   }
 
   const emailLower = String(email || '').trim().toLowerCase();

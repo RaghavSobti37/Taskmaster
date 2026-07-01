@@ -277,6 +277,24 @@ module.exports = [
     safety: 'caution',
     args: [],
   },
+  {
+    id: 'assign-finance-projects',
+    fileName: 'assignFinanceToProjects.js',
+    title: 'Assign Finance to Projects',
+    description: 'Maps finance docs to projects by filename/OCR text; uncertain → General.',
+    category: 'Finance',
+    safety: 'caution',
+    args: ['--local'],
+  },
+  {
+    id: 'assign-finance-projects-dry',
+    fileName: 'assignFinanceToProjects.js',
+    title: 'Assign Finance to Projects (Dry Run)',
+    description: 'Preview project assignment for finance docs without writing.',
+    category: 'Finance',
+    safety: 'safe',
+    args: ['--local', '--dry-run'],
+  },
 
   // —— Audits (needs API on :5000 for some) ——
   {

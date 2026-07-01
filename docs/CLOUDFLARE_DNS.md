@@ -1,12 +1,14 @@
 # Cloudflare DNS — CoreKnot subdomains
 
-DNS for **tsccoreknot.com** lives on Cloudflare. Three Vercel projects serve the frontend:
+**Current registrar DNS:** `tsccoreknot.com` uses **GoDaddy** nameservers (`domaincontrol.com`), not Cloudflare. Add subdomain CNAMEs at GoDaddy, or migrate the zone to Cloudflare then run `node scripts/provision-subdomain-dns.cjs`.
+
+Three Vercel projects serve the frontend:
 
 | Vercel project | Root directory | Custom domain |
 |----------------|----------------|---------------|
-| CoreKnot app | `client/` | `tsccoreknot.com`, `www.tsccoreknot.com` |
-| CoreKnot landing | `sites/landing` | `landing.tsccoreknot.com` |
-| CoreKnot auth | `sites/auth` | `auth.tsccoreknot.com` |
+| `taskmaster` | `client/` | `tsccoreknot.com`, `www.tsccoreknot.com` |
+| `coreknot-landing` | repo root + `sites/landing/vercel.json` | `landing.tsccoreknot.com` |
+| `coreknot-auth` | repo root + `sites/auth/vercel.json` | `auth.tsccoreknot.com` |
 
 API stays on Render (not Cloudflare). Session cookies use `domain: .tsccoreknot.com`.
 
@@ -24,7 +26,26 @@ Do this **before** creating Cloudflare records so you have the correct targets.
 
 ---
 
-## 2. Cloudflare DNS records
+## 1b. Vercel build settings (`coreknot-landing` / `coreknot-auth`)
+
+In each project → **Settings** → **Build & Development** (override with repo `sites/*/vercel.json`):
+
+| Setting | `coreknot-landing` | `coreknot-auth` |
+|---------|-------------------|-----------------|
+| Root Directory | `.` (Taskmaster repo root) | `.` |
+| Install Command | `node scripts/vercelSplitInstall.js` | same |
+| Build Command | `node scripts/vercelSplitBuild.js landing` | `node scripts/vercelSplitBuild.js auth` |
+| Output Directory | `client/dist` | `client/dist` |
+
+Or with `VERCEL_TOKEN` in `.cursor/vercel-api.local.env`:
+
+```bash
+node scripts/configure-vercel-split-projects.cjs
+```
+
+Redeploy both projects after saving.
+
+---
 
 In **Cloudflare** → **tsccoreknot.com** → **DNS** → **Records**:
 

@@ -41,7 +41,8 @@ const tracingHosts = () => {
 export const initPostHog = () => {
   if (!hasAnalyticsConsent()) return false;
 
-  const token = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN?.trim();
+  const token = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN?.trim()
+    || import.meta.env.VITE_POSTHOG_KEY?.trim();
   if (!token || initialized) return false;
 
   const remoteHost = import.meta.env.VITE_POSTHOG_HOST?.trim() || 'https://us.i.posthog.com';

@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
-import { PageContainer, DataTable, Button, Badge } from '../../components/ui/primitives';
-import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
+import { DataTable, Button, Badge } from '../../components/ui/primitives';
+import ListPageLayout from '../../components/ui/ListPageLayout';
 import SearchInput from '../../components/ui/SearchInput';
-import NexusDropdown from '../../components/ui/NexusDropdown';
-import DataOverviewSection from '../../components/ui/DataOverviewSection';
-import PageToolbar from '../../components/ui/PageToolbar';
-import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
 import DataHubOpsMenu from '../../components/dataHub/DataHubOpsMenu';
@@ -362,123 +360,135 @@ export function DataHubContent() {
     ? 'Syncing…'
     : `Synced ${formatLastSynced(lastSyncedAt)}${latestBackup?.date ? ` · Backup ${latestBackup.date}` : ''}`;
 
+  const handleClearDataHubFilters = useCallback(() => {
+    setActiveFolder('all');
+    setEmailStatusFilter('all');
+    setSortField('lastActivity');
+    setSortOrder('desc');
+    setPageSize(10);
+    setPage(1);
+  }, []);
+
+  const dataHubFilterFields = useMemo(() => [
+    {
+      id: 'folder',
+      label: 'Folder',
+      type: 'searchable',
+      value: activeFolder,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'All people' },
+        ...folderOptions,
+      ],
+      onChange: (v) => { setActiveFolder(v); setPage(1); },
+    },
+    {
+      id: 'status',
+      label: 'Email status',
+      type: 'radio',
+      value: emailStatusFilter,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'All statuses' },
+        { value: 'Active', label: 'Active' },
+        { value: 'Unsubscribed', label: 'Unsubscribed' },
+        { value: 'Bounced', label: 'Bounced' },
+        { value: 'Pending', label: 'Pending' },
+      ],
+      onChange: (v) => { setEmailStatusFilter(v); setPage(1); },
+    },
+    {
+      id: 'sort',
+      label: 'Sort',
+      type: 'radio',
+      value: sortValue,
+      defaultValue: 'lastActivity:desc',
+      options: SORT_OPTIONS,
+      onChange: (v) => {
+        const [field, order] = String(v).split(':');
+        setSortField(field || 'lastActivity');
+        setSortOrder(order || 'desc');
+        setPage(1);
+      },
+    },
+    {
+      id: 'pageSize',
+      label: 'Rows per page',
+      type: 'radio',
+      value: String(pageSize),
+      defaultValue: '10',
+      options: PAGE_SIZE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label })),
+      onChange: (v) => { setPageSize(Number(v)); setPage(1); },
+    },
+  ], [activeFolder, emailStatusFilter, sortValue, pageSize, folderOptions]);
+
   return (
     <>
-      <div className="flex flex-col min-h-[calc(100vh-14rem)] w-full space-y-3 mb-8">
-        <div className="flex items-center gap-2 min-w-0">
-          <AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
-              <Database size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="tm-page-title uppercase min-w-0">Data Hub</h1>
-          </div>
-        </div>
-        {localDevMode && (
-          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-            {syncStatus?.message || 'Local dev — CRM/person data not synced. Data Hub is empty by design.'}
-          </p>
-        )}
-        {queryError && (
-          <QueryErrorBanner
-            message={getQueryErrorMessage(queryError, 'Failed to load Data Hub data')}
-            onRetry={handleRefresh}
-          />
-        )}
-
-        {showAnalytics && (
-          <DataOverviewSection
-            stats={overview.stats}
-            charts={overview.charts}
-            eagerCharts={overview.eagerCharts}
-          />
-        )}
-
-        <PageToolbar
-          toolbarFill
-          filterSheetTitle="Data Hub filters"
-          actions={(
-            <>
-              <Button
-                variant={showAnalytics ? 'secondary' : 'ghost'}
-                size="sm"
-                className="!px-2.5 whitespace-nowrap"
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                title={showAnalytics ? 'Hide overview analytics' : 'Show overview analytics'}
-              >
-                <BarChart3 size={14} />
-                Analytics
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!px-2"
-                onClick={handleRefresh}
-                title="Refresh"
-                data-mobile-primary
-              >
-                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-              </Button>
-              <DataHubOpsMenu
-                syncLabel={syncStatusLabel}
-                onBackup={handleProductionBackup}
-                onIncrementalSync={handleReconcile}
-                onFullReconcile={handleFullReconcile}
-                onImported={handleRefresh}
-                backupPending={backupMutation.isPending}
-                reconcilePending={reconcileMutation.isPending}
-                reconcileEnabled={reconcileEnabled}
-              />
-            </>
-          )}
-        >
+      <ListPageLayout
+        containerClassName="!py-4"
+        title="Data Hub"
+        icon={Database}
+        backTo={ADMIN_CONSOLE_PATH}
+        toolbarFill
+        overview={showAnalytics ? overview : undefined}
+        filterFields={dataHubFilterFields}
+        filterSheetTitle="Data Hub filters"
+        mobileFilterCount={countActiveFilters(dataHubFilterFields)}
+        onActiveFiltersClear={handleClearDataHubFilters}
+        queryError={queryError}
+        onQueryRetry={handleRefresh}
+        queryErrorFallback="Failed to load Data Hub data"
+        searchBar={(
           <SearchInput
+            variant="toolbar"
             placeholder="Search name, email, phone…"
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+            className="w-full max-w-full"
           />
-          <NexusDropdown
-            label="Folder"
-            placeholder="All people"
-            value={activeFolder}
-            onChange={(v) => { setActiveFolder(v); setPage(1); }}
-            options={folderOptions.length ? folderOptions : [{ value: 'all', label: 'All people' }]}
-          />
-          <NexusDropdown
-            label="Status"
-            placeholder="All statuses"
-            value={emailStatusFilter}
-            onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
-            options={[
-              { value: 'all', label: 'All statuses' },
-              { value: 'Active', label: 'Active' },
-              { value: 'Unsubscribed', label: 'Unsubscribed' },
-              { value: 'Bounced', label: 'Bounced' },
-              { value: 'Pending', label: 'Pending' },
-            ]}
-          />
-          <NexusDropdown
-            label="Sort"
-            placeholder="Activity (newest)"
-            value={sortValue}
-            onChange={(v) => {
-              const [field, order] = String(v).split(':');
-              setSortField(field || 'lastActivity');
-              setSortOrder(order || 'desc');
-              setPage(1);
-            }}
-            options={SORT_OPTIONS}
-          />
-          <NexusDropdown
-            label="Rows"
-            placeholder="10 rows"
-            value={pageSize}
-            onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
-            options={PAGE_SIZE_OPTIONS}
-          />
-        </PageToolbar>
+        )}
+        toolbarActions={(
+          <>
+            <Button
+              variant={showAnalytics ? 'secondary' : 'ghost'}
+              size="sm"
+              className="!px-2.5 whitespace-nowrap"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              title={showAnalytics ? 'Hide overview analytics' : 'Show overview analytics'}
+            >
+              <BarChart3 size={14} />
+              Analytics
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="!px-2"
+              onClick={handleRefresh}
+              title="Refresh"
+              data-mobile-primary
+            >
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            </Button>
+            <DataHubOpsMenu
+              syncLabel={syncStatusLabel}
+              onBackup={handleProductionBackup}
+              onIncrementalSync={handleReconcile}
+              onFullReconcile={handleFullReconcile}
+              onImported={handleRefresh}
+              backupPending={backupMutation.isPending}
+              reconcilePending={reconcileMutation.isPending}
+              reconcileEnabled={reconcileEnabled}
+            />
+          </>
+        )}
+      >
+        {localDevMode && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+            {syncStatus?.message || 'Local dev — CRM/person data not synced. Data Hub is empty by design.'}
+          </p>
+        )}
 
-        <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase -mt-1">
+        <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase -mt-1 mb-2">
           {activeFolderLabel} · {total.toLocaleString()} {total === 1 ? 'person' : 'people'}
         </p>
 
@@ -500,7 +510,7 @@ export function DataHubContent() {
             tableMaxHeight="calc(100vh - 18rem)"
           />
         </div>
-      </div>
+      </ListPageLayout>
 
       {selectedPersonId && (
         <Suspense fallback={null}>
@@ -515,9 +525,5 @@ export function DataHubContent() {
 }
 
 export default function DataHubPage() {
-  return (
-    <PageContainer className="!py-4 !space-y-4">
-      <DataHubContent />
-    </PageContainer>
-  );
+  return <DataHubContent />;
 }

@@ -8,7 +8,7 @@ const initPostHog = () => {
 
   try {
     const { PostHog } = require('posthog-node');
-    client = new PostHog(apiKey, { host });
+    client = new PostHog(apiKey, { host, flushAt: 10, flushInterval: 5000 });
     initialized = true;
     return true;
   } catch (err) {
@@ -18,6 +18,11 @@ const initPostHog = () => {
   }
 };
 
+function getPostHogClient() {
+  if (!client) initPostHog();
+  return client;
+}
+
 const getDistinctId = (req) => {
   const headerId = req?.headers?.['x-posthog-distinct-id'];
   if (headerId) return String(headerId);
@@ -26,7 +31,8 @@ const getDistinctId = (req) => {
 };
 
 const captureEvent = (req, event, properties = {}) => {
-  if (!client) return;
+  const ph = getPostHogClient();
+  if (!ph) return;
   const distinctId = getDistinctId(req);
   if (!distinctId) return;
 
@@ -34,39 +40,43 @@ const captureEvent = (req, event, properties = {}) => {
   const payload = sessionId ? { ...properties, $session_id: String(sessionId) } : properties;
 
   try {
-    client.capture({
-      distinctId,
-      event,
-      properties: payload,
-    });
+    ph.capture({ distinctId, event, properties: payload });
   } catch {
     /* optional */
   }
 };
 
+function captureServerEvent(distinctId, event, properties = {}) {
+  const ph = getPostHogClient();
+  if (!ph || !distinctId || !event) return;
+  ph.capture({
+    distinctId: String(distinctId),
+    event,
+    properties,
+  });
+}
+
 function identifyServerUser(user) {
-  if (!client || !user) return;
+  const ph = getPostHogClient();
+  if (!ph || !user) return;
   const id = String(user._id || user.id || '').trim();
   if (!id) return;
-  try {
-    client.identify({
-      distinctId: id,
-      properties: {
-        email: user.email || undefined,
-        name: user.name || undefined,
-      },
-    });
-  } catch {
-    /* optional */
-  }
+  ph.identify({
+    distinctId: id,
+    properties: {
+      email: user.email || undefined,
+      name: user.name || undefined,
+    },
+  });
 }
 
 const captureException = (error, req, context = {}) => {
-  if (!client || !error) return;
+  const ph = getPostHogClient();
+  if (!ph || !error) return;
   const distinctId = getDistinctId(req) || 'server';
 
   try {
-    client.captureException(error, distinctId, context);
+    ph.captureException(error, distinctId, context);
   } catch {
     /* optional */
   }
@@ -88,6 +98,8 @@ module.exports = {
   initPostHog,
   captureEvent,
   captureException,
+  captureServerEvent,
+  getPostHogClient,
   identifyServerUser,
   shutdownPostHog,
   isPostHogEnabled: () => initialized,

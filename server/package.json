@@ -9,7 +9,7 @@
     "start": "node server.js",
     "predev": "node scripts/freePort.js 5000 --wait",
     "dev": "nodemon server.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js",
     "test:uploadthing": "node scripts/testUploadthingRoutes.js",
     "test:uploadthing:prod": "node scripts/testProductionUpload.js",
     "check:uploadthing-prod": "node scripts/checkProductionUploadthing.js",

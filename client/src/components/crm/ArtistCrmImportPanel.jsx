@@ -183,10 +183,12 @@ export default function ArtistCrmImportPanel({ compact = false }) {
   if (compact) {
     return (
       <>
-        <label className="inline-flex items-center gap-2 cursor-pointer">
+        <label className="inline-flex cursor-pointer">
           <input type="file" accept=".csv" className="hidden" onChange={handleFilePick} disabled={loading} />
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold border border-[var(--color-bg-border)]">
-            <Upload size={12} /> {loading ? '…' : 'Import CSV'}
+          <span className="inline-flex">
+            <Button size="sm" variant="secondary" type="button" disabled={loading} className="pointer-events-none">
+              <Upload size={14} /> {loading ? 'Reading…' : 'Import CSV'}
+            </Button>
           </span>
         </label>
         <Modal

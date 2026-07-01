@@ -25,6 +25,7 @@ import { Input, Button, Badge } from '../../../components/ui';
 import { ModalShell } from '../../../components/ui/modals';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getDepartmentName } from '../../../utils/departmentPermissions';
+import { formatDobInput, parseDobInput } from '../../../utils/dateDisplay';
 import { validatePasswordStrength } from '../../../utils/passwordValidation';
 import PasswordRequirements from '../../../components/auth/PasswordRequirements';
 import {
@@ -35,7 +36,7 @@ import {
 import { useUnsavedChanges, stableJsonEqual } from '../../../hooks/useUnsavedChanges';
 import { useNavigate } from 'react-router-dom';
 
-const formatDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
+const formatProfileDob = (value) => formatDobInput(value);
 
 const CATEGORY_ICONS = {
   'Cartoon Male': User,
@@ -62,7 +63,8 @@ export default function ProfileTab() {
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [phone, setPhone] = useState(user?.phone || '+91 ');
-  const [dateOfBirth, setDateOfBirth] = useState(formatDateInput(user?.dateOfBirth));
+  const [dateOfBirth, setDateOfBirth] = useState(formatProfileDob(user?.dateOfBirth));
+  const [dobError, setDobError] = useState('');
   const [teams, setTeams] = useState(() => (user?.teams ? user.teams.map((t) => ({ value: t, label: t })) : []));
   const [allTeams, setAllTeams] = useState([]);
   const [password, setPassword] = useState('');
@@ -92,7 +94,8 @@ export default function ProfileTab() {
     setName(source.name || '');
     setAvatar(source.avatar || '');
     setPhone(source.phone || '+91 ');
-    setDateOfBirth(formatDateInput(source?.dateOfBirth));
+    setDateOfBirth(formatProfileDob(source?.dateOfBirth));
+    setDobError('');
     setTeams(source.teams ? source.teams.map((t) => ({ value: t, label: t })) : []);
     setPassword('');
     setNewPassword('');
@@ -124,7 +127,7 @@ export default function ProfileTab() {
             name: user.name || '',
             avatar: user.avatar || '',
             phone: user.phone || '+91 ',
-            dateOfBirth: formatDateInput(user?.dateOfBirth),
+            dateOfBirth: formatProfileDob(user?.dateOfBirth),
             teams: user.teams || [],
             password: '',
             newPassword: '',
@@ -187,6 +190,7 @@ export default function ProfileTab() {
   const handleUpdateProfile = async () => {
     setPasswordError('');
     setSaveError('');
+    setDobError('');
     if (mustChangePassword && newPassword) {
       setPasswordError('Use "Save new password" below before saving other profile changes.');
       return;
@@ -202,6 +206,11 @@ export default function ProfileTab() {
         return;
       }
     }
+    const dobParsed = parseDobInput(dateOfBirth);
+    if (!dobParsed.ok) {
+      setDobError(dobParsed.error);
+      return;
+    }
     setLoading(true);
     try {
       const teamStrings = teams.map((t) => (typeof t === 'object' ? t.value : t));
@@ -210,7 +219,7 @@ export default function ProfileTab() {
         avatar,
         phone,
         teams: teamStrings,
-        dateOfBirth: dateOfBirth || null,
+        dateOfBirth: dobParsed.value,
       };
       if (newPassword && (password || canSkipCurrentPassword)) {
         if (password) payload.currentPassword = password;
@@ -292,13 +301,19 @@ export default function ProfileTab() {
             className="!text-xs"
           />
           <Input
-            type="date"
+            type="text"
+            inputMode="numeric"
             label="Date of Birth"
+            placeholder="DD/MM/YYYY"
             value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
+            onChange={(e) => {
+              setDateOfBirth(e.target.value);
+              setDobError('');
+            }}
             icon={CalendarDays}
             className="!text-xs"
           />
+          {dobError && <p className="text-xs text-rose-500 font-medium -mt-4">{dobError}</p>}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
               Department / Role

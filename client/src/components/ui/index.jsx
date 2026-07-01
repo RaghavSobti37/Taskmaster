@@ -34,6 +34,8 @@ export { default as IconButton } from './IconButton';
 export { default as SectionCard } from './SectionCard';
 export { default as AddMembers } from './AddMembers';
 export { default as PageLoadGuard } from './PageLoadGuard';
+export { default as SkeletonReveal } from './SkeletonReveal';
+export { default as TransitionCard } from './TransitionCard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
 export { LoadingPhrase } from './LoadingPhrase';
@@ -44,6 +46,10 @@ export { default as NexusDropdown } from './NexusDropdown';
 // ── Page chrome (UDIF 2.1) ──
 export { default as PageHeader } from './PageHeader';
 export { default as PageToolbar } from './PageToolbar';
+export { default as SelectionFilterPanel, FilterToolbarButton } from './SelectionFilterPanel';
+export { default as FilterFields, FilterField } from './FilterFields';
+export { countActiveFilters, isFilterFieldActive, resolveFilterDefault } from './selectionFilterUtils';
+export { default as ActiveFilterBar } from './ActiveFilterBar';
 export { default as ListPageLayout } from './ListPageLayout';
 export { default as DataOverviewSection } from './DataOverviewSection';
 export { default as DataInsightsLayout } from './DataInsightsLayout';
@@ -59,8 +65,10 @@ export { default as CountBadge } from './CountBadge';
 export { default as MobileCollapsibleSection } from './MobileCollapsibleSection';
 export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner';
 export { default as ModuleSubnav } from './ModuleSubnav';
+export { default as HubPageLayout } from './HubPageLayout';
 export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as PageSkeleton } from './PageSkeleton';
+export { default as NumberPopIn } from './NumberPopIn';
 export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';
 
 // Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

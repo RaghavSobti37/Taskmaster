@@ -453,7 +453,7 @@ const ProjectDetail = () => {
           </div>
 
           {showTaskFilters && (
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto min-w-0">
               <SearchInput
                 placeholder="Search tasks..."
                 value={searchTerm}

@@ -12,6 +12,7 @@ const { validatePasswordStrength, generateSecurePassword } = require('../../../u
 const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
+const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
@@ -196,6 +197,7 @@ exports.updateProfile = async (req, res) => {
 
     user.lastOnline = new Date();
     await user.save();
+    await invalidateAuthUserCache(user._id);
 
     if (passwordChanged) {
       const verified = await User.findById(user._id).select('+password').setOptions({ bypassTenant: true });
@@ -407,6 +409,7 @@ exports.updateUserAdmin = async (req, res) => {
     }
 
     await targetUser.save();
+    await invalidateAuthUserCache(targetUser._id);
 
     const updatedUser = await User.findById(req.params.id)
       .select('-password')

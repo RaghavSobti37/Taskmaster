@@ -18,8 +18,13 @@ export const LIST_UL_INLINE =
 export const SPACER_INLINE =
   'margin:0 0 1em 0!important;padding:0!important;margin-left:0!important;text-indent:0!important;border:0!important';
 
+/** Padding inside preview iframes (desktop + mobile mocks) */
+export const PREVIEW_BODY_PADDING = '20px 32px';
+
 export const PREVIEW_BASE_CSS = `
-  body{margin:0;padding:16px;font-family:${EMAIL_FONT_STACK};font-size:14px;line-height:1.42;}
+  body{margin:0;padding:${PREVIEW_BODY_PADDING};font-family:${EMAIL_FONT_STACK};font-size:14px;line-height:1.42;box-sizing:border-box;overflow-wrap:break-word;word-break:break-word;}
+  body *,body a,body p,body li,body td{max-width:100%;overflow-wrap:break-word;word-break:break-word;}
+  table{max-width:100%!important;}
   .email-preview-root,.email-preview-root p,.email-preview-root div,.email-preview-root li,.email-preview-root blockquote{max-width:100%;color:inherit;}
   a{color:#2563eb;}
 `;

@@ -1,10 +1,16 @@
 import React from 'react';
 import { ClerkProvider } from '@clerk/react';
-import { getClerkFrontendApiHost, getClerkPublishableKey, isClerkConfigured } from '../../config/clerk';
+import {
+  getClerkFrontendApiHost,
+  getClerkProxyUrl,
+  getClerkPublishableKey,
+  isClerkConfigured,
+} from '../../config/clerk';
 import { clerkAuthAppearance, clerkAuthLocalization } from '../../config/clerkAppearance';
 
 const publishableKey = getClerkPublishableKey();
 const frontendApi = getClerkFrontendApiHost();
+const proxyUrl = getClerkProxyUrl();
 
 export default function ClerkAppProvider({ children }) {
   if (!isClerkConfigured()) {
@@ -14,7 +20,7 @@ export default function ClerkAppProvider({ children }) {
   return (
     <ClerkProvider
       publishableKey={publishableKey}
-      {...(frontendApi ? { frontendApi } : {})}
+      {...(proxyUrl ? { proxyUrl } : frontendApi ? { frontendApi } : {})}
       appearance={clerkAuthAppearance}
       localization={clerkAuthLocalization}
       signInUrl="/login"

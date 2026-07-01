@@ -5,6 +5,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { buildVercelHeaders } = require('./vercelSecurityHeaders.cjs');
 
 const CLIENT_ROOT = path.join(__dirname, '..');
 const REPO_ROOT = path.join(CLIENT_ROOT, '..');
@@ -47,7 +48,7 @@ const BANNED_PROXY_HOSTS = new Set([
 
 const POSTHOG_PROXY_PREFIX = '/ph';
 /** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
-const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)';
+const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)';
 
 const resolvePostHogRegion = (host = '') => (
   String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
@@ -73,28 +74,42 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
 );
 
 /** PostHog rewrites must precede SPA catch-all — first Vercel match wins. */
+const buildClerkProxyRewrite = (apiDestination) => {
+  const origin = String(apiDestination || '').replace(/\/api\/\$1$/, '');
+  if (!origin || !origin.includes('.onrender.com')) return null;
+  return { source: '/__clerk/:path*', destination: `${origin}/__clerk/:path*` };
+};
+
 const composeRewrites = (templateRewrites, apiDestination, socketDestination) => {
   const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
   const posthog = buildPostHogRewrites();
+  const clerkProxy = buildClerkProxyRewrite(apiDestination);
   const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
-  if (catchallIdx === -1) return [...mapped, ...posthog];
+  const beforeCatchall = catchallIdx === -1 ? mapped : mapped.slice(0, catchallIdx);
+  const afterCatchall = catchallIdx === -1 ? [] : mapped.slice(catchallIdx);
   return [
-    ...mapped.slice(0, catchallIdx),
+    ...beforeCatchall,
+    ...(clerkProxy ? [clerkProxy] : []),
     ...posthog,
-    ...mapped.slice(catchallIdx),
+    ...afterCatchall,
   ];
 };
 
-/** PostHog same-origin proxy — static/array before catch-all (cache headers). */
+/**
+ * PostHog same-origin proxy — static/array before catch-all (cache headers).
+ * Uses `:path(.*)` (not `:path*`) because Vercel's wildcard segment matcher drops the
+ * trailing slash on paths like `/ph/decide/` and `/ph/e/`, which PostHog's SDK always
+ * sends with a trailing slash — see https://github.com/PostHog/posthog/issues/17596.
+ */
 const buildPostHogRewrites = () => {
   const region = resolvePostHogRegion(process.env.VITE_POSTHOG_HOST);
   const apiBase = `https://${region}.i.posthog.com`;
   const assetsBase = `https://${region}-assets.i.posthog.com`;
   const prefix = POSTHOG_PROXY_PREFIX;
   return [
-    { source: `${prefix}/static/:path*`, destination: `${assetsBase}/static/:path*` },
-    { source: `${prefix}/array/:path*`, destination: `${assetsBase}/array/:path*` },
-    { source: `${prefix}/:path*`, destination: `${apiBase}/:path*` },
+    { source: `${prefix}/static/:path(.*)`, destination: `${assetsBase}/static/:path` },
+    { source: `${prefix}/array/:path(.*)`, destination: `${assetsBase}/array/:path` },
+    { source: `${prefix}/:path(.*)`, destination: `${apiBase}/:path` },
   ];
 };
 
@@ -290,7 +305,7 @@ const payload = {
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
   ...(template.env ? { env: template.env } : {}),
-  ...(template.headers ? { headers: template.headers } : {}),
+  headers: buildVercelHeaders(template.headers),
 };
 
 const buildSitePayload = (buildCommand) => ({
@@ -300,7 +315,7 @@ const buildSitePayload = (buildCommand) => ({
   framework: null,
   ...(payload.redirects ? { redirects: payload.redirects } : {}),
   rewrites: payload.rewrites,
-  ...(payload.headers ? { headers: payload.headers } : {}),
+  headers: buildVercelHeaders(payload.headers),
   env: payload.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
 });
 
@@ -348,8 +363,10 @@ module.exports = {
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
+  buildClerkProxyRewrite,
   mapTemplateRewrites,
   existingRewritesLookValid,
+  buildVercelHeaders,
 };
 
 if (require.main === module) {

@@ -29,6 +29,7 @@ import PostHogConsentBridge from './components/PostHogConsentBridge';
 import ClerkAppProvider from './components/providers/ClerkAppProvider';
 import ClerkAuthEffects from './components/auth/ClerkAuthEffects';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
+import PostHogAnalytics from './components/analytics/PostHogAnalytics';
 import { Analytics } from '@vercel/analytics/react';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
@@ -135,31 +136,32 @@ const appTree = (
         <AuthProvider>
           <ClerkAuthEffects />
           <ThemeProvider>
-            <MotionConfigBridge>
-              <SidebarProvider>
-                <ToastProvider>
-                  <ConfirmProvider>
-                    <UnsavedChangesProvider>
-                      <LocalFirstRoot>
-                        <PostHogConsentBridge />
-                        <App />
-                      </LocalFirstRoot>
-                      <CookieBanner />
-                      {import.meta.env.PROD ? <Analytics /> : null}
-                      {AgentationDev ? (
-                        <Suspense fallback={null}>
-                          <AgentationDev />
-                        </Suspense>
-                      ) : null}
-                    </UnsavedChangesProvider>
-                  </ConfirmProvider>
-                </ToastProvider>
-              </SidebarProvider>
-            </MotionConfigBridge>
-          </ThemeProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+          <MotionConfigBridge>
+            <SidebarProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <UnsavedChangesProvider>
+                    <LocalFirstRoot>
+                      <PostHogConsentBridge />
+                      <App />
+                      <PostHogAnalytics />
+                    </LocalFirstRoot>
+                    <CookieBanner />
+                    {import.meta.env.PROD ? <Analytics /> : null}
+                    {AgentationDev ? (
+                      <Suspense fallback={null}>
+                        <AgentationDev />
+                      </Suspense>
+                    ) : null}
+                  </UnsavedChangesProvider>
+                </ConfirmProvider>
+              </ToastProvider>
+            </SidebarProvider>
+          </MotionConfigBridge>
+        </ThemeProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
   </ClerkAppProvider>
 );
 

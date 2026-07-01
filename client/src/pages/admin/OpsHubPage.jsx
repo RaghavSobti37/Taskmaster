@@ -6,9 +6,9 @@ import {
   PageContainer, DataTable, Button, Badge,
 } from '../../components/ui/primitives';
 import SearchInput from '../../components/ui/SearchInput';
-import NexusDropdown from '../../components/ui/NexusDropdown';
-import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import PageToolbar from '../../components/ui/PageToolbar';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
+import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import {
   useOpsHubTaxonomy,
@@ -82,6 +82,33 @@ export default function OpsHubPage() {
     { value: '', label: 'All statuses' },
     ...statuses.map((s) => ({ value: s, label: s.replace(/_/g, ' ') })),
   ], [statuses]);
+
+  const opsFilterFields = useMemo(() => [
+    {
+      id: 'subtype',
+      label: 'Subtype',
+      type: 'radio',
+      value: subtype,
+      defaultValue: '',
+      options: subtypeOptions,
+      onChange: (v) => { setSubtype(v); setPage(1); },
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      type: 'radio',
+      value: status,
+      defaultValue: '',
+      options: statusOptions,
+      onChange: (v) => { setStatus(v); setPage(1); },
+    },
+  ], [subtype, status, subtypeOptions, statusOptions]);
+
+  const handleClearOpsFilters = () => {
+    setSubtype('');
+    setStatus('');
+    setPage(1);
+  };
 
   useEffect(() => {
     if (searchParams.get('entity') && searchParams.get('entity') !== selectedId) {
@@ -230,11 +257,22 @@ export default function OpsHubPage() {
           </aside>
 
           <div className="flex-1 min-w-0 space-y-3">
-            <PageToolbar>
-              <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search ops records…" className="max-w-xs" />
-              <NexusDropdown value={subtype} options={subtypeOptions} onChange={(v) => { setSubtype(v); setPage(1); }} placeholder="Subtype" />
-              <NexusDropdown value={status} options={statusOptions} onChange={(v) => { setStatus(v); setPage(1); }} placeholder="Status" />
-            </PageToolbar>
+            <PageToolbar
+              toolbarFill
+              filterFields={opsFilterFields}
+              filterSheetTitle="Ops filters"
+              mobileFilterCount={countActiveFilters(opsFilterFields)}
+              onFilterClear={handleClearOpsFilters}
+              mobileSearch={(
+                <SearchInput
+                  variant="toolbar"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Search ops records…"
+                  className="w-full max-w-full"
+                />
+              )}
+            />
 
             <DataTable
               columns={columns}

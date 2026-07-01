@@ -5,6 +5,8 @@ import {
   formatDisplayDateTime,
   formatDateKeyForDisplay,
   formatWeekdayDateLong,
+  formatDobInput,
+  parseDobInput,
 } from './dateDisplay';
 
 describe('dateDisplay', () => {
@@ -28,5 +30,11 @@ describe('dateDisplay', () => {
   it('formats datetime with time', () => {
     const out = formatDisplayDateTime('2026-06-29T15:45:00');
     expect(out).toMatch(/^\d{2}\/\d{2}\/2026 \d{2}:\d{2}$/);
+  });
+
+  it('parses and formats DOB as DD/MM/YYYY', () => {
+    expect(formatDobInput('2003-05-11')).toBe('11/05/2003');
+    expect(parseDobInput('11/05/2003')).toEqual({ ok: true, value: '2003-05-11' });
+    expect(parseDobInput('bad')).toEqual({ ok: false, error: 'Use DD/MM/YYYY' });
   });
 });

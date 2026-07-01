@@ -6,7 +6,7 @@ import { ArrowLeft, Settings, UserPlus, X, Briefcase, Users } from 'lucide-react
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
-import { Badge, PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
+import { Badge, PageHeader, PageContainer, Button, PageSkeleton, EmptyState } from '../../components/ui';
 import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import WorkspaceGoalsPanel from '../../components/project/WorkspaceGoalsPanel';
 import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
@@ -359,10 +359,12 @@ const WorkspaceSettings = () => {
             </div>
           ))}
           {members.length === 0 && (
-            <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
-              <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
-              <p className="text-[10px] font-black uppercase tracking-widest">No Default Members</p>
-            </div>
+            <EmptyState
+              icon={UserPlus}
+              title="No Default Members"
+              variant="dashed"
+              className="col-span-full opacity-80"
+            />
           )}
         </div>
       </section>

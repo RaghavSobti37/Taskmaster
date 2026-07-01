@@ -1,4 +1,4 @@
-import { formatDisplayDateTime, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import {
@@ -7,7 +7,8 @@ import {
   Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, DataLoading, Spinner } from '../../components/ui';
+import { Badge, PageHeader, PageContainer, Button, Input, StatCard, DataLoading, Spinner, SearchInput, EmptyState, PageToolbar, IconButton } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
 import DailyLogTimeline from '../../components/productivity/DailyLogTimeline';
@@ -319,6 +320,45 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     [dailyLogs]
   );
 
+  const logFilterFields = useMemo(() => [
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      type: 'searchable',
+      value: logWorkspaceFilter,
+      defaultValue: 'all',
+      options: logWorkspaceOptions,
+      onChange: (value) => {
+        setLogWorkspaceFilter(value);
+        setLogProjectFilter('all');
+      },
+    },
+    {
+      id: 'project',
+      label: 'Project',
+      type: 'searchable',
+      value: logProjectFilter,
+      defaultValue: 'all',
+      options: logProjectOptions,
+      onChange: setLogProjectFilter,
+    },
+    {
+      id: 'sort',
+      label: 'Sort',
+      type: 'radio',
+      value: logSort,
+      defaultValue: 'newest',
+      options: LOG_SORT_OPTIONS,
+      onChange: setLogSort,
+    },
+  ], [logWorkspaceFilter, logProjectFilter, logSort, logWorkspaceOptions, logProjectOptions]);
+
+  const clearLogFilters = () => {
+    setLogWorkspaceFilter('all');
+    setLogProjectFilter('all');
+    setLogSort('newest');
+  };
+
   const formatTime = (totalMins) => formatMinuteGap(totalMins);
 
   return (
@@ -330,19 +370,22 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
               <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
-              <div className="flex flex-col items-center px-1 min-w-[7.5rem]">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] tabular-nums leading-none">
-                  {formatWeekdayDateLong(selectedDate)}
+              <label className="relative flex flex-col items-center px-2 py-0.5 min-w-[5.5rem] cursor-pointer">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none">
+                  {format(selectedDate, 'EEEE')}
+                </span>
+                <span className="text-xs font-black tabular-nums text-[var(--color-text-primary)] leading-tight mt-0.5">
+                  {formatDisplayDate(selectedDate)}
                 </span>
                 <input
                   type="date"
                   value={selectedDateKey}
                   max={normalizeWorkDate(new Date())}
                   onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
-                  className="px-0 py-0.5 bg-transparent text-[10px] font-black uppercase tracking-widest tabular-nums border-0 outline-none w-full text-center"
-                  aria-label={formatWeekdayDateLong(selectedDate)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  aria-label={`${format(selectedDate, 'EEEE')}, ${formatDisplayDate(selectedDate)}`}
                 />
-              </div>
+              </label>
               <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
             </div>
             {!adminViewUserId && isTodayOrPast && (
@@ -350,11 +393,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             )}
           </div>
         }
-      >
-        <p className="text-sm font-semibold text-[var(--color-text-secondary)] tabular-nums normal-case tracking-normal">
-          {formatWeekdayDateLong(selectedDate)}
-        </p>
-      </PageHeader>
+      />
 
       {logsError && (
         <QueryErrorBanner
@@ -389,42 +428,24 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     {displayedLogs.length}{displayedLogs.length !== dailyLogs.length ? ` / ${dailyLogs.length}` : ''} LOGS
                   </Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  <Input
-                    icon={Search}
-                    placeholder="Search logs…"
-                    value={logSearch}
-                    onChange={(e) => setLogSearch(e.target.value)}
-                    className="!py-1.5 !text-xs sm:col-span-2 lg:col-span-1"
-                  />
-                  <NexusDropdown
-                    variant="compact"
-                    options={logWorkspaceOptions}
-                    value={logWorkspaceFilter}
-                    onChange={(value) => {
-                      setLogWorkspaceFilter(value);
-                      setLogProjectFilter('all');
-                    }}
-                    placeholder="Workspace"
-                  />
-                  <NexusDropdown
-                    variant="compact"
-                    options={logProjectOptions}
-                    value={logProjectFilter}
-                    onChange={setLogProjectFilter}
-                    placeholder="Project"
-                  />
-                  <NexusDropdown
-                    variant="compact"
-                    options={LOG_SORT_OPTIONS}
-                    value={logSort}
-                    onChange={setLogSort}
-                    placeholder="Sort"
-                  />
-                </div>
+                <PageToolbar
+                  toolbarFill
+                  mobileSearch={(
+                    <SearchInput
+                      variant="toolbar"
+                      placeholder="Search logs…"
+                      value={logSearch}
+                      onChange={(e) => setLogSearch(e.target.value)}
+                    />
+                  )}
+                  filterFields={logFilterFields}
+                  filterSheetTitle="Log filters"
+                  mobileFilterCount={countActiveFilters(logFilterFields)}
+                  onFilterClear={clearLogFilters}
+                />
              </div>
              
-             <div className="p-6 space-y-4 relative min-h-[200px]">
+             <div className="p-3 lg:p-6 space-y-0 lg:space-y-4 relative min-h-[200px]">
                 {logsRefetching && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75">
                     <Spinner size={100} />
@@ -433,15 +454,19 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 {loading ? (
                   <DataLoading showPhrase className="py-16" />
                 ) : logsRefetching ? null : dailyLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
-                     <Activity size={48} className="mb-4" />
-                     <p className="text-xs font-black uppercase tracking-widest">No activity recorded for this date</p>
-                  </div>
+                  <EmptyState
+                    icon={Activity}
+                    title="No activity recorded for this date"
+                    variant="subtle"
+                    className="opacity-80"
+                  />
                 ) : displayedLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 opacity-40 text-center">
-                     <Search size={32} className="mb-3" />
-                     <p className="text-xs font-black uppercase tracking-widest">No logs match your filters</p>
-                  </div>
+                  <EmptyState
+                    icon={Search}
+                    title="No logs match your filters"
+                    variant="subtle"
+                    className="opacity-80"
+                  />
                 ) : (
                   displayedLogs.map((log, idx) => {
                     const isEditable = isLogEditable(log, { isAdmin: isAdminUser(user) });
@@ -491,11 +516,77 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        className="group p-4 border-b border-[var(--color-bg-border)] last:border-0 hover:bg-[var(--color-bg-secondary)]/30 transition-all flex gap-4 relative overflow-hidden"
+                        className="group border-b border-[var(--color-bg-border)] last:border-0 hover:bg-[var(--color-bg-secondary)]/30 transition-all relative overflow-hidden"
                       >
+                        {/* Mobile: dense scannable card */}
+                        <div className="lg:hidden p-3 space-y-1.5">
+                          <div className="flex items-start gap-2 min-w-0">
+                            <Activity size={14} className="shrink-0 mt-0.5 text-blue-500" aria-hidden />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 min-w-0">
+                                <span className="text-sm font-bold leading-snug truncate tm-data-primary">
+                                  {cleanLogTitle(log.details?.title)}
+                                </span>
+                                <div className="shrink-0 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-[var(--color-text-muted)] tabular-nums whitespace-nowrap">
+                                    {formatDisplayDateShort(new Date(log.createdAt))}
+                                  </span>
+                                  {isEditable && (
+                                    <>
+                                      <IconButton
+                                        icon={Edit2}
+                                        label="Edit log"
+                                        size="sm"
+                                        className="!p-2.5"
+                                        onClick={() => handleStartEdit(log)}
+                                      />
+                                      <IconButton
+                                        icon={Trash2}
+                                        label="Delete log"
+                                        variant="danger"
+                                        size="sm"
+                                        className="!p-2.5"
+                                        onClick={() => handleDeleteLog(log._id)}
+                                      />
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {log.details?.isSharedCopy && (
+                                  <Badge variant="warning" className="text-[8px] py-0">via {log.details?.sharedByName || 'teammate'}</Badge>
+                                )}
+                                {(log.details?.sharedMemberIds?.length > 0) && (
+                                  <Badge variant="mint" className="text-[8px] py-0">+{log.details.sharedMemberIds.length} shared</Badge>
+                                )}
+                                {(log.details?.type === 'TASK_REVIEW' || log.details?.title === '[review]') && (
+                                  <Badge variant="warning" className="text-[8px] py-0">[review]</Badge>
+                                )}
+                                <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
+                                <Badge variant="info" className="text-[8px] py-0 max-w-[10rem] truncate">{log.details?.project || 'GENERAL'}</Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
+                                <span className="text-blue-500 bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10 tabular-nums">
+                                  {formatLogInterval(log)}
+                                </span>
+                                <span className="text-[9px] tabular-nums opacity-80">
+                                  ({formatMinuteGap(readLogTimeSpentMinutes(log))})
+                                </span>
+                              </div>
+                              {cleanLogMessage(log.details?.message) && (
+                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed line-clamp-2 mt-1">
+                                  {cleanLogMessage(log.details?.message)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Desktop: table-style row */}
+                        <div className="hidden lg:flex gap-4 p-4">
                          <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
-                               <div className="flex items-center gap-3">
+                               <div className="flex items-center gap-3 min-w-0">
                                   <span className="text-xs font-black uppercase tracking-tight tm-data-primary">{cleanLogTitle(log.details?.title)}</span>
                                   {log.details?.isSharedCopy && (
                                     <Badge variant="warning" className="text-[8px] py-0">via {log.details?.sharedByName || 'teammate'}</Badge>
@@ -510,7 +601,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                                   <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>
-                               <div className="flex flex-col items-end gap-1 text-[10px] font-bold text-[var(--color-text-muted)]">
+                               <div className="flex flex-col items-end gap-1 text-[10px] font-bold text-[var(--color-text-muted)] shrink-0">
                                   <span className="tabular-nums">
                                     Logged {formatDisplayDateTime(new Date(log.createdAt))}
                                   </span>
@@ -538,6 +629,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                               <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{cleanLogMessage(log.details?.message)}</p>
                             )}
                          </div>
+                        </div>
                       </motion.div>
                     );
                   })

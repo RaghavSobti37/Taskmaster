@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { resolveSidebarDefaultOpen } from '../utils/activeFilterChips';
 
 const SidebarContext = createContext();
 
@@ -15,9 +16,9 @@ export const SidebarProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(() => {
     try {
       const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-      return saved === 'true';
+      return resolveSidebarDefaultOpen(saved);
     } catch {
-      return false;
+      return true;
     }
   });
 

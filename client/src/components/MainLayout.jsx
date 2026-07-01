@@ -5,7 +5,7 @@ import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
 import QuickAddMenu from './QuickAddMenu';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
-import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useWindowSize, DESKTOP_MIN } from '../hooks/useBreakpoint';
 import MobileRouteGuard from './mobile/MobileRouteGuard';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -31,7 +31,9 @@ const GChordHint = lazyWithRetry(() => import('./GChordHint'));
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
-  const isDesktop = useIsDesktop();
+  const { width } = useWindowSize();
+  // ponytail: viewport width beats PWA-desktop hook below lg — no margin when sidebar is off-screen
+  const applySidebarMargin = width >= DESKTOP_MIN;
   const { user } = useAuth();
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
 
@@ -80,9 +82,11 @@ const MainLayout = () => {
       )}
 
       <div
-        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out"
+        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out max-lg:!ml-0"
         style={{
-          marginLeft: isDesktop ? (isOpen ? SIDEBAR_SHELL_WIDTH_OPEN : SIDEBAR_SHELL_WIDTH_COLLAPSED) : 0,
+          marginLeft: applySidebarMargin
+            ? (isOpen ? SIDEBAR_SHELL_WIDTH_OPEN : SIDEBAR_SHELL_WIDTH_COLLAPSED)
+            : 0,
         }}
       >
         <main

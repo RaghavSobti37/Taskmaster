@@ -561,15 +561,20 @@ export default function DashboardCustomizationTab() {
       case 'last-backup': return (
         <div className="w-full space-y-2"><div className="h-3 w-2/3 bg-emerald-500/40 rounded"></div><div className="h-2 w-full bg-[var(--color-text-muted)] opacity-30 rounded"></div><div className="flex gap-1"><div className="h-4 w-12 bg-[var(--color-bg-secondary)] rounded"></div><div className="h-4 w-14 bg-[var(--color-bg-secondary)] rounded"></div></div></div>
       );
-      case 'render-logs':
-      case 'render-logs-production':
-      case 'render-logs-staging-api':
-      case 'render-logs-staging-nest': return (
+      case 'render-logs': return (
+        <div className="w-full flex flex-col gap-1 py-1 px-0.5">
+          <div className="h-5 w-full rounded bg-emerald-500/15 border border-emerald-500/25" />
+          <div className="h-5 w-full rounded bg-amber-500/15 border border-amber-500/25" />
+          <div className="h-5 w-full rounded bg-amber-500/15 border border-amber-500/25" />
+          <span className="text-[9px] text-teal-600/80 font-semibold text-center">Render logs</span>
+        </div>
+      );
+      case 'posthog': return (
         <div className="w-full flex flex-col items-center justify-center gap-2 py-1">
-          <div className="h-8 w-full rounded bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
-            <div className="h-2 w-2/3 bg-teal-500/50 rounded" />
+          <div className="h-8 w-full rounded bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+            <div className="h-2 w-2/3 bg-violet-500/50 rounded" />
           </div>
-          <span className="text-[9px] text-teal-600/80 font-semibold">Render logs</span>
+          <span className="text-[9px] text-violet-600/80 font-semibold">PostHog</span>
         </div>
       );
       case 'artist-calendar': return (

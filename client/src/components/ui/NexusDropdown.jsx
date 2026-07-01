@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 import { createPortal, flushSync } from 'react-dom';
 import { ChevronDown, Check, Search } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useBreakpoint';
+import { useTransitionSurface } from '../../hooks/transitions';
 import MobileSelectSheet from './MobileSelectSheet';
 
 const MENU_LIST_MAX = 280;
@@ -32,8 +33,13 @@ const NexusDropdown = ({
   const isMobile = useIsMobile();
   const multiSelect = isMulti || multi;
   const [isOpen, setIsOpen] = useState(false);
+  const { mounted: menuMounted, surfaceClass: menuSurfaceClass } = useTransitionSurface(isOpen && !isMobile, {
+    closeVar: '--dropdown-close-dur',
+    closeFallback: 150,
+  });
   const [search, setSearch] = useState('');
   const [menuStyle, setMenuStyle] = useState(null);
+  const [menuOrigin, setMenuOrigin] = useState('top-left');
   const dropdownRef = useRef(null);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -56,6 +62,10 @@ const NexusDropdown = ({
       left = window.innerWidth - menuWidth - 8;
     }
     left = Math.max(8, left);
+
+    const originX = left + menuWidth / 2 > rect.left + rect.width / 2 ? 'right' : 'left';
+    const originY = openUp ? 'bottom' : 'top';
+    setMenuOrigin(`${originY}-${originX}`);
 
     return {
       position: 'fixed',
@@ -194,7 +204,8 @@ const NexusDropdown = ({
     <div
       ref={menuRef}
       style={usePortal ? panelStyle : undefined}
-      className={usePortal ? portalMenuClass : inlineMenuClass}
+      data-origin={menuOrigin}
+      className={`t-dropdown ${menuSurfaceClass} ${usePortal ? portalMenuClass : inlineMenuClass}`}
     >
       {searchable && (
         <div className="shrink-0 px-2 py-1.5 border-b border-[var(--color-bg-border)]">
@@ -251,7 +262,7 @@ const NexusDropdown = ({
     </div>
   );
 
-  const renderedMenu = isOpen && !isMobile
+  const renderedMenu = menuMounted && !isMobile
     ? usePortal && typeof document !== 'undefined'
       ? createPortal(menuPanel, document.body)
       : menuPanel

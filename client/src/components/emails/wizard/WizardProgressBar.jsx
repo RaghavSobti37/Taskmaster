@@ -2,16 +2,16 @@ import React from 'react';
 import { Check } from 'lucide-react';
 
 const STEPS = [
-  { step: 1, label: 'Setup' },
-  { step: 2, label: 'Template' },
-  { step: 3, label: 'Audience' },
-  { step: 4, label: 'Pre-flight' },
+  { step: 1, label: 'Setup', hint: 'Name, subject & sender' },
+  { step: 2, label: 'Template', hint: 'Pick approved email' },
+  { step: 3, label: 'Audience', hint: 'Recipients & variables' },
+  { step: 4, label: 'Pre-flight', hint: 'Preview & send' },
 ];
 
 export default function WizardProgressBar({ currentStep, onStepClick }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-b border-[var(--color-bg-border)] pb-4">
-      {STEPS.map(({ step, label }) => {
+      {STEPS.map(({ step, label, hint }) => {
         const done = currentStep > step;
         const active = currentStep === step;
         return (
@@ -33,7 +33,14 @@ export default function WizardProgressBar({ currentStep, onStepClick }) {
             }`}>
               {done ? <Check size={12} /> : step}
             </span>
-            <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-black uppercase tracking-wider">{label}</span>
+              {(active || done) && (
+                <span className="block text-[9px] font-normal normal-case tracking-normal opacity-80 truncate">
+                  {hint}
+                </span>
+              )}
+            </span>
           </button>
         );
       })}

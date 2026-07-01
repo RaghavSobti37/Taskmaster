@@ -323,7 +323,7 @@ exports.getMe = async (req, res) => {
   }
 };
 
-/** Silent session bootstrap ΓÇö 200 with authenticated:false when logged out (no 401 noise in DevTools). */
+/** Silent session bootstrap — 200 with authenticated:false when logged out (no 401 noise in DevTools). */
 exports.getSession = async (req, res) => {
   try {
     if (req.sessionSuspended) {

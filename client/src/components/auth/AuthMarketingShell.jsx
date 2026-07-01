@@ -6,7 +6,7 @@ import { brand } from '../../constants/marketingContent';
 import { AUTH_PANEL_TEAL } from '../../config/clerkAppearance';
 
 /**
- * Unified auth card ΓÇö cream brand panel + teal sign-in zone; centered on all viewports.
+ * Unified auth card — cream brand panel + teal sign-in zone; centered on all viewports.
  */
 export default function AuthMarketingShell({
   title,

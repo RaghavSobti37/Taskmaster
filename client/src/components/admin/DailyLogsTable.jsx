@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Search, ArrowUpDown } from 'lucide-react';
-import { DataTable, Badge, Input, NexusDropdown, UserLabel } from '../ui';
+import { ArrowUpDown } from 'lucide-react';
+import { DataTable, Badge, NexusDropdown, UserLabel, SearchInput, EmptyState } from '../ui';
 import { parseTimeSpentToMinutes as parseLogMinutes } from '../../utils/timeSpent';
 
 const SORT_OPTIONS = [
@@ -115,12 +115,12 @@ const DailyLogsTable = ({ entries = [], showMember = false }) => {
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <Input
-            icon={Search}
+          <SearchInput
+            variant="toolbar"
             placeholder="Search title, project, message…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="!py-1.5 !text-xs"
+            className="!w-full"
           />
           <NexusDropdown
             variant="compact"
@@ -140,13 +140,17 @@ const DailyLogsTable = ({ entries = [], showMember = false }) => {
       </div>
 
       {entries.length === 0 ? (
-        <p className="p-4 text-xs text-[var(--color-text-muted)] opacity-60">
-          No daily log entries for this period.
-        </p>
+        <EmptyState
+          title="No daily log entries for this period"
+          variant="subtle"
+          className="py-4"
+        />
       ) : filteredEntries.length === 0 ? (
-        <p className="p-4 text-xs text-[var(--color-text-muted)] opacity-60">
-          No logs match your filters.
-        </p>
+        <EmptyState
+          title="No logs match your filters"
+          variant="subtle"
+          className="py-4"
+        />
       ) : (
         <DataTable
           className="!border-none !rounded-none"

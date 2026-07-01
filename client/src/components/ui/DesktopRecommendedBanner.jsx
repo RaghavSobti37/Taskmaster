@@ -24,7 +24,7 @@ export default function DesktopRecommendedBanner({ message, className = '' }) {
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-[var(--radius-atomic)] border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200 ${className}`}
+      className={`list-page-banner flex items-start gap-3 p-4 rounded-[var(--radius-atomic)] border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200 ${className}`}
       role="status"
     >
       <Monitor size={18} className="shrink-0 mt-0.5" />

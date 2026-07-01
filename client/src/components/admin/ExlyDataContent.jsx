@@ -7,11 +7,12 @@ import {
   SlidersHorizontal, BarChart3, TrendingUp, UserPlus
 } from 'lucide-react';
 import { Badge, DataTable, Button, FullScreenWorkspace, Input, Skeleton } from '../ui';
+import FunnelChart, { FUNNEL_CHART_COLORS } from '../ui/FunnelChart';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { format } from 'date-fns';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
+import { ExlyBookingsTrendChart, ExlyRevenueTrendChart } from '../charts/ExlyBklitTrendCharts';
 import { buildOfferingEditState, offeringEditHasChanges } from '../../utils/exlyOfferingEditState';
 import {
   formatOfferingDisplay,
@@ -22,12 +23,6 @@ import {
   formatPercent,
   computeOfferingTotals
 } from '../../utils/exlyFormatters';
-
-const exlyChartTooltipFormatter = (value, name) => {
-  if (/revenue|rev/i.test(String(name))) return [formatInr(value), name];
-  if (/booking/i.test(String(name))) return [String(Math.round(Number(value))), name];
-  return [value, name];
-};
 
 const MetricBlock = ({ label, value, tone = 'default', title }) => {
   const toneClass = {
@@ -669,6 +664,24 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
   const displayTotalBookings = dashboardStats?.totalBookingsCount ?? (
     displayPaidBookings + displayFreeBookings
   );
+
+  const exlyFunnelData = useMemo(() => {
+    const total = displayTotalBookings;
+    const unique = dashboardStats?.uniqueBookingsCount ?? 0;
+    const paid = displayPaidBookings;
+    const crmLinked = Math.max(0, total - unlinkedBookings.length);
+    return [
+      { label: 'All bookings', value: total, color: FUNNEL_CHART_COLORS[0] },
+      { label: 'Unique contacts', value: unique, color: FUNNEL_CHART_COLORS[1] },
+      { label: 'Paid', value: paid, color: FUNNEL_CHART_COLORS[2] },
+      { label: 'CRM linked', value: crmLinked, color: FUNNEL_CHART_COLORS[3] },
+    ];
+  }, [
+    dashboardStats?.uniqueBookingsCount,
+    displayPaidBookings,
+    displayTotalBookings,
+    unlinkedBookings.length,
+  ]);
   
   return (
     <div className="space-y-6 p-4">
@@ -764,7 +777,24 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
             </section>
           </div>
 
-          {/* Recharts Overall Analytics Visuals */}
+          <section className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-4">
+            <div className="flex items-center justify-between mb-3 border-b border-[var(--color-bg-border)] pb-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                Booking funnel
+              </span>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-brand-teal)]">
+                <BarChart3 size={12} />
+                <span>Exly → CRM</span>
+              </div>
+            </div>
+            {statsLoading || loading ? (
+              <Skeleton className="h-52 w-full" />
+            ) : (
+              <FunnelChart data={exlyFunnelData} layers={3} minHeight={220} />
+            )}
+          </section>
+
+          {/* Bklit area trend charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center justify-between mb-3 border-b border-[var(--color-bg-border)] pb-2">
@@ -776,55 +806,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                   <span>₹</span>
                 </div>
               </div>
-              {statsLoading ? (
-                <div className="h-48 w-full flex flex-col justify-between p-2">
-                  <div className="flex items-end justify-between h-36 gap-2 pt-4">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton 
-                        key={i} 
-                        className="w-full" 
-                        height={`${15 + Math.sin(i) * 10 + Math.random() * 55}%`} 
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between border-t border-[var(--color-bg-border)] pt-2">
-                    <Skeleton width="40px" height="10px" />
-                    <Skeleton width="40px" height="10px" />
-                    <Skeleton width="40px" height="10px" />
-                  </div>
-                </div>
-              ) : overallChartData.length === 0 ? (
-                <div className="h-48 w-full flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  No revenue stream data recorded
-                </div>
-              ) : (
-                <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={overallChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                      <defs>
-                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#81C995" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#81C995" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-bg-border)" opacity={0.3} />
-                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--color-text-muted)' }} />
-                      <YAxis tick={{ fontSize: 9, fill: 'var(--color-text-muted)' }} />
-                      <ChartTooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'var(--color-bg-surface)', 
-                          borderColor: 'var(--color-bg-border)', 
-                          fontSize: '11px',
-                          borderRadius: '8px'
-                        }}
-                        labelClassName="font-mono text-xs"
-                        formatter={exlyChartTooltipFormatter}
-                      />
-                      <Area type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#81C995" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+              <ExlyRevenueTrendChart data={overallChartData} loading={statsLoading} />
             </section>
 
             <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
@@ -837,55 +819,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                   <span>Transactions</span>
                 </div>
               </div>
-              {statsLoading ? (
-                <div className="h-48 w-full flex flex-col justify-between p-2">
-                  <div className="flex items-end justify-between h-36 gap-2 pt-4">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton 
-                        key={i} 
-                        className="w-full" 
-                        height={`${10 + Math.cos(i) * 8 + Math.random() * 60}%`} 
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between border-t border-[var(--color-bg-border)] pt-2">
-                    <Skeleton width="40px" height="10px" />
-                    <Skeleton width="40px" height="10px" />
-                    <Skeleton width="40px" height="10px" />
-                  </div>
-                </div>
-              ) : overallChartData.length === 0 ? (
-                <div className="h-48 w-full flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  No transaction trend data recorded
-                </div>
-              ) : (
-                <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={overallChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                      <defs>
-                        <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#FDD663" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#FDD663" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-bg-border)" opacity={0.3} />
-                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--color-text-muted)' }} />
-                      <YAxis tick={{ fontSize: 9, fill: 'var(--color-text-muted)' }} />
-                      <ChartTooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'var(--color-bg-surface)', 
-                          borderColor: 'var(--color-bg-border)', 
-                          fontSize: '11px',
-                          borderRadius: '8px'
-                        }}
-                        labelClassName="font-mono text-xs"
-                        formatter={exlyChartTooltipFormatter}
-                      />
-                      <Area type="monotone" dataKey="bookings" name="Bookings Count" stroke="#FDD663" fillOpacity={1} fill="url(#colorBookings)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+              <ExlyBookingsTrendChart data={overallChartData} loading={statsLoading} />
             </section>
           </div>
 
@@ -1511,7 +1445,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
               </div>
             )}
 
-            {/* Campaign-level Charts with Part-by-part Skeleton Hydration */}
+            {/* Campaign-level Bklit trend charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <section className="py-3 border-t border-[var(--color-bg-border)] space-y-3">
                 <div className="border-b border-[var(--color-bg-border)] pb-2 mb-2">
@@ -1519,43 +1453,12 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                     Campaign Revenue Flow
                   </span>
                 </div>
-                {cohortLoading ? (
-                  <div className="h-32 w-full flex items-end gap-1.5 p-2 pt-4">
-                    {[...Array(10)].map((_, idx) => (
-                      <Skeleton key={idx} className="w-full" height={`${20 + Math.sin(idx) * 15 + Math.random() * 40}%`} />
-                    ))}
-                  </div>
-                ) : cohortChartData.length === 0 ? (
-                  <div className="h-32 w-full flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    No revenue data recorded
-                  </div>
-                ) : (
-                  <div className="h-32 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={cohortChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                        <defs>
-                          <linearGradient id="colorCampRev" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#81C995" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#81C995" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-bg-border)" opacity={0.3} />
-                        <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'var(--color-text-muted)' }} />
-                        <YAxis tick={{ fontSize: 8, fill: 'var(--color-text-muted)' }} />
-                        <ChartTooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'var(--color-bg-surface)', 
-                            borderColor: 'var(--color-bg-border)', 
-                            fontSize: '10px',
-                            borderRadius: '6px'
-                          }}
-                          formatter={exlyChartTooltipFormatter}
-                        />
-                        <Area type="monotone" dataKey="revenue" name="Rev (INR)" stroke="#81C995" fillOpacity={1} fill="url(#colorCampRev)" strokeWidth={1.5} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                <ExlyRevenueTrendChart
+                  aspectRatio="3 / 1"
+                  data={cohortChartData}
+                  emptyLabel="No revenue data recorded"
+                  loading={cohortLoading}
+                />
               </section>
 
               <section className="py-3 border-t border-[var(--color-bg-border)] space-y-3">
@@ -1564,43 +1467,12 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                     Campaign Booking Flow
                   </span>
                 </div>
-                {cohortLoading ? (
-                  <div className="h-32 w-full flex items-end gap-1.5 p-2 pt-4">
-                    {[...Array(10)].map((_, idx) => (
-                      <Skeleton key={idx} className="w-full" height={`${25 + Math.cos(idx) * 10 + Math.random() * 35}%`} />
-                    ))}
-                  </div>
-                ) : cohortChartData.length === 0 ? (
-                  <div className="h-32 w-full flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    No booking data recorded
-                  </div>
-                ) : (
-                  <div className="h-32 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={cohortChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                        <defs>
-                          <linearGradient id="colorCampBooks" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FDD663" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#FDD663" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-bg-border)" opacity={0.3} />
-                        <XAxis dataKey="date" tick={{ fontSize: 8, fill: 'var(--color-text-muted)' }} />
-                        <YAxis tick={{ fontSize: 8, fill: 'var(--color-text-muted)' }} />
-                        <ChartTooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'var(--color-bg-surface)', 
-                            borderColor: 'var(--color-bg-border)', 
-                            fontSize: '10px',
-                            borderRadius: '6px'
-                          }}
-                          formatter={exlyChartTooltipFormatter}
-                        />
-                        <Area type="monotone" dataKey="bookings" name="Bookings" stroke="#FDD663" fillOpacity={1} fill="url(#colorCampBooks)" strokeWidth={1.5} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                <ExlyBookingsTrendChart
+                  aspectRatio="3 / 1"
+                  data={cohortChartData}
+                  emptyLabel="No booking data recorded"
+                  loading={cohortLoading}
+                />
               </section>
             </div>
 

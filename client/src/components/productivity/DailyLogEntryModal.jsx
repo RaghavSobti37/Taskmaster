@@ -108,19 +108,20 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
             <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
               Work date
             </label>
-            <input
-              type="date"
-              value={workDate}
-              max={todayKey}
-              onChange={(e) => setWorkDate(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-bold tabular-nums"
-              required
-            />
-            {workDate ? (
-              <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] tabular-nums ml-1">
-                {formatDateKeyForDisplay(workDate, { withWeekday: true })}
-              </p>
-            ) : null}
+            <div className="relative">
+              <div className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-bold tabular-nums text-center">
+                {workDate ? formatDateKeyForDisplay(workDate) : '—'}
+              </div>
+              <input
+                type="date"
+                value={workDate}
+                max={todayKey}
+                onChange={(e) => setWorkDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                required
+                aria-label={workDate ? formatDateKeyForDisplay(workDate, { withWeekday: true }) : 'Work date'}
+              />
+            </div>
           </div>
           <div className="text-[10px] text-[var(--color-text-muted)] flex items-end pb-2">
             Logged at submit: {formatDisplayDateTime(new Date())}

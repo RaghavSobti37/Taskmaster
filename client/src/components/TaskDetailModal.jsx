@@ -405,40 +405,41 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
 
           <ModalFooter className="justify-between px-6 py-4">
             {!isDone ? (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="xs"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="text-red-500 text-[10px] font-bold uppercase flex items-center gap-1"
+                className="text-red-500 uppercase tracking-wide"
               >
                 <Trash2 size={14} /> Remove
-              </button>
+              </Button>
             ) : (
               <span />
             )}
             <div className="flex gap-3 ml-auto">
-              <button type="button" onClick={onClose} disabled={isSaving || isDeleting} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)] disabled:opacity-50">
+              <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving || isDeleting}>
                 Close
-              </button>
+              </Button>
               {!isDone && (
-                <button
+                <Button
                   type="submit"
                   disabled={!title || isSaving || (!isDirty && !pendingFinishAfterSave)}
-                  className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSaving ? <Spinner size="sm" className="text-white" /> : <CheckCircle2 size={18} />}
                   {isSaving ? 'Saving...' : (pendingFinishAfterSave ? 'Save & Continue' : 'Save')}
-                </button>
+                </Button>
               )}
               {isDone && canRollback && !showRollbackForm && (
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowRollbackForm(true)}
                   disabled={isSaving || isHydrating}
-                  className="bg-amber-500 hover:bg-amber-400 text-[var(--color-bg-primary)] px-6 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50 transition-colors"
+                  className="bg-amber-500 hover:bg-amber-400 text-[var(--color-bg-primary)] border-amber-500"
                 >
                   <RotateCcw size={16} />
                   Rollback Task
-                </button>
+                </Button>
               )}
             </div>
           </ModalFooter>

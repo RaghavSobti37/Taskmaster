@@ -1,0 +1,11 @@
+{
+  "auth_email": {
+    "enabled": true,
+    "verify_at_sign_up": true,
+    "used_for_sign_in": false
+  },
+  "auth_password": {
+    "enabled": true,
+    "required": true
+  }
+}

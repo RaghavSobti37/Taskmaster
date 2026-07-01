@@ -52,7 +52,7 @@ export default function LoginPage() {
       <button type="button" onClick={() => setInstallGuideOpen(true)} className={linkClass}>
         {installPlatform.installed ? loginCopy.installCtaInstalled : 'Install app'}
       </button>
-      <span className="text-[var(--brand-teal-mid)]/40" aria-hidden>┬╖</span>
+      <span className="text-[var(--brand-teal-mid)]/40" aria-hidden>·</span>
       <span className="text-[var(--brand-teal-mid)]">New user?</span>
       <Link to="/register" className={linkClass}>
         Create account

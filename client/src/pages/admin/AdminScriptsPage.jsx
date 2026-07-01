@@ -2,9 +2,8 @@ import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
-import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { Badge, Button, Input, ListPageLayout, PageSkeleton, SearchInput, EmptyState } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
-import QueryErrorSlot from '../../components/ui/QueryErrorSlot';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 
@@ -108,36 +107,34 @@ const AdminScriptsPage = () => {
   if (isLoading) return <PageSkeleton />;
 
   return (
-    <PageContainer className="space-y-5">
-      <QueryErrorSlot
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        fallback="Failed to load admin scripts"
-      />
-      <PageHeader
-        title="Admin Script Runner"
-        icon={Brackets}
-        backTo={ADMIN_CONSOLE_PATH}
-        actions={
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search scripts..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64"
-            />
-            <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
-              {isFetching ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-xs text-[var(--color-text-muted)]">
-          {scripts.length} curated scripts (whitelist). Edit{' '}
-          <code className="text-[10px] font-mono">server/config/adminScriptsCatalog.js</code> to add or remove.
-        </p>
-      </PageHeader>
+    <ListPageLayout
+      containerClassName="!py-4 space-y-5"
+      title="Admin Script Runner"
+      icon={Brackets}
+      backTo={ADMIN_CONSOLE_PATH}
+      toolbarFill
+      queryError={isError ? error : null}
+      onQueryRetry={() => refetch()}
+      queryErrorFallback="Failed to load admin scripts"
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search scripts..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
+      toolbarActions={(
+        <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      )}
+    >
+      <p className="text-xs text-[var(--color-text-muted)]">
+        {scripts.length} curated scripts (whitelist). Edit{' '}
+        <code className="text-[10px] font-mono">server/config/adminScriptsCatalog.js</code> to add or remove.
+      </p>
 
       <section className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -185,9 +182,11 @@ const AdminScriptsPage = () => {
       </section>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">
-          No scripts match your search.
-        </p>
+        <EmptyState
+          title="No scripts match your search"
+          variant="subtle"
+          className="py-8"
+        />
       ) : (
         <div className="space-y-8">
           {grouped.map(({ category, items }) => (
@@ -266,7 +265,7 @@ const AdminScriptsPage = () => {
           ))}
         </div>
       )}
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

@@ -1167,10 +1167,12 @@ class GamificationService {
 
   static async generateDailyMissions(userId) {
     const today = startOfToday();
+    const endToday = endOfToday();
 
     const existing = await DailyMission.countDocuments({
       userId,
-      date: { $gte: today },
+      cadence: { $ne: 'weekly' },
+      date: { $gte: today, $lte: endToday },
     });
 
     if (existing > 0) return;

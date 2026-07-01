@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 export const useAdminRoles = () => useQuery({
   queryKey: ['adminRoles'],
@@ -33,7 +34,7 @@ export const useUpdateOrgRole = () => {
 export const useDeleteOrgRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => axios.delete(`/api/admin/roles/${id}`),
+    mutationFn: (id) => axios.delete(`/api/admin/roles/${id}`, AXIOS_SKIP_TOAST),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminRoles'] });
       queryClient.invalidateQueries({ queryKey: ['departments'] });

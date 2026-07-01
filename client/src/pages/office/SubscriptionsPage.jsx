@@ -8,9 +8,16 @@ import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import MemberSelect from '../../components/forms/MemberSelect';
 import { Button, Input, Badge, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import SubscriptionMobileRow from '../../components/office/SubscriptionMobileRow';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficePrimaryCell,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 
 const SUBSCRIPTION_TYPES = ['Software', 'SaaS', 'Hosting', 'Domain', 'Service', 'Other'];
 const PERIODICITY_OPTIONS = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'One-time'];
@@ -207,13 +214,10 @@ const SubscriptionsPage = () => {
       {
         header: 'Subscription',
         sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
         render: (sub) => (
-          <div className="min-w-0">
-            <span className="tm-data-primary text-xs tracking-tight block truncate">{sub.name}</span>
-            {sub.notes ? (
-              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{sub.notes}</span>
-            ) : null}
-          </div>
+          <OfficePrimaryCell title={sub.name} subtitle={sub.notes || undefined} />
         ),
       },
       {
@@ -222,8 +226,10 @@ const SubscriptionsPage = () => {
         sortFn: (sub) => Number(sub.amount) || 0,
         numeric: true,
         align: 'right',
+        headerClassName: OFFICE_TABLE_COL.numeric,
+        cellClassName: OFFICE_TABLE_COL.numeric,
         render: (sub) => (
-          <span className="text-[11px] font-bold tabular-nums text-[var(--color-text-primary)]">
+          <span className="office-hub-cell-meta tabular-nums" title={formatInr(sub.amount)}>
             {formatInr(sub.amount)}
           </span>
         ),
@@ -232,13 +238,20 @@ const SubscriptionsPage = () => {
         header: 'Due Date',
         sortKey: 'dueDate',
         sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
+        headerClassName: OFFICE_TABLE_COL.date,
+        cellClassName: OFFICE_TABLE_COL.date,
         render: (sub) => (
-          <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">{formatDate(sub.dueDate)}</span>
+          <OfficeMetaCell
+            value={sub.dueDate ? formatDate(sub.dueDate) : undefined}
+            className="tabular-nums text-[var(--color-text-muted)] font-normal"
+          />
         ),
       },
       {
         header: 'Type',
         sortKey: 'type',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
         render: (sub) => (
           <Badge variant="info" className="max-w-full truncate" title={sub.type}>
             {sub.type}
@@ -248,6 +261,8 @@ const SubscriptionsPage = () => {
       {
         header: 'Periodicity',
         sortKey: 'periodicity',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
         render: (sub) => (
           <Badge variant="mint" className="max-w-full truncate" title={sub.periodicity}>
             {sub.periodicity}
@@ -261,13 +276,16 @@ const SubscriptionsPage = () => {
           normalizeUsedByUsers(sub.usedBy)
             .map((user) => user?.name || '')
             .join(', '),
+        headerClassName: OFFICE_TABLE_COL.users,
+        cellClassName: OFFICE_TABLE_COL.users,
         render: (sub) => {
           const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
           if (!users.length) {
             return <span className="text-[var(--color-text-muted)]">—</span>;
           }
+          const label = users.map((user) => user.name).filter(Boolean).join(', ');
           return (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 min-w-0" title={label}>
               {users.map((user) => (
                 <UserLabel
                   key={user._id || user.name}
@@ -325,14 +343,16 @@ const SubscriptionsPage = () => {
           },
         ],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder="Search subscriptions..."
+          variant="toolbar"
+          placeholder="Search subscription name, vendor…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <Button size="sm" onClick={openCreate}>
           <Plus size={14} /> Add Subscription
@@ -350,11 +370,11 @@ const SubscriptionsPage = () => {
         data={filtered}
         onRowClick={openEdit}
         getRowId={(sub) => sub._id}
-        rowEstimateSize={52}
-        tableMaxHeight="70vh"
-        fitWidth
+        mobileRowRender={(row) => <SubscriptionMobileRow subscription={row} />}
+        mobileRowClassName="!py-2.5 !px-3"
         emptyTitle="No subscriptions found"
         emptyDescription="Try a different search or add a new subscription."
+        {...OFFICE_TABLE_PROPS}
       />
 
       <NexusModal

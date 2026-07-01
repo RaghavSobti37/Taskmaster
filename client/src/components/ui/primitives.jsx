@@ -4,6 +4,9 @@ import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Spinner } from './Spinner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useInputErrorShake, useSlidingTabs } from '../../hooks/transitions';
+import NumberPopIn from './NumberPopIn';
+import DeltaBadge from './DeltaBadge';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
@@ -19,7 +22,7 @@ export const Skeleton = ({ className = '', variant = 'rect', width, height }) =>
 
   return (
     <div 
-      className={`animate-pulse bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${variants[variant]} ${className}`}
+      className={`t-skel-skeleton is-pulsing animate-pulse bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${variants[variant]} ${className}`}
       style={{ width, height }}
     />
   );
@@ -103,37 +106,52 @@ export const PageContainer = ({ children, className = '', maxWidth = '1600px' })
   </div>
 );
 
-export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
-  <div className={`tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 bg-[var(--color-bg-secondary)] px-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}>
-    {tabs.map((tab) => (
-      <button
-        key={tab.id}
-        type="button"
-        onClick={() => onChange(tab.id)}
-        className={`inline-flex items-center gap-1.5 px-2.5 h-7 text-[10px] font-bold uppercase tracking-wider transition-colors rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
-          activeTab === tab.id
-            ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
-            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-        }`}
-      >
-        <span>{tab.label}</span>
-        {tab.badge > 0 && (
-          <span
-            className={`flex h-4 min-w-4 px-1 items-center justify-center rounded-full text-[8px] font-bold tabular-nums ${
-              tab.badgeVariant === 'warning'
-                ? 'bg-amber-500 text-[var(--color-bg-primary)]'
-                : tab.badgeVariant === 'overdue'
-                  ? 'bg-rose-500 text-white'
-                  : 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)]'
-            }`}
-          >
-            {tab.badge > 99 ? '99+' : tab.badge}
-          </span>
-        )}
-      </button>
-    ))}
-  </div>
-);
+export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => {
+  const { barRef, pillRef, movePill } = useSlidingTabs('[aria-selected="true"]');
+
+  useLayoutEffect(() => {
+    movePill(true);
+  }, [activeTab, tabs.length, movePill]);
+
+  return (
+    <div
+      ref={barRef}
+      role="tablist"
+      className={`t-tabs tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}
+    >
+      <div ref={pillRef} className="t-tabs-pill" aria-hidden />
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`t-tab inline-flex items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${
+            activeTab === tab.id
+              ? 'is-active text-[var(--color-action-primary)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+          }`}
+        >
+          <span>{tab.label}</span>
+          {tab.badge > 0 && (
+            <span
+              className={`flex h-4 min-w-4 px-1 items-center justify-center rounded-full text-[8px] font-bold tabular-nums ${
+                tab.badgeVariant === 'warning'
+                  ? 'bg-amber-500 text-[var(--color-bg-primary)]'
+                  : tab.badgeVariant === 'overdue'
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)]'
+              }`}
+            >
+              {tab.badge > 99 ? '99+' : tab.badge}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 /** Wraps a single form control so it sizes correctly in flex/grid layouts. */
 const FormField = ({ children, className = '' }) => (
@@ -163,6 +181,9 @@ export const Input = React.forwardRef(({
   label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props
 }, ref) => {
   const textareaRef = useRef(null);
+  const inputRef = useRef(null);
+  const fieldRef = multiline ? textareaRef : inputRef;
+  const { wrapRef, clearError } = useInputErrorShake(error, fieldRef);
   const fieldStyles = variant === 'ghost'
     ? 'bg-transparent border-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] focus:border-transparent'
     : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)]';
@@ -178,19 +199,26 @@ export const Input = React.forwardRef(({
     syncTextareaHeight();
   }, [props.value, syncTextareaHeight]);
 
-  const assignRef = useCallback((node) => {
+  const assignTextareaRef = useCallback((node) => {
     textareaRef.current = node;
     if (typeof ref === 'function') ref(node);
     else if (ref) ref.current = node;
   }, [ref]);
 
+  const assignInputRef = useCallback((node) => {
+    inputRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+
   const handleChange = (e) => {
+    if (error) clearError();
     onChange?.(e);
     if (multiline && autoGrow) syncTextareaHeight();
   };
 
   return (
-  <div className="flex flex-col gap-2 w-full min-w-0">
+  <div ref={wrapRef} className="t-input-wrap flex flex-col gap-2 w-full min-w-0">
     {label && (
       <label className="block tm-section-label">
         {label}
@@ -202,11 +230,11 @@ export const Input = React.forwardRef(({
       )}
       {multiline ? (
         <textarea
-          ref={assignRef}
+          ref={assignTextareaRef}
           rows={rows}
           onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`mobile-form-control block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
+          className={`mobile-form-control t-input block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
             autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
           } ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
@@ -215,10 +243,10 @@ export const Input = React.forwardRef(({
         />
       ) : (
         <input
-          ref={ref}
+          ref={assignInputRef}
           onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`mobile-form-control block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
+          className={`mobile-form-control t-input block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
           } ${className}`}
           {...props}
@@ -230,7 +258,7 @@ export const Input = React.forwardRef(({
         </div>
       )}
     </div>
-    {error && <p className="text-[10px] font-bold text-rose-400">{error}</p>}
+    {error && <p className="t-error-msg text-[10px] font-bold text-rose-400">{error}</p>}
     {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
   </div>
   );
@@ -264,30 +292,21 @@ export const Badge = ({ children, variant = 'info', className = '' }) => {
 };
 
 export const InfoButton = ({ text }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const tipId = React.useId();
 
   return (
-    <div 
-      className="inline-flex items-center ml-1.5 align-middle relative"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-      onFocus={() => setIsOpen(true)}
-      onBlur={() => setIsOpen(false)}
-    >
-      <button 
+    <span className="t-tt-wrap inline-flex items-center ml-1.5 align-middle">
+      <button
         type="button"
-        className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-mono font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-action-primary)] hover:text-[var(--color-bg-primary)] transition-colors cursor-help focus:outline-none"
+        className="t-tt-trigger w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-mono font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-action-primary)] hover:text-[var(--color-bg-primary)] transition-colors cursor-help focus:outline-none"
+        aria-describedby={tipId}
       >
         i
       </button>
-
-      {isOpen && (
-        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-black text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl w-48 z-[99999] pointer-events-none text-center border border-white/20">
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-slate-900 dark:border-t-black" />
-        </div>
-      )}
-    </div>
+      <span className="t-tt" id={tipId} role="tooltip">
+        {text}
+      </span>
+    </span>
   );
 };
 
@@ -317,11 +336,11 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
       </div>
       <div className="flex items-end justify-between gap-2 mt-auto">
         <div className="flex items-baseline gap-2 min-w-0">
-          <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">{value}</span>
+          <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">
+            <NumberPopIn value={value} />
+          </span>
           {delta && (
-            <span className={delta.direction === 'down' ? 'tm-delta-negative' : 'tm-delta-positive'}>
-              {delta.direction === 'down' ? '↓' : '↑'} {delta.value}
-            </span>
+            <DeltaBadge value={delta.value} direction={delta.direction} />
           )}
         </div>
         <div className="flex-shrink-0 flex items-center justify-end">
@@ -441,9 +460,11 @@ export const DataTable = ({
   sortState: controlledSortState,
   onSortChange,
   mobileRowRender,
+  mobileRowClassName = '',
   rowEstimateSize = 52,
   tableMaxHeight = '600px',
   virtualize = true,
+  density = 'default',
 }) => {
   const [localSortState, setLocalSortState] = useState(null);
   const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
@@ -547,8 +568,13 @@ export const DataTable = ({
   const isMobile = useIsMobile();
   const mobileColumns = columns.filter((c) => !c.mobileHidden);
   const primaryCol = columns.find((c) => c.mobilePrimary) || mobileColumns[0];
-  const detailColumns = mobileColumns.filter((c) => c !== primaryCol);
+  const detailColumns = mobileColumns.filter((c) => c !== primaryCol && !c.mobileAction);
   const actionColumns = columns.filter((c) => c.mobileAction);
+
+  const isComfortable = density === 'comfortable';
+  const thCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-2.5' : 'px-4 py-2';
+  const tdCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-3' : 'px-4 py-2';
+  const tableDensityClass = isComfortable ? 'data-table--comfortable' : '';
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
@@ -558,7 +584,7 @@ export const DataTable = ({
         style={isMobile ? undefined : { maxHeight: tableMaxHeight }}
       >
         <table
-          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}
+          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'} ${tableDensityClass}`}
         >
           <thead className="border-b border-[var(--color-bg-border)]">
             <tr>
@@ -577,7 +603,7 @@ export const DataTable = ({
                 return (
                   <th
                     key={i}
-                    className={`px-4 py-2 tm-widget-label whitespace-nowrap ${alignClass} ${col.headerClassName || ''} ${
+                    className={`${thCellPad} tm-widget-label whitespace-nowrap leading-normal overflow-visible ${alignClass} ${col.headerClassName || ''} ${
                       sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
                     }`}
                     onClick={sortable ? () => handleSortClick(col) : undefined}
@@ -643,7 +669,7 @@ export const DataTable = ({
                     return (
                     <td
                       key={j}
-                      className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                      className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
                     >
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
@@ -674,7 +700,7 @@ export const DataTable = ({
                       return (
                         <td
                           key={j}
-                          className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                          className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
                         >
                           {col.render ? col.render(row) : row[col.key]}
                         </td>
@@ -706,7 +732,7 @@ export const DataTable = ({
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 onRowClick?.(row);
               }}
-              className="tm-data-row cursor-pointer min-w-0"
+              className={`tm-data-row cursor-pointer min-w-0 ${mobileRowClassName}`.trim()}
             >
               {mobileRowRender ? (
                 mobileRowRender(row)
@@ -727,7 +753,7 @@ export const DataTable = ({
                     </div>
                   )}
                   {detailColumns.length > 0 && (
-                    <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-[var(--color-bg-border)] pt-2.5">
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--color-bg-border)] pt-2 lg:mt-2.5 lg:gap-y-2.5 lg:pt-2.5">
                       {detailColumns.map((col, j) => (
                         <div
                           key={j}
@@ -745,11 +771,11 @@ export const DataTable = ({
                   )}
                   {actionColumns.length > 0 && (
                     <div
-                      className="mt-2.5 flex flex-wrap gap-2 pt-2.5 border-t border-[var(--color-bg-border)]"
+                      className="mt-2 flex items-center justify-end gap-1.5 lg:mt-2.5 lg:gap-2 lg:pt-2.5 lg:border-t lg:border-[var(--color-bg-border)]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {actionColumns.map((col, j) => (
-                        <div key={j} className="flex-1 min-w-[120px]">
+                        <div key={j} className="shrink-0">
                           {col.render ? col.render(row) : row[col.key]}
                         </div>
                       ))}
@@ -780,8 +806,11 @@ export const DataTable = ({
 export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)]' }) => (
   <div className="w-full h-1 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
     <div
-      className={`h-full ${color} transition-all duration-300 ease-out`}
-      style={{ width: `${progress}%` }}
+      className={`h-full ${color}`}
+      style={{
+        width: `${progress}%`,
+        transition: 'width var(--duration-fast) var(--ease-smooth-out)',
+      }}
     />
   </div>
 );
@@ -801,38 +830,56 @@ export const Switch = ({ checked, onChange, disabled = false, className = '' }) 
   </button>
 );
 
+const ACCORDION_CHEVRON = (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <path
+      d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z"
+      fill="currentColor"
+      fillRule="evenodd"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
 export const Accordion = ({ items, className = '' }) => {
   const [openIndex, setOpenIndex] = useState(null);
-  
+
   return (
     <div className={`space-y-2 w-full ${className}`}>
-      {items.map((item, i) => (
-        <div key={i} className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden bg-[var(--color-bg-surface)]">
-          <button
-            onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className="w-full flex items-center justify-between p-4 text-sm font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none text-left"
+      {items.map((item, i) => {
+        const open = openIndex === i;
+        return (
+          <div
+            key={i}
+            className="t-acc border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden bg-[var(--color-bg-surface)]"
+            data-open={open ? 'true' : 'false'}
           >
-            <span className="min-w-0">
-              <span className="block truncate">{item.title}</span>
-              {item.subtitle && (
-                <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mt-0.5 truncate">
-                  {item.subtitle}
-                </span>
-              )}
-            </span>
-            <div className={`transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
-            </div>
-          </button>
-          {openIndex === i && (
-            <div className="overflow-hidden bg-[var(--color-bg-secondary)] animate-in fade-in slide-in-from-top-1 duration-200">
-              <div className="p-4 pt-2 text-sm text-[var(--color-text-secondary)]">
+            <button
+              type="button"
+              onClick={() => setOpenIndex(open ? null : i)}
+              aria-expanded={open}
+              className="t-acc-head w-full flex items-center justify-between p-4 text-sm font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none text-left"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">{item.title}</span>
+                {item.subtitle && (
+                  <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mt-0.5 truncate">
+                    {item.subtitle}
+                  </span>
+                )}
+              </span>
+              <span className="t-acc-chevron text-[var(--color-text-muted)] shrink-0 ml-2">
+                {ACCORDION_CHEVRON}
+              </span>
+            </button>
+            <div className="t-acc-panel">
+              <div className="t-acc-panel-inner p-4 pt-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)]">
                 {item.content}
               </div>
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 };

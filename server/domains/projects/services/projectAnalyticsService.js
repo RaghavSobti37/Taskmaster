@@ -237,6 +237,25 @@ const buildAnalyticsForProject = async (project, window, memberProfileById = new
       return formatLogEntry(log, memberProfileById.get(uid) || { name: '', avatar: '' });
     });
 
+  const financeDocs = await FinanceDocument.find({
+    project: project._id,
+    isFolder: { $ne: true },
+  })
+    .select('project category metadata createdAt')
+    .lean();
+
+  const financeByProjectId = rollupFinanceByProject(financeDocs, rangeStart, rangeEnd);
+  const finance = financeByProjectId.get(project._id.toString()) || {
+    budget: 0,
+    spentTotal: 0,
+    spentInRange: 0,
+    revenueTotal: 0,
+    revenueInRange: 0,
+    remaining: 0,
+    budgetUsedPct: null,
+    spendByCategory: {},
+  };
+
   return {
     project: {
       _id: project._id,
@@ -260,6 +279,16 @@ const buildAnalyticsForProject = async (project, window, memberProfileById = new
       tasksCompleted: completedInRange.length,
       tasksTotal: tasksInRange.length,
       tasksInProgress: byStatus.inProgress + byStatus.inReview,
+      budget: finance.budget,
+      spentTotal: finance.spentTotal,
+      spentInRange: finance.spentInRange,
+      revenueTotal: finance.revenueTotal,
+      revenueInRange: finance.revenueInRange,
+      remaining: finance.remaining,
+      budgetUsedPct: finance.budgetUsedPct,
+    },
+    finance: {
+      spendByCategory: finance.spendByCategory,
     },
     byDay,
     byMember,
@@ -349,6 +378,7 @@ const buildProjectsAnalyticsSummary = async (user, rangeQuery = {}) => {
       revenueInRange: 0,
       remaining: 0,
       budgetUsedPct: null,
+      spendByCategory: {},
     };
     return {
       projectId: p._id,
@@ -364,6 +394,7 @@ const buildProjectsAnalyticsSummary = async (user, rangeQuery = {}) => {
       revenueInRange: finance.revenueInRange,
       remaining: finance.remaining,
       budgetUsedPct: finance.budgetUsedPct,
+      spendByCategory: finance.spendByCategory,
     };
   });
 

@@ -29,7 +29,7 @@ import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SI
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../utils/departmentPermissions';
 import { useTheme } from '../contexts/ThemeContext';
-import { useIsMobile } from '../hooks/useBreakpoint';
+import { useWindowSize, MOBILE_MAX } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
@@ -241,7 +241,9 @@ const OutletSidebar = () => {
     review: { pending: 0 },
     projects: { overdue: 0, review: 0 },
   } } = useStatusCounts(shellQueriesEnabled);
-  const isMobile = useIsMobile();
+  const { width: viewportWidth } = useWindowSize();
+  // ponytail: match CSS lg breakpoint — drawer shell when sidebar is off-screen
+  const isMobile = viewportWidth <= MOBILE_MAX;
 
   useEffect(() => {
     closeMobileSidebar();

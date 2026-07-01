@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { ChevronLeft, ChevronRight, Save, Send, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Save, Send } from 'lucide-react';
 import axios from 'axios';
 import { Button, Input } from '../../ui';
-import PreviewIframe from '../PreviewIframe';
+import EmailDevicePreview from '../EmailDevicePreview';
+import CampaignAttachmentsField from './CampaignAttachmentsField';
 import { resolveRowValuesFromRecipient } from '../../../utils/indexedTemplateVariables';
 import {
   enhancePreviewDocument,
@@ -11,7 +12,6 @@ import {
   wrapVisualPreviewBody,
 } from '../../../utils/visualEmailHtml';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useUploadCampaignAttachment } from '../../../hooks/useTaskmasterQueries';
 import { useToast } from '../../../contexts/ToastContext';
 
 function resolveProfileSignature(profiles, senderProfileId) {
@@ -29,12 +29,12 @@ export default function StepPreflight({
   const { watch, setValue } = useFormContext();
   const { user } = useAuth();
   const toast = useToast();
-  const uploadMutation = useUploadCampaignAttachment();
 
   const [previewIndex, setPreviewIndex] = useState(0);
   const [serverPreview, setServerPreview] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [testEmail, setTestEmail] = useState(user?.email || '');
+  const [testSending, setTestSending] = useState(false);
   const [signatureDraft, setSignatureDraft] = useState('');
 
   const formValues = watch();
@@ -150,25 +150,13 @@ export default function StepPreflight({
 
   const previewHtml = serverPreview || clientPreviewHtml;
 
-  const handleAttachment = async (e) => {
-    const files = Array.from(e.target.files || []);
-    for (const file of files) {
-      try {
-        const uploaded = await uploadMutation.mutateAsync(file);
-        setValue('attachments', [...attachments, uploaded]);
-      } catch (err) {
-        toast.error(`Upload failed: ${err.response?.data?.error || err.message}`);
-      }
-    }
-    e.target.value = '';
-  };
-
   const handleTestSend = async () => {
     if (!testEmail) { toast.warn('Enter test email'); return; }
     if (formValues.includeSignature && !previewSignature) {
       toast.warn('Save sender signature before sending a test');
       return;
     }
+    setTestSending(true);
     try {
       await axios.post('/api/mail/test-campaign', {
         subject: formValues.subject,
@@ -189,6 +177,8 @@ export default function StepPreflight({
       toast.success(`Test sent to ${testEmail}`);
     } catch (e) {
       toast.error('Test send failed: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -265,27 +255,22 @@ export default function StepPreflight({
           </label>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Attachments</label>
-          <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--color-bg-border)] text-xs font-medium hover:border-[var(--color-action-primary)]">
-            <Upload size={14} /> Add file
-            <input type="file" multiple className="hidden" onChange={handleAttachment} />
-          </label>
-          {attachments.length > 0 && (
-            <ul className="text-xs space-y-1">
-              {attachments.map((a, i) => (
-                <li key={i}>{a.filename}</li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <CampaignAttachmentsField />
 
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] space-y-2">
           <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Test send</label>
           <div className="flex gap-2">
             <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="your@email.com" className="flex-1" />
-            <Button variant="secondary" size="sm" onClick={handleTestSend}>
-              <Send size={14} /> Send test
+            <Button variant="secondary" size="sm" onClick={handleTestSend} disabled={testSending}>
+              {testSending ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Sending…
+                </>
+              ) : (
+                <>
+                  <Send size={14} /> Send test
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -314,7 +299,13 @@ export default function StepPreflight({
         {previewLoading && !serverPreview ? (
           <div className="p-8 text-center text-sm text-[var(--color-text-muted)]">Loading preview…</div>
         ) : (
-          <PreviewIframe html={previewHtml} minHeight={420} />
+          <EmailDevicePreview
+            html={previewHtml}
+            minHeight={420}
+            subject={formValues.subject}
+            fromEmail={formValues.resendFromEmail}
+            toLabel={activeRecipient?.name || activeRecipient?.email || ''}
+          />
         )}
       </div>
     </div>

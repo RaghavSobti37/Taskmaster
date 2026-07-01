@@ -54,9 +54,8 @@ export const WIDGET_SECTION_MAP = {
   'system-health': 'status-strip',
   'last-backup': 'status-strip',
   'render-logs': 'status-strip',
-  'render-logs-production': 'status-strip',
-  'render-logs-staging-api': 'status-strip',
-  'render-logs-staging-nest': 'status-strip',
+  posthog: 'status-strip',
+  clerk: 'status-strip',
   'leave-alerts': 'status-strip',
   'invoice-alerts': 'status-strip',
   'attendance-overview': 'status-strip',
@@ -103,6 +102,8 @@ export const WIDGET_ROUTES = {
   'system-health': '/admin/console',
   'last-backup': '/admin/console',
   'render-logs': '/admin/console',
+  posthog: 'https://us.posthog.com/project/468825',
+  clerk: 'https://dashboard.clerk.com/last-active',
   'leave-alerts': '/settings?tab=leave',
   'invoice-alerts': '/settings?tab=invoice',
   'attendance-overview': '/attendance/all',
@@ -114,7 +115,8 @@ export const WIDGET_ROUTES = {
 export const DAILY_ACTION_ORDER = [
   'mark-attendance',
   'schedule',
-  'my-tasks',
+  'todos-today',
+  'todos-overdue',
   'review-queue',
 ];
 
@@ -132,6 +134,8 @@ const DEFAULT_VISIBLE = new Set([
   'system-health',
   'last-backup',
   'render-logs',
+  'posthog',
+  'clerk',
   'pipeline-summary',
   'campaign-metrics',
   'dept-stats',
@@ -145,6 +149,10 @@ const DEFAULT_HIDDEN = new Set([
   'daily-missions',
   'leave-alerts',
   'invoice-alerts',
+]);
+
+/** Legacy per-env widgets merged into render-logs */
+const DEPRECATED_RENDER_LOG_WIDGETS = new Set([
   'render-logs-production',
   'render-logs-staging-api',
   'render-logs-staging-nest',
@@ -197,9 +205,18 @@ export function getDefaultTierElements(permissionPreset) {
 /** Merge saved preset with section metadata; migrate legacy grid presets */
 export function normalizeDashboardElements(elements, permissionPreset) {
   const accessible = getAccessibleComponents(permissionPreset);
-  const source = Array.isArray(elements) && elements.length
+  const raw = Array.isArray(elements) && elements.length
     ? elements
     : getDefaultTierElements(permissionPreset);
+
+  let promoteRenderLogs = false;
+  const source = raw.filter((el) => {
+    if (DEPRECATED_RENDER_LOG_WIDGETS.has(el.componentId)) {
+      if (el.visible !== false) promoteRenderLogs = true;
+      return false;
+    }
+    return true;
+  });
 
   const byId = new Map();
   source.forEach((el, idx) => {
@@ -217,6 +234,10 @@ export function normalizeDashboardElements(elements, permissionPreset) {
       byId.set(def.componentId, { ...def, visible: false });
     }
   });
+
+  if (promoteRenderLogs && byId.has('render-logs')) {
+    byId.get('render-logs').visible = true;
+  }
 
   return [...byId.values()].sort((a, b) => a.order - b.order);
 }
@@ -394,36 +415,9 @@ export function repackDashboardElements(elements) {
 
 const TASK_WIDGET_IDS = new Set(['todos-today', 'todos-overdue']);
 
-/** Daily row: collapse today + overdue into my-tasks while keeping saved widths/order */
+/** Daily row: keep today + overdue as separate widgets (settings preview matches dashboard). */
 export function prepareDailyActionRenderList(sectionElements) {
-  const sorted = sortSectionWidgets(sectionElements);
-  const ids = new Set(sectionElements.map((e) => e.componentId));
-  const hasTasks = ids.has('todos-today') || ids.has('todos-overdue');
-  const today = sorted.find((e) => e.componentId === 'todos-today');
-  const overdue = sorted.find((e) => e.componentId === 'todos-overdue');
-  const result = [];
-  let tasksMerged = false;
-
-  for (const el of sorted) {
-    if (TASK_WIDGET_IDS.has(el.componentId)) {
-      if (!tasksMerged && hasTasks) {
-        tasksMerged = true;
-        result.push({
-          componentId: 'my-tasks',
-          section: 'daily-actions',
-          order: Math.min(today?.order ?? overdue?.order ?? 0, overdue?.order ?? today?.order ?? 0),
-          row: Math.min(today?.row ?? overdue?.row ?? 1, overdue?.row ?? today?.row ?? 1),
-          col: today?.col ?? overdue?.col ?? 1,
-          size: today?.size || overdue?.size || '2',
-          visible: true,
-        });
-      }
-      continue;
-    }
-    result.push(el);
-  }
-
-  return sortSectionWidgets(result);
+  return sortSectionWidgets(sectionElements);
 }
 
 /** Daily row: merge today + overdue into one slot; order follows saved grid order */

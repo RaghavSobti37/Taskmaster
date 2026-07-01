@@ -312,9 +312,9 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
       const holySheetSources = Array.from(new Set(newRecs.map((r) => r.source).filter(Boolean)));
       setExcludedSources((prev) => [...new Set([...prev, ...holySheetSources])]);
       const skipNote = skipped > 0 ? ` Skipped ${skipped} invalid.` : '';
-      toast.success(`Loaded ${newRecs.length} from HolySheet (${holySheetSources.length} tabs deselected by default).${skipNote}`);
+      toast.success(`Loaded ${newRecs.length} from Media List (${holySheetSources.length} tabs deselected by default).${skipNote}`);
     } catch (e) {
-      toast.error('Failed to load HolySheet: ' + (e.response?.data?.error || e.message));
+      toast.error('Failed to load Media List: ' + (e.response?.data?.error || e.message));
     }
     setLoadingHolySheet(false);
   }, [toast]);

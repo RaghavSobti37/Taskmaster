@@ -31,7 +31,7 @@ const DOMAINS = {
 };
 
 const VERCEL_PROJECTS = [
-  { name: 'coreknot', root: 'client', domains: [DOMAINS.app, DOMAINS.www], siteMode: 'app' },
+  { name: 'taskmaster', root: 'client', domains: [DOMAINS.app, DOMAINS.www], siteMode: 'app' },
   { name: 'coreknot-landing', root: 'sites/landing', domains: [DOMAINS.landing], siteMode: 'landing' },
   { name: 'coreknot-auth', root: 'sites/auth', domains: [DOMAINS.auth], siteMode: 'auth' },
 ];
@@ -372,32 +372,27 @@ async function stepCloudflare(cfEnv) {
   log('\n=== 4. Cloudflare DNS ===\n');
   const token = cfEnv.CLOUDFLARE_API_TOKEN?.trim();
   const zoneId = cfEnv.CLOUDFLARE_ZONE_ID?.trim();
-  const vercelTarget = cfEnv.CLOUDFLARE_VERCEL_CNAME?.trim() || 'cname.vercel-dns.com';
-
   if (!token || !zoneId) {
     fail('CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID missing');
     log('  Copy .cursor/cloudflare-api.local.env.example');
-    log('  Manual: Cloudflare → tsccoreknot.com → DNS — see docs/CLOUDFLARE_DNS.md');
+    log('  Or run: node scripts/provision-subdomain-dns.mjs (prints GoDaddy CNAME rows)');
+    log('  Note: tsccoreknot.com currently uses GoDaddy nameservers — migrate to Cloudflare or add records at GoDaddy.');
     return false;
   }
 
-  const records = [
-    { name: DOMAINS.app, target: vercelTarget },
-    { name: DOMAINS.www, target: vercelTarget },
-    { name: DOMAINS.landing, target: vercelTarget },
-    { name: DOMAINS.auth, target: vercelTarget },
-  ];
-
-  for (const { name, target } of records) {
-    if (dryRun) {
-      ok(`Would CNAME ${name} → ${target} (DNS only)`);
-      continue;
-    }
-    const action = await ensureCloudflareRecord(token, zoneId, name, target, false);
-    ok(`${name} → ${target} (${action})`);
+  if (dryRun) {
+    ok('Would run scripts/provision-subdomain-dns.mjs for landing + auth CNAME targets from Vercel');
+    return true;
   }
 
-  return true;
+  try {
+    execSync('node scripts/provision-subdomain-dns.cjs', { cwd: ROOT, stdio: 'inherit' });
+    ok('Subdomain DNS provisioned via Cloudflare');
+    return true;
+  } catch {
+    fail('provision-subdomain-dns.mjs failed — add CNAME records at your DNS provider');
+    return false;
+  }
 }
 
 function fetchHead(url) {

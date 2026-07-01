@@ -8,7 +8,7 @@ function departmentNeedsHydration(dept) {
 }
 
 /**
- * Session user sometimes carries departmentId as an unpopulated id ΓÇö breaks admin widgets + role label.
+ * Session user sometimes carries departmentId as an unpopulated id — breaks admin widgets + role label.
  * Admin dept is excluded from /public; use authenticated departments list when needed.
  */
 export async function enrichUserDepartment(user) {

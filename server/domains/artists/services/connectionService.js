@@ -107,6 +107,29 @@ async function getConnectionsForArtist(artistId, { includeTokens = false } = {})
   });
 }
 
+async function getConnectionsForArtists(artistIds, { includeTokens = false } = {}) {
+  const map = new Map();
+  if (!artistIds?.length) return map;
+
+  for (const id of artistIds) {
+    map.set(String(id), []);
+  }
+
+  const query = ArtistConnection.find({ artistId: { $in: artistIds } });
+  if (includeTokens) query.select('+tokenData');
+  const rows = await query.lean();
+
+  for (const row of rows) {
+    const key = String(row.artistId);
+    const tokens = includeTokens ? unpackTokenData(row.tokenData) : {};
+    const list = map.get(key) || [];
+    list.push({ ...row, _tokens: tokens });
+    map.set(key, list);
+  }
+
+  return map;
+}
+
 async function upsertConnection({
   artistId,
   provider,
@@ -280,6 +303,7 @@ module.exports = {
   sanitizeConnection,
   buildLegacyOAuthShape,
   getConnectionsForArtist,
+  getConnectionsForArtists,
   upsertConnection,
   getCredentialsForSync,
   migrateAuthDocToConnections,

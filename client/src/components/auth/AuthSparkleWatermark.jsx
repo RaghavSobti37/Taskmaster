@@ -1,7 +1,7 @@
 import React from 'react';
 import HarmonicLogo from '../brand/HarmonicLogo';
 
-/** Faint sparkle watermark on auth panel ΓÇö uses mark geometry, not the app logo shell. */
+/** Faint sparkle watermark on auth panel — uses mark geometry, not the app logo shell. */
 export default function AuthSparkleWatermark() {
   return (
     <div

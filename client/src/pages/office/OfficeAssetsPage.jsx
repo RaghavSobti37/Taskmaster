@@ -9,6 +9,14 @@ import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
+import EquipmentMobileRow, { equipmentStatusVariant } from '../../components/office/EquipmentMobileRow';
+import ContactMobileRow from '../../components/office/ContactMobileRow';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficePrimaryCell,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 
 const OfficeAssetsPage = () => {
   const { confirm } = useConfirm();
@@ -140,13 +148,6 @@ const OfficeAssetsPage = () => {
     isSaving: saveContactMutation.isPending,
   });
 
-  const getStatusBadgeVariant = (status) => {
-    if (status === 'Available') return 'success';
-    if (status === 'In Use') return 'info';
-    if (status === 'Maintenance') return 'warning';
-    return 'danger';
-  };
-
   const filteredAssets = assets.filter(a => 
     a.name.toLowerCase().includes(search.toLowerCase()) || 
     a.currentlyWith.toLowerCase().includes(search.toLowerCase())
@@ -193,37 +194,51 @@ const OfficeAssetsPage = () => {
       {
         header: 'Equipment',
         sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
         render: (a) => (
-          <div className="min-w-0">
-            <span className="tm-data-primary text-xs tracking-tight block truncate">{a.name}</span>
-            {a.description ? (
-              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{a.description}</span>
-            ) : null}
-          </div>
+          <OfficePrimaryCell title={a.name} subtitle={a.description || undefined} />
         ),
       },
       {
         header: 'Category',
         sortKey: 'category',
-        render: (a) => <Badge variant="info">{a.category}</Badge>,
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (a) => (
+          <Badge variant="info" className="max-w-full truncate" title={a.category}>
+            {a.category}
+          </Badge>
+        ),
       },
       {
         header: 'Status',
         sortKey: 'status',
-        render: (a) => <Badge variant={getStatusBadgeVariant(a.status)}>{a.status}</Badge>,
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (a) => (
+          <Badge variant={equipmentStatusVariant(a.status)} className="max-w-full truncate" title={a.status}>
+            {a.status}
+          </Badge>
+        ),
       },
       {
         header: 'Assigned To',
         sortKey: 'currentlyWith',
-        render: (a) => (
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)]">{a.currentlyWith}</span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (a) => <OfficeMetaCell value={a.currentlyWith} />,
       },
       {
         header: 'Serial Number',
         sortKey: 'serialNumber',
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
         render: (a) => (
-          <span className="text-[11px] text-[var(--color-text-muted)] tabular-nums">{a.serialNumber || '—'}</span>
+          <OfficeMetaCell
+            value={a.serialNumber}
+            className="tabular-nums text-[var(--color-text-muted)] font-normal"
+          />
         ),
       },
     ],
@@ -235,11 +250,16 @@ const OfficeAssetsPage = () => {
       {
         header: 'Contact',
         sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
         render: (c) => (
-          <span className="block min-w-0 truncate text-xs" title={[c.name, c.notes].filter(Boolean).join(' — ')}>
+          <span
+            className="block min-w-0 truncate office-hub-cell-primary"
+            title={[c.name, c.notes].filter(Boolean).join(' — ')}
+          >
             <span className="tm-data-primary">{c.name}</span>
             {c.notes ? (
-              <span className="text-[var(--color-text-muted)] font-medium"> · {c.notes}</span>
+              <span className="office-hub-cell-secondary font-medium"> · {c.notes}</span>
             ) : null}
           </span>
         ),
@@ -247,6 +267,8 @@ const OfficeAssetsPage = () => {
       {
         header: 'Role',
         sortKey: 'role',
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
         render: (c) => (
           <Badge variant="info" className="max-w-full truncate" title={c.role}>
             {c.role}
@@ -256,20 +278,16 @@ const OfficeAssetsPage = () => {
       {
         header: 'Phone',
         sortKey: 'phone',
-        render: (c) => (
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)] truncate block" title={c.phone}>
-            {c.phone}
-          </span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (c) => <OfficeMetaCell value={c.phone} />,
       },
       {
         header: 'Email',
         sortKey: 'email',
-        render: (c) => (
-          <span className="text-[11px] text-[var(--color-text-muted)] truncate block" title={c.email || undefined}>
-            {c.email || '—'}
-          </span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (c) => <OfficeMetaCell value={c.email} className="text-[var(--color-text-muted)] font-normal" />,
       },
     ],
     []
@@ -332,14 +350,16 @@ const OfficeAssetsPage = () => {
           ? [{ id: 'assetStatus', title: 'Asset status', type: 'donut', data: assetStatusChart }]
           : [],
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder={activeTab === 'assets' ? 'Search assets or users...' : 'Search contacts by name or role...'}
+          variant="toolbar"
+          placeholder={activeTab === 'assets' ? 'Search asset name, assignee…' : 'Search contact name, role…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <>
           <TabSwitcher
@@ -369,10 +389,11 @@ const OfficeAssetsPage = () => {
           onRowClick={openAssetRow}
           getRowId={(a) => a._id}
           isLoading={assetsLoading}
-          rowEstimateSize={52}
-          tableMaxHeight="70vh"
+          mobileRowRender={(row) => <EquipmentMobileRow asset={row} />}
+          mobileRowClassName="!py-2.5 !px-3"
           emptyTitle="No equipment found"
           emptyDescription="Try a different search or add a new asset."
+          {...OFFICE_TABLE_PROPS}
         />
       ) : (
         <DataTable
@@ -381,11 +402,11 @@ const OfficeAssetsPage = () => {
           onRowClick={openContactRow}
           getRowId={(c) => c._id}
           isLoading={contactsLoading}
-          fitWidth
-          rowEstimateSize={52}
-          tableMaxHeight="70vh"
+          mobileRowRender={(row) => <ContactMobileRow contact={row} />}
+          mobileRowClassName="!py-2.5 !px-3"
           emptyTitle="No contacts found"
           emptyDescription="Try a different search or add a new contact."
+          {...OFFICE_TABLE_PROPS}
         />
       )}
 

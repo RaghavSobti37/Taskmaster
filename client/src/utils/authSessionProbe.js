@@ -11,12 +11,12 @@ export const AUTH_SESSION_PROBE_HEADERS = {
 const SESSION_PROBE_TIMEOUT_MS = 12000;
 
 /**
- * Silent GET /api/auth/me for session bootstrap.
- * Uses fetch (not axios) so expected 401 when logged out does not surface as a rejected XHR in DevTools.
+ * Silent GET /api/auth/session for session bootstrap.
+ * Returns 200 { authenticated: false } when logged out — avoids 401 noise in DevTools.
  */
 export async function probeAuthSession() {
   const res = await fetchWithTimeout(
-    apiPath('/api/auth/me'),
+    apiPath('/api/auth/session'),
     {
       method: 'GET',
       credentials: 'include',
@@ -28,21 +28,27 @@ export async function probeAuthSession() {
     SESSION_PROBE_TIMEOUT_MS,
   );
 
-  if (res.status === 401 || res.status === 403) {
-    return { status: res.status, user: null };
-  }
-
   // ponytail: broken Vercel /api proxy returns 404 — treat as logged out, not fatal
   if (res.status === 404) {
     return { status: 401, user: null };
   }
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 403) {
     const err = new Error(`auth session probe failed: ${res.status}`);
     err.status = res.status;
     throw err;
   }
 
-  const user = await res.json();
-  return { status: res.status, user };
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return { status: 401, user: null };
+  }
+
+  if (res.status === 403 || !body?.authenticated) {
+    return { status: res.status === 403 ? 403 : 401, user: null };
+  }
+
+  return { status: 200, user: body.user };
 }

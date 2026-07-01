@@ -20,9 +20,12 @@ test('composeRewrites places PostHog proxy before SPA catch-all', () => {
   const rewrites = composeRewrites(templateRewrites, apiDestination, socketDestination);
   const catchallIdx = rewrites.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
   const firstPhIdx = rewrites.findIndex((rule) => String(rule.source).startsWith('/ph/'));
+  const clerkIdx = rewrites.findIndex((rule) => rule.source === '/__clerk/:path*');
 
   assert.ok(catchallIdx >= 0, 'SPA catch-all present');
   assert.ok(firstPhIdx >= 0, 'PostHog proxy present');
+  assert.ok(clerkIdx >= 0, 'Clerk proxy present');
+  assert.ok(clerkIdx < catchallIdx, 'Clerk proxy must precede SPA catch-all');
   assert.ok(firstPhIdx < catchallIdx, 'PostHog must precede SPA catch-all');
 });
 
@@ -35,6 +38,28 @@ test('composeRewrites drops duplicate PostHog rules from template', () => {
   const phRules = rewrites.filter((rule) => String(rule.source).startsWith('/ph/'));
 
   assert.equal(phRules.length, 3);
+});
+
+test('PostHog proxy rewrites use hungry regex so trailing-slash endpoints (/decide/, /e/) are not dropped', () => {
+  // Vercel's :path* wildcard fails to match segments ending in "/" (e.g. "/ph/decide/?v=3"),
+  // producing a Vercel-native 404 instead of proxying to PostHog. PostHog's own docs and
+  // https://github.com/PostHog/posthog/issues/17596 recommend :path(.*) instead.
+  const rules = buildPostHogRewrites();
+  assert.equal(rules.length, 3);
+  for (const rule of rules) {
+    assert.ok(
+      rule.source.endsWith(':path(.*)'),
+      `source must end with :path(.*) not :path* — got "${rule.source}"`,
+    );
+    assert.ok(
+      !rule.destination.includes(':path*'),
+      `destination must reference :path not :path* — got "${rule.destination}"`,
+    );
+    assert.ok(
+      rule.destination.endsWith(':path'),
+      `destination must end with :path — got "${rule.destination}"`,
+    );
+  }
 });
 
 test('existingRewritesLookValid accepts live Render host, rejects placeholder', () => {

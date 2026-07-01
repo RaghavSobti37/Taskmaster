@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from './primitives';
+import { useInputClearDissolve } from '../../hooks/transitions';
 
 /**
  * SearchInput — standardized search field used across list/table pages.
@@ -21,6 +22,29 @@ const SearchInput = ({
     onClear?.();
   };
 
+  const { wrapRef, inputRef, clearAnimated } = useInputClearDissolve({
+    value,
+    onClear: handleClear,
+    placeholder,
+  });
+
+  const clearButton = (btnClass) => (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        if (document.activeElement === inputRef.current) e.preventDefault();
+      }}
+      onMouseDown={(e) => {
+        if (document.activeElement === inputRef.current) e.preventDefault();
+      }}
+      onClick={clearAnimated}
+      className={`t-clear-btn ${btnClass}`}
+      aria-label="Clear search"
+    >
+      <X size={14} />
+    </button>
+  );
+
   if (variant === 'toolbar') {
     return (
       <div
@@ -30,28 +54,30 @@ const SearchInput = ({
         {label ? (
           <span className="block tm-section-label leading-none">{label}</span>
         ) : null}
-        <div className="relative min-w-0">
+        <div
+          ref={wrapRef}
+          className={`t-clear relative min-w-0 ${value ? 'has-value' : ''}`}
+        >
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[4]"
           />
           <input
+            ref={inputRef}
             type="search"
             placeholder={placeholder}
             value={value}
             onChange={onChange}
-            className="mobile-form-control tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
+            className="mobile-form-control tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)] relative z-[1]"
             {...props}
           />
-          {value ? (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-              aria-label="Clear search"
-            >
-              <X size={14} />
-            </button>
+          <div className="t-clear-mirror text-xs pl-9 pr-8" aria-hidden />
+          <div className="t-clear-placeholder text-xs pl-9 pr-8 text-[var(--color-text-muted)]" aria-hidden>
+            {placeholder}
+          </div>
+          <div className="t-clear-glow" aria-hidden />
+          {value ? clearButton(
+            'absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors z-[4]',
           ) : null}
         </div>
       </div>

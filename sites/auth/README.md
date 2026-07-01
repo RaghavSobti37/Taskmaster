@@ -2,6 +2,12 @@
 
 Deploy this folder as a **separate Vercel project** on `auth.tsccoreknot.com`.
 
+**Quick deploy (from `coreknot/Taskmaster`):**
+
+```bash
+node scripts/deploy-coreknot-auth.mjs
+```
+
 **Vercel settings**
 
 | Setting | Value |
@@ -22,5 +28,7 @@ Auth routes:
 - `/auth/google/success`
 
 After login, users redirect to `https://tsccoreknot.com/dashboard` (session cookie domain: `.tsccoreknot.com`).
+
+**Troubleshooting `DEPLOYMENT_NOT_FOUND`:** domain pointed at Vercel but `coreknot-auth` had no production deploy, or domain was on wrong project (`sync-couple`). Run `node scripts/deploy-coreknot-auth.mjs` and confirm Vercel → **coreknot-auth** → Domains lists `auth.tsccoreknot.com`.
 
 DNS + Cloudflare: see `docs/CLOUDFLARE_DNS.md`.

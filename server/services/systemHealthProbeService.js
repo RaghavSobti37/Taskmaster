@@ -246,19 +246,53 @@ function aggregateStatus(services) {
   return 'ok';
 }
 
+const HEALTH_CACHE_TTL_MS = Math.max(
+  5000,
+  Number.parseInt(process.env.SYSTEM_HEALTH_CACHE_MS || '60000', 10) || 60000,
+);
+let healthCache = null;
+let healthCacheAt = 0;
+
+const skipExternalProbes = () => (
+  config.NODE_ENV === 'development'
+  || String(process.env.SYSTEM_HEALTH_SKIP_EXTERNAL || '').toLowerCase() === 'true'
+);
+
 async function getAdminSystemHealth() {
+  const now = Date.now();
+  if (healthCache && now - healthCacheAt < HEALTH_CACHE_TTL_MS) {
+    return healthCache;
+  }
+
+  const light = skipExternalProbes();
   const services = await Promise.all([
     probeMongo(),
     probeRedis(),
-    probeSupabase(),
-    probeResend(),
+    light
+      ? Promise.resolve(serviceResult({
+        id: 'supabase',
+        label: 'Supabase',
+        status: 'ok',
+        state: 'skipped_local',
+        detail: 'External probe skipped in development',
+      }))
+      : probeSupabase(),
+    light
+      ? Promise.resolve(serviceResult({
+        id: 'resend',
+        label: 'Resend Email',
+        status: 'ok',
+        state: 'skipped_local',
+        detail: 'External probe skipped in development',
+      }))
+      : probeResend(),
     probeBullmq(),
   ]);
 
   const status = aggregateStatus(services);
   const checkedAt = new Date().toISOString();
 
-  return {
+  const report = {
     status,
     ok: status === 'ok',
     checkedAt,
@@ -266,6 +300,10 @@ async function getAdminSystemHealth() {
     environment: config.NODE_ENV,
     services,
   };
+
+  healthCache = report;
+  healthCacheAt = now;
+  return report;
 }
 
 module.exports = {

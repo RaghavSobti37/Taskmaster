@@ -7,6 +7,13 @@ import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
+import EquipmentMobileRow, { equipmentStatusVariant } from '../../components/office/EquipmentMobileRow';
+import {
+  OFFICE_TABLE_COL,
+  OFFICE_TABLE_PROPS,
+  OfficePrimaryCell,
+  OfficeMetaCell,
+} from '../../components/office/officeHubTableClasses';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
@@ -35,13 +42,6 @@ const EQUIPMENT_FIELD_LABELS = {
   currentlyWith: 'Currently With',
   serialNumber: 'Serial Number',
   purchaseDate: 'Purchase Date',
-};
-
-const equipmentStatusVariant = (status) => {
-  if (status === 'Available') return 'success';
-  if (status === 'In Use') return 'info';
-  if (status === 'Maintenance') return 'warning';
-  return 'danger';
 };
 
 const toAssetFormData = (asset) => ({
@@ -138,31 +138,40 @@ const EquipmentPage = () => {
       {
         header: 'Equipment',
         sortKey: 'name',
+        headerClassName: OFFICE_TABLE_COL.primary,
+        cellClassName: OFFICE_TABLE_COL.primary,
         render: (row) => (
-          <div className="min-w-0">
-            <span className="tm-data-primary text-xs tracking-tight block truncate">{row.name}</span>
-            {row.description ? (
-              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{row.description}</span>
-            ) : null}
-          </div>
+          <OfficePrimaryCell title={row.name} subtitle={row.description || undefined} />
         ),
       },
       {
         header: 'Category',
         sortKey: 'category',
-        render: (row) => <Badge variant="info">{row.category}</Badge>,
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (row) => (
+          <Badge variant="info" className="max-w-full truncate" title={row.category}>
+            {row.category}
+          </Badge>
+        ),
       },
       {
         header: 'Status',
         sortKey: 'status',
-        render: (row) => <Badge variant={equipmentStatusVariant(row.status)}>{row.status}</Badge>,
+        headerClassName: OFFICE_TABLE_COL.badge,
+        cellClassName: OFFICE_TABLE_COL.badge,
+        render: (row) => (
+          <Badge variant={equipmentStatusVariant(row.status)} className="max-w-full truncate" title={row.status}>
+            {row.status}
+          </Badge>
+        ),
       },
       {
         header: 'Assigned To',
         sortKey: 'currentlyWith',
-        render: (row) => (
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)]">{row.currentlyWith}</span>
-        ),
+        headerClassName: OFFICE_TABLE_COL.meta,
+        cellClassName: OFFICE_TABLE_COL.meta,
+        render: (row) => <OfficeMetaCell value={row.currentlyWith} />,
       },
     ],
     []
@@ -206,14 +215,16 @@ const EquipmentPage = () => {
         ],
        
       }}
-      toolbar={
+      toolbarFill
+      searchBar={(
         <SearchInput
-          placeholder="Search equipment..."
+          variant="toolbar"
+          placeholder="Search equipment name, category, assignee…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="!w-44 shrink min-w-[9rem]"
+          className="w-full max-w-full"
         />
-      }
+      )}
       toolbarActions={
         <Button size="sm" onClick={openAddModal}>
           <Plus size={14} /> Add Asset
@@ -231,10 +242,11 @@ const EquipmentPage = () => {
         data={filteredAssets}
         onRowClick={openAssetEditor}
         getRowId={(row) => row._id}
-        rowEstimateSize={52}
-        tableMaxHeight="70vh"
+        mobileRowRender={(row) => <EquipmentMobileRow asset={row} />}
+        mobileRowClassName="!py-2.5 !px-3"
         emptyTitle="No equipment found"
         emptyDescription="Try a different search or add a new asset."
+        {...OFFICE_TABLE_PROPS}
       />
 
       <NexusModal

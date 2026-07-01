@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import RegisteredLocationBarChart from '../components/emails/RegisteredLocationBarChart';
+import { BklitMultiLineChart } from '../components/charts/bklitInsightsCharts';
 import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon, Download } from 'lucide-react';
 import { Card, Button, Badge, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar, QueryErrorBanner, getQueryErrorMessage } from '../components/ui';
 import { useCampaignDetails, useCampaignAnalytics, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
@@ -466,21 +466,27 @@ export default function CampaignDetails() {
           </h3>
           <div className="h-64 w-full">
             {!summaryReady || analyticsLoading ? (
-              <SectionSkeleton height={256} className="h-full" />
+              <BklitMultiLineChart
+                height={256}
+                lines={[
+                  { key: 'opens', stroke: '#38bdf8' },
+                  { key: 'clicks', stroke: '#10b981' },
+                ]}
+                loading
+                series={[]}
+                xKey="timeStr"
+              />
             ) : hasChartData ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                <XAxis dataKey="timeStr" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }}
-                  formatter={(value, name) => [String(value), name]}
-                />
-                <Line type="monotone" dataKey="opens" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8' }} name="Opens" />
-                <Line type="monotone" dataKey="clicks" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} name="Clicks" />
-              </LineChart>
-            </ResponsiveContainer>
+              <BklitMultiLineChart
+                height={256}
+                lines={[
+                  { key: 'opens', stroke: '#38bdf8', strokeWidth: 2.5 },
+                  { key: 'clicks', stroke: '#10b981', strokeWidth: 2.5 },
+                ]}
+                series={chartData}
+                showMarkers
+                xKey="timeStr"
+              />
             ) : (
               <EmptyState variant="subtle" title="No engagement yet" description="Opens and clicks will appear here once recipients interact with this campaign." className="h-full flex flex-col justify-center" />
             )}

@@ -3,8 +3,10 @@ import { PageContainer } from './primitives';
 import DataOverviewSection from './DataOverviewSection';
 import DataInsightsLayout from './DataInsightsLayout';
 import PageToolbar from './PageToolbar';
+import ActiveFilterBar from './ActiveFilterBar';
 import QueryErrorSlot from './QueryErrorSlot';
 import AdminConsoleBackButton from '../admin/AdminConsoleBackButton';
+import { useIsMobile } from '../../hooks/useBreakpoint';
 
 /**
  * UDIF 2.1 list page: insights → overview → toolbar → workspace (table).
@@ -17,6 +19,9 @@ export default function ListPageLayout({
   overview,
   toolbar,
   toolbarActions,
+  mobileSearch,
+  searchBar,
+  filtersInPanel = false,
   children,
   className = '',
   containerClassName = '',
@@ -25,7 +30,11 @@ export default function ListPageLayout({
   overviewMobileMaxStats = 2,
   mobileFilterCount,
   filterSheetTitle,
+  filterFields,
   toolbarFill = false,
+  activeFilterChips,
+  onActiveFilterRemove,
+  onActiveFiltersClear,
   overviewSectionClassName = '',
   queryError,
   queryErrorFallback = 'Failed to load data',
@@ -37,14 +46,17 @@ export default function ListPageLayout({
   const hasOverview =
     overview &&
     ((overview.stats?.length ?? 0) > 0 || (overview.charts?.length ?? 0) > 0);
+  const isMobile = useIsMobile();
   const hasTopAnalytics = hasInsights || hasOverview;
-  const showToolbarTitle = title && !hasTopAnalytics;
+  const showCompactMobileTitle = isMobile && title && hasTopAnalytics && !backTo;
+  const showToolbarTitle = title && (!hasTopAnalytics || showCompactMobileTitle);
   const backLeading = backTo ? <AdminConsoleBackButton to={backTo} /> : null;
   const showOverviewTitleRow = backTo && hasTopAnalytics;
+  const resolvedSearchBar = searchBar ?? mobileSearch;
 
   return (
     <PageContainer className={containerClassName} maxWidth={maxWidth}>
-      <div className={`space-y-3 ${className}`}>
+      <div className={`list-page-stack ${className}`.trim()}>
         {showOverviewTitleRow && (
           <div className="flex items-center gap-2 min-w-0">
             {backLeading}
@@ -73,7 +85,6 @@ export default function ListPageLayout({
             charts={insights.charts}
             chartColumns={insights.chartColumns}
             chartsEager={insights.chartsEager}
-            className="!space-y-3 mb-0"
           />
         )}
         {hasOverview && (
@@ -85,20 +96,31 @@ export default function ListPageLayout({
             className={overviewSectionClassName}
           />
         )}
-        {(toolbar || toolbarActions || showToolbarTitle) && (
+        {(toolbar || toolbarActions || showToolbarTitle || resolvedSearchBar || filterFields?.length > 0) && (
           <PageToolbar
             icon={showToolbarTitle ? icon : undefined}
             title={showToolbarTitle ? title : undefined}
             leading={backTo && showToolbarTitle ? backLeading : undefined}
             actions={toolbarActions}
+            mobileSearch={resolvedSearchBar}
             mobileFilterCount={mobileFilterCount}
             filterSheetTitle={filterSheetTitle}
             toolbarFill={toolbarFill}
+            filtersInPanel={filtersInPanel}
+            filterFields={filterFields}
+            onFilterClear={onActiveFiltersClear}
           >
             {toolbar}
           </PageToolbar>
         )}
-        <div className="list-page-workspace min-w-0">{children}</div>
+        {activeFilterChips?.length > 0 && (
+          <ActiveFilterBar
+            chips={activeFilterChips}
+            onRemove={onActiveFilterRemove}
+            onClear={onActiveFiltersClear}
+          />
+        )}
+        <div className="list-page-workspace">{children}</div>
       </div>
     </PageContainer>
   );

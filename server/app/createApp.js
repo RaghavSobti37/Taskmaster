@@ -10,7 +10,7 @@ const { applyCors } = require('./cors');
 const { applyRateLimits } = require('./rateLimits');
 const { buildCspDirectives } = require('./csp');
 const perfMiddleware = require('../middleware/perfMiddleware');
-const { qaProbeStorage } = require('../utils/qaProbeContext');
+const { qaProbeGate } = require('../middleware/qaProbeGate');
 
 const PERF_LOG_PATH = path.join(__dirname, '..', 'performance.log');
 const PERF_LOG_MAX_BYTES = 5 * 1024 * 1024;
@@ -48,6 +48,7 @@ function createApp() {
   }
 
   app.set('trust proxy', 1);
+  app.use('/__clerk', require('../middleware/clerkFapiProxy'));
   app.use(perfMiddleware);
   app.use(helmet({
     contentSecurityPolicy: {
@@ -59,13 +60,15 @@ function createApp() {
   app.use(compression({ threshold: 1024 }));
   applyCors(app);
   app.use(cookieParser());
+  const { getDefaultJsonBodyLimit } = require('../utils/deployTier');
+  const jsonBodyLimit = String(config.JSON_BODY_LIMIT || getDefaultJsonBodyLimit()).trim();
   app.use(express.json({
-    limit: '50mb',
+    limit: jsonBodyLimit,
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.urlencoded({ limit: jsonBodyLimit, extended: true }));
   // ponytail: express-mongo-sanitize mutates req.query — broken on Express 5 (read-only getter)
   app.use((req, _res, next) => {
     const { sanitize } = mongoSanitize;
@@ -77,10 +80,7 @@ function createApp() {
 
   app.use('/api/public', require('../routes/publicRoutes'));
 
-  app.use('/api', (req, res, next) => {
-    if (req.headers['x-qa-integration-probe'] !== 'true') return next();
-    qaProbeStorage.run({ syncGamification: true }, next);
-  });
+  app.use('/api', qaProbeGate);
 
   return app;
 }

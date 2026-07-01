@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { Inbox, CheckCheck, Shield, ListTodo, Bell, Trash2 } from 'lucide-react';
@@ -10,7 +10,9 @@ import DataListRow from '../../components/ui/DataListRow';
 import CountBadge from '../../components/ui/CountBadge';
 import { DataLoading } from '../../components/ui/DataLoading';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
-import { Button, Badge } from '../../components/ui/primitives';
+import { Button, Badge, SearchInput } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
+import { useDebounce } from '../../hooks/useDebounce';
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -54,15 +56,20 @@ const NotificationAvatar = ({ notification: n }) => {
 };
 
 const INBOX_FILTERS_KEY = 'inbox-filters';
+const INBOX_FILTER_DEFAULTS = { filter: 'all', search: '', sortBy: 'newest' };
 
 const InboxPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [filter, setFilter] = useState(() => loadPageFilters(INBOX_FILTERS_KEY, { filter: 'all' }).filter);
+  const saved = useMemo(() => loadPageFilters(INBOX_FILTERS_KEY, INBOX_FILTER_DEFAULTS), []);
+  const [filter, setFilter] = useState(saved.filter);
+  const [search, setSearch] = useState(saved.search || '');
+  const [sortBy, setSortBy] = useState(saved.sortBy || 'newest');
+  const debouncedSearch = useDebounce(search, 200);
 
   useEffect(() => {
-    savePageFilters(INBOX_FILTERS_KEY, { filter });
-  }, [filter]);
+    savePageFilters(INBOX_FILTERS_KEY, { filter, search, sortBy });
+  }, [filter, search, sortBy]);
   const { data, isLoading, isError, error, refetch } = useNotifications();
   const deferInboxSecondary = useDeferredQueryEnabled(!isLoading);
   const { data: statusCounts } = useStatusCounts(!!user && deferInboxSecondary);
@@ -95,9 +102,35 @@ const InboxPage = () => {
     return unreadByCategory[cat] || 0;
   };
 
-  const filtered = filter === 'all'
-    ? notifications
-    : notifications.filter((n) => n.category === filter);
+  const filtered = useMemo(() => {
+    let list = filter === 'all'
+      ? notifications
+      : notifications.filter((n) => n.category === filter);
+
+    const q = debouncedSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((n) => {
+        const hay = [
+          n.title,
+          n.message,
+          n.actorId?.name,
+          n.relatedProjectId?.name,
+          n.category,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    const sorted = [...list];
+    if (sortBy === 'unread-first') {
+      sorted.sort((a, b) => Number(a.read) - Number(b.read) || new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sortBy === 'oldest') {
+      sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    return sorted;
+  }, [notifications, filter, debouncedSearch, sortBy]);
 
   const handleOpen = (n) => {
     if (!n.read) markRead.mutate(n._id);
@@ -119,8 +152,38 @@ const InboxPage = () => {
     if (ok) clearAll.mutate();
   };
 
+  const inboxFilterFields = useMemo(() => ([
+    {
+      id: 'category',
+      label: 'Category',
+      type: 'radio',
+      value: filter,
+      defaultValue: 'all',
+      options: allowedCategories.map((cat) => ({ value: cat, label: formatInboxCategory(cat) })),
+      onChange: setFilter,
+    },
+    {
+      id: 'sortBy',
+      label: 'Sort by',
+      type: 'radio',
+      value: sortBy,
+      defaultValue: 'newest',
+      options: [
+        { value: 'newest', label: 'Newest first' },
+        { value: 'oldest', label: 'Oldest first' },
+        { value: 'unread-first', label: 'Unread first' },
+      ],
+      onChange: setSortBy,
+    },
+  ]), [filter, sortBy, allowedCategories]);
+
+  const handleClearInboxFilters = useCallback(() => {
+    setFilter('all');
+    setSortBy('newest');
+  }, []);
+
   const filterChipClass = (active) =>
-    `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
+    `inline-flex items-center gap-1.5 px-2.5 min-h-[44px] py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
       active
         ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
         : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
@@ -181,29 +244,20 @@ const InboxPage = () => {
           },
         ],
       }}
-      toolbar={
-        <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
-          <button type="button" onClick={() => setFilter('all')} className={filterChipClass(filter === 'all')}>
-            All
-            {categoryUnread('all') > 0 && (
-              <CountBadge count={categoryUnread('all')} size="sm" variant="teal" className="!border-transparent" />
-            )}
-          </button>
-          {allowedCategories.filter((cat) => cat !== 'all').map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setFilter(cat)}
-              className={filterChipClass(filter === cat)}
-            >
-              {formatInboxCategory(cat)}
-              {categoryUnread(cat) > 0 && (
-                <CountBadge count={categoryUnread(cat)} size="sm" variant={filter === cat ? 'teal' : 'rose'} className="!border-transparent" />
-              )}
-            </button>
-          ))}
-        </div>
-      }
+      toolbarFill
+      filterFields={inboxFilterFields}
+      filterSheetTitle="Inbox filters"
+      mobileFilterCount={countActiveFilters(inboxFilterFields)}
+      onActiveFiltersClear={handleClearInboxFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search notifications…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
       toolbarActions={
         <div className="flex items-center gap-1.5 shrink-0">
           <Button

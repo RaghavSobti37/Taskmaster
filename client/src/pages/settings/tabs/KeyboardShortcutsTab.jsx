@@ -48,6 +48,84 @@ function BindingDisplay({ binding }) {
   );
 }
 
+function ShortcutRow({
+  action,
+  binding,
+  bindings,
+  actions,
+  recording,
+  startRecording,
+  setBindings,
+}) {
+  const conflicts = binding?.keys
+    ? getBindingConflicts(binding.keys, { bindingsMap: bindings, excludeActionId: action.id, actions })
+    : [];
+  const isRecording = recording?.id === action.id;
+  const mode = action.category === 'nav' ? 'sequence' : 'combo';
+
+  return (
+    <div
+      className={`flex items-center gap-2 border-t border-[var(--color-bg-border)] px-3 py-1.5 first:border-t-0 ${
+        isRecording ? 'bg-[var(--color-action-primary)]/5' : ''
+      }`}
+    >
+      <div className="flex-1 min-w-0 text-xs font-medium text-[var(--color-text-primary)] truncate">
+        {action.label}
+      </div>
+      <button
+        type="button"
+        onClick={() => startRecording(action.id, mode)}
+        className={`inline-flex items-center min-h-[28px] rounded-md border px-2 py-0.5 transition-colors shrink-0 ${
+          isRecording
+            ? 'border-[var(--color-action-primary)] ring-1 ring-[var(--color-action-primary)]/30'
+            : 'border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)]/40'
+        }`}
+      >
+        {isRecording ? (
+          recording.mode === 'sequence' && recording.sequence.length > 0 ? (
+            <span className="inline-flex flex-wrap items-center gap-0.5">
+              {recording.sequence.map((k, i) => (
+                <KbdChip key={i}>{k.toUpperCase()}</KbdChip>
+              ))}
+              <span className="text-[10px] text-[var(--color-action-primary)]">…</span>
+            </span>
+          ) : recording.mode === 'combo' && (recording.mods?.mod || recording.mods?.shift || recording.mods?.alt) ? (
+            <span className="inline-flex flex-wrap items-center gap-0.5">
+              {formatKeysForDisplay(
+                buildBindingFromModsAndMain(recording.mods, null).keys
+              ).split(' ').map((part, i) => (
+                <KbdChip key={i}>{part}</KbdChip>
+              ))}
+              <span className="text-[10px] text-[var(--color-action-primary)]">+ …</span>
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold text-[var(--color-action-primary)]">Listening…</span>
+          )
+        ) : (
+          <BindingDisplay binding={binding} />
+        )}
+      </button>
+      <div className="w-[5.5rem] shrink-0 text-right">
+        {conflicts.length > 0 && (
+          <span className="inline-flex items-start gap-1 text-[9px] text-amber-600 dark:text-amber-400">
+            <AlertTriangle size={10} className="shrink-0 mt-0.5" />
+            <span className="leading-tight text-left">{conflicts.map(formatConflictLabel).join(' · ')}</span>
+          </span>
+        )}
+        {binding && !isRecording && (
+          <button
+            type="button"
+            onClick={() => setBindings((prev) => ({ ...prev, [action.id]: null }))}
+            className="text-[9px] font-bold text-[var(--color-text-muted)] hover:text-rose-500 ml-1"
+          >
+            Off
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const KeyboardShortcutsTab = () => {
   const { user } = useAuth();
   const isAdmin = isAdminUser(user);
@@ -287,7 +365,8 @@ const KeyboardShortcutsTab = () => {
         </div>
       )}
 
-      <div className="overflow-y-auto custom-scrollbar px-4 py-2 space-y-3">
+      <div className="overflow-y-auto custom-scrollbar px-4 py-2">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
         {Object.entries(grouped).map(([category, categoryActions]) => (
           <section key={category}>
             <h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-[var(--color-text-muted)] mb-1 px-1">
@@ -295,84 +374,24 @@ const KeyboardShortcutsTab = () => {
               {category === 'nav' && <span className="font-normal normal-case tracking-normal"> · two keys in order</span>}
             </h4>
             <div className="rounded-lg border border-[var(--color-bg-border)] overflow-hidden bg-[var(--color-bg-primary)]">
-              <table className="w-full text-left">
-                <tbody>
-                  {categoryActions.map((action) => {
-                    const binding = bindings[action.id];
-                    const conflicts = binding?.keys
-                      ? getBindingConflicts(binding.keys, { bindingsMap: bindings, excludeActionId: action.id, actions })
-                      : [];
-                    const isRecording = recording?.id === action.id;
-                    const mode = action.category === 'nav' ? 'sequence' : 'combo';
-
-                    return (
-                      <tr
-                        key={action.id}
-                        className={`border-t border-[var(--color-bg-border)] first:border-t-0 ${isRecording ? 'bg-[var(--color-action-primary)]/5' : ''}`}
-                      >
-                        <td className="py-1.5 pl-3 pr-2 text-xs font-medium text-[var(--color-text-primary)] w-[45%]">
-                          {action.label}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          <button
-                            type="button"
-                            onClick={() => startRecording(action.id, mode)}
-                            className={`inline-flex items-center min-h-[28px] rounded-md border px-2 py-0.5 transition-colors ${
-                              isRecording
-                                ? 'border-[var(--color-action-primary)] ring-1 ring-[var(--color-action-primary)]/30'
-                                : 'border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)]/40'
-                            }`}
-                          >
-                            {isRecording ? (
-                              recording.mode === 'sequence' && recording.sequence.length > 0 ? (
-                                <span className="inline-flex flex-wrap items-center gap-0.5">
-                                  {recording.sequence.map((k, i) => (
-                                    <KbdChip key={i}>{k.toUpperCase()}</KbdChip>
-                                  ))}
-                                  <span className="text-[10px] text-[var(--color-action-primary)]">…</span>
-                                </span>
-                              ) : recording.mode === 'combo' && (recording.mods?.mod || recording.mods?.shift || recording.mods?.alt) ? (
-                                <span className="inline-flex flex-wrap items-center gap-0.5">
-                                  {formatKeysForDisplay(
-                                    buildBindingFromModsAndMain(recording.mods, null).keys
-                                  ).split(' ').map((part, i) => (
-                                    <KbdChip key={i}>{part}</KbdChip>
-                                  ))}
-                                  <span className="text-[10px] text-[var(--color-action-primary)]">+ …</span>
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-bold text-[var(--color-action-primary)]">Listening…</span>
-                              )
-                            ) : (
-                              <BindingDisplay binding={binding} />
-                            )}
-                          </button>
-                        </td>
-                        <td className="py-1.5 pr-3 text-right w-[28%]">
-                          {conflicts.length > 0 && (
-                            <span className="inline-flex items-start gap-1 text-[9px] text-amber-600 dark:text-amber-400 max-w-[11rem] ml-auto">
-                              <AlertTriangle size={10} className="shrink-0 mt-0.5" />
-                              <span className="leading-tight">{conflicts.map(formatConflictLabel).join(' · ')}</span>
-                            </span>
-                          )}
-                          {binding && !isRecording && (
-                            <button
-                              type="button"
-                              onClick={() => setBindings((prev) => ({ ...prev, [action.id]: null }))}
-                              className="text-[9px] font-bold text-[var(--color-text-muted)] hover:text-rose-500 ml-2"
-                            >
-                              Off
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                {categoryActions.map((action) => (
+                  <ShortcutRow
+                    key={action.id}
+                    action={action}
+                    binding={bindings[action.id]}
+                    bindings={bindings}
+                    actions={actions}
+                    recording={recording}
+                    startRecording={startRecording}
+                    setBindings={setBindings}
+                  />
+                ))}
+              </div>
             </div>
           </section>
         ))}
+        </div>
       </div>
     </div>
   );

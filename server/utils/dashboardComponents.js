@@ -25,9 +25,8 @@ const COMPONENT_ACCESS = {
   'system-health': ['admin'],
   'last-backup': ['admin'],
   'render-logs': ['admin'],
-  'render-logs-production': ['admin'],
-  'render-logs-staging-api': ['admin'],
-  'render-logs-staging-nest': ['admin'],
+  posthog: ['admin'],
+  clerk: ['admin'],
   'artist-calendar': ['artist-management'],
 };
 

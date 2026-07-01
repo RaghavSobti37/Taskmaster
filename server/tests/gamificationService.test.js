@@ -482,4 +482,44 @@ describe('GamificationService XP resolution', () => {
     expect(weekly.resolvedSum).toBe(30);
     expect(weekly.storedSum).toBe(5);
   });
+
+  test('generateDailyMissions still runs when weekly mission exists for same day', async () => {
+    const DailyMission = require('../models/DailyMission');
+    const { todayStart, getCurrentWeekRange } = require('../utils/attendanceDate');
+    const userId = new mongoose.Types.ObjectId();
+    const { weekStartKey, weekStart } = getCurrentWeekRange();
+
+    await DailyMission.create({
+      userId,
+      title: 'Newsletter Contributor',
+      description: 'Add 1 article link this week',
+      targetCount: 1,
+      expReward: 30,
+      actionType: 'NEWSLETTER_ARTICLE',
+      cadence: 'weekly',
+      weekKey: weekStartKey,
+      date: weekStart,
+    });
+
+    await GamificationService.generateDailyMissions(userId);
+
+    const daily = await DailyMission.find({
+      userId,
+      cadence: { $ne: 'weekly' },
+      date: { $gte: todayStart() },
+    }).lean();
+
+    expect(daily).toHaveLength(3);
+  });
+
+  test('generateDailyMissions does not duplicate dailies for the same app day', async () => {
+    const DailyMission = require('../models/DailyMission');
+    const userId = new mongoose.Types.ObjectId();
+
+    await GamificationService.generateDailyMissions(userId);
+    await GamificationService.generateDailyMissions(userId);
+
+    const daily = await DailyMission.find({ userId, cadence: { $ne: 'weekly' } }).lean();
+    expect(daily).toHaveLength(3);
+  });
 });

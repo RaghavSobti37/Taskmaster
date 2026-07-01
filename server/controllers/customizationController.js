@@ -12,6 +12,10 @@ const {
   canAccessComponent,
   VALID_DASHBOARD_COMPONENT_IDS,
 } = require('../utils/dashboardComponents');
+const { getCache, setCache, deleteCache } = require('../services/cacheService');
+
+const shortcutCacheKey = (userId) => `customization:shortcuts:v1:${userId}`;
+const SHORTCUT_CACHE_TTL_SECONDS = 120;
 
 // ============ DASHBOARD ENDPOINTS ============
 
@@ -293,28 +297,33 @@ function sanitizeShortcutBindings(raw = {}) {
 exports.getShortcutPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    let doc;
+    const cacheKey = shortcutCacheKey(userId);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
-    try {
-      doc = await ShortcutPreference.findOneAndUpdate(
-        { userId },
-        { $setOnInsert: { bindings: {}, updatedAt: new Date() } },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-      );
-    } catch (error) {
-      if (error.code !== 11000) throw error;
-      doc = await ShortcutPreference.findOne({ userId }).setOptions({ bypassTenant: true });
-      if (!doc) throw error;
+    let doc = await ShortcutPreference.findOne({ userId });
+    if (!doc) {
+      try {
+        doc = await ShortcutPreference.create({ userId, bindings: {} });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        doc = await ShortcutPreference.findOne({ userId }).setOptions({ bypassTenant: true });
+        if (!doc) throw error;
+      }
     }
 
     const overrides = doc.bindings || {};
     const effective = mergeShortcutBindings(overrides);
 
-    res.json({
+    const payload = {
       bindings: overrides,
       effectiveBindings: effective,
       updatedAt: doc.updatedAt,
-    });
+    };
+    await setCache(cacheKey, payload, SHORTCUT_CACHE_TTL_SECONDS);
+    res.json(payload);
   } catch (error) {
     logger.error('Shortcuts', 'Error fetching shortcut preferences', { error: error.message });
     next(error);
@@ -340,6 +349,7 @@ exports.saveShortcutPreferences = async (req, res, next) => {
     );
 
     const overrides = doc.bindings || {};
+    await deleteCache(shortcutCacheKey(userId));
     res.json({
       bindings: overrides,
       effectiveBindings: mergeShortcutBindings(overrides),
@@ -362,6 +372,7 @@ exports.resetShortcutPreferences = async (req, res, next) => {
       { new: true, upsert: true }
     );
 
+    await deleteCache(shortcutCacheKey(userId));
     res.json({
       bindings: {},
       effectiveBindings: mergeShortcutBindings({}),

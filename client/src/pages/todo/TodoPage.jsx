@@ -1,5 +1,5 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
+import React, { useState, useMemo, lazy, Suspense, useEffect, useCallback } from 'react';
 import { Search, ListTodo, AlertCircle, Clock, ClipboardCheck, Layers } from 'lucide-react';
 import axios from 'axios';
 import ListPageLayout from '../../components/ui/ListPageLayout';
@@ -10,11 +10,8 @@ import ListCard from '../../components/ui/ListCard';
 import { UserLabel } from '../../components/ui/UserAvatar';
 import { Badge, TablePagination, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { DataLoading } from '../../components/ui/DataLoading';
-import StatusSelect from '../../components/forms/StatusSelect';
-import PrioritySelect from '../../components/forms/PrioritySelect';
-import NexusDropdown from '../../components/ui/NexusDropdown';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
-import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant } from '../../constants/taskOptions';
+import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant, STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../constants/taskOptions';
 import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTodoTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
@@ -46,6 +43,8 @@ import TaskMentionBadge from '../../components/tasks/TaskMentionBadge';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 import VirtualTaskList from '../../components/tasks/VirtualTaskList';
 import { useDebounce } from '../../hooks/useDebounce';
+import { buildTodoActiveFilterChips } from '../../utils/activeFilterChips';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 
 const TODO_FILTERS_KEY = 'todo-filters';
 const DEFAULT_PAGE_SIZE = 10;
@@ -208,6 +207,138 @@ const TodoPage = () => {
     { value: 'all', label: 'All projects' },
     ...filterProjectsByWorkspace(projects, workspaceFilter).map((p) => ({ value: p._id, label: p.name }))
   ], [projects, workspaceFilter]);
+
+  const activeFilterChips = useMemo(
+    () => buildTodoActiveFilterChips(
+      {
+        search,
+        statusFilter,
+        priorityFilter,
+        typeFilter,
+        workspaceFilter,
+        projectFilter,
+        statFilter,
+      },
+      {
+        typeOptions,
+        workspaceOptions: workspaceFilterOptions,
+        projectOptions: projectFilterOptions,
+      }
+    ),
+    [
+      search,
+      statusFilter,
+      priorityFilter,
+      typeFilter,
+      workspaceFilter,
+      projectFilter,
+      statFilter,
+      typeOptions,
+      workspaceFilterOptions,
+      projectFilterOptions,
+    ]
+  );
+
+  const handleClearAllFilters = useCallback(() => {
+    setSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setTypeFilter('all');
+    setWorkspaceFilter('all');
+    setProjectFilter('all');
+    setStatFilter(null);
+    setPage(1);
+  }, []);
+
+  const handleActiveFilterRemove = useCallback((id) => {
+    switch (id) {
+      case 'search':
+        setSearch('');
+        break;
+      case 'statFilter':
+        setStatFilter(null);
+        break;
+      case 'statusFilter':
+        setStatusFilter('all');
+        break;
+      case 'priorityFilter':
+        setPriorityFilter('all');
+        break;
+      case 'typeFilter':
+        setTypeFilter('all');
+        break;
+      case 'workspaceFilter':
+        setWorkspaceFilter('all');
+        setProjectFilter('all');
+        break;
+      case 'projectFilter':
+        setProjectFilter('all');
+        break;
+      default:
+        break;
+    }
+    setPage(1);
+  }, []);
+
+  const todoFilterFields = useMemo(() => [
+    {
+      id: 'statusFilter',
+      label: 'Status',
+      type: 'radio',
+      value: statusFilter,
+      defaultValue: 'all',
+      options: STATUS_FILTER_OPTIONS,
+      onChange: setStatusFilter,
+    },
+    {
+      id: 'priorityFilter',
+      label: 'Priority',
+      type: 'radio',
+      value: priorityFilter,
+      defaultValue: 'all',
+      options: PRIORITY_FILTER_OPTIONS,
+      onChange: setPriorityFilter,
+    },
+    {
+      id: 'typeFilter',
+      label: 'Category',
+      type: 'radio',
+      value: typeFilter,
+      defaultValue: 'all',
+      options: typeOptions,
+      onChange: setTypeFilter,
+    },
+    {
+      id: 'workspaceFilter',
+      label: 'Workspace',
+      type: 'searchable',
+      value: workspaceFilter,
+      defaultValue: 'all',
+      options: workspaceFilterOptions,
+      onChange: (value) => {
+        setWorkspaceFilter(value);
+        setProjectFilter('all');
+      },
+    },
+    {
+      id: 'projectFilter',
+      label: 'Project',
+      type: 'searchable',
+      value: projectFilter,
+      defaultValue: 'all',
+      options: projectFilterOptions,
+      onChange: setProjectFilter,
+    },
+  ], [
+    statusFilter,
+    priorityFilter,
+    typeFilter,
+    workspaceFilter,
+    projectFilter,
+    typeOptions,
+    workspaceFilterOptions,
+    projectFilterOptions,
+  ]);
 
   const getWorkspaceRowProps = (task, isDone) => {
     const workspaceColor = resolveTaskWorkspaceColor(task, workspaces, projects);
@@ -459,32 +590,24 @@ const TodoPage = () => {
         ],
       }}
       mobileFilterCount={
-        [statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter].filter((f) => f !== 'all').length
+        countActiveFilters(todoFilterFields) + (statFilter ? 1 : 0) + (search.trim() ? 1 : 0)
       }
-      toolbar={
-        <>
-          <SearchInput
-            label="Search"
-            placeholder="Search tasks..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} />
-          <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} />
-          <NexusDropdown options={typeOptions} value={typeFilter} onChange={setTypeFilter} label="Category" placeholder="All categories" />
-          <NexusDropdown
-            label="Workspace"
-            options={workspaceFilterOptions}
-            value={workspaceFilter}
-            onChange={(value) => {
-              setWorkspaceFilter(value);
-              setProjectFilter('all');
-            }}
-            searchable
-          />
-          <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} searchable />
-        </>
-      }
+      toolbarFill
+      filterFields={todoFilterFields}
+      filterSheetTitle="Task filters"
+      activeFilterChips={activeFilterChips}
+      onActiveFilterRemove={handleActiveFilterRemove}
+      onActiveFiltersClear={handleClearAllFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          label="Search"
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
     >
       {isError && (
         <QueryErrorBanner

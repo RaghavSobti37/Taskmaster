@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
 import { SEVERITY, MODULE } from '../../lib/systemLogContract';
-import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataInsightsLayout, MetricPanelGroup, MetricBlock, InsightsChartGrid } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataInsightsLayout, MetricPanelGroup, MetricBlock, InsightsChartGrid, TransitionCard, SkeletonReveal, CountBadge } from '../../components/ui';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
 import { ChartSurface } from '../../components/ui/charts';
 import FluidRibbonLoaderGallery from '../../components/brand/FluidRibbonLoaderGallery';
@@ -60,6 +60,8 @@ const ComponentsShowcase = () => {
   const [shellOpen, setShellOpen] = useState(false);
   const [centerOpen, setCenterOpen] = useState(false);
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
+  const [demoLeadCount, setDemoLeadCount] = useState(1284);
+  const [skelLoaded, setSkelLoaded] = useState(false);
 
   const tableColumns = [
     { header: 'Name', key: 'name', sortKey: 'name' },
@@ -101,6 +103,8 @@ const ComponentsShowcase = () => {
             ['add-members', 'Add members'],
             ['subnav', 'Module subnav'],
             ['insights-layout', 'Insights layout'],
+            ['brand-logos', 'Brand loaders'],
+            ['transitions', 'Transitions'],
             ['layout', 'Layout'],
           ].map(([id, label]) => (
             <a
@@ -152,7 +156,7 @@ const ComponentsShowcase = () => {
         <ShowcaseSection
           id="buttons"
           title="Buttons"
-          description="Primary system uses primitives Button (CSS vars). Shadcn Button available for future Radix-nova migration."
+          description="Primitives Button only — shadcn removed."
         >
           <VariantRow label="Primitives — variants">
             <Button variant="primary">Primary</Button>
@@ -176,11 +180,6 @@ const ComponentsShowcase = () => {
             <IconButton icon={Edit2} label="Edit" />
             <IconButton icon={Trash2} label="Delete" variant="danger" />
             <IconButton icon={Bell} label="Notify" variant="primary" size="lg" />
-          </VariantRow>
-          <VariantRow label="Shadcn Button">
-            <p className="text-xs text-[var(--color-text-muted)] italic">
-              Removed — use <code className="text-[10px]">Button</code> from <code className="text-[10px]">primitives.jsx</code> only.
-            </p>
           </VariantRow>
         </ShowcaseSection>
 
@@ -222,11 +221,16 @@ const ComponentsShowcase = () => {
 
         <ShowcaseSection id="cards" title="Cards & Stats">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label="Total Leads" value="1,284" icon={TrendingUp} variant="mint" subValue="+12%" delta={{ value: '+12%', direction: 'up' }} active />
+            <StatCard label="Total Leads" value={demoLeadCount.toLocaleString()} icon={TrendingUp} variant="mint" subValue="+12%" delta={{ value: '+12%', direction: 'up' }} active />
             <StatCard label="Pipeline" value="₹4.2L" icon={Database} variant="info" />
             <StatCard label="Overdue" value="7" icon={Bell} variant="rose" delta={{ value: '-2', direction: 'down' }} />
             <StatCard label="Neutral" value="42" icon={Inbox} variant="slate" />
           </div>
+          <VariantRow label="Number pop-in">
+            <Button size="xs" variant="secondary" onClick={() => setDemoLeadCount((n) => n + Math.floor(Math.random() * 40) + 1)}>
+              Bump lead count
+            </Button>
+          </VariantRow>
           <SectionCard
             title="Section Card"
             subtitle="Grouped content with header bar"
@@ -236,10 +240,10 @@ const ComponentsShowcase = () => {
               Use SectionCard for filter bars, table wrappers, and form sections.
             </p>
           </SectionCard>
-          <Card hover className="p-4 max-w-xs cursor-pointer">
-            <p className="text-xs font-bold">Hover Card</p>
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Interactive surface variant</p>
-          </Card>
+          <TransitionCard innerClassName="p-4 max-w-xs cursor-pointer rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]" maxDeg={10}>
+            <p className="text-xs font-bold">Hover Card (3D tilt)</p>
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-1">TransitionCard — transitions.dev card-tilt</p>
+          </TransitionCard>
         </ShowcaseSection>
 
         <ShowcaseSection
@@ -392,11 +396,33 @@ const ComponentsShowcase = () => {
             onAction={() => {}}
             variant="dashed"
           />
-          <VariantRow label="Skeleton">
+          <VariantRow label="CountBadge (notification pop)">
+            <span className="relative inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[var(--color-bg-border)]">
+              <Bell size={14} />
+              Inbox
+              <CountBadge count={3} variant="teal" />
+            </span>
+            <CountBadge count={12} variant="warning" pulse />
+          </VariantRow>
+          <VariantRow label="Skeleton + SkeletonReveal">
             <Skeleton width={120} height={16} />
             <Skeleton width={80} height={16} variant="text" />
             <Skeleton width={32} height={32} variant="circle" />
+            <Button size="xs" variant="ghost" onClick={() => setSkelLoaded((v) => !v)}>
+              Toggle reveal
+            </Button>
           </VariantRow>
+          {skelLoaded !== null && (
+            <SkeletonReveal
+              loading={!skelLoaded}
+              skeleton={<div className="h-24 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)]" />}
+              className="max-w-sm"
+            >
+              <p className="text-sm text-[var(--color-text-secondary)] p-4 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+                Loaded content cross-fades in after skeleton pulse.
+              </p>
+            </SkeletonReveal>
+          )}
           <Accordion
             items={[
               { title: 'Accordion item 1', content: 'Expandable content block.' },
@@ -556,8 +582,8 @@ const ComponentsShowcase = () => {
               },
               {
                 id: 'showcase-insights-bar',
-                title: 'InsightsChartGrid bar',
-                type: 'bar',
+                title: 'InsightsChartGrid area',
+                type: 'area',
                 data: [
                   { date: 'Email', value: 92 },
                   { date: 'Calls', value: 63 },
@@ -633,6 +659,28 @@ const ComponentsShowcase = () => {
         </ShowcaseSection>
 
         <ShowcaseSection
+          id="transitions"
+          title="Transitions.dev map"
+          description="Each library primitive uses the best-fit transition from transitions.dev."
+        >
+          <ul className="text-xs text-[var(--color-text-secondary)] space-y-1.5 list-disc list-inside">
+            <li><strong>TabSwitcher / ModuleSubnav / TimeframeFilter</strong> — tabs sliding pill</li>
+            <li><strong>NexusDropdown</strong> — menu dropdown</li>
+            <li><strong>NexusModal / ModalShell</strong> — modal open/close</li>
+            <li><strong>SearchInput (toolbar)</strong> — input clear dissolve</li>
+            <li><strong>Input errors</strong> — error state shake</li>
+            <li><strong>EmptyState / PageHeader</strong> — texts reveal stagger</li>
+            <li><strong>LoadingPhrase</strong> — shimmer text</li>
+            <li><strong>StatCard / MetricBlock / DeltaBadge</strong> — number pop-in</li>
+            <li><strong>Accordion / MobileCollapsibleSection</strong> — accordion expand</li>
+            <li><strong>SkeletonReveal</strong> — skeleton loader reveal</li>
+            <li><strong>TransitionCard / MetricCard</strong> — card hover tilt</li>
+            <li><strong>CountBadge</strong> — notification badge</li>
+            <li><strong>InfoButton (StatCard)</strong> — tooltip</li>
+          </ul>
+        </ShowcaseSection>
+
+        <ShowcaseSection
           id="brand-logos"
           title="Brand & loading animations"
           description="App logo: Harmonic Frequency (#99). Five fluid-ribbon pulse loaders — copy variant id to change DEFAULT_LOADER_VARIANT."
@@ -657,14 +705,13 @@ const ComponentsShowcase = () => {
         </ShowcaseSection>
       </div>
 
-      {/* Phase 2 note */}
-      <Card className="p-4 border-l-4 border-l-[var(--color-action-primary)] bg-[var(--color-pastel-mint-bg)]/30">
-        <p className="text-xs font-bold text-[var(--color-text-primary)]">Phase 2 migration candidates</p>
+      <Card className="p-4 border-l-4 border-l-[var(--color-pastel-mint-text)] bg-[var(--color-pastel-mint-bg)]/30">
+        <p className="text-xs font-bold text-[var(--color-text-primary)]">Phase 2 — complete</p>
         <ul className="mt-2 text-xs text-[var(--color-text-secondary)] space-y-1 list-disc list-inside">
-          <li>Replace inline search fields with SearchInput (AssetsPage, FinancePage, OfficeAssetsPage)</li>
-          <li>Replace inline empty states with EmptyState (ProjectsView, AdminLogsPage, etc.)</li>
-          <li>Pick one Button system: primitives vs Shadcn</li>
-          <li>Migrate bespoke modals (TaskDetailModal, TaskCreateModal) to ModalShell</li>
+          <li>SearchInput on list/admin toolbars (inline search fields migrated)</li>
+          <li>EmptyState on ProjectsView, NotesPage, ProjectCreate, WorkspaceSettings, admin tables</li>
+          <li>Button system: primitives only</li>
+          <li>TaskCreateModal + TaskDetailModal on ModalShell + standard footer buttons</li>
         </ul>
       </Card>
     </PageContainer>

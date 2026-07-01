@@ -1,6 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import AdminConsoleBackButton from '../admin/AdminConsoleBackButton';
+import { useStaggerReveal } from '../../hooks/transitions';
 
 /**
  * PageHeader — legacy / simple pages without ListPageLayout.
@@ -16,45 +16,34 @@ const PageHeader = ({
   actions,
   children,
 }) => {
-  const mergedLeading = backTo || leadingActions ? (
-    <>
-      {backTo && <AdminConsoleBackButton to={backTo} />}
-      {leadingActions}
-    </>
-  ) : null;
+  const staggerRef = useStaggerReveal([title, showTitle]);
 
   return (
-    <motion.header
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4"
+    <header
+      ref={staggerRef}
+      className="t-stagger flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4"
     >
-      <div className="flex items-start gap-3 min-w-0 flex-1">
-        {mergedLeading && (
-          <div className="flex items-center gap-2 shrink-0 self-center">
-            {mergedLeading}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {backTo && <AdminConsoleBackButton to={backTo} />}
+        {leadingActions}
+        {Icon && (
+          <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10">
+            <Icon size={18} strokeWidth={2.5} />
           </div>
         )}
-        <div className="space-y-1 min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           {showTitle && title && (
-            <div className="flex items-center gap-3 min-w-0">
-              {Icon && (
-                <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
-                  <Icon size={18} strokeWidth={2.5} />
-                </div>
-              )}
-              <h1 className="tm-page-title uppercase min-w-0">{title}</h1>
-            </div>
+            <h1 className="t-stagger-line tm-page-title uppercase min-w-0 m-0">{title}</h1>
           )}
-          {children}
+          {children && <div className="t-stagger-line t-stagger-line--2">{children}</div>}
         </div>
       </div>
       {actions && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start md:self-center">
+        <div className="t-stagger-line flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
           {actions}
         </div>
       )}
-    </motion.header>
+    </header>
   );
 };
 

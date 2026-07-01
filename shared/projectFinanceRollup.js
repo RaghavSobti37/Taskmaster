@@ -1,6 +1,7 @@
 const BUDGET_CATEGORIES = new Set(['budget']);
 const EXPENSE_CATEGORIES = new Set(['invoice', 'receipt', 'tax']);
 const REVENUE_CATEGORIES = new Set(['contract', 'proposal']);
+const SPEND_TRACK_CATEGORIES = new Set(['invoice', 'receipt', 'tax', 'other', 'report']);
 
 const roundMoney = (n) => Math.round(n * 100) / 100;
 
@@ -20,6 +21,8 @@ const inDateRange = (doc, rangeStart, rangeEnd) => {
   return d >= rangeStart && d <= rangeEnd;
 };
 
+const emptyCategorySpend = () => ({ total: 0, inRange: 0 });
+
 const emptyFinanceRow = () => ({
   budget: 0,
   spentTotal: 0,
@@ -28,7 +31,23 @@ const emptyFinanceRow = () => ({
   revenueInRange: 0,
   remaining: 0,
   budgetUsedPct: null,
+  spendByCategory: {},
 });
+
+const ensureCategorySpend = (row, category) => {
+  if (!row.spendByCategory[category]) {
+    row.spendByCategory[category] = emptyCategorySpend();
+  }
+  return row.spendByCategory[category];
+};
+
+const addSpend = (row, category, amount, inRange) => {
+  row.spentTotal += amount;
+  if (inRange) row.spentInRange += amount;
+  const bucket = ensureCategorySpend(row, category);
+  bucket.total += amount;
+  if (inRange) bucket.inRange += amount;
+};
 
 const applyFinanceDoc = (row, doc, rangeStart, rangeEnd) => {
   const amount = docAmount(doc);
@@ -40,14 +59,13 @@ const applyFinanceDoc = (row, doc, rangeStart, rangeEnd) => {
     row.budget += amount;
     return;
   }
-  if (EXPENSE_CATEGORIES.has(category)) {
-    row.spentTotal += amount;
-    if (inRange) row.spentInRange += amount;
-    return;
-  }
   if (REVENUE_CATEGORIES.has(category)) {
     row.revenueTotal += amount;
     if (inRange) row.revenueInRange += amount;
+    return;
+  }
+  if (SPEND_TRACK_CATEGORIES.has(category)) {
+    addSpend(row, category, amount, inRange);
   }
 };
 
@@ -61,6 +79,14 @@ const finalizeFinanceRow = (row) => {
   row.budgetUsedPct = row.budget > 0
     ? roundMoney((row.spentTotal / row.budget) * 100)
     : null;
+
+  Object.keys(row.spendByCategory).forEach((key) => {
+    row.spendByCategory[key] = {
+      total: roundMoney(row.spendByCategory[key].total),
+      inRange: roundMoney(row.spendByCategory[key].inRange),
+    };
+  });
+
   return row;
 };
 
@@ -89,6 +115,7 @@ module.exports = {
   BUDGET_CATEGORIES,
   EXPENSE_CATEGORIES,
   REVENUE_CATEGORIES,
+  SPEND_TRACK_CATEGORIES,
   rollupFinanceByProject,
   budgetStatusTone,
   roundMoney,

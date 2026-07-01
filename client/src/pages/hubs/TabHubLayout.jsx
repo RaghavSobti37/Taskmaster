@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { HUB_CONFIG } from '../../utils/navbarConfig';
 import { HUB_NAV_META, withHubTabIcons } from '../../utils/hubSubnavConfig';
+import HubPageLayout from '../../components/ui/HubPageLayout';
 import ModuleSubnav from '../../components/ui/ModuleSubnav';
 
 export default function TabHubLayout({ hubPath, panels }) {
@@ -45,24 +46,29 @@ export default function TabHubLayout({ hubPath, panels }) {
   }));
 
   return (
-    <div className="flex flex-col min-h-0 lg:h-full gap-3">
-      <ModuleSubnav
-        title={shell?.label || hub.label}
-        titleIcon={shell?.icon}
-        items={subnavItems}
-        mode="tabs"
-        activeId={resolvedTab}
-        onTabChange={(id) => setSearchParams({ tab: id })}
-        ariaLabel={`${hub.label} sections`}
-      />
+    <HubPageLayout
+      header={(
+        <ModuleSubnav
+          title={shell?.label || hub.label}
+          titleIcon={shell?.icon}
+          items={subnavItems}
+          mode="tabs"
+          activeId={resolvedTab}
+          onTabChange={(id) => setSearchParams({ tab: id })}
+          ariaLabel={`${hub.label} sections`}
+          tabsFitContent
+        />
+      )}
+    >
       <div
         role="tabpanel"
         id={`hub-panel-${resolvedTab}`}
         aria-labelledby={`hub-tab-${resolvedTab}`}
-        className="tm-hub-panel min-h-0 flex-1 min-w-0"
+        data-hub={hubPath.replace(/^\//, '')}
+        className="tm-hub-panel list-page-stack min-h-0 flex-1 min-w-0 flex flex-col"
       >
         <Panel />
       </div>
-    </div>
+    </HubPageLayout>
   );
 }

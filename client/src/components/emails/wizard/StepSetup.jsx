@@ -19,7 +19,10 @@ export default function StepSetup({ profiles = [] }) {
       </div>
 
       <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Send via</p>
+        <div>
+          <p className="text-xs font-semibold text-[var(--color-text-secondary)]">How do you want to send?</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Resend is easiest for most campaigns. Gmail uses your connected profile.</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"

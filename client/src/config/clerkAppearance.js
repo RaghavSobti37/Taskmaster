@@ -1,4 +1,4 @@
-﻿/** Clerk theme + copy for auth panels (teal #0B3B31 panel, logo accent). */
+/** Clerk theme + copy for auth panels (teal #0B3B31 panel, logo accent). */
 export const AUTH_PANEL_TEAL = '#0B3B31';
 export const AUTH_ACCENT = '#126d5e';
 export const AUTH_ACCENT_BRIGHT = '#2dd4bf';

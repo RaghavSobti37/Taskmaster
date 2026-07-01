@@ -8,9 +8,10 @@ import {
   Users,
 } from 'lucide-react';
 import {
-  Badge, ProgressBar, Button, Input, PageSkeleton, NexusDropdown,
-  ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage,
+  Badge, ProgressBar, Button, Input, PageSkeleton,
+  ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage, EmptyState,
 } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { NexusModal } from '../../components/ui/modals';
 import {
   useProjects, useWorkspaces, useReviewTasks, useDashboardTasks, useUpdateProject,
@@ -29,6 +30,8 @@ import { countReviewTasksByProject, countTasksByProject } from '../../utils/task
 import { filterOverdueTasks } from '../../utils/dashboardTasks';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { projectCardAccentClass, ProjectCardStatusOverlay } from '../../components/project/ProjectStatusPing';
+import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
+import { buildProjectsActiveFilterChips } from '../../utils/activeFilterChips';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -247,15 +250,26 @@ const TableRow = ({ project, accent, reviewCount, overdueCount, canMove, onNavig
 
 // ─── ProjectsView ────────────────────────────────────────────────────────────
 
+const PROJECTS_FILTERS_KEY = 'projects-filters';
+const PROJECTS_FILTER_DEFAULTS = {
+  viewMode: 'workspace',
+  filterStatus: 'all',
+  filterWorkspace: 'all',
+  filterStarred: false,
+  sortBy: 'newest',
+  searchTerm: '',
+};
+
 const ProjectsView = () => {
+  const savedFilters = useMemo(() => loadPageFilters(PROJECTS_FILTERS_KEY, PROJECTS_FILTER_DEFAULTS), []);
   const { confirm } = useConfirm();
   const toast = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterWorkspace, setFilterWorkspace] = useState('all');
-  const [filterStarred, setFilterStarred] = useState(false);
-  const [sortBy, setSortBy] = useState('newest');
-  const [viewMode, setViewMode] = useState('workspace');
+  const [searchTerm, setSearchTerm] = useState(savedFilters.searchTerm || '');
+  const [filterStatus, setFilterStatus] = useState(savedFilters.filterStatus || 'all');
+  const [filterWorkspace, setFilterWorkspace] = useState(savedFilters.filterWorkspace || 'all');
+  const [filterStarred, setFilterStarred] = useState(Boolean(savedFilters.filterStarred));
+  const [sortBy, setSortBy] = useState(savedFilters.sortBy || 'newest');
+  const [viewMode, setViewMode] = useState(savedFilters.viewMode || 'workspace');
   // Workspace create modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -264,11 +278,6 @@ const ProjectsView = () => {
   // Move modal
   const [moveModal, setMoveModal] = useState(null); // { project } | null
   const [moveTarget, setMoveTarget] = useState('');
-  // Quick-create modal
-  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
-  const [quickCreateName, setQuickCreateName] = useState('');
-  const [quickCreateWorkspace, setQuickCreateWorkspace] = useState('GENERAL');
-  const [quickCreating, setQuickCreating] = useState(false);
   // Duplicate modal
   const [dupModal, setDupModal] = useState(null); // { project } | null
   const [dupName, setDupName] = useState('');
@@ -314,6 +323,17 @@ const ProjectsView = () => {
     refetchProjects();
     refetchWorkspaces();
   }, [user?._id, refetchProjects, refetchWorkspaces]);
+
+  useEffect(() => {
+    savePageFilters(PROJECTS_FILTERS_KEY, {
+      viewMode,
+      filterStatus,
+      filterWorkspace,
+      filterStarred,
+      sortBy,
+      searchTerm,
+    });
+  }, [viewMode, filterStatus, filterWorkspace, filterStarred, sortBy, searchTerm]);
 
   useEffect(() => {
     if (location.state?.openCreateWorkspace) {
@@ -437,24 +457,6 @@ const ProjectsView = () => {
       toast.error(err.response?.data?.error || 'Failed to create workspace');
     } finally {
       setCreatingWorkspace(false);
-    }
-  };
-
-  // ── quick-create project ──
-  const handleQuickCreate = async (e) => {
-    e.preventDefault();
-    if (!quickCreateName.trim()) return;
-    setQuickCreating(true);
-    try {
-      await axios.post('/api/projects', { name: quickCreateName.trim(), workspace: quickCreateWorkspace });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      setQuickCreateOpen(false);
-      setQuickCreateName('');
-      toast.success('Project created');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create project');
-    } finally {
-      setQuickCreating(false);
     }
   };
 
@@ -608,6 +610,99 @@ const ProjectsView = () => {
     ...workspaces.map((w) => ({ value: w.name, label: w.name })),
   ], [workspaces]);
 
+  const activeFilterChips = useMemo(
+    () => buildProjectsActiveFilterChips(
+      { searchTerm, viewMode, filterWorkspace, filterStatus, filterStarred, sortBy },
+      { workspaceOptions: workspaceFilterOptions }
+    ),
+    [searchTerm, viewMode, filterWorkspace, filterStatus, filterStarred, sortBy, workspaceFilterOptions]
+  );
+
+  const handleClearAllFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterStatus('all');
+    setFilterWorkspace('all');
+    setFilterStarred(false);
+    setSortBy('newest');
+    setViewMode('workspace');
+  }, []);
+
+  const handleActiveFilterRemove = useCallback((id) => {
+    switch (id) {
+      case 'searchTerm':
+        setSearchTerm('');
+        break;
+      case 'viewMode':
+        setViewMode('workspace');
+        break;
+      case 'filterWorkspace':
+        setFilterWorkspace('all');
+        break;
+      case 'filterStatus':
+        setFilterStatus('all');
+        break;
+      case 'filterStarred':
+        setFilterStarred(false);
+        break;
+      case 'sortBy':
+        setSortBy('newest');
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const projectsFilterFields = useMemo(() => [
+    {
+      id: 'filterWorkspace',
+      label: 'Workspace',
+      type: 'searchable',
+      value: filterWorkspace,
+      defaultValue: 'all',
+      options: workspaceFilterOptions,
+      onChange: setFilterWorkspace,
+    },
+    {
+      id: 'filterStatus',
+      label: 'Status',
+      type: 'radio',
+      value: filterStatus,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'All Projects' },
+        { value: 'active', label: 'Active Only' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'archived', label: 'Archived' },
+      ],
+      onChange: setFilterStatus,
+    },
+    {
+      id: 'filterStarred',
+      label: 'Starred',
+      type: 'toggle',
+      value: filterStarred,
+      defaultValue: false,
+      toggleLabel: filterStarred ? 'Starred only' : 'All projects',
+      onChange: setFilterStarred,
+    },
+    {
+      id: 'sortBy',
+      label: 'Sort by',
+      type: 'radio',
+      value: sortBy,
+      defaultValue: 'newest',
+      options: [
+        { value: 'newest', label: 'Newest First' },
+        { value: 'oldest', label: 'Oldest First' },
+        { value: 'updated', label: 'Recently Updated' },
+        { value: 'progress-high', label: 'Highest Progress' },
+        { value: 'progress-low', label: 'Lowest Progress' },
+        { value: 'name', label: 'Alphabetical' },
+      ],
+      onChange: setSortBy,
+    },
+  ], [filterWorkspace, filterStatus, filterStarred, sortBy, workspaceFilterOptions]);
+
   if (loading && projects.length === 0) return <PageSkeleton />;
 
   return (
@@ -649,15 +744,25 @@ const ProjectsView = () => {
           },
         ],
       }}
-      toolbar={
+      toolbarFill
+      filterFields={projectsFilterFields}
+      filterSheetTitle="Project filters"
+      mobileFilterCount={countActiveFilters(projectsFilterFields) + (searchTerm.trim() ? 1 : 0) + (viewMode !== 'workspace' ? 1 : 0)}
+      activeFilterChips={activeFilterChips}
+      onActiveFilterRemove={handleActiveFilterRemove}
+      onActiveFiltersClear={handleClearAllFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search name, tags, workspace…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
+      toolbar={(
         <>
-          <SearchInput
-            variant="toolbar"
-            placeholder="Search name, tags, workspace…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {/* View toggle */}
+          {/* View toggle — stays inline (not in filter panel) */}
           <div
             data-mobile-inline
             data-filter-label="View"
@@ -673,7 +778,7 @@ const ProjectsView = () => {
                 type="button"
                 onClick={() => setViewMode(id)}
                 title={label}
-                className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 h-full min-h-0 rounded-[var(--radius-atomic)] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === id
+                className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 h-full min-h-[44px] sm:min-h-0 rounded-[var(--radius-atomic)] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === id
                   ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                   }`}
@@ -684,86 +789,24 @@ const ProjectsView = () => {
               </button>
             ))}
           </div>
-          {/* Workspace filter (P0-3) */}
-          <NexusDropdown
-            variant="toolbar"
-            data-filter-label="Workspace"
-            options={workspaceFilterOptions}
-            value={filterWorkspace}
-            onChange={setFilterWorkspace}
-            placeholder="All workspaces"
-          />
-          {/* Status filter */}
-          <NexusDropdown
-            variant="toolbar"
-            data-filter-label="Status"
-            options={[
-              { value: 'all', label: 'All Projects' },
-              { value: 'active', label: 'Active Only' },
-              { value: 'completed', label: 'Completed' },
-              { value: 'archived', label: 'Archived' },
-            ]}
-            value={filterStatus}
-            onChange={setFilterStatus}
-            placeholder="All projects"
-          />
-          {/* Starred toggle (P1-3) */}
-          <button
-            type="button"
-            onClick={() => setFilterStarred((v) => !v)}
-            title={filterStarred ? 'Show all projects' : 'Starred only'}
-            className={`tm-toolbar-control inline-flex items-center gap-1 px-2.5 rounded-[var(--radius-atomic)] border text-[10px] font-bold uppercase tracking-wide transition-colors shrink-0 ${filterStarred
-              ? 'border-amber-400 bg-amber-400/10 text-amber-500'
-              : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-              }`}
-          >
-            <Star size={12} className={filterStarred ? 'fill-amber-400' : ''} />
-            <span className="hidden sm:inline">Starred</span>
-          </button>
-          {/* Sort */}
-          <NexusDropdown
-            variant="toolbar"
-            data-filter-label="Sort by"
-            options={[
-              { value: 'newest', label: 'Newest First' },
-              { value: 'oldest', label: 'Oldest First' },
-              { value: 'updated', label: 'Recently Updated' },
-              { value: 'progress-high', label: 'Highest Progress' },
-              { value: 'progress-low', label: 'Lowest Progress' },
-              { value: 'name', label: 'Alphabetical' },
-            ]}
-            value={sortBy}
-            onChange={setSortBy}
-            placeholder="Newest first"
-          />
         </>
-      }
+      )}
       toolbarActions={
         <>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setCreateModalOpen(true)}
-            className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs"
+            className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs min-h-[44px] sm:min-h-0"
           >
             <FolderPlus size={14} />
             Add Workspace
-          </Button>
-          {/* Quick create modal (P1-4) */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setQuickCreateOpen(true)}
-            className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs"
-          >
-            <Plus size={14} />
-            Quick Add
           </Button>
           <Button
             size="sm"
             data-mobile-primary
             onClick={() => navigate('/projects/new')}
-            className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs"
+            className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs min-h-[44px] sm:min-h-0"
           >
             <Plus size={14} />
             New Project
@@ -998,18 +1041,13 @@ const ProjectsView = () => {
                         </div>
                       ) : (
                         // P0-6: empty state CTA
-                        <div className="py-8 text-center border-t border-dashed border-[var(--color-bg-border)] flex flex-col items-center gap-2">
-                          <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No projects yet</p>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            className="text-[var(--color-action-primary)] !text-[9px]"
-                            onClick={() => navigate(`/projects/new?workspace=${encodeURIComponent(group.name)}`)}
-                          >
-                            <Plus size={10} className="mr-1" />
-                            Create project in {group.name}
-                          </Button>
-                        </div>
+                        <EmptyState
+                          variant="subtle"
+                          title="No projects yet"
+                          actionLabel={`Create project in ${group.name}`}
+                          onAction={() => navigate(`/projects/new?workspace=${encodeURIComponent(group.name)}`)}
+                          className="py-8 border-t border-dashed border-[var(--color-bg-border)]"
+                        />
                       )}
                     </div>
                   </div>
@@ -1018,10 +1056,12 @@ const ProjectsView = () => {
             </AnimatePresence>
 
             {workspaceGroups.length === 0 && (
-              <div className="col-span-full py-20 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
-                <Briefcase size={32} className="mx-auto text-[var(--color-text-muted)] mb-3 opacity-20" />
-                <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No workspaces found</p>
-              </div>
+              <EmptyState
+                icon={Briefcase}
+                title="No workspaces found"
+                variant="dashed"
+                className="col-span-full"
+              />
             )}
           </div>
         )}
@@ -1084,13 +1124,14 @@ const ProjectsView = () => {
                   </tbody>
                 </table>
                 {filteredProjects.length === 0 && (
-                  <div className="py-16 text-center">
-                    <Briefcase size={28} className="mx-auto text-[var(--color-text-muted)] mb-3 opacity-20" />
-                    <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-3">No projects found</p>
-                    <Button size="sm" variant="ghost" onClick={() => navigate('/projects/new')} className="text-[var(--color-action-primary)]">
-                      <Plus size={12} className="mr-1" /> Create Project
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={Briefcase}
+                    title="No projects found"
+                    actionLabel="Create Project"
+                    onAction={() => navigate('/projects/new')}
+                    variant="subtle"
+                    className="py-16"
+                  />
                 )}
               </div>
             ) : (
@@ -1240,19 +1281,14 @@ const ProjectsView = () => {
 
                 {/* P0-6: empty state */}
                 {filteredProjects.length === 0 && (
-                  <div className="col-span-full py-20 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
-                    <Briefcase size={32} className="mx-auto text-[var(--color-text-muted)] mb-3 opacity-20" />
-                    <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-3">No projects found</p>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigate(filterWorkspace !== 'all' ? `/projects/new?workspace=${encodeURIComponent(filterWorkspace)}` : '/projects/new')}
-                      className="text-[var(--color-action-primary)]"
-                    >
-                      <Plus size={12} className="mr-1" />
-                      {filterWorkspace !== 'all' ? `Create project in ${filterWorkspace}` : 'Create Project'}
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={Briefcase}
+                    title="No projects found"
+                    actionLabel={filterWorkspace !== 'all' ? `Create project in ${filterWorkspace}` : 'Create Project'}
+                    onAction={() => navigate(filterWorkspace !== 'all' ? `/projects/new?workspace=${encodeURIComponent(filterWorkspace)}` : '/projects/new')}
+                    variant="dashed"
+                    className="col-span-full"
+                  />
                 )}
               </div>
             )}
@@ -1326,50 +1362,6 @@ const ProjectsView = () => {
             </div>
           </div>
         )}
-      </NexusModal>
-
-      {/* ── Quick Create Modal (P1-4 / P1-5) ── */}
-      <NexusModal
-        isOpen={quickCreateOpen}
-        onClose={() => setQuickCreateOpen(false)}
-        title="Quick Create Project"
-        size="sm"
-        showFooter={false}
-      >
-        <form onSubmit={handleQuickCreate} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
-            <Input
-              value={quickCreateName}
-              onChange={(e) => setQuickCreateName(e.target.value)}
-              placeholder="Enter project name"
-              className="!py-2.5 !text-xs font-bold uppercase"
-              required
-              autoFocus
-            />
-          </div>
-          <WorkspaceSelect
-            value={quickCreateWorkspace}
-            onChange={setQuickCreateWorkspace}
-            label="Workspace"
-          />
-          <p className="text-[9px] text-[var(--color-text-muted)]">
-            For full settings (members, description, tags) use{' '}
-            <button
-              type="button"
-              className="text-[var(--color-action-primary)] underline"
-              onClick={() => { setQuickCreateOpen(false); navigate(`/projects/new?workspace=${encodeURIComponent(quickCreateWorkspace)}`); }}
-            >
-              New Project
-            </button>.
-          </p>
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setQuickCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={quickCreating || !quickCreateName.trim()}>
-              {quickCreating ? 'Creating...' : 'Create'}
-            </Button>
-          </div>
-        </form>
       </NexusModal>
 
       {/* ── Duplicate Project Modal (P2-4) ── */}

@@ -2,7 +2,7 @@ import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, forma
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,8 +21,10 @@ import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAcco
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { Button, SearchInput, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { buildFinanceTableColumns } from '../../components/finance/buildFinanceTableColumns';
+import { FINANCE_TABLE_PROPS } from '../../components/finance/financeHubTableClasses';
 import { FINANCE_CATEGORIES, buildFinanceTableRows, formatFinanceBytes } from '../../utils/financeDisplay';
 import { NexusModal } from '../../components/ui/modals';;
 import { useConfirm } from '../../contexts/confirmContext';
@@ -36,6 +38,8 @@ import {
   cloneFinanceEditForm,
   financeEditPayload,
 } from '../../utils/financeEditForm';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasPageAccess } from '../../utils/pagePermissions';
 
 const CATEGORIES = FINANCE_CATEGORIES;
 
@@ -69,6 +73,8 @@ const InfoTooltip = ({ content }) => {
 
 const FinancePage = () => {
   const { confirm } = useConfirm();
+  const { user } = useAuth();
+  const canRunFinanceScripts = hasPageAccess(user, 'admin_scripts');
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get('folderId') || '';
@@ -686,14 +692,100 @@ const FinancePage = () => {
     return { stats };
   }, [docsRes?.categoryMix, pagination.total, pendingInvoices.length]);
 
+  const handleClearFinanceFilters = useCallback(() => {
+    setSelectedWorkspace('');
+    setSelectedProject('');
+    setSelectedCategory('all');
+    setStartDate('');
+    setEndDate('');
+    goToProjectRoot();
+    setCurrentPage(1);
+  }, []);
+
+  const financeFilterFields = useMemo(() => [
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      type: 'searchable',
+      value: selectedWorkspace,
+      defaultValue: '',
+      options: [
+        { value: '', label: 'All workspaces' },
+        ...workspaces.map((w) => ({ value: w.name, label: w.name })),
+      ],
+      onChange: (value) => {
+        setSelectedWorkspace(value);
+        setSelectedProject('');
+        goToProjectRoot();
+      },
+    },
+    {
+      id: 'project',
+      label: 'Project',
+      type: 'searchable',
+      value: selectedProject,
+      defaultValue: '',
+      options: [
+        { value: '', label: 'All projects' },
+        ...filteredProjects.map((p) => ({ value: p._id, label: p.name })),
+      ],
+      onChange: (projectId) => {
+        setSelectedProject(projectId);
+        const projectRecord = projects.find((p) => p._id === projectId);
+        if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
+        goToProjectRoot();
+      },
+    },
+    {
+      id: 'category',
+      label: 'Document type',
+      type: 'radio',
+      value: selectedCategory,
+      defaultValue: 'all',
+      options: CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
+      onChange: setSelectedCategory,
+    },
+    {
+      id: 'dateRange',
+      label: 'Document date',
+      type: 'dateRange',
+      value: { start: startDate, end: endDate },
+      defaultValue: { start: '', end: '' },
+      onChange: ({ start, end }) => {
+        setStartDate(start);
+        setEndDate(end);
+      },
+    },
+  ], [
+    selectedWorkspace,
+    selectedProject,
+    selectedCategory,
+    startDate,
+    endDate,
+    workspaces,
+    filteredProjects,
+    projects,
+  ]);
+
   return (
     <ListPageLayout
       maxWidth="1400px"
       containerClassName="!py-4"
-      className="!space-y-2"
-      overviewSectionClassName="!mb-0 !space-y-0"
       toolbarFill
       overview={financeOverview}
+      filterFields={financeFilterFields}
+      filterSheetTitle="Finance filters"
+      mobileFilterCount={countActiveFilters(financeFilterFields)}
+      onActiveFiltersClear={handleClearFinanceFilters}
+      searchBar={(
+        <SearchInput
+          variant="toolbar"
+          placeholder="Search title, file name, vendor..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full max-w-full"
+        />
+      )}
       toolbarActions={(
         <>
           <Button variant="secondary" size="sm" onClick={openNewFolderModal}>
@@ -702,75 +794,6 @@ const FinancePage = () => {
           <Button size="sm" onClick={() => setShowUpload(true)}>
             <Upload size={16} /> Upload Documents
           </Button>
-        </>
-      )}
-      toolbar={(
-        <>
-          <SearchInput
-            
-            placeholder="Search title, file name, vendor..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <NexusDropdown
-            variant="toolbar"
-            
-            placeholder="All workspaces"
-            value={selectedWorkspace}
-            onChange={(value) => {
-              setSelectedWorkspace(value);
-              setSelectedProject('');
-              goToProjectRoot();
-            }}
-            options={[
-              { value: '', label: 'All workspaces' },
-              ...workspaces.map((w) => ({ value: w.name, label: w.name })),
-            ]}
-          />
-          <NexusDropdown
-            variant="toolbar"
-           
-            placeholder="All projects"
-            value={selectedProject}
-            onChange={(projectId) => {
-              setSelectedProject(projectId);
-              const projectRecord = projects.find((p) => p._id === projectId);
-              if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
-              goToProjectRoot();
-            }}
-            options={[
-              { value: '', label: 'All projects' },
-              ...filteredProjects.map((p) => ({ value: p._id, label: p.name })),
-            ]}
-            searchable
-          />
-          <NexusDropdown
-            variant="toolbar"
-            
-            placeholder="All types"
-            value={selectedCategory}
-            onChange={setSelectedCategory}
-            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
-          />
-          <div className="tm-toolbar-field tm-toolbar-date-range tm-toolbar-control shrink-0">
-            <Calendar size={14} className="text-[var(--color-text-muted)] shrink-0" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              aria-label="Document date from"
-            />
-            <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">–</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              aria-label="Document date to"
-            />
-            {(startDate || endDate) && (
-              <IconButton icon={X} label="Clear dates" size="sm" className="!p-1 shrink-0" onClick={() => { setStartDate(''); setEndDate(''); }} />
-            )}
-          </div>
         </>
       )}
     >
@@ -788,9 +811,23 @@ const FinancePage = () => {
         isRejecting={rejectInvoiceMutation.isPending}
       />
       <DesktopRecommendedBanner message="Finance document management works best on desktop. You can browse folders on mobile with limited preview." />
+      {canRunFinanceScripts && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-[var(--color-text-primary)]">
+          Project analytics uses finance doc project + amount fields.
+          {' '}
+          Run
+          {' '}
+          <Link to="/admin/scripts" className="font-semibold text-amber-600 hover:underline">
+            Assign Finance to Projects
+          </Link>
+          {' '}
+          in Script Runner to map unassigned docs (uncertain → General).
+          Reparse OCR if amounts are missing.
+        </div>
+      )}
 
       {/* Documents Table */}
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0">
         {tableBreadcrumb}
         {folderToolbar}
         {isLoading ? (
@@ -805,12 +842,10 @@ const FinancePage = () => {
           />
         ) : (
           <DataTable
+            {...FINANCE_TABLE_PROPS}
             columns={financeColumns}
             data={financeTableRows}
             serverSide
-            paginated={false}
-            virtualize={false}
-            tableMaxHeight="70vh"
             sortState={sortConfig.field ? { key: sortConfig.field, direction: sortConfig.order } : null}
             onSortChange={(state) => {
               if (!state?.key || !state?.direction) {

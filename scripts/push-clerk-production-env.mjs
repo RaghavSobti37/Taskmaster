@@ -24,8 +24,18 @@ const ROOT = path.join(__dirname, '..');
 // a prior misconfiguration that caused the auth bridge to see a stale/wrong
 // publishable key on the main app.
 const VERCEL_PROJECTS = [
-  { name: 'coreknot-auth', cwd: path.join(ROOT, 'sites', 'auth'), needsClerkSecret: true },
-  { name: 'taskmaster', cwd: path.join(ROOT, 'client'), needsClerkSecret: true },
+  {
+    name: 'coreknot-auth',
+    cwd: path.join(ROOT, 'sites', 'auth'),
+    needsClerkSecret: true,
+    clerkProxyUrl: 'https://auth.tsccoreknot.com/__clerk',
+  },
+  {
+    name: 'taskmaster',
+    cwd: path.join(ROOT, 'client'),
+    needsClerkSecret: true,
+    clerkProxyUrl: 'https://tsccoreknot.com/__clerk',
+  },
 ];
 
 const RENDER_SERVICE_ID = 'srv-d37a5m1r0fns739brt40';
@@ -180,10 +190,10 @@ if (!keys.orgId) {
 }
 
 console.log('Pushing Clerk production keys…');
-for (const { cwd, needsClerkSecret } of VERCEL_PROJECTS) {
+for (const { cwd, needsClerkSecret, clerkProxyUrl } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
-  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', 'https://tsccoreknot.com/__clerk');
+  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', clerkProxyUrl);
   if (keys.orgId) {
     vercelUpsert(cwd, 'VITE_CLERK_ORGANIZATION_ID', keys.orgId);
   }

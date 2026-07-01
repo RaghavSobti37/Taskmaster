@@ -121,6 +121,9 @@ async function renderUpsert(sk) {
   }
   const upserts = [
     ['CLERK_SECRET_KEY', sk],
+    ['CLERK_FAPI_UPSTREAM', 'https://clerk.tsccoreknot.com'],
+    ['CLERK_FRONTEND_API', 'clerk.tsccoreknot.com'],
+    ['CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk'],
   ];
 
   for (const [key, value] of upserts) {
@@ -174,8 +177,11 @@ console.log('Pushing Clerk production keys…');
 for (const { cwd, needsClerkSecret } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
+  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', 'https://tsccoreknot.com/__clerk');
   if (needsClerkSecret) {
     vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
+    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://clerk.tsccoreknot.com');
+    vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk');
   }
   // Remove legacy org pin from Vercel if present
   for (const env of ['production']) {

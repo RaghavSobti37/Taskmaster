@@ -5,7 +5,9 @@
 
 const express = require('express');
 
-const CLERK_FAPI = 'https://frontend-api.clerk.services';
+const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || process.env.CLERK_FRONTEND_API || '')
+  .trim()
+  .replace(/\/$/, '') || 'https://frontend-api.clerk.services';
 const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';
 
 const hopByHop = new Set([
@@ -30,7 +32,8 @@ const clientIp = (req) => {
 
 const buildTargetUrl = (req) => {
   const suffix = String(req.originalUrl || req.url || '').replace(/^\/__clerk\/?/, '/');
-  return `${CLERK_FAPI}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+  const base = CLERK_FAPI.startsWith('http') ? CLERK_FAPI : `https://${CLERK_FAPI}`;
+  return `${base}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
 };
 
 const proxyHandler = async (req, res) => {

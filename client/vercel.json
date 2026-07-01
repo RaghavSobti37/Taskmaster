@@ -47,7 +47,7 @@
     },
     {
       "source": "/__clerk/:path*",
-      "destination": "https://taskmaster-jfw0.onrender.com/__clerk/:path*"
+      "destination": "/api/clerk/:path*"
     },
     {
       "source": "/ph/static/:path(.*)",

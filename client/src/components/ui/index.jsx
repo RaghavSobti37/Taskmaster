@@ -64,5 +64,6 @@ export { default as ModuleSubnav } from './ModuleSubnav';
 export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as PageSkeleton } from './PageSkeleton';
 export { default as NumberPopIn } from './NumberPopIn';
+export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';
 
 // Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

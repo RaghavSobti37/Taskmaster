@@ -97,8 +97,8 @@ const SearchInput = ({
           value ? (
             <button
               type="button"
-              onClick={clearAnimated}
-              className="t-clear-btn p-1 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              onClick={handleClear}
+              className="p-1 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
               aria-label="Clear search"
             >
               <X size={14} />

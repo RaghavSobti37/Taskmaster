@@ -15,18 +15,36 @@ const findUserById = (userId, options = {}) => {
   return query;
 };
 
-const authUserCacheKey = (userId) => `auth:user:v1:${userId}`;
+const authUserCacheKey = (userId) => `auth:user:v2:${userId}`;
+
+/** Hydrate drops populated refs; cache stores departmentId as ObjectId only. */
+const serializeAuthUserForCache = (user) => {
+  const plain = user.toObject();
+  const dept = plain.departmentId;
+  if (dept && typeof dept === 'object' && dept._id) {
+    plain.departmentId = dept._id;
+  }
+  return plain;
+};
+
+const hydrateAuthUserFromCache = async (cached) => {
+  const user = User.hydrate(cached);
+  if (!user.departmentId?.slug) {
+    await user.populate('departmentId', DEPARTMENT_POPULATE);
+  }
+  return user;
+};
 
 const loadAuthUser = async (userId) => {
   const cacheKey = authUserCacheKey(userId);
   const cached = await getCache(cacheKey);
   if (cached) {
-    return User.hydrate(cached);
+    return hydrateAuthUserFromCache(cached);
   }
 
   const user = await findUserById(userId).populate('departmentId', DEPARTMENT_POPULATE);
   if (user) {
-    await setCache(cacheKey, user.toObject(), AUTH_USER_CACHE_TTL_SECONDS);
+    await setCache(cacheKey, serializeAuthUserForCache(user), AUTH_USER_CACHE_TTL_SECONDS);
   }
   return user;
 };
@@ -38,4 +56,6 @@ module.exports = {
   loadAuthUser,
   invalidateAuthUserCache,
   DEPARTMENT_POPULATE,
+  authUserCacheKey,
+  serializeAuthUserForCache,
 };

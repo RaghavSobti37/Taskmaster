@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import TransitionCard from './TransitionCard';
+import NumberPopIn from './NumberPopIn';
 
 const ACCENT = {
   info: 'border-l-[var(--color-pastel-blue-text)]',
@@ -62,7 +63,7 @@ export default function MetricCard({
       <div className={`flex items-end justify-between gap-2 ${fill ? 'mt-auto min-h-[2.5rem]' : ''}`}>
         <div className="flex flex-col gap-1 min-w-0">
           <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">
-            {typeof value === 'number' ? value.toLocaleString() : value}
+            <NumberPopIn value={typeof value === 'number' ? value.toLocaleString() : value} />
           </span>
           {(deltaText || pctText) && (
             <div className={`flex items-center gap-1.5 text-[10px] font-bold tabular-nums ${deltaClass}`}>

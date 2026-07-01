@@ -6,6 +6,7 @@ import { Spinner } from './Spinner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useInputErrorShake, useSlidingTabs } from '../../hooks/transitions';
 import NumberPopIn from './NumberPopIn';
+import DeltaBadge from './DeltaBadge';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
 /** Default rows per page for DataTable and TablePagination */
@@ -338,9 +339,7 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
             <NumberPopIn value={value} />
           </span>
           {delta && (
-            <span className={delta.direction === 'down' ? 'tm-delta-negative' : 'tm-delta-positive'}>
-              {delta.direction === 'down' ? '↓' : '↑'} {delta.value}
-            </span>
+            <DeltaBadge value={delta.value} direction={delta.direction} />
           )}
         </div>
         <div className="flex-shrink-0 flex items-center justify-end">

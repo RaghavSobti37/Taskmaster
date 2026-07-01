@@ -48,7 +48,7 @@ const BANNED_PROXY_HOSTS = new Set([
 
 const POSTHOG_PROXY_PREFIX = '/ph';
 /** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
-const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!.*\\.[^/]+$).*)';
+const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)';
 
 const resolvePostHogRegion = (host = '') => (
   String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
@@ -74,15 +74,24 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
 );
 
 /** PostHog rewrites must precede SPA catch-all — first Vercel match wins. */
+const buildClerkProxyRewrite = (apiDestination) => {
+  const origin = String(apiDestination || '').replace(/\/api\/\$1$/, '');
+  if (!origin || !origin.includes('.onrender.com')) return null;
+  return { source: '/__clerk/:path*', destination: `${origin}/__clerk/:path*` };
+};
+
 const composeRewrites = (templateRewrites, apiDestination, socketDestination) => {
   const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
   const posthog = buildPostHogRewrites();
+  const clerkProxy = buildClerkProxyRewrite(apiDestination);
   const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
-  if (catchallIdx === -1) return [...mapped, ...posthog];
+  const beforeCatchall = catchallIdx === -1 ? mapped : mapped.slice(0, catchallIdx);
+  const afterCatchall = catchallIdx === -1 ? [] : mapped.slice(catchallIdx);
   return [
-    ...mapped.slice(0, catchallIdx),
+    ...beforeCatchall,
+    ...(clerkProxy ? [clerkProxy] : []),
     ...posthog,
-    ...mapped.slice(catchallIdx),
+    ...afterCatchall,
   ];
 };
 
@@ -354,6 +363,7 @@ module.exports = {
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
+  buildClerkProxyRewrite,
   mapTemplateRewrites,
   existingRewritesLookValid,
   buildVercelHeaders,

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../contexts/AuthContext';
+import { isClerkConfigured } from '../config/clerk';
 import AppBootError from './AppBootError';
 import BootScreen from './BootScreen';
 import ExternalRedirect from './ExternalRedirect';
@@ -8,13 +10,23 @@ import { authUrl, usesExternalAuthHost } from '../config/siteUrls';
 
 const ProtectedRoute = () => {
   const { user, loading, sessionReady, bootError, retryBoot } = useAuth();
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
   const location = useLocation();
+
+  const clerkBoot = isClerkConfigured() && !clerkLoaded;
+  const clerkSessionPending = isClerkConfigured()
+    && clerkLoaded
+    && clerkSignedIn
+    && !user
+    && !bootError;
 
   if (bootError) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
   }
 
-  if (loading || (user && !sessionReady)) return <BootScreen bootError={bootError} onRefresh={() => retryBoot()} />;
+  if (clerkBoot || loading || clerkSessionPending || (user && !sessionReady)) {
+    return <BootScreen bootError={bootError} onRefresh={() => retryBoot()} />;
+  }
 
   if (!user) {
     if (usesExternalAuthHost()) {

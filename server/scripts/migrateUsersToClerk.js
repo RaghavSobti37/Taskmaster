@@ -4,15 +4,19 @@
  *
  * Usage:
  *   node server/scripts/migrateUsersToClerk.js --email user@example.com
- *   node server/scripts/migrateUsersToClerk.js --domain example.com
- *   node server/scripts/migrateUsersToClerk.js --all
+ *   node server/scripts/migrateUsersToClerk.js --staff-only --source local
+ *   node server/scripts/migrateUsersToClerk.js --staff-only --source prod
+ *   node server/scripts/migrateUsersToClerk.js --staff-only --source both
  *   node server/scripts/migrateUsersToClerk.js --domain example.com --dry-run
- *   node server/scripts/migrateUsersToClerk.js --domain example.com --import-passwords
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const { clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
+const {
+  isClerkMigrationExcludedEmail,
+  isStaffEmail,
+} = require('../utils/clerkMigrationFilters');
 
 const args = process.argv.slice(2);
 const readArg = (flag) => {
@@ -38,8 +42,35 @@ const passwordFieldsFromMongo = (dbUser) => {
 
 const orgId = readArg('--org-id') || process.env.CLERK_ORGANIZATION_ID || '';
 const emailFilter = readArg('--email');
-const domainFilter = readArg('--domain') || process.env.ALLOWED_DOMAIN || '';
+const domainFilter = readArg('--domain') || '';
 const migrateAll = hasFlag('--all');
+const staffOnly = hasFlag('--staff-only');
+const includeTest = hasFlag('--include-test');
+const sourceArg = (readArg('--source') || 'local').toLowerCase();
+
+const resolveMongoUri = (source) => {
+  if (source === 'prod') {
+    const uri = process.env.MONGODB_URI_PROD || process.env.MONGO_URI_PROD;
+    if (!uri) throw new Error('MONGODB_URI_PROD required for --source prod');
+    return uri;
+  }
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (!uri) throw new Error('MONGODB_URI required');
+  return uri;
+};
+
+const shouldIncludeUser = (dbUser) => {
+  const email = String(dbUser.email || '').trim().toLowerCase();
+  if (!email) return false;
+  if (!includeTest && isClerkMigrationExcludedEmail(email)) return false;
+  if (staffOnly) return isStaffEmail(email);
+  if (emailFilter) return email === emailFilter.trim().toLowerCase();
+  if (domainFilter) {
+    const escaped = domainFilter.replace(/\./g, '\\.');
+    return new RegExp(`@${escaped}$`, 'i').test(email);
+  }
+  return migrateAll;
+};
 
 const normalizePhone = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
@@ -70,6 +101,15 @@ const findClerkUserByEmail = async (email) => {
 const ensureOrgMembership = async (clerkUserId) => {
   if (!orgId) return { joined: false, reason: 'no org id' };
   try {
+    const list = await clerkClient.users.getOrganizationMembershipList({
+      userId: clerkUserId,
+      limit: 100,
+    });
+    const already = (list?.data || []).some(
+      (entry) => entry?.organization?.id === orgId || entry?.organizationId === orgId,
+    );
+    if (already) return { joined: true, reason: 'already member' };
+
     await clerkClient.organizations.createOrganizationMembership({
       organizationId: orgId,
       userId: clerkUserId,
@@ -81,6 +121,15 @@ const ensureOrgMembership = async (clerkUserId) => {
     if (/already/i.test(msg)) return { joined: true, reason: 'already member' };
     return { joined: false, reason: msg || 'org membership failed' };
   }
+};
+
+const syncClerkIdByEmail = async (uri, email, clerkUserId) => {
+  await mongoose.connect(uri);
+  await User.updateOne(
+    { email: email.trim().toLowerCase() },
+    { $set: { clerkId: clerkUserId } },
+  ).setOptions({ bypassTenant: true });
+  await mongoose.disconnect();
 };
 
 const migrateOne = async (dbUser) => {
@@ -133,8 +182,11 @@ const migrateOne = async (dbUser) => {
     try {
       clerkUser = await clerkClient.users.createUser(payload);
     } catch (err) {
-      const code = err?.errors?.[0]?.code || '';
-      if (code === 'unsupported_country_code' && payload.phoneNumber) {
+      const errors = err?.errors || [];
+      const isPhoneRejection = errors.some(
+        (e) => e?.code === 'unsupported_country_code' || e?.meta?.paramName === 'phone_number',
+      );
+      if (isPhoneRejection && payload.phoneNumber) {
         delete payload.phoneNumber;
         clerkUser = await clerkClient.users.createUser(payload);
       } else {
@@ -175,6 +227,30 @@ const migrateOne = async (dbUser) => {
   };
 };
 
+async function loadUsersFromSource(source) {
+  const uri = resolveMongoUri(source);
+  await mongoose.connect(uri);
+  let query = {};
+  if (emailFilter) {
+    query.email = emailFilter.trim().toLowerCase();
+  } else if (staffOnly) {
+    const domain = process.env.ALLOWED_DOMAIN || 'theshakticollective.in';
+    query.email = new RegExp(`@${domain.replace(/\./g, '\\.')}$`, 'i');
+  } else if (!migrateAll && domainFilter) {
+    query.email = new RegExp(`@${domainFilter.replace(/\./g, '\\.')}$`, 'i');
+  } else if (!migrateAll) {
+    await mongoose.disconnect();
+    return [];
+  }
+
+  const users = await User.find(query)
+    .select('+password email name clerkId phone role')
+    .setOptions({ bypassTenant: true })
+    .lean();
+  await mongoose.disconnect();
+  return users.filter(shouldIncludeUser).map((user) => ({ ...user, _source: source }));
+}
+
 async function main() {
   if (!process.env.CLERK_SECRET_KEY) {
     console.error('CLERK_SECRET_KEY required');
@@ -184,42 +260,64 @@ async function main() {
     console.error('Pass --password or set CLERK_INITIAL_PASSWORD when using --set-password');
     process.exit(1);
   }
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
-  if (!uri) {
-    console.error('MONGODB_URI required');
+
+  if (!emailFilter && !staffOnly && !migrateAll && !domainFilter) {
+    console.error('Pass --email, --domain, --staff-only, or --all');
     process.exit(1);
   }
 
-  await mongoose.connect(uri);
-
-  let query = {};
-  if (emailFilter) {
-    query.email = emailFilter.trim().toLowerCase();
-  } else if (!migrateAll && domainFilter) {
-    query.email = new RegExp(`@${domainFilter.replace(/\./g, '\\.')}$`, 'i');
-  } else if (!migrateAll) {
-    console.error('Pass --email, --domain, or --all');
+  if (!['local', 'prod', 'both'].includes(sourceArg)) {
+    console.error('--source must be local, prod, or both');
     process.exit(1);
   }
 
-  const users = await User.find(query)
-    .select('+password email name clerkId phone role')
-    .setOptions({ bypassTenant: true })
-    .lean();
+  const sources = sourceArg === 'both' ? ['local', 'prod'] : [sourceArg];
+  const byEmail = new Map();
+  for (const source of sources) {
+    const batch = await loadUsersFromSource(source);
+    for (const dbUser of batch) {
+      const key = String(dbUser.email || '').trim().toLowerCase();
+      if (!key) continue;
+      if (!byEmail.has(key)) byEmail.set(key, dbUser);
+    }
+  }
+
+  const users = [...byEmail.values()];
   if (!users.length) {
     console.log('No matching users in MongoDB');
-    await mongoose.disconnect();
     return;
   }
 
+  const primarySource = users[0]._source || sources[0];
+  await mongoose.connect(resolveMongoUri(primarySource));
+
   const results = [];
   for (const dbUser of users) {
+    const writeSource = dbUser._source || primarySource;
     try {
-      results.push(await migrateOne(dbUser));
+      if (writeSource !== primarySource) {
+        await mongoose.disconnect();
+        await mongoose.connect(resolveMongoUri(writeSource));
+      }
+      const outcome = await migrateOne(dbUser);
+      results.push({ ...outcome, source: writeSource });
+
+      if (outcome.status === 'ok' && outcome.clerkUserId && sourceArg === 'both') {
+        for (const mirrorSource of ['local', 'prod']) {
+          if (mirrorSource === writeSource) continue;
+          try {
+            await syncClerkIdByEmail(resolveMongoUri(mirrorSource), dbUser.email, outcome.clerkUserId);
+          } catch {
+            // ponytail: best-effort mirror clerkId across env DBs
+          }
+        }
+        await mongoose.connect(resolveMongoUri(writeSource));
+      }
     } catch (err) {
       results.push({
         email: dbUser.email,
         status: 'error',
+        source: writeSource,
         reason: err?.errors?.[0]?.message || err?.message || String(err),
       });
     }
@@ -230,8 +328,12 @@ async function main() {
       {
         dryRun,
         importPasswords,
+        staffOnly,
+        includeTest,
+        source: sourceArg,
         orgId: orgId || null,
         count: results.length,
+        joined: results.filter((r) => r.orgMembership?.joined).length,
         results,
       },
       null,

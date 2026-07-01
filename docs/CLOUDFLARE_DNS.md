@@ -1,6 +1,6 @@
 # Cloudflare DNS — CoreKnot subdomains
 
-**Current registrar DNS:** `tsccoreknot.com` uses **GoDaddy** nameservers (`domaincontrol.com`), not Cloudflare. Add subdomain CNAMEs at GoDaddy, or migrate the zone to Cloudflare then run `node scripts/provision-subdomain-dns.cjs`.
+**Current registrar DNS (verified 2026-07-01 via `nslookup -type=NS tsccoreknot.com`):** `tsccoreknot.com` uses **Cloudflare** nameservers (`lars.ns.cloudflare.com`, `jillian.ns.cloudflare.com`). The zone has migrated off GoDaddy since this doc was first written — add/edit records via the **Cloudflare dashboard** or `CLOUDFLARE_API_TOKEN` (see `.cursor/cloudflare-api.local.env.example`), not GoDaddy.
 
 Three Vercel projects serve the frontend:
 
@@ -11,6 +11,27 @@ Three Vercel projects serve the frontend:
 | `coreknot-auth` | repo root + `sites/auth/vercel.json` | `auth.tsccoreknot.com` |
 
 API stays on Render (not Cloudflare). Session cookies use `domain: .tsccoreknot.com`.
+
+## Clerk production Frontend API domain
+
+The production Clerk instance's Frontend API host is `clerk.tsccoreknot.com` (derived from the
+`pk_live_` publishable key). This is a **separate DNS record from the Vercel subdomains above** —
+add it manually in Cloudflare (no automation script covers this one, it's not a Vercel target):
+
+| Type | Name | Target | Proxy status |
+|------|------|--------|--------------|
+| `CNAME` | `clerk` | `frontend-api.clerk.services` | **DNS only** (grey cloud — required, orange-cloud proxying breaks Clerk's TLS/DNS validation) |
+
+Steps: Cloudflare dashboard → `tsccoreknot.com` zone → DNS → Records → Add record → paste the row
+above → save → click the orange cloud icon to toggle it to grey ("DNS only") before saving.
+
+If the Clerk Dashboard → **Domains** page also lists `accounts.tsccoreknot.com` and/or
+`clkmail`/`clk._domainkey` email records, copy those **exact** values from the dashboard (they are
+unique per Clerk instance — do not reuse the values above for them) and add them the same way,
+DNS-only.
+
+Verify after adding: `nslookup clerk.tsccoreknot.com` should resolve; Clerk Dashboard shows a green
+checkmark next to the record within a few minutes.
 
 ---
 

@@ -25,8 +25,6 @@ export default function ClerkAppProvider({ children }) {
       localization={clerkAuthLocalization}
       signInUrl="/login"
       signUpUrl="/register"
-      signInFallbackRedirectUrl="/dashboard"
-      signUpFallbackRedirectUrl="/dashboard"
       afterSignOutUrl="/login"
     >
       {children}

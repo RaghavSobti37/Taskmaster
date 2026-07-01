@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { buildProxyRequestHeaders } = require('../utils/proxyHeaders');
 
 const SERVICE_CONFIG = {
   holysheet: {
@@ -74,19 +75,7 @@ exports.handleProxyRequest = async (req, res) => {
 
     const targetUrl = buildTargetUrl(serviceConfig, servicePath);
     const params = cleanupQuery(req.query);
-    const headers = {
-      accept: 'application/json',
-      'content-type': 'application/json',
-      ...req.headers
-    };
-
-    // Remove sensitive headers that should not be forwarded
-    delete headers.host;
-    delete headers.cookie;
-    delete headers.authorization;
-    delete headers['content-length'];
-    delete headers.origin;
-    delete headers.referer;
+    const headers = buildProxyRequestHeaders(req.headers);
 
     if (serviceConfig.authType === 'header') {
       headers[serviceConfig.headerName] = serviceConfig.apiKey;

@@ -32,6 +32,12 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
+      - key: COREKNOT_DEPLOY_TIER
+        value: production
+      - key: JSON_BODY_LIMIT
+        value: 50mb
+      - key: CORS_ALLOW_VERCEL_PREVIEWS
+        value: "false"
       - key: LOG_LEVEL
         value: warn
       - key: MONGODB_URI_PROD
@@ -98,6 +104,14 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
+      - key: COREKNOT_DEPLOY_TIER
+        value: staging
+      - key: JSON_BODY_LIMIT
+        value: 50mb
+      - key: CORS_ALLOW_VERCEL_PREVIEWS
+        value: "true"
+      - key: QA_INTEGRATION_PROBE_ENABLED
+        value: "true"
       - key: LOG_LEVEL
         value: info
       - key: MONGODB_URI

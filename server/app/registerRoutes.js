@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const { createRouteHandler } = require('uploadthing/express');
 const { uploadRouter } = require('../config/uploadthing');
 const { config } = require('../config');
@@ -12,6 +14,19 @@ const { apiOk, apiError } = require('../utils/apiResponse');
 const { uploadRateLimit } = require('../middleware/rateLimits');
 const { protectUploadthingClient } = require('../middleware/uploadthingAuth');
 const { apiIdempotency } = require('../middleware/apiIdempotency');
+
+const crmUnsubscribeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many unsubscribe requests. Try again later.' },
+  keyGenerator: (req) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    if (email) return `crm-unsub:${email}`;
+    return `crm-unsub-ip:${ipKeyGenerator(req)}`;
+  },
+});
 
 /** Domain mount prefixes — used by startup banner. */
 const API_DOMAINS = [
@@ -83,11 +98,16 @@ function registerRoutes(app) {
 
   // --- Webhooks & tracking (public, rate-limited) ---
   app.use(require('../routes/track'));
-  app.post('/api/crm/unsubscribe', asyncHandler(async (req, res) => {
+  app.post('/api/crm/unsubscribe', crmUnsubscribeLimiter, asyncHandler(async (req, res) => {
     const { email, reason } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email required' });
-    const Lead = require('../domains/crm/models/Lead');
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email required' });
+    }
     const cleanEmail = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+    const Lead = require('../domains/crm/models/Lead');
     const leadDoc = await Lead.findOne({ email: cleanEmail });
     const leadName = leadDoc ? leadDoc.name : '';
     await Lead.updateMany(

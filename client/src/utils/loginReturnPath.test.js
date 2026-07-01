@@ -25,4 +25,11 @@ describe('resolveLoginReturnPath', () => {
     expect(resolveLoginReturnPath({ storedReturnPath: '/todo' })).toBe('/todo');
     expect(resolveLoginReturnPath({})).toBe('/dashboard');
   });
+
+  it('never returns marketing or root paths after login', () => {
+    expect(resolveLoginReturnPath({ storedReturnPath: '/' })).toBe('/dashboard');
+    expect(resolveLoginReturnPath({ storedReturnPath: '/landing' })).toBe('/dashboard');
+    expect(resolveLoginReturnPath({ search: '?redirect=/landing' })).toBe('/dashboard');
+    expect(resolveLoginReturnPath({ stateFrom: { pathname: '/login' } })).toBe('/dashboard');
+  });
 });

@@ -17,7 +17,7 @@ const readArg = (flag, fallback) => {
   return fallback;
 };
 
-const orgId = readArg('--org-id', process.env.CLERK_ORGANIZATION_ID || 'org_3FtSYDXVVjJQPtOg8LqhPYdeEdH');
+const orgId = readArg('--org-id', process.env.CLERK_ORGANIZATION_ID || '');
 const slug = readArg('--slug', process.env.PLATFORM_TENANT_SLUG || 'theshakticollective');
 const allowedEmailDomain = readArg('--domain', process.env.ALLOWED_DOMAIN || 'theshakticollective.in');
 const tenantName = readArg('--name', 'The Shakti Collective');

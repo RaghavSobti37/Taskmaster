@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
-import { Badge, Button, Input, ListPageLayout, PageSkeleton, SearchInput, EmptyState } from '../../components/ui';
+import { Button, Input, ListPageLayout, PageSkeleton, SearchInput, EmptyState, StatusBadge } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
@@ -12,10 +12,10 @@ const formatMs = (ms = 0) => {
   return `${(ms / 1000).toFixed(2)}s`;
 };
 
-const SAFETY_VARIANT = {
-  safe: 'success',
-  caution: 'warning',
-  danger: 'danger',
+const SAFETY_ROLE = {
+  safe: 'positive',
+  caution: 'advisory',
+  danger: 'error',
 };
 
 const SAFETY_LABEL = {
@@ -136,14 +136,14 @@ const AdminScriptsPage = () => {
         <code className="text-[10px] font-mono">server/config/adminScriptsCatalog.js</code> to add or remove.
       </p>
 
-      <section className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-4 space-y-3">
+      <section className="tm-stat-shell p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Layers size={16} className="text-[var(--color-brand-teal)]" />
             <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Background queues</h2>
-            <Badge variant={queueStatus?.redisAvailable ? 'success' : 'warning'}>
+            <StatusBadge role={queueStatus?.redisAvailable ? 'positive' : 'advisory'}>
               {queueStatus?.redisAvailable ? 'Redis' : 'Memory fallback'}
-            </Badge>
+            </StatusBadge>
           </div>
           <Button size="sm" variant="secondary" onClick={() => refetchQueues()} disabled={queuesFetching}>
             {queuesFetching ? 'Refreshing...' : 'Refresh queues'}
@@ -159,9 +159,9 @@ const AdminScriptsPage = () => {
               <div key={q.name} className="rounded-lg border border-[var(--color-bg-border)] p-3">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-xs font-bold font-mono text-[var(--color-text-primary)]">{q.name}</span>
-                  <Badge variant="info">waiting {q.waiting}</Badge>
-                  <Badge variant="info">active {q.active}</Badge>
-                  <Badge variant={q.failed > 0 ? 'danger' : 'success'}>failed {q.failed}</Badge>
+                  <StatusBadge status="active">waiting {q.waiting}</StatusBadge>
+                  <StatusBadge status="in use">active {q.active}</StatusBadge>
+                  <StatusBadge status={q.failed > 0 ? 'error' : 'positive'}>failed {q.failed}</StatusBadge>
                 </div>
                 {q.recentFailed?.length > 0 && (
                   <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
@@ -200,14 +200,14 @@ const AdminScriptsPage = () => {
                   const isRunning = runningId === script.id;
 
                   return (
-                    <div key={script.id} className="p-4 space-y-3 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+                    <div key={script.id} className="tm-stat-shell p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-sm font-black uppercase tracking-wider">{script.title}</h3>
-                            <Badge variant={SAFETY_VARIANT[script.safety] || 'secondary'}>
+                            <StatusBadge role={SAFETY_ROLE[script.safety] || 'neutral'}>
                               {SAFETY_LABEL[script.safety] || script.safety}
-                            </Badge>
+                            </StatusBadge>
                           </div>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">{script.description}</p>
                           <p className="text-[10px] font-mono text-[var(--color-text-muted)] mt-2 break-all">
@@ -216,10 +216,10 @@ const AdminScriptsPage = () => {
                         </div>
                         <Button
                           size="sm"
+                          variant="secondary"
                           onClick={() => runScript(script.id)}
                           disabled={!!runningId}
                           className="shrink-0"
-                          variant={script.safety === 'danger' ? 'danger' : 'primary'}
                         >
                           <Play size={12} />
                           {isRunning ? 'Running...' : 'Run'}
@@ -229,9 +229,9 @@ const AdminScriptsPage = () => {
                       {result && (
                         <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] p-3 space-y-2 bg-[var(--color-bg-workspace)]">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={result.ok ? 'success' : 'danger'}>
+                            <StatusBadge status={result.ok ? 'positive' : 'error'}>
                               {result.ok ? 'Success' : 'Failed'}
-                            </Badge>
+                            </StatusBadge>
                             <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
                               exit {result.exitCode ?? '-'}
                             </span>

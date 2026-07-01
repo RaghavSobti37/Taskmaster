@@ -37,6 +37,49 @@ export function useIsDesktop() {
   return width >= DESKTOP_MIN;
 }
 
+/** Touch-primary device — excludes hybrid laptops (fine pointer + hover). */
+export function isTouchPrimaryDevice() {
+  if (typeof window === 'undefined') return false;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const fineHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  return coarse && !fineHover;
+}
+
+/** Mobile pull-to-refresh: touch-primary AND not desktop layout width. */
+export function shouldEnablePullToRefresh() {
+  if (typeof window === 'undefined') return false;
+  if (isPwaDesktop()) return false;
+  if (window.innerWidth >= DESKTOP_MIN) return false;
+  return isTouchPrimaryDevice();
+}
+
+/** Primary input is touch (phone/tablet) — not mouse/trackpad desktop. */
+export function useIsCoarsePointer() {
+  const [isCoarse, setIsCoarse] = useState(() => isTouchPrimaryDevice());
+
+  useEffect(() => {
+    const coarseMq = window.matchMedia('(pointer: coarse)');
+    const fineMq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const onChange = () => setIsCoarse(isTouchPrimaryDevice());
+    onChange();
+    coarseMq.addEventListener('change', onChange);
+    fineMq.addEventListener('change', onChange);
+    return () => {
+      coarseMq.removeEventListener('change', onChange);
+      fineMq.removeEventListener('change', onChange);
+    };
+  }, []);
+
+  return isCoarse;
+}
+
+/** True when pull-to-refresh should mount (mobile layout + touch-primary). */
+export function usePullToRefreshEnabled() {
+  const isDesktop = useIsDesktop();
+  const isTouch = useIsCoarsePointer();
+  return !isDesktop && isTouch;
+}
+
 /** Dev helper: warn when elements exceed viewport width */
 function auditHorizontalOverflow() {
   if (import.meta.env.PROD) return;

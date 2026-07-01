@@ -89,17 +89,15 @@ export const FullScreenWorkspace = ({
           </div>
 
           <div className={`flex-1 flex overflow-hidden ${sidebar ? 'flex-col lg:flex-row' : 'flex-col'}`}>
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar bg-[var(--color-bg-surface)]">
+            <div className="flex-1 lg:w-[65%] min-w-0 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar bg-[var(--color-bg-surface)]">
               <div className={`${mainClassName} ${centerMain ? 'mx-auto' : 'w-full'} space-y-6`}>
                 {children}
               </div>
             </div>
 
             {sidebar ? (
-              <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[var(--color-bg-border)] bg-[var(--color-bg-workspace-sidebar)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
-                <div className="space-y-6">
-                  {sidebar}
-                </div>
+              <aside className="w-full lg:w-[35%] lg:max-w-[480px] shrink-0 border-t lg:border-t-0 lg:border-l border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
+                {sidebar}
               </aside>
             ) : null}
           </div>

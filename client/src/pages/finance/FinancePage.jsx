@@ -769,7 +769,6 @@ const FinancePage = () => {
 
   return (
     <ListPageLayout
-      maxWidth="1400px"
       containerClassName="!py-4"
       toolbarFill
       overview={financeOverview}

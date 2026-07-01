@@ -1,5 +1,4 @@
 import React from 'react';
-import { PageContainer } from './primitives';
 import DataOverviewSection from './DataOverviewSection';
 import DataInsightsLayout from './DataInsightsLayout';
 import PageToolbar from './PageToolbar';
@@ -25,13 +24,12 @@ export default function ListPageLayout({
   children,
   className = '',
   containerClassName = '',
-  maxWidth,
   overviewMobileCollapsed = true,
   overviewMobileMaxStats = 2,
   mobileFilterCount,
   filterSheetTitle,
   filterFields,
-  toolbarFill = false,
+  toolbarFill,
   activeFilterChips,
   onActiveFilterRemove,
   onActiveFiltersClear,
@@ -39,6 +37,7 @@ export default function ListPageLayout({
   queryError,
   queryErrorFallback = 'Failed to load data',
   onQueryRetry,
+  header,
 }) {
   const hasInsights =
     insights &&
@@ -53,10 +52,14 @@ export default function ListPageLayout({
   const backLeading = backTo ? <AdminConsoleBackButton to={backTo} /> : null;
   const showOverviewTitleRow = backTo && hasTopAnalytics;
   const resolvedSearchBar = searchBar ?? mobileSearch;
+  const resolvedToolbarFill = toolbarFill ?? Boolean(resolvedSearchBar);
+
+  const shellClass = `tm-page-container min-w-0 w-full overflow-x-clip ${containerClassName}`.trim();
 
   return (
-    <PageContainer className={containerClassName} maxWidth={maxWidth}>
+    <div className={shellClass}>
       <div className={`list-page-stack ${className}`.trim()}>
+        {header}
         {showOverviewTitleRow && (
           <div className="flex items-center gap-2 min-w-0">
             {backLeading}
@@ -105,7 +108,7 @@ export default function ListPageLayout({
             mobileSearch={resolvedSearchBar}
             mobileFilterCount={mobileFilterCount}
             filterSheetTitle={filterSheetTitle}
-            toolbarFill={toolbarFill}
+            toolbarFill={resolvedToolbarFill}
             filtersInPanel={filtersInPanel}
             filterFields={filterFields}
             onFilterClear={onActiveFiltersClear}
@@ -122,6 +125,6 @@ export default function ListPageLayout({
         )}
         <div className="list-page-workspace">{children}</div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

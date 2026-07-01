@@ -48,7 +48,7 @@ const SearchInput = ({
   if (variant === 'toolbar') {
     return (
       <div
-        className={`tm-toolbar-field tm-toolbar-search flex flex-col gap-1.5 min-w-[10rem] w-[12rem] max-w-[16rem] shrink-0 ${className}`}
+        className={`tm-toolbar-field tm-toolbar-search flex flex-col gap-1.5 min-w-0 ${className}`}
         data-toolbar-field=""
       >
         {label ? (
@@ -56,7 +56,7 @@ const SearchInput = ({
         ) : null}
         <div
           ref={wrapRef}
-          className={`t-clear relative min-w-0 ${value ? 'has-value' : ''}`}
+          className={`t-clear relative min-w-0 w-full ${value ? 'has-value' : ''}`}
         >
           <Search
             size={14}

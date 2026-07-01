@@ -101,7 +101,6 @@ const ProjectFinanceTable = ({ docs, isLoading, onViewDoc, onDeleteDoc, confirm 
       getRowId={(row) => row._id}
       emptyTitle="No finance records for this project"
       emptyDescription="Upload invoices and receipts for this project to see them here."
-      tableMaxHeight="60vh"
     />
   );
 };

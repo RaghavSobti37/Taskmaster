@@ -1,6 +1,6 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo, useState } from 'react';
-import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { PageContainer, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE, QueryErrorBanner, getQueryErrorMessage, StatusBadge } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
 import { useLiveLeads } from '../../hooks/useTaskmasterQueries';
 import { crmQueryParamsForUser } from '../../utils/crmScope';
@@ -47,7 +47,7 @@ export default function ArtistBookingEnquiriesPage() {
     {
       header: 'Artist',
       render: (row) => (
-        <Badge variant="info">{row.artistProject || row.metadata?.artist || '—'}</Badge>
+        <StatusBadge status="active">{row.artistProject || row.metadata?.artist || '—'}</StatusBadge>
       ),
     },
     {
@@ -61,9 +61,9 @@ export default function ArtistBookingEnquiriesPage() {
     {
       header: 'Status',
       render: (row) => (
-        <Badge variant={row.callStatus === 'Scheduled' ? 'warning' : 'slate'}>
+        <StatusBadge status={row.callStatus === 'Scheduled' ? 'advisory' : 'neutral'}>
           {(row.callStatus || row.leadStatus || 'New').toUpperCase()}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {

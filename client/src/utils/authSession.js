@@ -1,4 +1,4 @@
-/** Set before logout redirect so the next page load skips /api/auth/me until cookie is cleared. */
+/** Set before logout redirect so the next page load skips session probe until cookie is cleared. */
 export const FORCE_LOGOUT_KEY = 'coreknot_force_logout';
 
 export function markForceLogout() {

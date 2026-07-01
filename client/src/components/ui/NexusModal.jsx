@@ -73,46 +73,58 @@ export const NexusModal = ({
   const config = typeConfig[type] || typeConfig.info;
   const Icon = config.icon;
 
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (isConfirm) {
+      onConfirm?.();
+      onClose();
+      return;
+    }
+    onClose();
+  };
+
   return (
     <ModalShell isOpen={isOpen} onClose={onClose} size={shellSize}>
-      <ModalHeader
-        title={title}
-        subtitle={subtitle}
-        subtitleFirst={subtitleFirst}
-        prominentTitle={prominentTitle}
-        onClose={onClose}
-        icon={Icon}
-        iconStyle={{ background: config.bg, color: config.color }}
-      />
-      <ModalBody className={bodyClassName}>
-        {message && (
-          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{message}</p>
-        )}
-        {children}
-      </ModalBody>
-      {footer != null ? (
-        footer
-      ) : showFooter ? (
-        <ModalFooter>
-          {isConfirm ? (
-            <>
-              <Button size="sm" variant="ghost" onClick={onClose}>{cancelLabel}</Button>
-              <Button
-                size="sm"
-                variant={type === 'danger' ? 'danger' : 'primary'}
-                onClick={() => {
-                  onConfirm?.();
-                  onClose();
-                }}
-              >
-                {confirmLabel}
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="primary" onClick={onClose}>Acknowledged</Button>
+      <form className="flex flex-col flex-1 min-h-0 overflow-hidden" onSubmit={handleFormSubmit}>
+        <ModalHeader
+          title={title}
+          subtitle={subtitle}
+          subtitleFirst={subtitleFirst}
+          prominentTitle={prominentTitle}
+          onClose={onClose}
+          icon={Icon}
+          iconStyle={{ background: config.bg, color: config.color }}
+        />
+        <ModalBody className={bodyClassName}>
+          {message && (
+            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{message}</p>
           )}
-        </ModalFooter>
-      ) : null}
+          {children}
+        </ModalBody>
+        {footer != null ? (
+          footer
+        ) : showFooter ? (
+          <ModalFooter>
+            {isConfirm ? (
+              <>
+                <Button type="button" size="sm" variant="ghost" onClick={onClose}>{cancelLabel}</Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant={type === 'danger' ? 'danger' : 'primary'}
+                  data-modal-primary
+                >
+                  {confirmLabel}
+                </Button>
+              </>
+            ) : (
+              <Button type="submit" size="sm" variant="primary" data-modal-primary>
+                Acknowledged
+              </Button>
+            )}
+          </ModalFooter>
+        ) : null}
+      </form>
     </ModalShell>
   );
 };

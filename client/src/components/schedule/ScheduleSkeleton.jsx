@@ -29,7 +29,7 @@ const ScheduleSkeleton = ({
         </div>
       )}
 
-      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)]">
+      <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)]">
         <table className="w-full min-w-[640px] text-xs">
           {!hideTableHeader && (
             <thead>

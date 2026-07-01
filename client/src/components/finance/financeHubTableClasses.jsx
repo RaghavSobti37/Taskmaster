@@ -15,7 +15,6 @@ export const FINANCE_TABLE_PROPS = {
   density: 'comfortable',
   className: 'finance-hub-table',
   rowEstimateSize: 52,
-  tableMaxHeight: '70vh',
   virtualize: false,
   paginated: false,
 };

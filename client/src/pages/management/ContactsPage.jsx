@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Contact } from 'lucide-react';
 import ListPageLayout from '../../components/ui/ListPageLayout';
-import PageSkeleton from '../../components/ui/PageSkeleton';
+import ListPageSkeleton from '../../components/ui/ListPageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
 import ContactMobileRow from '../../components/office/ContactMobileRow';
@@ -146,7 +146,7 @@ const ContactsPage = () => {
     []
   );
 
-  if (isLoading && !contacts.length) return <PageSkeleton />;
+  if (isLoading && !contacts.length) return <ListPageSkeleton statCount={3} />;
 
   return (
     <ListPageLayout

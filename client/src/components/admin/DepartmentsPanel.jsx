@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, Trash2, FileText, BarChart3, Pencil, Plus } from 'lucide-react';
-import { Button, Input, Badge } from '../ui';
+import { Button, Input, Badge, EmptyState, PageHeader } from '../ui';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';
 import {
   useCreateDepartment,
@@ -136,31 +136,31 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
     <>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-4 lg:gap-6">
         <section className="space-y-3 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Departments</h2>
-              <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                Org groups with page-access presets — assign users from the Users admin page.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setTeamReportOpen(true)}
-                className="font-black uppercase text-[10px]"
-              >
-                <BarChart3 size={14} className="mr-1" />
-                Team report
-              </Button>
-              <Button size="sm" onClick={() => setAddOpen(true)} className="font-black uppercase text-[10px]">
-                <Plus size={14} className="mr-1" />
-                Add department
-              </Button>
-            </div>
-          </div>
+          <PageHeader
+            icon={Building2}
+            title="Departments"
+            description="Org groups with page-access presets — assign users from the Users admin page."
+            showTitle
+            actions={(
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setTeamReportOpen(true)}
+                  className="font-black uppercase text-[10px]"
+                >
+                  <BarChart3 size={14} className="mr-1" aria-hidden />
+                  Team report
+                </Button>
+                <Button size="sm" onClick={() => setAddOpen(true)} className="font-black uppercase text-[10px]">
+                  <Plus size={14} className="mr-1" aria-hidden />
+                  Add department
+                </Button>
+              </>
+            )}
+          />
 
-          <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden bg-[var(--color-bg-primary)]">
+          <div className="border border-[var(--color-bg-border)] rounded-[10px] overflow-hidden bg-[var(--color-bg-primary)]">
             <div className="hidden md:grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] gap-3 px-4 py-2 bg-[var(--color-bg-secondary)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
               <span>Name</span>
               <span>Page access</span>
@@ -169,11 +169,14 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
             </div>
 
             {departments.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <Building2 size={28} className="mx-auto mb-2 text-[var(--color-text-muted)] opacity-40" />
-                <p className="text-[11px] font-bold text-[var(--color-text-muted)]">No departments yet</p>
-                <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Add one to group users and preset page access.</p>
-              </div>
+              <EmptyState
+                icon={Building2}
+                title="No departments yet"
+                description="Add one to group users and preset page access."
+                variant="compact"
+                actionLabel="Add department"
+                onAction={() => setAddOpen(true)}
+              />
             ) : (
               departments.map((dept) => {
                 const count = memberCounts[dept._id] || 0;
@@ -406,7 +409,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
           <Button
             type="button"
             size="sm"
-            variant="success"
+            variant="primary"
             onClick={handleSavePermissions}
             disabled={!hasPermissionEdits || updateMutation.isPending}
           >

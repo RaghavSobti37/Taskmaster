@@ -15,9 +15,11 @@ const envSchema = z.object({
   TRACKING_BASE_URL: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   CORS_ALLOW_VERCEL_PREVIEWS: z.string().optional(),
+  COREKNOT_DEPLOY_TIER: z.enum(['production', 'staging', 'development']).optional(),
   PERF_LOG_ENABLED: z.string().optional(),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   JWT_SECRET: z.string().optional(),
+  JSON_BODY_LIMIT: z.string().optional(),
 }).passthrough().superRefine((data, ctx) => {
   if (data.NODE_ENV === 'production' && !data.JWT_SECRET?.trim()) {
     ctx.addIssue({

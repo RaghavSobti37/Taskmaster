@@ -16,15 +16,17 @@ export default function AssetsHubLayout() {
   }
 
   return (
-    <div className="py-4 space-y-4">
-      <ModuleSubnav
-        title={meta.label}
-        titleIcon={meta.icon}
-        items={ASSETS_SUBNAV_ITEMS}
-        mode="route"
-        ariaLabel="Assets hub sections"
-      />
-      <div className="min-w-0">
+    <div className="hub-page-stack min-w-0 lg:h-full lg:flex lg:flex-col">
+      <div className="tm-hub-header shrink-0 min-w-0">
+        <ModuleSubnav
+          title={meta.label}
+          titleIcon={meta.icon}
+          items={ASSETS_SUBNAV_ITEMS}
+          mode="route"
+          ariaLabel="Assets hub sections"
+        />
+      </div>
+      <div className="min-w-0 flex-1">
         <Outlet />
       </div>
     </div>

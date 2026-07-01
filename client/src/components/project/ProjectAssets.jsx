@@ -117,7 +117,7 @@ const ProjectAssets = ({ projectId }) => {
         </Button>
       </div>
 
-      <div className="overflow-x-auto border-t border-[var(--color-bg-border)]">
+      <div className="border-t border-[var(--color-bg-border)]">
         <table className="w-full text-left border-collapse">
           <thead className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
             <tr>

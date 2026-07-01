@@ -536,7 +536,7 @@ const AttendancePage = () => {
                   onEdit={openEditModal}
                 />
               </div>
-              <div className="lg:hidden -mx-1 overflow-x-auto">
+              <div className="lg:hidden -mx-1">
                 <MonthlyAttendanceGrid
                   month={monthView}
                   onMonthChange={setMonthView}
@@ -561,7 +561,7 @@ const AttendancePage = () => {
                 isLoading={isLoading}
                 usersLoading={usersLoading}
               />
-              <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)]">
+              <div className="hidden lg:block border border-[var(--color-bg-border)]">
                 <table className="min-w-full text-xs">
                   <thead className="bg-[var(--color-bg-primary)]">
                     <tr>

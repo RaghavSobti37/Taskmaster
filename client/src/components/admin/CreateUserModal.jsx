@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { UserPlus, Copy, Check, RefreshCw } from 'lucide-react';
+import { UserPlus, Copy, Check, RefreshCw, CalendarDays } from 'lucide-react';
 import { Button, Input } from '../ui';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';;
 import { formatUserCredentialsForCopy } from '../../utils/passwordValidation';
+import { parseDobInput } from '../../utils/dateDisplay';
 
 const EMPTY_FORM = {
   name: '',
@@ -34,12 +35,17 @@ const CreateUserModal = ({ isOpen, onClose, departments = [], onCreate, isPendin
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const dobParsed = parseDobInput(form.dateOfBirth);
+    if (!dobParsed.ok) {
+      setError(dobParsed.error);
+      return;
+    }
     try {
       const result = await onCreate({
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        dateOfBirth: form.dateOfBirth || null,
+        dateOfBirth: dobParsed.value,
         departmentId: form.departmentId || null,
         gender: form.gender,
       });
@@ -121,8 +127,11 @@ const CreateUserModal = ({ isOpen, onClose, departments = [], onCreate, isPendin
               placeholder="+91 …"
             />
             <Input
-              type="date"
+              type="text"
+              inputMode="numeric"
               label="Date of birth (optional)"
+              placeholder="DD/MM/YYYY"
+              icon={CalendarDays}
               value={form.dateOfBirth}
               onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
             />

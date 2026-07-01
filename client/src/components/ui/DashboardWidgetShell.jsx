@@ -18,7 +18,7 @@ export default function DashboardWidgetShell({
 
   return (
     <Card
-      className={`dashboard-widget p-0 flex flex-col ${className} ${
+      className={`dashboard-widget tm-stat-shell p-0 flex flex-col border-0 ${className} ${
         expandContent ? '!h-auto !min-h-0 !overflow-visible' : 'h-full min-h-0 overflow-hidden'
       }`}
     >

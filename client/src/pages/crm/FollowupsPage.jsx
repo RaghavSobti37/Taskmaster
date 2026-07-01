@@ -5,7 +5,6 @@ import {
   Search, RefreshCw, Clock, Target, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send, History
 } from 'lucide-react';
 import { 
-  Badge, 
   Card, 
   DataTable, 
   Button, 
@@ -17,6 +16,8 @@ import {
   UserLabel,
   QueryErrorBanner,
   getQueryErrorMessage,
+  StatusBadge,
+  Badge,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { crmQueryParamsForUser } from '../../utils/crmScope';
@@ -343,9 +344,9 @@ export default function FollowupsPage() {
       header: 'Interest Level',
       sortKey: 'leadStatus',
       render: (row) => (
-        <Badge variant={row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'info'}>
+        <StatusBadge status={row.leadStatus === 'Hot' ? 'error' : row.leadStatus === 'Warm' ? 'advisory' : 'active'}>
           {row?.leadStatus}
-        </Badge>
+        </StatusBadge>
       )
     },
     {
@@ -509,17 +510,17 @@ export default function FollowupsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold">Stage</span>
-                  <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'mint' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
+                  <StatusBadge status={selectedLead?.leadStatus === 'Converted' ? 'converted' : 'active'}>{selectedLead?.leadStatus || 'Fresh'}</StatusBadge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold">Call Status</span>
-                  <Badge variant="neutral">{selectedLead?.callStatus || 'Pending'}</Badge>
+                  <StatusBadge status="neutral">{selectedLead?.callStatus || 'Pending'}</StatusBadge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold">Meaningful Connect</span>
-                  <Badge variant={meaningfulConnectBadgeVariant(selectedLead?.meaningfulConnect)}>
+                  <StatusBadge status={meaningfulConnectBadgeVariant(selectedLead?.meaningfulConnect)}>
                     {formatMeaningfulConnect(selectedLead?.meaningfulConnect).toUpperCase()}
-                  </Badge>
+                  </StatusBadge>
                 </div>
                 {selectedLead?.nextFollowupDate && (
                   <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">

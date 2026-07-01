@@ -29,6 +29,9 @@ export function summarizeRouteError(error) {
   if (/\b401\b|\b403\b|unauthorized|forbidden/i.test(lower)) {
     return 'You may not have permission to view this content.';
   }
+  if (/is not a function|cannot read propert|undefined is not an object/i.test(msg)) {
+    return 'This page hit an unexpected error. Refresh to try again.';
+  }
   if (msg && msg.length <= 120 && !msg.includes('\n') && !/^error:/i.test(msg)) {
     return msg;
   }

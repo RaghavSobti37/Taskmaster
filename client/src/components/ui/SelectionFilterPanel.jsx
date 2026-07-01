@@ -135,7 +135,7 @@ export function FilterToolbarButton({ activeCount = 0, onClick, className = '' }
       type="button"
       onClick={onClick}
       data-filter-toolbar-button
-      className={`relative shrink-0 flex items-center gap-1.5 px-3 min-h-[44px] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)]/40 transition-colors ${className}`}
+      className={`relative shrink-0 flex items-center gap-1.5 px-3 min-h-[44px] lg:h-9 lg:min-h-[2.25rem] lg:max-h-[2.25rem] box-border rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)]/40 transition-colors ${className}`}
     >
       <SlidersHorizontal size={16} aria-hidden />
       Filters

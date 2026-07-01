@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isAriaModalOpen } from '../lib/escapeBack';
 
 export const PTR_THRESHOLD = 72;
 export const PTR_MAX_PULL = 120;
@@ -6,10 +7,6 @@ export const PTR_MAX_PULL = 120;
 function getScrollTop(scrollEl) {
   if (scrollEl) return scrollEl.scrollTop;
   return window.scrollY || document.documentElement.scrollTop || 0;
-}
-
-function isModalOpen() {
-  return Boolean(document.querySelector('[aria-modal="true"]'));
 }
 
 function isNestedScrollerAtTop(target, scrollRoot) {
@@ -72,7 +69,7 @@ export function usePullToRefresh({ enabled = true, onRefresh, getScrollElement }
     if (!enabled || !onRefresh) return undefined;
 
     const onTouchStart = (e) => {
-      if (refreshingRef.current || isModalOpen()) return;
+      if (refreshingRef.current || isAriaModalOpen()) return;
       const scrollEl = getScrollElementRef.current?.() ?? null;
       const scrollTop = getScrollTop(scrollEl);
       if (scrollTop > 2) return;

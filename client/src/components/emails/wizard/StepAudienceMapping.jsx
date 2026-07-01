@@ -390,7 +390,7 @@ export default function StepAudienceMapping({
       {previewRows.length > 0 && (
         <div className="space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Preview (first 5 rows)</p>
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
+          <div className="rounded-xl border border-[var(--color-bg-border)]">
             <table className="w-full text-xs">
               <thead className="bg-[var(--color-bg-secondary)]">
                 <tr>

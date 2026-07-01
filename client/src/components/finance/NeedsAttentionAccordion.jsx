@@ -35,7 +35,7 @@ export default function NeedsAttentionAccordion({
 
       {open && (
         <>
-          <div className="hidden lg:block overflow-x-auto">
+          <div className="hidden lg:block">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-amber-500/10">

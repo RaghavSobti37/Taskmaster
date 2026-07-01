@@ -19,6 +19,7 @@ import {
   bindingMatchesSequenceComplete,
 } from '../lib/keyboardShortcuts';
 import { filterActionsByPageAccess } from '../utils/navPageAccess';
+import { useEscapeBack } from '../hooks/useEscapeBack';
 
 export function KeyboardShortcutsProvider({ children }) {
   const navigate = useNavigate();
@@ -90,6 +91,10 @@ export function KeyboardShortcutsProvider({ children }) {
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     flashTimerRef.current = setTimeout(() => setGChordFlash(null), 1200);
   }, []);
+
+  useEscapeBack({
+    blocked: () => paletteOpen || helpOpen || gChordPending,
+  });
 
   const executeAction = useCallback((action) => {
     if (!action) return;

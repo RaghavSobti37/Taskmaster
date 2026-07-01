@@ -214,7 +214,7 @@ const ProjectList = ({
 
   return (
     <div className="space-y-6">
-      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+      <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
         <table className="w-full text-left border-collapse">
           {TABLE_HEAD}
           <tbody>
@@ -238,7 +238,7 @@ const ProjectList = ({
       </div>
 
       {totalDoneCount > 0 && (
-        <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+        <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
           <div className="px-4 py-2 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
               Completed Tasks ({totalDoneCount})

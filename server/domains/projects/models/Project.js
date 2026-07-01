@@ -28,7 +28,7 @@ const projectSchema = new mongoose.Schema({
     calendarId: { type: String, default: 'primary' }
   }],
   color: { type: String, default: '#3b82f6' },
-  workspace: { type: String, default: 'General', index: true },
+  workspace: { type: String, default: 'General' },
   starred: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 }, { 

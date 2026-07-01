@@ -1,7 +1,9 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
 import { Music, Mail, MapPin, Calendar } from 'lucide-react';
-import { Badge, Card } from '../ui/primitives';
+import { Card } from '../ui/primitives';
+import EmptyState from '../ui/EmptyState';
+import StatusBadge from '../ui/StatusBadge';
 import { displayRespondentName, displayStageBadge } from '../../utils/artistPathDisplay';
 
 function formatDate(d) {
@@ -26,11 +28,11 @@ export default function ArtistPathCardGrid({ people = [], onSelect, loading }) {
 
   if (!people.length) {
     return (
-      <div className="text-center py-16 text-[var(--color-text-muted)]">
-        <Music size={32} className="mx-auto mb-3 opacity-40" />
-        <p className="text-sm font-medium">No Artist Path respondents yet</p>
-        <p className="text-xs mt-1">Submissions appear here via website webhook, or use Sync from Sheet to backfill</p>
-      </div>
+      <EmptyState
+        icon={Music}
+        title="No Artist Path respondents yet"
+        description="Submissions appear here via website webhook, or use Sync from Sheet to backfill"
+      />
     );
   }
 
@@ -58,9 +60,9 @@ export default function ArtistPathCardGrid({ people = [], onSelect, loading }) {
                   {displayName}
                 </h3>
                 {stageBadge && (
-                  <Badge variant="mint" className="shrink-0 text-[9px] max-w-[40%] truncate">
+                  <StatusBadge status="positive" className="shrink-0 text-[9px] max-w-[40%] truncate">
                     {stageBadge}
-                  </Badge>
+                  </StatusBadge>
                 )}
               </div>
               {person.email && (
@@ -78,7 +80,7 @@ export default function ArtistPathCardGrid({ people = [], onSelect, loading }) {
                   <Calendar size={10} /> {formatDate(person.lastActivityAt)}
                 </span>
                 {(person.artistPathResponseCount ?? 0) > 1 && (
-                  <Badge variant="neutral">{person.artistPathResponseCount} responses</Badge>
+                  <StatusBadge status="neutral">{person.artistPathResponseCount} responses</StatusBadge>
                 )}
               </div>
             </Card>

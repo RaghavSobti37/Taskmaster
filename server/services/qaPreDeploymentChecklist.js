@@ -250,7 +250,7 @@ async function runCorsChecks() {
       'Vercel preview origins allowed with opt-out',
       vercelGated ? 'pass' : 'fail',
       vercelGated
-        ? '*.vercel.app allowed by default; set CORS_ALLOW_VERCEL_PREVIEWS=false to block'
+        ? '*.vercel.app allowed on staging/dev; blocked on strict production unless CORS_ALLOW_VERCEL_PREVIEWS=true'
         : 'Expected allowVercelPreviews helper for *.vercel.app origins',
       'server.js corsOptions',
       'high'

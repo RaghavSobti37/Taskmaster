@@ -93,7 +93,7 @@ export default function DataOverviewSection({
     <section ref={sectionRef} className={`data-overview-section space-y-4 ${className}`} aria-label="Data overview">
       {hasStats && (
         <div
-          className={`grid w-full gap-3 ${
+          className={`grid w-full gap-4 ${
             isMobile && insightsOpen ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'
           }`}
         >

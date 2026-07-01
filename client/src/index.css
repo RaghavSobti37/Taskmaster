@@ -183,6 +183,8 @@
   /* tm-page-shell owns gutters — avoid double padding on mobile and desktop */
   padding: 0;
   padding-bottom: 0;
+  width: 100%;
+  max-width: none;
 }
 
 /* List + hub pages — uniform vertical spacing between major blocks */
@@ -214,7 +216,7 @@
     border: 1px solid var(--color-bg-border);
     border-radius: var(--radius-md);
     background: var(--color-bg-surface);
-    overflow: hidden;
+    overflow: visible;
   }
 }
 
@@ -249,6 +251,15 @@
   --foreground: var(--brand-teal-deep);
   --card: var(--brand-white);
   --border: color-mix(in srgb, var(--brand-cream) 55%, var(--brand-pumpkin));
+}
+
+/* Landing page redesign — mockup palette */
+.tm-landing {
+  --landing-green-dark: #0f3d37;
+  --landing-green-mid: #165d52;
+  --landing-accent: #e9a66b;
+  --landing-beige: #f4ede3;
+  --landing-beige-wash: #faf7f2;
 }
 
 /* Auth routes — always cream/teal marketing palette (even in app dark mode) */
@@ -545,6 +556,23 @@ select option {
   color: var(--color-pastel-slate-text);
 }
 
+.badge-teal {
+  background: color-mix(in srgb, var(--color-action-primary) 12%, transparent);
+  color: var(--color-action-primary);
+}
+
+.badge-blue {
+  background: color-mix(in srgb, var(--color-pastel-blue-text) 10%, transparent);
+  color: var(--color-pastel-blue-text);
+}
+
+/* Stat / action grid card shell — surface-1, 1px border, 10px radius */
+.tm-stat-shell {
+  border-radius: 10px;
+  border: 1px solid var(--color-bg-border);
+  background: var(--color-bg-surface);
+}
+
 /* Coreknot typography — use across pages for consistency */
 .tm-page-title {
   font-size: var(--size-text-header);
@@ -723,6 +751,7 @@ select option {
 
 .page-toolbar-row {
   align-items: center;
+  width: 100%;
 }
 
 .page-toolbar-controls {
@@ -741,6 +770,13 @@ select option {
   max-width: none;
   min-width: 0;
   flex: 1 1 auto;
+  align-self: stretch;
+}
+
+.page-toolbar-search .tm-toolbar-search--grow .t-clear {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
 }
 
 .page-toolbar-right {
@@ -774,6 +810,8 @@ select option {
   min-width: 0;
   max-width: none;
   width: 100%;
+  /* ponytail: beat Tailwind width utilities on SearchInput */
+  flex-shrink: 1;
 }
 
 .page-toolbar-controls.page-toolbar-controls--fill {
@@ -812,6 +850,23 @@ select option {
 .page-toolbar-actions button {
   min-height: 2.25rem;
   max-height: 2.25rem;
+}
+
+/* Search slot: single-row toolbar control (no stacked label) */
+.page-toolbar-search .tm-toolbar-search {
+  gap: 0;
+}
+
+.page-toolbar-search .tm-section-label {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .page-toolbar-right [data-filter-toolbar-button] {
+    height: 2.25rem;
+    min-height: 2.25rem;
+    max-height: 2.25rem;
+  }
 }
 
 .tm-toolbar-date-range {
@@ -1465,6 +1520,24 @@ a.tm-hashtag-chip:hover {
   }
 }
 
+/* Pull-to-refresh chrome — global so desktop always hides; default off-screen before JS */
+.mobile-ptr-indicator {
+  top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+  transform: translateY(-72px);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.15s ease;
+}
+
+@media (min-width: 1024px) {
+  .mobile-ptr-indicator {
+    display: none !important;
+  }
+}
+
+html[data-pwa-standalone] .mobile-ptr-indicator {
+  top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+}
+
 /* Mobile App Native Feel Optimizations — skip for desktop-installed PWA */
 @media (max-width: 1023px) {
   html:not([data-pwa-desktop]) {
@@ -1538,15 +1611,6 @@ a.tm-hashtag-chip:hover {
   /* Standalone PWA: brand safe-area under status bar */
   html[data-pwa-standalone] main[data-page-root] {
     padding-top: calc(var(--page-gutter) + env(safe-area-inset-top));
-  }
-
-  .mobile-ptr-indicator {
-    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
-    transition: transform 0.2s ease, opacity 0.15s ease;
-  }
-
-  html[data-pwa-standalone] .mobile-ptr-indicator {
-    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
   }
 
   .mobile-desktop-gate {
@@ -1764,6 +1828,27 @@ html[data-pwa-desktop] [data-page-root] {
 .note-rich-editor--mobile .ql-editor {
   min-height: 50vh;
   font-size: 16px;
+}
+
+/* Notes list compose — compact editor; saved notes stay above fold */
+.note-rich-editor--compact {
+  min-height: 0;
+}
+
+.note-rich-editor--compact .note-rich-editor__quill .ql-container {
+  min-height: 96px;
+  max-height: 240px;
+}
+
+.note-rich-editor--compact .note-rich-editor__quill .ql-editor {
+  min-height: 80px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.note-rich-editor--compact.note-rich-editor--mobile .ql-editor {
+  min-height: 80px;
+  max-height: 200px;
 }
 
 .note-rich-editor .ql-editor.ql-blank::before {

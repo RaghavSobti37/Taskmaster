@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { Building2, Layers, Mail, MapPin, Newspaper, Phone, Users } from 'lucide-react';
+import { Building2, Mail, MapPin, Newspaper, Phone, Users } from 'lucide-react';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import PageSkeleton from '../../components/ui/PageSkeleton';
@@ -50,8 +50,6 @@ const MediaListPage = () => {
     () => new Set(contacts.map((c) => c.publication).filter(Boolean)).size,
     [contacts],
   );
-  const sheetCount = filterOptions?.sheets?.filter((s) => s.count > 0).length || 0;
-
   const columns = useMemo(
     () => [
       {
@@ -232,14 +230,6 @@ const MediaListPage = () => {
             icon: Users,
             variant: 'info',
             info: `Showing ${activeSheetLabel}.`,
-          },
-          {
-            id: 'sheets',
-            label: 'Sheets loaded',
-            value: sheetCount,
-            icon: Layers,
-            variant: 'mint',
-            info: 'Imported spreadsheet tabs in production.',
           },
           {
             id: 'publications',

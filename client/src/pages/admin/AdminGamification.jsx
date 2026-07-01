@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { Card, Button, PageHeader, PageContainer, PageSkeleton, QueryErrorBanner, getQueryErrorMessage, StatusBadge } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { Edit2, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
@@ -187,7 +187,7 @@ const AdminGamification = () => {
           <h3 className="text-base font-bold">XP by action</h3>
           <p className="text-sm text-[var(--color-text-muted)]">Click Edit to change rates — time-based actions use hours × XP per hour</p>
         </div>
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -224,7 +224,7 @@ const AdminGamification = () => {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={row.capLabel === 'Unlimited' ? 'info' : 'neutral'}>{row.capLabel}</Badge>
+                    <StatusBadge status={row.capLabel === 'Unlimited' ? 'active' : 'neutral'}>{row.capLabel}</StatusBadge>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-[var(--color-text-muted)] text-xs">{row.who}</td>
                   <td className="px-4 py-3">
@@ -296,7 +296,7 @@ const AdminGamification = () => {
                 <p className="font-medium text-sm">{m.title}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">{m.description}</p>
               </div>
-              <Badge variant="success">+{m.expReward} XP</Badge>
+              <StatusBadge status="positive">+{m.expReward} XP</StatusBadge>
             </div>
           ))}
         </div>

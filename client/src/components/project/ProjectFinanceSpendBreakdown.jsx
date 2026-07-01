@@ -53,7 +53,7 @@ const ProjectFinanceSpendBreakdown = ({ finance, rangeLabel = 'in range' }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div>
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">

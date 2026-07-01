@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useTransitionSurface } from '../../hooks/transitions';
+import { shouldSubmitModalOnEnter, triggerModalPrimarySubmit } from '../../lib/modalEnter';
 
 /** Pixel widths for compact (sm) modals — inline styles prevent flex collapse */
 export const MODAL_WIDTH_PX = {
@@ -84,6 +85,7 @@ export const ModalShell = ({
   panelClassName = '',
   closeOnBackdrop = true,
   closeOnEscape = true,
+  submitOnEnter = true,
   ariaLabel,
 }) => {
   const compact = isCompactModalSize(size) && widthPx == null;
@@ -98,7 +100,11 @@ export const ModalShell = ({
   React.useEffect(() => {
     if (!mounted) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape' && closeOnEscape) onClose?.();
+      if (e.key !== 'Escape' || !closeOnEscape) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      onClose?.();
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey, true);
@@ -107,6 +113,14 @@ export const ModalShell = ({
       window.removeEventListener('keydown', onKey, true);
     };
   }, [mounted, onClose, closeOnEscape]);
+
+  const handlePanelKeyDown = React.useCallback((e) => {
+    if (!submitOnEnter || e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
+    if (!shouldSubmitModalOnEnter(e.target)) return;
+    if (triggerModalPrimarySubmit(panelRef.current)) {
+      e.preventDefault();
+    }
+  }, [submitOnEnter]);
 
   if (typeof document === 'undefined') return null;
 
@@ -137,6 +151,7 @@ export const ModalShell = ({
           style={panelStyle}
           className={`t-modal ${getModalPanelClassName(compact ? 'sm' : size)} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] flex flex-col overflow-hidden w-full ${panelLayout} ${surfaceClass} ${panelClassName}`}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handlePanelKeyDown}
           role="dialog"
           aria-modal="true"
           aria-label={ariaLabel}

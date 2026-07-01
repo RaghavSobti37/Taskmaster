@@ -5,6 +5,7 @@ import { BarChart3, Plus, Layers } from 'lucide-react';
 import {
   PageContainer, DataTable, Button, Badge,
 } from '../../components/ui/primitives';
+import StatusBadge from '../../components/ui/StatusBadge';
 import SearchInput from '../../components/ui/SearchInput';
 import PageToolbar from '../../components/ui/PageToolbar';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
@@ -171,7 +172,7 @@ export default function OpsHubPage() {
     },
     {
       header: 'Status',
-      render: (row) => <Badge variant="mint">{row.status}</Badge>,
+      render: (row) => <StatusBadge status={row.status}>{row.status}</StatusBadge>,
     },
     {
       header: 'Owner',

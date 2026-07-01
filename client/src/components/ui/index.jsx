@@ -29,7 +29,12 @@ export { FullScreenWorkspace } from './FullScreenWorkspace';
 
 // ── New unified components (Phase 1) ──
 export { default as EmptyState } from './EmptyState';
+export { default as Banner } from './Banner';
+export { default as StatusBadge, resolveStatusRole } from './StatusBadge';
+export { default as ValueChange } from './ValueChange';
+export { default as DetailSidebarShell, DetailSidebarSection } from './DetailSidebarShell';
 export { default as SearchInput } from './SearchInput';
+export { default as PasswordInput } from './PasswordInput';
 export { default as IconButton } from './IconButton';
 export { default as SectionCard } from './SectionCard';
 export { default as AddMembers } from './AddMembers';
@@ -68,6 +73,11 @@ export { default as ModuleSubnav } from './ModuleSubnav';
 export { default as HubPageLayout } from './HubPageLayout';
 export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as PageSkeleton } from './PageSkeleton';
+export { default as ListPageSkeleton } from './ListPageSkeleton';
+export { default as HubPageSkeleton } from './HubPageSkeleton';
+export { default as TableSkeleton } from './TableSkeleton';
+export { default as DashboardPageSkeleton } from './DashboardPageSkeleton';
+export { default as RouteContentSkeleton } from './RouteContentSkeleton';
 export { default as NumberPopIn } from './NumberPopIn';
 export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';
 

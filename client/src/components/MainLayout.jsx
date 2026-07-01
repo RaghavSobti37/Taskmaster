@@ -7,8 +7,10 @@ import QuickAddMenu from './QuickAddMenu';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
 import { useWindowSize, DESKTOP_MIN } from '../hooks/useBreakpoint';
 import MobileRouteGuard from './mobile/MobileRouteGuard';
+import MobilePullToRefresh from './mobile/MobilePullToRefresh';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import RouteErrorBoundary from './RouteErrorBoundary';
+import RouteContentSkeleton from './ui/RouteContentSkeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
@@ -55,6 +57,7 @@ const MainLayout = () => {
     <KeyboardShortcutsProvider>
     <QuickAddProvider>
     <NetworkStatusBanner />
+    <MobilePullToRefresh />
     <div className="flex min-h-screen bg-[var(--color-bg-workspace)]">
       <a
         href="#main-content"
@@ -102,7 +105,9 @@ const MainLayout = () => {
             </Suspense>
             <MobileRouteGuard>
               <RouteErrorBoundary>
-                <Outlet />
+                <Suspense fallback={<RouteContentSkeleton />}>
+                  <Outlet />
+                </Suspense>
               </RouteErrorBoundary>
             </MobileRouteGuard>
           </div>

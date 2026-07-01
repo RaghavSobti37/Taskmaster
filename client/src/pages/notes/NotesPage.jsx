@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StickyNote, Clock, Lock, Users } from 'lucide-react';
+import { StickyNote, Clock } from 'lucide-react';
 import {
   ListPageLayout,
   DataListRow,
@@ -9,6 +9,8 @@ import {
   getQueryErrorMessage,
   EmptyState,
   SearchInput,
+  PageHeader,
+  StatusBadge,
 } from '../../components/ui';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
@@ -28,9 +30,9 @@ const preview = (content, max = 100) => {
 
 const visibilityLabel = (note) => {
   if (note.visibility === 'private' || !note.shareWithTeam) {
-    return { icon: Lock, text: 'Private' };
+    return 'Private';
   }
-  return { icon: Users, text: 'Shared' };
+  return 'Shared';
 };
 
 const VISIBILITY_OPTIONS = [
@@ -106,6 +108,13 @@ export default function NotesPage() {
     <ListPageLayout
       containerClassName="!py-4"
       toolbarFill
+      header={(
+        <PageHeader
+          icon={StickyNote}
+          title="Notes"
+          description="Capture ideas, link to projects or events, and share with your team when ready."
+        />
+      )}
       filterFields={notesFilterFields}
       filterSheetTitle="Note filters"
       mobileFilterCount={countActiveFilters(notesFilterFields)}
@@ -120,7 +129,7 @@ export default function NotesPage() {
         />
       )}
     >
-      <NoteComposer className="mb-8" />
+      <NoteComposer className="mb-8" compact />
 
       {isError && (
         <QueryErrorBanner
@@ -179,7 +188,6 @@ export default function NotesPage() {
             {filteredNotes.map((note) => {
               const isOwner = String(note.userId?._id || note.userId) === String(user?._id);
               const vis = visibilityLabel(note);
-              const VisIcon = vis.icon;
               const projectName = note.projectId?.name;
               const eventTitle = note.calendarEventId?.title;
               const contextLabel = eventTitle || projectName || 'Personal';
@@ -201,13 +209,18 @@ export default function NotesPage() {
                   secondary={(
                     <div className="space-y-1">
                       <p className="text-xs text-[var(--color-text-muted)] truncate">{preview(note.content)}</p>
-                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                        <span className="text-[var(--color-action-primary)] truncate">{contextLabel}</span>
-                        <span className="inline-flex items-center gap-1 shrink-0">
-                          <VisIcon size={10} />
-                          {vis.text}
-                        </span>
-                        {!isOwner && <span>· Shared with you</span>}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <StatusBadge role="neutral" className="!text-[9px] uppercase tracking-wider truncate max-w-[45%]">
+                          {contextLabel}
+                        </StatusBadge>
+                        <StatusBadge role="neutral" className="!text-[9px] uppercase tracking-wider shrink-0">
+                          {vis}
+                        </StatusBadge>
+                        {!isOwner && (
+                          <StatusBadge role="neutral" className="!text-[9px] uppercase tracking-wider shrink-0">
+                            Shared with you
+                          </StatusBadge>
+                        )}
                       </div>
                     </div>
                   )}

@@ -73,23 +73,35 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
     })
 );
 
-/** PostHog rewrites must precede SPA catch-all — first Vercel match wins. */
-const buildClerkProxyRewrite = (apiDestination) => {
+/** Clerk FAPI proxy on primary app — forwarded to Render (Vercel api/ breaks monorepo npm install). */
+const buildClerkProxyRewriteMainApp = (apiDestination) => {
   const origin = String(apiDestination || '').replace(/\/api\/\$1$/, '');
   if (!origin || !origin.includes('.onrender.com')) return null;
   return { source: '/__clerk/:path*', destination: `${origin}/__clerk/:path*` };
 };
 
-const composeRewrites = (templateRewrites, apiDestination, socketDestination) => {
+/** Auth/landing satellites forward Clerk to primary app host (Clerk rejects proxy on other hosts). */
+const buildClerkProxyRewriteSatellite = () => {
+  const appOrigin = normalizeProxyUrl(
+    process.env.VITE_APP_URL || process.env.PRODUCTION_APP_URL || 'https://tsccoreknot.com',
+  );
+  if (!appOrigin) return null;
+  return { source: '/__clerk/:path*', destination: `${appOrigin}/__clerk/:path*` };
+};
+
+/** @deprecated alias */
+const buildClerkProxyRewrite = (apiDestination) => buildClerkProxyRewriteMainApp(apiDestination);
+
+const composeRewrites = (templateRewrites, apiDestination, socketDestination, clerkProxy) => {
   const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
   const posthog = buildPostHogRewrites();
-  const clerkProxy = buildClerkProxyRewrite(apiDestination);
+  const clerkRewrite = clerkProxy || buildClerkProxyRewriteMainApp(apiDestination);
   const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
   const beforeCatchall = catchallIdx === -1 ? mapped : mapped.slice(0, catchallIdx);
   const afterCatchall = catchallIdx === -1 ? [] : mapped.slice(catchallIdx);
   return [
     ...beforeCatchall,
-    ...(clerkProxy ? [clerkProxy] : []),
+    ...(clerkRewrite ? [clerkRewrite] : []),
     ...posthog,
     ...afterCatchall,
   ];
@@ -308,16 +320,33 @@ const payload = {
   headers: buildVercelHeaders(template.headers),
 };
 
-const buildSitePayload = (buildCommand) => ({
-  buildCommand,
-  outputDirectory: '../../client/dist',
-  installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
-  framework: null,
-  ...(payload.redirects ? { redirects: payload.redirects } : {}),
-  rewrites: payload.rewrites,
-  headers: buildVercelHeaders(payload.headers),
-  env: payload.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
-});
+const buildSitePayload = (buildCommand) => {
+  const satelliteClerk = buildClerkProxyRewriteSatellite();
+  const siteRewrites = composeRewrites(
+    template.rewrites,
+    apiDestination,
+    socketDestination,
+    satelliteClerk,
+  );
+  return {
+    buildCommand,
+    outputDirectory: '../../client/dist',
+    installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
+    framework: null,
+    ...(template.redirects ? { redirects: template.redirects } : {}),
+    rewrites: [
+      ...(nestAttendanceDestination
+        ? [
+            { source: '/api/attendance', destination: nestAttendanceDestination },
+            { source: '/api/attendance/:path*', destination: `${nestAttendanceDestination}/:path*` },
+          ]
+        : []),
+      ...siteRewrites,
+    ],
+    headers: buildVercelHeaders(template.headers),
+    env: template.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
+  };
+};
 
 const targets = [
   path.join(REPO_ROOT, 'vercel.json'),
@@ -364,6 +393,8 @@ module.exports = {
   composeRewrites,
   buildPostHogRewrites,
   buildClerkProxyRewrite,
+  buildClerkProxyRewriteMainApp,
+  buildClerkProxyRewriteSatellite,
   mapTemplateRewrites,
   existingRewritesLookValid,
   buildVercelHeaders,

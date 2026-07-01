@@ -158,7 +158,7 @@ export default function ProgressTab() {
             <Activity size={14} className="text-blue-500" /> Recent XP Activity
           </h3>
         </div>
-        <div className="overflow-x-auto">
+        <div>
           <table className="min-w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--color-bg-border)]">

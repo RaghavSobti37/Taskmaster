@@ -72,8 +72,14 @@ export default function PageToolbar({
   const activeFilterCount = mobileFilterCount || configActiveCount || legacyActiveCount;
 
   const desktopChildren = useMemo(
-    () => childArray.map(normalizeToolbarChild),
-    [childArray],
+    () => childArray.map((child) => {
+      const normalized = normalizeToolbarChild(child);
+      if (toolbarFill && isValidElement(normalized) && isSearchInputElement(normalized)) {
+        return normalizeSearchForGrow(normalized);
+      }
+      return normalized;
+    }),
+    [childArray, toolbarFill],
   );
 
   const hasLegacyFilters = !usesConfigPanel && filterChildren.some((c) => !isSearchInputElement(c));
@@ -268,7 +274,8 @@ export default function PageToolbar({
   const showDesktopFilterButton = usePanel && hasFilters;
   const searchFromProp = mobileSearch !== undefined;
   const hasDesktopSearchSlot = Boolean(
-    inlineSearch && (searchFromProp || showDesktopFilterButton),
+    inlineSearch
+    && (toolbarFill || searchFromProp || showDesktopFilterButton || Boolean(actions)),
   );
   const desktopSearchNode = hasDesktopSearchSlot ? (
     <div className="page-toolbar-search flex-1 min-w-0">
@@ -301,7 +308,7 @@ export default function PageToolbar({
     <>
       <div
         className={`page-toolbar-row flex items-center gap-2 min-w-0 min-h-[44px] py-2 border-b border-[var(--color-bg-border)] ${
-          desktopWrap ? 'flex-wrap' : 'flex-nowrap overflow-x-auto custom-scrollbar'
+          desktopWrap ? 'flex-nowrap w-full' : 'flex-nowrap overflow-x-auto custom-scrollbar'
         } ${className}`}
       >
         {(leading || Icon || title) && (
@@ -352,12 +359,19 @@ export default function PageToolbar({
   );
 }
 
+function stripFixedWidthClasses(className = '') {
+  return className
+    .replace(/\s*!?(min-|max-)?w-(?!full\b)[^\s]+/g, '')
+    .replace(/\s*shrink[^\s]*/g, '')
+    .trim();
+}
+
 function normalizeSearchForGrow(searchElement) {
   const normalized = normalizeToolbarChild(searchElement);
   if (!isValidElement(normalized) || !isSearchInputElement(normalized)) return normalized;
   const { className = '' } = normalized.props || {};
   return cloneElement(normalized, {
-    className: `${className} tm-toolbar-search--grow`.trim(),
+    className: `${stripFixedWidthClasses(className)} tm-toolbar-search--grow w-full max-w-full`.trim(),
   });
 }
 

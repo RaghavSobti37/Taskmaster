@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Plus, Contact, Phone, Mail, Wrench } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { Button, Input, Badge, TabSwitcher, SearchInput, DataTable, PageLoadGuard, PageSkeleton, ListPageLayout } from '../../components/ui';
+import { Button, Input, Badge, TabSwitcher, SearchInput, DataTable, PageLoadGuard, PageSkeleton, ListPageLayout, StatusBadge } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
-import EquipmentMobileRow, { equipmentStatusVariant } from '../../components/office/EquipmentMobileRow';
+import EquipmentMobileRow from '../../components/office/EquipmentMobileRow';
 import ContactMobileRow from '../../components/office/ContactMobileRow';
 import {
   OFFICE_TABLE_COL,
@@ -206,9 +206,9 @@ const OfficeAssetsPage = () => {
         headerClassName: OFFICE_TABLE_COL.badge,
         cellClassName: OFFICE_TABLE_COL.badge,
         render: (a) => (
-          <Badge variant="info" className="max-w-full truncate" title={a.category}>
+          <StatusBadge role="neutral" className="max-w-full truncate" title={a.category}>
             {a.category}
-          </Badge>
+          </StatusBadge>
         ),
       },
       {
@@ -217,9 +217,7 @@ const OfficeAssetsPage = () => {
         headerClassName: OFFICE_TABLE_COL.badge,
         cellClassName: OFFICE_TABLE_COL.badge,
         render: (a) => (
-          <Badge variant={equipmentStatusVariant(a.status)} className="max-w-full truncate" title={a.status}>
-            {a.status}
-          </Badge>
+          <StatusBadge status={a.status} className="max-w-full truncate" title={a.status} />
         ),
       },
       {

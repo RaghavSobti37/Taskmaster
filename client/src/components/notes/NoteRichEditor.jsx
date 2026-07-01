@@ -25,6 +25,7 @@ export default function NoteRichEditor({
   placeholder = 'Start writing…',
   isMobile = false,
   readOnly = false,
+  compact = false,
 }) {
   const quillRef = useRef(null);
 
@@ -68,7 +69,9 @@ export default function NoteRichEditor({
   }, []);
 
   return (
-    <div className={`note-rich-editor flex flex-col min-h-0 flex-1 ${isMobile ? 'note-rich-editor--mobile' : ''}`}>
+    <div
+      className={`note-rich-editor flex flex-col min-h-0 flex-1 ${isMobile ? 'note-rich-editor--mobile' : ''} ${compact ? 'note-rich-editor--compact' : ''}`}
+    >
       <ReactQuill
         ref={quillRef}
         theme="snow"

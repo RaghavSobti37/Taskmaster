@@ -4,10 +4,11 @@ import axios from 'axios';
 import { Wrench, Plus } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import ListPageLayout from '../../components/ui/ListPageLayout';
-import PageSkeleton from '../../components/ui/PageSkeleton';
+import ListPageSkeleton from '../../components/ui/ListPageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
-import EquipmentMobileRow, { equipmentStatusVariant } from '../../components/office/EquipmentMobileRow';
+import StatusBadge from '../../components/ui/StatusBadge';
+import EquipmentMobileRow from '../../components/office/EquipmentMobileRow';
 import {
   OFFICE_TABLE_COL,
   OFFICE_TABLE_PROPS,
@@ -150,9 +151,9 @@ const EquipmentPage = () => {
         headerClassName: OFFICE_TABLE_COL.badge,
         cellClassName: OFFICE_TABLE_COL.badge,
         render: (row) => (
-          <Badge variant="info" className="max-w-full truncate" title={row.category}>
+          <StatusBadge role="neutral" className="max-w-full truncate" title={row.category}>
             {row.category}
-          </Badge>
+          </StatusBadge>
         ),
       },
       {
@@ -161,9 +162,7 @@ const EquipmentPage = () => {
         headerClassName: OFFICE_TABLE_COL.badge,
         cellClassName: OFFICE_TABLE_COL.badge,
         render: (row) => (
-          <Badge variant={equipmentStatusVariant(row.status)} className="max-w-full truncate" title={row.status}>
-            {row.status}
-          </Badge>
+          <StatusBadge status={row.status} className="max-w-full truncate" title={row.status} />
         ),
       },
       {
@@ -184,7 +183,7 @@ const EquipmentPage = () => {
     setIsAssetModalOpen(true);
   };
 
-  if (isLoading && !assets.length) return <PageSkeleton />;
+  if (isLoading && !assets.length) return <ListPageSkeleton statCount={3} />;
 
   return (
     <ListPageLayout

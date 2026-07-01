@@ -43,8 +43,8 @@ export function normalizeUserDirectory(payload) {
 
 export const useUserDirectory = (enabled = true) => useQuery({
   queryKey: ['userDirectory'],
-  queryFn: async () =>
-    normalizeUserDirectory((await axios.get('/api/users/directory?limit=1000')).data),
+  queryFn: async () => (await axios.get('/api/users/directory?limit=1000')).data,
+  select: normalizeUserDirectory,
   enabled,
   staleTime: 1000 * 60 * 30,
   gcTime: 1000 * 60 * 60,

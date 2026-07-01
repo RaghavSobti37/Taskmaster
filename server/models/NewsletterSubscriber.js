@@ -5,6 +5,7 @@ const { personFields, applyPersonPreSave } = require('./personFields');
 const NewsletterSubscriberSchema = new mongoose.Schema({
   personId: { type: mongoose.Schema.Types.ObjectId, ref: 'Person', index: true },
   ...personFields,
+  email: { type: String },
   subscribedAt: { type: Date, default: Date.now, index: true },
   source: { type: String, index: true },
   unsubscribed: { type: Boolean, default: false, index: true },

@@ -12,9 +12,9 @@ const inletEntrySchema = new mongoose.Schema({
 
 const personIndexSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  nameKey: { type: String, index: true },
-  email: { type: String, index: true },
-  phone: { type: String, index: true },
+  nameKey: { type: String },
+  email: { type: String },
+  phone: { type: String },
 
   inCRM: { type: Boolean, default: false },
   inExly: { type: Boolean, default: false },

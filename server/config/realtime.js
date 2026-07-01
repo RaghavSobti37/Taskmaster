@@ -1,13 +1,36 @@
 const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const User = require('../models/User');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { COOKIE_NAME } = require('../utils/authCookie');
 const { isVercelAppOrigin, allowVercelPreviewOrigins } = require('../utils/vercelOrigins');
+const { resolveRequestUser } = require('../middleware/authMiddleware');
 
 let io = null;
 const log = () => require('../utils/logger');
+
+const buildSocketAuthRequest = (socket) => {
+  const cookieHeader = socket.handshake.headers.cookie || '';
+  const cookies = cookie.parse(cookieHeader);
+  const authToken = socket.handshake.auth?.token;
+  const headers = { cookie: cookieHeader };
+
+  if (authToken && typeof authToken === 'string') {
+    headers.authorization = `Bearer ${authToken}`;
+  }
+
+  return {
+    cookies,
+    headers,
+    ip: socket.handshake.address,
+    get(name) {
+      const key = String(name || '').toLowerCase();
+      if (key === 'cookie') return cookieHeader;
+      if (key === 'authorization') return headers.authorization;
+      return socket.handshake.headers[key];
+    },
+  };
+};
 
 const initRealtime = (httpServer, corsAllowlist = new Set()) => {
   if (io) return io;
@@ -29,21 +52,21 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
 
   io.use(async (socket, next) => {
     try {
-      const cookies = cookie.parse(socket.handshake.headers.cookie || '');
-      const token = cookies[COOKIE_NAME] || socket.handshake.auth?.token;
-      if (!token) return next(new Error('Unauthorized'));
+      const req = buildSocketAuthRequest(socket);
+      const hasToken = Boolean(
+        req.cookies?.[COOKIE_NAME]
+        || req.headers.authorization,
+      );
+      if (!hasToken) return next(new Error('Unauthorized'));
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id)
-        .select('_id departmentId')
-        .populate('departmentId', 'slug');
-      if (!user) return next(new Error('Unauthorized'));
+      const { user, suspended } = await resolveRequestUser(req);
+      if (suspended || !user) return next(new Error('Unauthorized'));
 
       socket.userId = user._id.toString();
       socket.isAdmin = isAdminUser(user);
       socket.isOps = isOpsUser(user);
       next();
-    } catch (err) {
+    } catch {
       next(new Error('Unauthorized'));
     }
   });
@@ -97,4 +120,5 @@ module.exports = {
   initRealtime,
   broadcastRealtimeEvent,
   closeRealtime,
+  buildSocketAuthRequest,
 };

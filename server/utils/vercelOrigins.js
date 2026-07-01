@@ -12,9 +12,13 @@ function isVercelAppOrigin(origin) {
   }
 }
 
-/** Default on — set CORS_ALLOW_VERCEL_PREVIEWS=false to block *.vercel.app in production. */
+/** Strict production blocks previews unless CORS_ALLOW_VERCEL_PREVIEWS=true; staging/dev allow by default. */
 function allowVercelPreviewOrigins() {
-  return String(process.env.CORS_ALLOW_VERCEL_PREVIEWS || '').trim() !== 'false';
+  const flag = String(process.env.CORS_ALLOW_VERCEL_PREVIEWS || '').trim().toLowerCase();
+  if (flag === 'true') return true;
+  if (flag === 'false') return false;
+  const { isStrictProduction } = require('./deployTier');
+  return !isStrictProduction();
 }
 
 module.exports = {

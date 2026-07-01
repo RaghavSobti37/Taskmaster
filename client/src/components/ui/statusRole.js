@@ -1,0 +1,42 @@
+const STATUS_ALIASES = {
+  folder: 'neutral',
+  category: 'neutral',
+  neutral: 'neutral',
+  info: 'neutral',
+  slate: 'neutral',
+  low: 'neutral',
+  fresh: 'neutral',
+  available: 'positive',
+  invoice: 'positive',
+  present: 'positive',
+  success: 'positive',
+  enabled: 'positive',
+  converted: 'positive',
+  mint: 'positive',
+  complete: 'positive',
+  safe: 'positive',
+  'in use': 'active',
+  in_use: 'active',
+  occupied: 'active',
+  active: 'active',
+  'in-progress': 'active',
+  caution: 'advisory',
+  maintenance: 'advisory',
+  warning: 'advisory',
+  apricot: 'advisory',
+  hot: 'error',
+  danger: 'error',
+  error: 'error',
+  blocked: 'error',
+  lost: 'error',
+  damaged: 'error',
+  overdue: 'error',
+  rose: 'error',
+  failed: 'error',
+};
+
+export function resolveStatusRole(statusOrVariant) {
+  const key = String(statusOrVariant ?? '').trim().toLowerCase();
+  if (!key) return 'neutral';
+  return STATUS_ALIASES[key] || 'neutral';
+}

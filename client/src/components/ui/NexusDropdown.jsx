@@ -118,6 +118,20 @@ const NexusDropdown = ({
     }
   }, [isOpen, searchable, isMobile]);
 
+  useEffect(() => {
+    if (!isOpen || isMobile) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      setIsOpen(false);
+      setSearch('');
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [isOpen, isMobile]);
+
   const handleToggle = () => {
     if (disabled) return;
     if (isOpen) {

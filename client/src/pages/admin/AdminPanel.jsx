@@ -61,6 +61,7 @@ const AdminPanel = () => {
   }, [setSearchParams]);
   
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
+  const userList = useMemo(() => (Array.isArray(users) ? users : []), [users]);
   const deferAdminRibbon = useDeferredQueryEnabled(!usersLoading);
   const { data: teams = [] } = useTeams(deferAdminRibbon);
   const { data: crmStats } = useCRMStats(deferAdminRibbon, ADMIN_RIBBON_QUERY_OPTS);
@@ -147,11 +148,11 @@ const AdminPanel = () => {
   const showRibbon = activeTab === 'users' || activeTab === 'teams';
 
   const filteredUsers = useMemo(() => {
-    return users.filter(u => 
+    return userList.filter(u => 
       u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [users, searchTerm]);
+  }, [userList, searchTerm]);
 
   const userColumns = [
     {
@@ -199,6 +200,7 @@ const AdminPanel = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
+      toolbarFill
       title={currentMeta.title}
       icon={ShieldCheck}
       backTo={ADMIN_CONSOLE_PATH}
@@ -209,7 +211,7 @@ const AdminPanel = () => {
                 {
                   id: 'users',
                   label: 'Total Users',
-                  value: users.length,
+                  value: userList.length,
                   icon: Users,
                   variant: 'info',
                   info: 'Total number of registered user accounts.',
@@ -243,15 +245,16 @@ const AdminPanel = () => {
             }
           : undefined
       }
-      toolbar={
+      searchBar={
         showRibbon ? (
           <SearchInput
+            variant="toolbar"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="!w-44 shrink min-w-[9rem]"
+            className="w-full max-w-full"
           />
-        ) : null
+        ) : undefined
       }
       toolbarActions={
         <TabSwitcher
@@ -313,7 +316,7 @@ const AdminPanel = () => {
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                  {teams.map(team => {
-                   const memberCount = users.filter(u => u.teams?.includes(team.name)).length;
+                   const memberCount = userList.filter(u => u.teams?.includes(team.name)).length;
                    return (
                      <div key={team._id} className="p-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-lg flex items-center justify-between">
                         <span className="font-bold uppercase tracking-tight text-[10px]">{team.name}</span>

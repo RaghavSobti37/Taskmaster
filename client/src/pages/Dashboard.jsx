@@ -4,6 +4,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import { PageContainer, Button } from '../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../components/ui/QueryErrorBanner';
 import DashboardWidgetSkeleton from '../components/ui/DashboardWidgetSkeleton';
+import DashboardPageSkeleton from '../components/ui/DashboardPageSkeleton';
 import { useAuth } from '../contexts/AuthContext';
 import {
   useDashboardTasks,
@@ -244,6 +245,8 @@ const Dashboard = () => {
     }
   };
 
+  const widgetsBooting = queriesEnabled && summaryLoading && tasksLoading && projectsLoading;
+
   return (
     <PageContainer>
       {summaryError && (
@@ -296,6 +299,9 @@ const Dashboard = () => {
         </Button>
       </div>
       <PinBoardProvider>
+        {widgetsBooting ? (
+          <DashboardPageSkeleton />
+        ) : (
         <DashboardTierLayout
           elements={layoutElements}
           permissionPreset={permissionPreset}
@@ -308,6 +314,7 @@ const Dashboard = () => {
           onComplete={handleCompleteRequest}
           completingTaskId={completingTaskId}
         />
+        )}
       </PinBoardProvider>
 
       <Suspense fallback={null}>

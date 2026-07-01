@@ -414,6 +414,7 @@ const ComponentsShowcase = () => {
           </VariantRow>
           {skelLoaded !== null && (
             <SkeletonReveal
+              reveal
               loading={!skelLoaded}
               skeleton={<div className="h-24 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)]" />}
               className="max-w-sm"

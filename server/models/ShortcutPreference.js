@@ -22,7 +22,6 @@ const shortcutPreferenceSchema = new mongoose.Schema({
   collection: 'shortcutPreferences',
 });
 
-shortcutPreferenceSchema.index({ userId: 1 });
 shortcutPreferenceSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ShortcutPreference', shortcutPreferenceSchema);

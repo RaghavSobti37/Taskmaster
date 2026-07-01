@@ -1110,7 +1110,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
             </div>
           </div>
 
-          <div className="overflow-x-auto bg-[var(--color-bg-surface)]">
+          <div className="bg-[var(--color-bg-surface)]">
             {unlinkedLoading ? (
               <div className="p-8 space-y-3">
                 {[...Array(5)].map((_, i) => (

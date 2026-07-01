@@ -539,7 +539,7 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
           </div>
 
           {view === 'themes' ? (
-            <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-lg">
+            <div className="border border-[var(--color-bg-border)] rounded-lg">
               <table className="w-full text-left">
                 <thead>
                   <tr className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
@@ -584,7 +584,7 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
               </table>
             </div>
           ) : (
-            <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-lg">
+            <div className="border border-[var(--color-bg-border)] rounded-lg">
               <table className="w-full text-left min-w-[720px]">
                 <thead>
                   <tr className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">

@@ -55,6 +55,10 @@ describe('routeErrorPresentation', () => {
     expect(summarizeRouteError(new Error('Loading chunk 42 failed'))).toMatch(/failed to load/i);
   });
 
+  it('hides raw TypeError messages from users', () => {
+    expect(summarizeRouteError(new Error('tableData.slice is not a function'))).toMatch(/unexpected error/i);
+  });
+
   it('builds mailto with reference and summary', () => {
     const url = buildRouteErrorSupportMailto('CK-20260101-AB12', 'Network failed');
     expect(url).toMatch(/^mailto:/);
@@ -117,8 +121,8 @@ describe('RouteErrorFallback', () => {
       'href',
       expect.stringMatching(/^mailto:/),
     );
-    expect(screen.getByRole('button', { name: /what is the error/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy error code/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /what happened/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy error details/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument();
   });
 
@@ -127,13 +131,13 @@ describe('RouteErrorFallback', () => {
     renderFallback();
 
     expect(screen.queryByTestId('route-error-technical')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /what is the error/i }));
+    await user.click(screen.getByRole('button', { name: /what happened/i }));
     expect(screen.getByTestId('route-error-technical')).toHaveTextContent('Loading chunk 9 failed');
   });
 
-  it('shows copy error code action', () => {
+  it('shows copy affordance on reference row', () => {
     renderFallback();
-    expect(screen.getByRole('button', { name: /copy error code/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy error details/i })).toBeInTheDocument();
   });
 });
 

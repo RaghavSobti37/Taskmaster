@@ -181,7 +181,7 @@ function SyncDashboard({ items = [], loading }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800">
       <table className="w-full text-left text-xs">
         <thead className="bg-slate-50 dark:bg-slate-900/50 text-[10px] uppercase tracking-widest text-slate-500">
           <tr>

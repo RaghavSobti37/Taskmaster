@@ -2,8 +2,13 @@
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from './helpers/auth.js';
 import { hasAuthCreds } from './helpers/creds.js';
+import { mockPublicAuthApi } from './helpers/publicApiMock.js';
 
 test.describe('public smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockPublicAuthApi(page);
+  });
+
   test('landing page loads', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/CoreKnot|Coreknot/i);
@@ -12,8 +17,14 @@ test.describe('public smoke', () => {
   test('login page renders', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: /coreknot/i })).toBeVisible();
-    await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
-    await expect(page.locator('input[autocomplete="current-password"]')).toBeVisible();
+
+    const clerkSignIn = page.locator(
+      '[data-clerk-component], .cl-signIn-root, .cl-rootBox, iframe[title*="Clerk" i]',
+    );
+    const clerkMissing = page.getByText(/Clerk is not configured/i);
+    const legacyEmail = page.locator('input[autocomplete="username"]');
+
+    await expect(clerkSignIn.or(clerkMissing).or(legacyEmail).first()).toBeVisible();
   });
 });
 

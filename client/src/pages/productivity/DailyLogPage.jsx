@@ -7,7 +7,8 @@ import {
   Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, PageHeader, PageContainer, Button, Input, StatCard, DataLoading, Spinner, SearchInput, EmptyState, PageToolbar, IconButton } from '../../components/ui';
+import { Badge, PageHeader, PageContainer, Button, Input, DataLoading, Spinner, SearchInput, EmptyState, PageToolbar, IconButton } from '../../components/ui';
+import DataOverviewSection from '../../components/ui/DataOverviewSection';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
@@ -407,13 +408,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           onRetry={() => refetchActivityGrid()}
         />
       )}
-      {/* Analytical Ribbon - Plain English */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Time" value={formatTime(totalMinutes)} icon={Timer} variant="mint" info="Total hours logged on this date." />
-        <StatCard label="Tasks Done" value={dailyTasks.length} icon={CheckSquare} variant="info" info="Number of work items completed today." />
-        <StatCard label="Logs Created" value={dailyLogs.length} icon={RefreshCw} variant="apricot" info="Total entries added to your activity stream." />
-        <StatCard label="Goal Progress" value={`${Math.min(100, Math.round((totalMinutes / 480) * 100))}%`} icon={Zap} variant="slate" info="Progress towards your 8-hour daily goal." />
-      </div>
+      <DataOverviewSection
+        mobileCollapsed={false}
+        stats={[
+          { id: 'time', label: 'Total Time', value: formatTime(totalMinutes), icon: Timer, variant: 'mint', info: 'Total hours logged on this date.' },
+          { id: 'tasks', label: 'Tasks Done', value: dailyTasks.length, icon: CheckSquare, variant: 'info', info: 'Number of work items completed today.' },
+          { id: 'logs', label: 'Logs Created', value: dailyLogs.length, icon: RefreshCw, variant: 'apricot', info: 'Total entries added to your activity stream.' },
+          { id: 'goal', label: 'Goal Progress', value: `${Math.min(100, Math.round((totalMinutes / 480) * 100))}%`, icon: Zap, variant: 'slate', info: 'Progress towards your 8-hour daily goal.' },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">

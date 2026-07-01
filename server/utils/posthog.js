@@ -44,6 +44,23 @@ const captureEvent = (req, event, properties = {}) => {
   }
 };
 
+function identifyServerUser(user) {
+  if (!client || !user) return;
+  const id = String(user._id || user.id || '').trim();
+  if (!id) return;
+  try {
+    client.identify({
+      distinctId: id,
+      properties: {
+        email: user.email || undefined,
+        name: user.name || undefined,
+      },
+    });
+  } catch {
+    /* optional */
+  }
+}
+
 const captureException = (error, req, context = {}) => {
   if (!client || !error) return;
   const distinctId = getDistinctId(req) || 'server';
@@ -71,6 +88,7 @@ module.exports = {
   initPostHog,
   captureEvent,
   captureException,
+  identifyServerUser,
   shutdownPostHog,
   isPostHogEnabled: () => initialized,
 };

@@ -20,7 +20,18 @@ const { attachProfileCompletion } = require('../../../utils/profileCompleteness'
 const { getDefaultSeedPassword } = require('../../../utils/defaultPassword');
 const { sendSystemEmail } = require('../../../utils/sendSystemEmail');
 const { apiError } = require('../../../utils/apiResponse');
-const { captureEvent: capturePostHogEvent } = require('../../../utils/posthog');
+const { captureEvent: capturePostHogEvent, identifyServerUser } = require('../../../utils/posthog');
+const {
+  isClerkConfigured,
+  verifyClerkSessionToken,
+  resolveUserFromClerkProfile,
+} = require('../../../utils/clerkAuth');
+const { clerkClient } = require('@clerk/clerk-sdk-node');
+const {
+  resolveClerkOrganizationId,
+  resolveTenantForOrganization,
+  ensureClerkOrganizationAccess,
+} = require('../../../utils/organizationAccess');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
 
@@ -70,7 +81,9 @@ const formatAuthUser = (populated) => attachProfileCompletion(
 const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
   await finishAuthSession(req, res, populated._id);
   if (authMethod) {
-    capturePostHogEvent(req, 'user_logged_in', { method: authMethod });
+    const userObj = populated.toObject ? populated.toObject() : populated;
+    identifyServerUser(userObj);
+    capturePostHogEvent(req, 'user_logged_in', { method: authMethod, source: 'server' });
   }
   return res.json(formatAuthUser(populated));
 };
@@ -299,10 +312,41 @@ exports.getMe = async (req, res) => {
     if (!req.user) {
       return apiError(res, 'Not authorized', 401);
     }
+    if (req.user.departmentId && !req.user.departmentId.slug) {
+      const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
+      await req.user.populate('departmentId', DEPARTMENT_POPULATE);
+    }
     return res.json(attachProfileCompletion(req.user));
   } catch (error) {
     logger.error('authController', 'getMe failed', { error: error.message || error });
     return apiError(res, 'Failed to load user profile', 500);
+  }
+};
+
+/** Silent session bootstrap ΓÇö 200 with authenticated:false when logged out (no 401 noise in DevTools). */
+exports.getSession = async (req, res) => {
+  try {
+    if (req.sessionSuspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({
+        authenticated: false,
+        error: 'Account suspended. Contact an administrator.',
+      });
+    }
+    if (!req.user) {
+      return res.json({ authenticated: false });
+    }
+    if (req.user.departmentId && !req.user.departmentId.slug) {
+      const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
+      await req.user.populate('departmentId', DEPARTMENT_POPULATE);
+    }
+    return res.json({
+      authenticated: true,
+      user: attachProfileCompletion(req.user),
+    });
+  } catch (error) {
+    logger.error('authController', 'getSession failed', { error: error.message || error });
+    return apiError(res, 'Failed to load session', 500);
   }
 };
 
@@ -489,6 +533,61 @@ exports.oauthEstablishSession = async (req, res) => {
     return res.json(formatAuthUser(populated));
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });
+  }
+};
+
+exports.clerkEstablishSession = async (req, res) => {
+  if (!isClerkConfigured()) {
+    return res.status(503).json({ error: 'Clerk authentication is not configured' });
+  }
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (!token) {
+      return res.status(400).json({ error: 'Missing Clerk session token' });
+    }
+
+    const profile = await verifyClerkSessionToken(token);
+    if (!profile) {
+      return res.status(401).json({ error: 'Invalid Clerk session' });
+    }
+
+    const clerkOrganizationId = resolveClerkOrganizationId({
+      bodyOrganizationId: req.body?.organizationId,
+      tokenOrganizationId: profile.clerkOrganizationId,
+    });
+    const tenant = await resolveTenantForOrganization(clerkOrganizationId);
+    let orgAccessGranted = false;
+
+    if (clerkOrganizationId) {
+      await ensureClerkOrganizationAccess({
+        clerkClient,
+        clerkUserId: profile.clerkUserId,
+        email: profile.email,
+        clerkOrganizationId,
+        tenant,
+      });
+      orgAccessGranted = true;
+    }
+
+    const populated = await resolveUserFromClerkProfile(profile, {
+      isRegistrationAllowed: (emailLower) => {
+        if (orgAccessGranted) return { ok: true };
+        return isRegistrationAllowed(emailLower);
+      },
+      tenantId: tenant?._id,
+    });
+    if (!populated) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+    if (populated.suspended) {
+      clearAuthCookie(res, req);
+      return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
+    }
+
+    return sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
+  } catch (error) {
+    const status = error.status || 401;
+    return res.status(status).json({ error: error.message || 'Clerk sign-in failed' });
   }
 };
 

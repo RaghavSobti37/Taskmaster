@@ -60,7 +60,7 @@ const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
   rules
     .filter((rule) => !isPostHogRewrite(rule))
     .map((rule) => {
-      if (rule.source === '/api/(.*)' || rule.source === '/api/(?!clerk-proxy)(.*)') {
+      if (rule.source === '/api/(.*)') {
         return { ...rule, destination: apiDestination };
       }
       if (rule.source === '/socket.io/(.*)') {
@@ -186,9 +186,7 @@ const readExistingClientVercelJson = () => {
 };
 
 const existingRewritesLookValid = (existing) => {
-  const apiRule = existing?.rewrites?.find(
-    (rule) => rule.source === '/api/(.*)' || rule.source === '/api/(?!clerk-proxy)(.*)',
-  );
+  const apiRule = existing?.rewrites?.find((rule) => rule.source === '/api/(.*)');
   const dest = String(apiRule?.destination || '');
   if (!dest.includes('.onrender.com') || dest.includes('YOUR-RENDER-SERVICE')) return false;
   try {

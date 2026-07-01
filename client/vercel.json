@@ -38,7 +38,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(?!clerk-proxy)(.*)",
+      "source": "/api/(.*)",
       "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
     },
     {

@@ -1,29 +1,32 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * Cross-fade from skeleton pulse to loaded content (transitions.dev skeleton-reveal).
+ * Cross-fade skeleton → content (transitions.dev). Use `reveal` only for inline widgets;
+ * page loads should swap without a lingering absolute skeleton layer.
  */
-export default function SkeletonReveal({ loading, skeleton, children, className = '' }) {
+export default function SkeletonReveal({ loading, skeleton, children, className = '', reveal = false }) {
   const rootRef = useRef(null);
 
   useEffect(() => {
-    if (loading || !rootRef.current) return;
+    if (!reveal || loading || !rootRef.current) return;
     const root = rootRef.current;
     root.classList.add('is-revealed');
-  }, [loading]);
+  }, [loading, reveal]);
 
   if (loading) {
     return (
-      <div className={`t-skel ${className}`} data-state="loading">
-        <div className="t-skel-skeleton is-pulsing relative min-h-[12rem]">{skeleton}</div>
-        <div className="t-skel-content" aria-hidden />
+      <div className={`t-skel ${className}`.trim()} data-state="loading" aria-busy="true">
+        <div className="t-skel-skeleton is-pulsing relative min-h-[8rem]">{skeleton}</div>
       </div>
     );
   }
 
+  if (!reveal) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
-    <div ref={rootRef} className={`t-skel ${className}`} data-state="loaded">
-      <div className="t-skel-skeleton is-pulsing" aria-hidden />
+    <div ref={rootRef} className={`t-skel ${className}`.trim()} data-state="loaded">
       <div className="t-skel-content relative">{children}</div>
     </div>
   );

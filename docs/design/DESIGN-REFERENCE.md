@@ -285,4 +285,22 @@ Every element must map to step 1 or a recoverable branch of step 3.
 
 ---
 
-*Last updated: design reference v1 — ideology + UI/UX agency merge + CoreKnot conventions.*
+## Page archetypes (design system rollout)
+
+| Archetype | Shell | Use |
+|-----------|--------|-----|
+| **A — List** | `ListPageLayout` → `DataOverviewSection` (stat cards) → `PageToolbar` → optional `Banner` → `DataTable` | Assets, Equipment, Subscriptions, Users, Finance, Ops Hub, etc. |
+| **B — Detail overlay** | `FullScreenWorkspace` 65/35 + `DetailSidebarShell` | CRM lead detail, User detail |
+| **C — Tab hub** | `TabHubLayout` + `ModuleSubnav` (teal pill active) | Office, Management, CRM |
+| **D — Empty utility** | `PageHeader` + `EmptyState` | Artist Path, sparse modules |
+| **E — Config modal** | Save=primary, Discard=secondary; section labels match stat label style | Page Access editor |
+| **F — Action grid** | `tm-stat-shell` cards + `StatusBadge` (SAFE/CAUTION) | Admin Script Runner |
+| **G — Dashboard** | `DashboardWidgetShell` (`tm-stat-shell`) + `Banner` for alerts | Dashboard widgets |
+
+**Shared primitives:** `PageHeader`, `StatCard`, `Banner`, `StatusBadge`, `EmptyState`, `tm-stat-shell` (surface-1, 1px border, 10px radius).
+
+**Color roles:** teal = interactive/positive; amber = advisory; red = error/destructive; gray = neutral; blue = active/occupied (not teal).
+
+---
+
+*Last updated: design reference v1 — ideology + UI/UX agency merge + CoreKnot conventions + page archetypes.*

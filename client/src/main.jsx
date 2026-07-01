@@ -6,6 +6,7 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
+import { bootstrapDocumentTheme } from './lib/publicRouteTheme'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
@@ -79,6 +80,7 @@ function Root() {
   return tree;
 }
 
+bootstrapDocumentTheme();
 applyPwaDesktopDocumentFlag();
 watchDisplayModeFlags();
 purgeExpiredNoteDrafts();

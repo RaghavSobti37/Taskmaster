@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Users, TrendingUp,
-  Database, Zap, UserPlus, UserCheck, CalendarDays, KeyRound
+  Database, Zap, UserPlus, CalendarDays
 } from 'lucide-react';
 import {
-  Badge,
-  Card,
   Button,
   DataTable,
   FullScreenWorkspace,
   Input,
+  PasswordInput,
   PageSkeleton,
   ListPageLayout,
   SearchInput,
   UserAvatar,
   QueryErrorBanner,
   getQueryErrorMessage,
+  DetailSidebarShell,
+  DetailSidebarSection,
+  StatusBadge,
 } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { distributionFromField } from '../../utils/buildChartSeries';
@@ -43,11 +45,7 @@ import UserDeleteAction from '../../components/admin/UserDeleteAction';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
 import { resolveDepartmentPages } from '../../utils/pagePermissions';
-
-const formatDateInput = (value) => {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
-};
+import { formatDobInput, parseDobInput } from '../../utils/dateDisplay';
 
 const AdminUsers = () => {
   const { confirm } = useConfirm();
@@ -56,6 +54,7 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
   const [editUserBaseline, setEditUserBaseline] = useState(null);
+  const [dobError, setDobError] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
 
   const {
@@ -83,7 +82,7 @@ const AdminUsers = () => {
         name: selectedUser.name || '',
         email: selectedUser.email || '',
         phone: selectedUser.phone || '',
-        dateOfBirth: formatDateInput(selectedUser.dateOfBirth),
+        dateOfBirth: formatDobInput(selectedUser.dateOfBirth),
         departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || '',
         useCustomPagePermissions: Array.isArray(selectedUser.pagePermissions) && selectedUser.pagePermissions.length > 0,
         pagePermissions: selectedUser.pagePermissions?.length
@@ -96,6 +95,7 @@ const AdminUsers = () => {
       };
       setEditUserData(loaded);
       setEditUserBaseline(loaded);
+      setDobError('');
     } else {
       setEditUserBaseline(null);
     }
@@ -108,6 +108,12 @@ const AdminUsers = () => {
 
   const handleSaveUser = useCallback(async () => {
     if (!selectedUser) return;
+    const dobParsed = parseDobInput(editUserData.dateOfBirth);
+    if (!dobParsed.ok) {
+      setDobError(dobParsed.error);
+      return;
+    }
+    setDobError('');
     if (editUserData.newPassword && editUserData.newPassword !== editUserData.confirmPassword) {
       alert('Passwords do not match.');
       return;
@@ -125,7 +131,7 @@ const AdminUsers = () => {
         email: editUserData.email,
         phone: editUserData.phone,
         departmentId: editUserData.departmentId || null,
-        dateOfBirth: editUserData.dateOfBirth || null,
+        dateOfBirth: dobParsed.value,
         teams: [],
         pagePermissions: editUserData.useCustomPagePermissions ? editUserData.pagePermissions : [],
         suspended: !!editUserData.suspended,
@@ -186,9 +192,9 @@ const AdminUsers = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{u.name}</span>
-              <Badge variant={isAdminUser(u) ? 'rose' : 'info'} className="!text-[9px] uppercase font-mono">
+              <StatusBadge role={isAdminUser(u) ? 'error' : 'neutral'} className="!text-[9px] uppercase font-mono">
                 {u.departmentId?.name || 'Unassigned'}
-              </Badge>
+              </StatusBadge>
             </div>
             <span className="text-[10px] text-[var(--color-text-muted)]">{u.email}</span>
           </div>
@@ -307,141 +313,139 @@ const AdminUsers = () => {
           ) : null
         }
         sidebar={
-          <>
-            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Delete User</h4>
-              {getDeleteBlockReason(selectedUser) && (
-                <p className="text-[10px] text-[var(--color-text-muted)] mb-3">{getDeleteBlockReason(selectedUser)}</p>
-              )}
-              <UserDeleteAction
-                blockReason={getDeleteBlockReason(selectedUser)}
-                isPending={deleteUserMutation.isPending}
-                onDelete={() => handleDeleteUser(selectedUser._id)}
-              />
-            </Card>
-
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                <UserCheck size={12} /> User Details
-              </h4>
-              <Input
-                label="Full Name"
-                value={editUserData.name || ''}
-                onChange={e => setEditUserData({ ...editUserData, name: e.target.value })}
-              />
-              <Input
-                label="Email Address"
-                value={editUserData.email || ''}
-                onChange={e => setEditUserData({ ...editUserData, email: e.target.value })}
-              />
-              <Input
-                label="Phone Number"
-                placeholder="No phone listed"
-                value={editUserData.phone || ''}
-                onChange={e => setEditUserData({ ...editUserData, phone: e.target.value })}
-              />
-              <Input
-                type="date"
-                label="Date of Birth"
-                icon={CalendarDays}
-                value={editUserData.dateOfBirth || ''}
-                onChange={e => setEditUserData({ ...editUserData, dateOfBirth: e.target.value })}
-              />
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Department</label>
-                <select
-                  value={editUserData.departmentId || ''}
-                  onChange={e => setEditUserData({ ...editUserData, departmentId: e.target.value })}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
-                >
-                  <option value="">Unassigned</option>
-                  {departments.map((d) => (
-                    <option key={d._id} value={d._id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            </Card>
-
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                <Database size={12} /> Page Access Override
-              </h4>
-              <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!editUserData.useCustomPagePermissions}
-                  onChange={(e) => {
-                    const enabled = e.target.checked;
-                    setEditUserData((prev) => ({
-                      ...prev,
-                      useCustomPagePermissions: enabled,
-                      pagePermissions: enabled
-                        ? (prev.pagePermissions?.length
-                          ? prev.pagePermissions
-                          : resolveDepartmentPages(
-                            departments.find((d) => String(d._id) === String(prev.departmentId)) || selectedUser?.departmentId || {}
-                          ))
-                        : [],
-                    }));
-                  }}
-                  className="rounded border-[var(--color-bg-border)]"
+          <DetailSidebarShell
+            actions={
+              selectedUser ? (
+                <UserDeleteAction
+                  blockReason={getDeleteBlockReason(selectedUser)}
+                  isPending={deleteUserMutation.isPending}
+                  onDelete={() => handleDeleteUser(selectedUser._id)}
                 />
-                Custom page access (overrides role defaults)
-              </label>
-              {editUserData.useCustomPagePermissions && (
-                <PagePermissionsEditor
-                  selectedPages={editUserData.pagePermissions || []}
-                  onChange={(pages) => setEditUserData({ ...editUserData, pagePermissions: pages })}
-                />
-              )}
-            </Card>
-
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                Account Access
-              </h4>
-              <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!editUserData.suspended}
-                  onChange={(e) => setEditUserData((prev) => ({ ...prev, suspended: e.target.checked }))}
-                  className="rounded border-[var(--color-bg-border)]"
-                />
-                Suspend account (blocks Coreknot access, keeps data)
-              </label>
-              {editUserData.suspended && (
+              ) : null
+            }
+          >
+            <DetailSidebarSection label="User Details">
+              <div className="tm-stat-shell p-4 space-y-4">
                 <Input
-                  label="Suspension reason (optional)"
-                  placeholder="Internal note"
-                  value={editUserData.suspensionReason || ''}
-                  onChange={(e) => setEditUserData({ ...editUserData, suspensionReason: e.target.value })}
+                  label="Full Name"
+                  value={editUserData.name || ''}
+                  onChange={e => setEditUserData({ ...editUserData, name: e.target.value })}
                 />
-              )}
-            </Card>
+                <Input
+                  label="Email Address"
+                  value={editUserData.email || ''}
+                  onChange={e => setEditUserData({ ...editUserData, email: e.target.value })}
+                />
+                <Input
+                  label="Phone Number"
+                  placeholder="No phone listed"
+                  value={editUserData.phone || ''}
+                  onChange={e => setEditUserData({ ...editUserData, phone: e.target.value })}
+                />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  label="Date of Birth"
+                  placeholder="DD/MM/YYYY"
+                  icon={CalendarDays}
+                  value={editUserData.dateOfBirth || ''}
+                  onChange={e => {
+                    setEditUserData({ ...editUserData, dateOfBirth: e.target.value });
+                    setDobError('');
+                  }}
+                />
+                {dobError && <p className="text-xs text-rose-500 font-medium -mt-2">{dobError}</p>}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Department</label>
+                  <select
+                    value={editUserData.departmentId || ''}
+                    onChange={e => setEditUserData({ ...editUserData, departmentId: e.target.value })}
+                    className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
+                  >
+                    <option value="">Unassigned</option>
+                    {departments.map((d) => (
+                      <option key={d._id} value={d._id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </DetailSidebarSection>
 
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                <KeyRound size={12} /> Password
-              </h4>
-              <p className="text-[10px] text-[var(--color-text-muted)]">
-                {selectedUser?.hasPassword ? 'Password is set for this account.' : 'OAuth only — no password on file.'}
-              </p>
-              <Input
-                type="password"
-                label="New Password"
-                placeholder="Leave blank to keep current"
-                value={editUserData.newPassword || ''}
-                onChange={e => setEditUserData({ ...editUserData, newPassword: e.target.value })}
-              />
-              <Input
-                type="password"
-                label="Confirm Password"
-                placeholder="Repeat new password"
-                value={editUserData.confirmPassword || ''}
-                onChange={e => setEditUserData({ ...editUserData, confirmPassword: e.target.value })}
-              />
-            </Card>
-          </>
+            <DetailSidebarSection label="Page Access Override">
+              <div className="tm-stat-shell p-4 space-y-4">
+                <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editUserData.useCustomPagePermissions}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setEditUserData((prev) => ({
+                        ...prev,
+                        useCustomPagePermissions: enabled,
+                        pagePermissions: enabled
+                          ? (prev.pagePermissions?.length
+                            ? prev.pagePermissions
+                            : resolveDepartmentPages(
+                              departments.find((d) => String(d._id) === String(prev.departmentId)) || selectedUser?.departmentId || {}
+                            ))
+                          : [],
+                      }));
+                    }}
+                    className="rounded border-[var(--color-bg-border)]"
+                  />
+                  Custom page access (overrides role defaults)
+                </label>
+                {editUserData.useCustomPagePermissions && (
+                  <PagePermissionsEditor
+                    selectedPages={editUserData.pagePermissions || []}
+                    onChange={(pages) => setEditUserData({ ...editUserData, pagePermissions: pages })}
+                  />
+                )}
+              </div>
+            </DetailSidebarSection>
+
+            <DetailSidebarSection label="Account Access">
+              <div className="tm-stat-shell p-4 space-y-4">
+                <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editUserData.suspended}
+                    onChange={(e) => setEditUserData((prev) => ({ ...prev, suspended: e.target.checked }))}
+                    className="rounded border-[var(--color-bg-border)]"
+                  />
+                  Suspend account (blocks Coreknot access, keeps data)
+                </label>
+                {editUserData.suspended && (
+                  <Input
+                    label="Suspension reason (optional)"
+                    placeholder="Internal note"
+                    value={editUserData.suspensionReason || ''}
+                    onChange={(e) => setEditUserData({ ...editUserData, suspensionReason: e.target.value })}
+                  />
+                )}
+              </div>
+            </DetailSidebarSection>
+
+            <DetailSidebarSection label="Password">
+              <div className="tm-stat-shell p-4 space-y-4">
+                <p className="text-[10px] text-[var(--color-text-muted)] m-0">
+                  {selectedUser?.hasPassword ? 'Password is set for this account.' : 'OAuth only — no password on file.'}
+                </p>
+                <PasswordInput
+                  label="New Password"
+                  placeholder="Leave blank to keep current"
+                  value={editUserData.newPassword || ''}
+                  onChange={e => setEditUserData({ ...editUserData, newPassword: e.target.value })}
+                />
+                <PasswordInput
+                  label="Confirm Password"
+                  placeholder="Repeat new password"
+                  value={editUserData.confirmPassword || ''}
+                  onChange={e => setEditUserData({ ...editUserData, confirmPassword: e.target.value })}
+                />
+              </div>
+            </DetailSidebarSection>
+          </DetailSidebarShell>
         }
       >
         <div className="space-y-8">

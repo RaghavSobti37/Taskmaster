@@ -1,9 +1,8 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { RefreshCw, Music } from 'lucide-react';
-import { PageContainer, Button } from '../../components/ui/primitives';
+import { PageContainer, Button, PageHeader, Banner } from '../../components/ui';
 import SearchInput from '../../components/ui/SearchInput';
-import PageToolbar from '../../components/ui/PageToolbar';
-import AdminConsoleBackButton, { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
+import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ArtistPathCardGrid from '../../components/artistPath/ArtistPathCardGrid';
 import { useArtistPathPeople, useArtistPathSync } from '../../hooks/queries/artistPath';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -40,10 +39,16 @@ export default function ArtistPathPage() {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageToolbar
+      <PageHeader
         icon={Music}
         title="Artist Path"
-        leading={<AdminConsoleBackButton to={ADMIN_CONSOLE_PATH} />}
+        backTo={ADMIN_CONSOLE_PATH}
+        description={(
+          <span className="flex flex-wrap items-center gap-2">
+            <span>Live submissions arrive via website webhook. HolySheet remains the source of truth; use sync only to backfill.</span>
+            <ArtistProductHint product="artistPath" />
+          </span>
+        )}
         actions={(
           <Button
             variant="secondary"
@@ -57,11 +62,6 @@ export default function ArtistPathPage() {
         )}
       />
 
-      <p className="text-xs text-[var(--color-text-muted)] -mt-2 flex flex-wrap items-center gap-2">
-        <span>Live submissions arrive via website webhook. HolySheet remains the source of truth; use sync only to backfill.</span>
-        <ArtistProductHint product="artistPath" />
-      </p>
-
       <div className="max-w-md">
         <SearchInput
           value={search}
@@ -71,9 +71,10 @@ export default function ArtistPathPage() {
       </div>
 
       {isError && (
-        <p className="text-sm text-rose-500">
-          {error?.response?.data?.error || 'Failed to load Artist Path data'}
-        </p>
+        <Banner
+          variant="error"
+          message={error?.response?.data?.error || 'Failed to load Artist Path data'}
+        />
       )}
 
       <ArtistPathCardGrid

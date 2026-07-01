@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ChevronDown,
   Copy,
-  HelpCircle,
   Mail,
   RefreshCw,
 } from 'lucide-react';
@@ -24,6 +23,9 @@ export function canGoBackInHistory() {
   const idx = window.history.state?.idx;
   return typeof idx === 'number' ? idx > 0 : window.history.length > 1;
 }
+
+const actionBtnClass =
+  'h-9 min-h-[44px] w-full justify-center gap-2 sm:min-h-9';
 
 export function RouteErrorFallback({ error, errorRef, onReload }) {
   const navigate = useNavigate();
@@ -64,41 +66,52 @@ export function RouteErrorFallback({ error, errorRef, onReload }) {
 
   return (
     <div
-      className="flex min-h-[calc(100dvh-6rem)] w-full items-center justify-center bg-[var(--color-bg-workspace)] px-6 py-10"
+      className="flex min-h-[calc(100dvh-6rem)] w-full items-center justify-center bg-[var(--color-bg-workspace)] px-4 py-10 sm:px-6"
       role="alert"
     >
-      <div className="w-full max-w-[22rem] text-center">
-        <div className="rounded-2xl border border-[var(--color-bg-border)]/80 bg-[var(--color-bg-surface)] px-6 py-8 shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-brand-teal)]/12 text-[var(--color-brand-teal)]">
+      <div className="w-full max-w-md text-center">
+        <div className="rounded-2xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-6 py-8 sm:px-8 sm:py-10">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-brand-teal)]/12 text-[var(--color-brand-teal)]">
             <AlertTriangle size={28} aria-hidden />
           </div>
 
-          <h1 className="text-base font-bold tracking-tight text-[var(--color-text-primary)]">
+          <h1 className="text-lg font-bold tracking-tight text-[var(--color-text-primary)]">
             Something went wrong
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
-            This page hit an unexpected error. Reload to recover — if it keeps happening, contact your
-            admin with the reference below.
+            {summary}
           </p>
 
-          <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">{summary}</p>
-
-          <p className="mt-4 font-mono text-[11px] tracking-wide text-[var(--color-text-muted)]">
-            Ref{' '}
-            <span className="text-[var(--color-text-primary)]" data-testid="route-error-ref">
-              {errorRef}
+          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Reference
             </span>
-          </p>
+            <code
+              className="font-mono text-xs tracking-wide text-[var(--color-text-primary)]"
+              data-testid="route-error-ref"
+            >
+              {errorRef}
+            </code>
+            <button
+              type="button"
+              onClick={handleCopyRef}
+              className="ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-atomic)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-border)] hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action-primary)]"
+              aria-label={copied ? 'Copied' : 'Copy error details'}
+              title={copied ? 'Copied' : 'Copy error details'}
+            >
+              <Copy size={14} aria-hidden />
+            </button>
+          </div>
 
           <div className="mt-6 flex flex-col gap-2">
-            <Button type="button" onClick={onReload} className="min-h-11 w-full justify-center gap-2">
+            <Button type="button" onClick={onReload} className={actionBtnClass}>
               <RefreshCw size={14} aria-hidden />
               Refresh
             </Button>
 
             <a
               href={supportMailto}
-              className="rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)] px-4 py-2 text-sm min-h-11 w-full"
+              className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center ${actionBtnClass} bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)] px-4 text-sm`}
             >
               <Mail size={14} aria-hidden />
               Contact admin
@@ -106,49 +119,39 @@ export function RouteErrorFallback({ error, errorRef, onReload }) {
 
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => setDetailsOpen((open) => !open)}
-              aria-expanded={detailsOpen}
-              className="min-h-11 w-full justify-center gap-2 text-[var(--color-text-secondary)]"
-            >
-              <HelpCircle size={14} aria-hidden />
-              What is the error
-              <ChevronDown
-                size={14}
-                aria-hidden
-                className={`transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
-              />
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleCopyRef}
-              className="min-h-11 w-full justify-center gap-2 text-[var(--color-text-secondary)]"
-            >
-              <Copy size={14} aria-hidden />
-              {copied ? 'Copied' : 'Copy error code'}
-            </Button>
-
-            <Button
-              type="button"
               variant="secondary"
               onClick={handleGoBack}
-              className="min-h-11 w-full justify-center gap-2"
+              className={actionBtnClass}
             >
               <ArrowLeft size={14} aria-hidden />
               Go back
             </Button>
           </div>
 
-          {detailsOpen ? (
-            <p
-              className="mt-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2.5 text-left text-xs leading-relaxed text-[var(--color-text-muted)] break-words"
-              data-testid="route-error-technical"
+          <div className="mt-4 border-t border-[var(--color-bg-border)] pt-4">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((open) => !open)}
+              aria-expanded={detailsOpen}
+              className="mx-auto flex min-h-[44px] items-center justify-center gap-2 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
             >
-              {technicalDetail}
-            </p>
-          ) : null}
+              What happened
+              <ChevronDown
+                size={14}
+                aria-hidden
+                className={`transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {detailsOpen ? (
+              <pre
+                className="mt-3 max-h-40 overflow-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2.5 text-left font-mono text-[11px] leading-relaxed text-[var(--color-text-muted)] whitespace-pre-wrap break-words"
+                data-testid="route-error-technical"
+              >
+                {technicalDetail}
+              </pre>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

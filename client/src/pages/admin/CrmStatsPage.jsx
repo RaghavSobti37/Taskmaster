@@ -257,12 +257,13 @@ export default function CrmStatsPage() {
         id: 'artist-crm',
         icon: Phone,
         title: 'Artist CRM',
-        colSpan: 3,
         className: 'opacity-75',
         children: (
-          <p className="text-sm text-[var(--color-text-muted)] italic py-1">
-            No artist CRM pipeline activity — all stages are empty.
-          </p>
+          <div className="tm-stat-shell p-4 min-h-[88px] flex items-center">
+            <p className="text-sm text-[var(--color-text-muted)] italic">
+              No artist CRM pipeline activity — all stages are empty.
+            </p>
+          </div>
         ),
       });
     } else {
@@ -331,6 +332,7 @@ export default function CrmStatsPage() {
   return (
     <PageContainer className="!py-4 space-y-6">
       <DataInsightsLayout
+        panelColumns={3}
         header={(
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <PageHeader

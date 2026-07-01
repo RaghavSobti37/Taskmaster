@@ -4,11 +4,14 @@ const { protect } = require('../middleware/authMiddleware');
 const asyncHandler = require('../middleware/asyncHandler');
 const { apiOk, apiError } = require('../utils/apiResponse');
 const { config } = require('../config');
+const { generateSessionToken } = require('../utils/authSession');
 
 const router = express.Router();
 
+const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
 /**
- * Proxy sync token issuance to NestJS when configured, else issue dev stub.
+ * Proxy sync token issuance to NestJS when configured, else issue dev stub (localhost only).
  */
 router.post(
   '/token',
@@ -19,14 +22,16 @@ router.post(
       process.env.NEST_SYNC_URL ||
       `http://127.0.0.1:${config.NEST_PORT || 5001}`;
 
+    // Mint legacy session JWT so Nest AuthGuard accepts Clerk-authenticated users from Express.
+    const internalToken = generateSessionToken(req.user._id.toString());
+
     try {
       const response = await axios.post(
         `${nestBase}/api/v1/sync/token`,
         {},
         {
           headers: {
-            Cookie: req.headers.cookie || '',
-            Authorization: req.headers.authorization || '',
+            Authorization: `Bearer ${internalToken}`,
           },
           timeout: 5000,
           validateStatus: () => true,
@@ -36,11 +41,11 @@ router.post(
       if (response.status >= 200 && response.status < 300) {
         return apiOk(res, response.data);
       }
-    } catch (err) {
+    } catch {
       // fall through to dev stub
     }
 
-    if (config.isDevelopment) {
+    if (config.isDevelopment && LOCALHOST_IPS.has(req.ip)) {
       const jwt = require('jsonwebtoken');
       const secret = config.JWT_SECRET || 'dev-sync-secret';
       const token = jwt.sign(

@@ -14,6 +14,9 @@ const isLocalHostUrl = (url = '') => {
 /** Public API origin for open pixel + click redirect routes (/api/track/...). */
 const DEFAULT_PUBLIC_TRACKING = 'https://YOUR-RENDER-SERVICE.onrender.com';
 
+const isPlaceholderTrackingUrl = (url = '') =>
+  /YOUR-RENDER-SERVICE|YOUR-SERVICE|YOUR-PRODUCTION-API/i.test(String(url));
+
 const resolveTrackingApiBaseUrl = () => {
   const explicit = (process.env.TRACKING_BASE_URL || '').trim().replace(/\/$/, '');
   if (explicit) return explicit;
@@ -31,8 +34,13 @@ const resolveTrackingApiBaseUrl = () => {
     return appBase || `http://localhost:${port}`;
   }
 
-  // Local dev + real inboxes: Gmail cannot reach localhost — use public API
+  // Local dev + real inboxes: Gmail cannot reach localhost — use public API when configured
   const fallback = (process.env.TRACKING_PUBLIC_FALLBACK || DEFAULT_PUBLIC_TRACKING).trim().replace(/\/$/, '');
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  if (isDev && isPlaceholderTrackingUrl(fallback)) {
+    const port = process.env.PORT || 5000;
+    return `http://localhost:${port}`;
+  }
   return fallback;
 };
 
@@ -117,4 +125,5 @@ module.exports = {
   getTrackingDbMismatchWarning,
   isLocalDevMongoUri,
   DEFAULT_PUBLIC_TRACKING,
+  isPlaceholderTrackingUrl,
 };

@@ -82,7 +82,7 @@ const MonthlyAttendanceGrid = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+      <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
         <table className="min-w-full border-collapse text-xs">
           <thead className="bg-[var(--color-bg-secondary)]">
             <tr>

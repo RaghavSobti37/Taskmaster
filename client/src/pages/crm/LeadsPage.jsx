@@ -5,7 +5,7 @@ import {
   Search, Plus, Trash2, CheckCircle2,
   Database, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus, Mail
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, QueryErrorBanner, getQueryErrorMessage, DetailSidebarShell, DetailSidebarSection, StatusBadge } from '../../components/ui';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { Modal } from '../../components/ui/modals';
 import { useAuth } from '../../contexts/AuthContext';
@@ -677,9 +677,9 @@ export default function LeadsPage() {
               </span>
             )}
             {row.emailStatus && row.emailStatus !== 'Pending' && (
-              <Badge variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Unsubscribed' ? 'warning' : 'rose'}>
+              <StatusBadge status={row.emailStatus === 'Active' ? 'available' : row.emailStatus === 'Unsubscribed' ? 'advisory' : 'error'}>
                 {row?.emailStatus}
-              </Badge>
+              </StatusBadge>
             )}
             {row.nextFollowupDate && (
               <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full font-bold uppercase flex items-center gap-1">
@@ -696,9 +696,9 @@ export default function LeadsPage() {
       sortKey: 'leadQuality',
       info: 'How likely this person is to join based on their recent interactions.',
       render: (row) => (
-        <Badge variant={Number(row.leadQuality) >= 4 || row.leadQuality === 'Future 4' ? 'mint' : Number(row.leadQuality) >= 2 ? 'info' : 'apricot'}>
+        <StatusBadge status={Number(row.leadQuality) >= 4 || row.leadQuality === 'Future 4' ? 'positive' : Number(row.leadQuality) >= 2 ? 'active' : 'advisory'}>
           LEVEL {row?.leadQuality}
-        </Badge>
+        </StatusBadge>
       )
     },
     {
@@ -706,9 +706,9 @@ export default function LeadsPage() {
       sortKey: 'leadStatus',
       info: 'Pipeline stage from Fresh through Converted — filters how sales prioritizes outreach.',
       render: (row) => (
-        <Badge variant={row.leadStatus === 'Converted' ? 'mint' : row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'slate'}>
+        <StatusBadge status={row.leadStatus === 'Converted' ? 'converted' : row.leadStatus === 'Hot' ? 'error' : row.leadStatus === 'Warm' ? 'advisory' : 'neutral'}>
           {row.leadStatus?.toUpperCase() || 'NEW'}
-        </Badge>
+        </StatusBadge>
       )
     },
     {
@@ -746,6 +746,7 @@ export default function LeadsPage() {
   return (
     <ListPageLayout
       containerClassName="!py-4"
+      toolbarFill
       overviewMobileMaxStats={2}
       filterFields={filterFields}
       filterSheetTitle={artistMode ? 'Contact filters' : 'Lead filters'}
@@ -756,7 +757,6 @@ export default function LeadsPage() {
       searchBar={(
         <SearchInput
           variant="toolbar"
-          label="Search"
           placeholder={artistMode ? 'Search contacts…' : 'Search name or phone...'}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -840,7 +840,6 @@ export default function LeadsPage() {
         onSortChange={handleTableSortChange}
         isLoading={isLoading}
         rowEstimateSize={58}
-        tableMaxHeight="70vh"
       />
 
       <FullScreenWorkspace
@@ -908,12 +907,9 @@ export default function LeadsPage() {
           </div>
         }
         sidebar={
-          <div className="space-y-4 animate-fade-in">
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
-                <UserCheck size={12} className="text-[var(--color-action-primary)]" /> Contact Profile
-              </h4>
-              <div className="space-y-3">
+          <DetailSidebarShell className="animate-fade-in">
+            <DetailSidebarSection label="Contact Profile">
+              <div className="tm-stat-shell p-4 space-y-3">
                 <Input
                   label="Customer Name"
                   value={editLeadData.name}
@@ -961,12 +957,10 @@ export default function LeadsPage() {
                   </div>
                 )}
               </div>
-            </Card>
+            </DetailSidebarSection>
 
-            <Card className="p-4 space-y-3 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                {artistRepContext ? 'Assigned Manager' : 'Assigned Agent'}
-              </h4>
+            <DetailSidebarSection label={artistRepContext ? 'Assigned Manager' : 'Assigned Agent'}>
+              <div className="tm-stat-shell p-4 space-y-3">
               <select
                 className={CRM_FIELD_SELECT}
                 value={editLeadData.assignedRepId || ''}
@@ -991,22 +985,23 @@ export default function LeadsPage() {
                   </p>
                 </div>
               )}
-            </Card>
+              </div>
+            </DetailSidebarSection>
 
-            <Card className="p-4 space-y-3 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pipeline Snapshot</h4>
+            <DetailSidebarSection label="Pipeline Snapshot">
+              <div className="tm-stat-shell p-4 space-y-3">
               <div className="flex flex-wrap gap-2">
-                <Badge variant={editLeadData.leadStatus === 'Converted' ? 'mint' : 'info'}>
+                <StatusBadge status={editLeadData.leadStatus === 'Converted' ? 'converted' : 'active'}>
                   {(editLeadData.leadStatus || 'New').toUpperCase()}
-                </Badge>
-                <Badge variant="neutral">{(editLeadData.callStatus || 'Pending').toUpperCase()}</Badge>
-                <Badge variant={meaningfulConnectBadgeVariant(editLeadData.meaningfulConnect)}>
+                </StatusBadge>
+                <StatusBadge status="neutral">{(editLeadData.callStatus || 'Pending').toUpperCase()}</StatusBadge>
+                <StatusBadge status={meaningfulConnectBadgeVariant(editLeadData.meaningfulConnect)}>
                   MC: {formatMeaningfulConnect(editLeadData.meaningfulConnect).toUpperCase()}
-                </Badge>
-                <Badge variant="slate">Q{editLeadData.leadQuality || '—'}</Badge>
+                </StatusBadge>
+                <StatusBadge status="neutral">Q{editLeadData.leadQuality || '—'}</StatusBadge>
               </div>
               {selectedLead?.unsubscribed && (
-                <Badge variant="rose" className="w-fit">Unsubscribed</Badge>
+                <StatusBadge status="error" className="w-fit">Unsubscribed</StatusBadge>
               )}
               {editLeadData.nextFollowupDate && (
                 <p className="text-[10px] font-mono text-blue-400 flex items-center gap-1.5 pt-1 border-t border-[var(--color-bg-border)]">
@@ -1014,13 +1009,11 @@ export default function LeadsPage() {
                   Follow-up {editLeadData.nextFollowupDate} {editLeadData.nextFollowupTime}
                 </p>
               )}
-            </Card>
+              </div>
+            </DetailSidebarSection>
 
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 border-b border-[var(--color-bg-border)] pb-2">
-                <Zap size={12} className="text-purple-500" /> Exly Offerings
-              </h4>
-              <div className="space-y-3">
+            <DetailSidebarSection label="Exly Offerings">
+              <div className="tm-stat-shell p-4 space-y-3">
                 {(() => {
                   const offerings = detailLead?.exlyOfferings?.length > 0
                     ? detailLead.exlyOfferings
@@ -1042,8 +1035,8 @@ export default function LeadsPage() {
                   ));
                 })()}
               </div>
-            </Card>
-          </div>
+            </DetailSidebarSection>
+          </DetailSidebarShell>
         }
       >
         <div className="space-y-8">

@@ -157,7 +157,7 @@ export default function WorkspaceGoalsPanel({ workspaceName }) {
               Project contribution
             </p>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
+          <div className="rounded-xl border border-[var(--color-bg-border)]">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]">

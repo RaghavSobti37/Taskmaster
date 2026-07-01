@@ -21,6 +21,9 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
+      - name: Dependency audit (high+)
+        run: npm audit --workspace=coreknot-server --audit-level=high
+        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Jest
@@ -40,6 +43,9 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
+      - name: Dependency audit (high+)
+        run: npm audit --workspace=CoreKnot-client --audit-level=high
+        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Lint

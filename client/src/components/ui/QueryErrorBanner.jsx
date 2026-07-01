@@ -1,6 +1,7 @@
 import React from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from './primitives';
+import Banner from './Banner';
 
 export function getQueryErrorMessage(error, fallback = 'Failed to load data') {
   return error?.response?.data?.error
@@ -11,19 +12,17 @@ export function getQueryErrorMessage(error, fallback = 'Failed to load data') {
 
 export default function QueryErrorBanner({ message, onRetry, className = '' }) {
   return (
-    <div
-      className={`list-page-banner rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3 ${className}`}
-      role="alert"
-    >
-      <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-300 min-w-0">
-        <AlertCircle size={18} className="shrink-0 mt-0.5" />
-        <span>{message}</span>
-      </div>
-      {onRetry && (
-        <Button size="sm" variant="secondary" onClick={onRetry} className="shrink-0">
-          <RefreshCw size={14} /> Retry
-        </Button>
-      )}
-    </div>
+    <Banner
+      variant="error"
+      message={message}
+      className={className}
+      actions={
+        onRetry ? (
+          <Button size="sm" variant="secondary" onClick={onRetry} className="shrink-0">
+            <RefreshCw size={14} aria-hidden /> Retry
+          </Button>
+        ) : null
+      }
+    />
   );
 }

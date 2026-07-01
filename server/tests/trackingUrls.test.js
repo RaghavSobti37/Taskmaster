@@ -45,4 +45,21 @@ describe('trackingUrls local DB mismatch warning', () => {
     expect(isLocalDevMongoUri(prodAtlas)).toBe(false);
     expect(getDbNameFromUri(localAtlas)).toBe('taskmaster_local');
   });
+
+  test('dev placeholder public fallback resolves to localhost and skips mismatch warn', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.MONGODB_URI = 'mongodb://localhost:27017/taskmaster_local';
+    process.env.MONGODB_URI_PROD =
+      'mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/';
+    delete process.env.TRACKING_BASE_URL;
+    delete process.env.TRACKING_PUBLIC_FALLBACK;
+    delete process.env.APP_BASE_URL;
+    delete process.env.TRACKING_USE_LOCAL;
+    delete process.env.MAIL_USE_PROD_DB;
+    process.env.PORT = '5000';
+
+    const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('../utils/trackingUrls');
+    expect(resolveTrackingApiBaseUrl()).toBe('http://localhost:5000');
+    expect(getTrackingDbMismatchWarning()).toBeNull();
+  });
 });

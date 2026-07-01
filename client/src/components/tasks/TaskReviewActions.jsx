@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, RotateCcw } from 'lucide-react';
 import { Button } from '../ui';
+import Banner from '../ui/Banner';
 
 /**
  * In-review approve / rollback controls (extracted from TaskDetailModal).
@@ -59,9 +60,11 @@ export default function TaskReviewActions({
 
   if (!canApproveReview && !canReview) {
     return (
-      <p className="text-xs text-[var(--color-text-muted)] py-3 border-t border-[var(--color-bg-border)]">
-        Awaiting review by {assignerName}
-      </p>
+      <Banner
+        variant="advisory"
+        message={`Awaiting review by ${assignerName}`}
+        className="mt-3"
+      />
     );
   }
 

@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  applyDocumentTheme,
+  getSystemTheme,
+  isPublicThemeRoute,
+  resolveStoredThemePreference,
+} from '../lib/publicRouteTheme';
 
 const ThemeContext = createContext();
 
@@ -11,6 +18,9 @@ const readReducedMotionOverride = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
+  const { pathname } = useLocation();
+  const publicRoute = isPublicThemeRoute(pathname);
+
   const [theme, setThemeState] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme');
@@ -40,36 +50,29 @@ export const ThemeProvider = ({ children }) => {
     [reducedMotionOverride, osReducedMotion]
   );
 
-  // Theme Logic
-  useEffect(() => {
-    const resolveTheme = () => {
-      if (theme === 'system') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-      return theme;
-    };
-
-    const resolved = resolveTheme();
+  const syncDocumentTheme = useCallback((resolved) => {
     setEffectiveTheme(resolved);
+    applyDocumentTheme(resolved);
+  }, []);
 
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(resolved);
-  }, [theme]);
-
-  // System Theme Listener
+  // Public routes → OS scheme; authenticated app → saved preference (incl. system)
   useEffect(() => {
-    if (theme !== 'system') return;
+    const resolved = publicRoute ? getSystemTheme() : resolveStoredThemePreference(theme);
+    syncDocumentTheme(resolved);
+  }, [theme, publicRoute, syncDocumentTheme]);
+
+  // Follow OS changes on public routes and when preference is "system"
+  useEffect(() => {
+    if (!publicRoute && theme !== 'system') return undefined;
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
-      setEffectiveTheme(mediaQuery.matches ? 'dark' : 'light');
-      const root = window.document.documentElement;
-      root.classList.remove('light', 'dark');
-      root.classList.add(mediaQuery.matches ? 'dark' : 'light');
+      syncDocumentTheme(mediaQuery.matches ? 'dark' : 'light');
     };
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [publicRoute, theme, syncDocumentTheme]);
 
   // OS prefers-reduced-motion sync
   useEffect(() => {
@@ -106,6 +109,7 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const toggleTheme = () => {
+    if (publicRoute) return;
     setTheme(effectiveTheme === 'light' ? 'dark' : 'light');
   };
 
@@ -116,6 +120,7 @@ export const ThemeProvider = ({ children }) => {
       reducedMotion: reducedMotionOverride ?? osReducedMotion,
       effectiveReducedMotion,
       setReducedMotion,
+      isPublicThemeRoute: publicRoute,
     }}>
       {children}
     </ThemeContext.Provider>

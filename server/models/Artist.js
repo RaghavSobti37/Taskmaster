@@ -64,8 +64,6 @@ ArtistSchema.pre('save', function () {
   if (this.slug) this.slug = this.slug.trim().toLowerCase().replace(/\s+/g, '-');
 });
 
-ArtistSchema.index({ slug: 1 }, { unique: true, sparse: true });
-
 ArtistSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Artist', ArtistSchema);

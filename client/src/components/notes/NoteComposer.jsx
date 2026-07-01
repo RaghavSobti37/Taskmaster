@@ -23,7 +23,7 @@ function stripHtml(html) {
 
 const isEmptyContent = (html) => !stripHtml(html);
 
-export default function NoteComposer({ onSaved, className = '' }) {
+export default function NoteComposer({ onSaved, className = '', compact = false }) {
   const isMobile = useIsMobile();
   const toast = useToast();
   const createNote = useCreateNote();
@@ -170,11 +170,14 @@ export default function NoteComposer({ onSaved, className = '' }) {
         </Button>
       </div>
 
-      <div className="px-2 sm:px-4 py-3 min-h-[220px] lg:min-h-[280px] note-editor-page-body">
+      <div
+        className={`px-2 sm:px-4 py-3 note-editor-page-body ${compact ? 'min-h-0' : 'min-h-[220px] lg:min-h-[280px]'}`}
+      >
         <NoteRichEditor
           value={content}
           onChange={setContent}
           isMobile={isMobile}
+          compact={compact}
           placeholder="Write your note… Use the toolbar for formatting."
         />
       </div>

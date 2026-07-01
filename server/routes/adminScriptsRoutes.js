@@ -7,6 +7,7 @@ const { validateBody } = require('../validation/validateBody');
 const { validateParams } = require('../validation/validateParams');
 const { runAdminScriptBody, adminScriptParams } = require('../validation/schemas/admin');
 const SCRIPTS_CATALOG = require('../config/adminScriptsCatalog');
+const { spawnEnvForAdminScript } = require('../utils/adminScriptEnv');
 
 const router = express.Router();
 
@@ -53,13 +54,20 @@ router.post('/:scriptId/run', validateParams(adminScriptParams), validateBody(ru
       return res.status(404).json({ success: false, message: 'Script not found' });
     }
 
+    if (process.env.NODE_ENV === 'production' && selected.safety === 'danger') {
+      return res.status(403).json({
+        success: false,
+        message: 'Danger-tier scripts are disabled in production. Run from a secure ops environment.',
+      });
+    }
+
     const scriptPath = path.join(SCRIPTS_DIR, selected.fileName);
     const args = selected.args || [];
     const startedAt = Date.now();
 
     const child = spawn('node', [scriptPath, ...args], {
       cwd: SERVER_ROOT,
-      env: process.env,
+      env: spawnEnvForAdminScript(),
       windowsHide: true,
     });
 

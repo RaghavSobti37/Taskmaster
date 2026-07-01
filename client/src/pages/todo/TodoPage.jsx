@@ -8,7 +8,7 @@ import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import ListCard from '../../components/ui/ListCard';
 import { UserLabel } from '../../components/ui/UserAvatar';
-import { Badge, TablePagination, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { StatusBadge, Banner, TablePagination, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { DataLoading } from '../../components/ui/DataLoading';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant, STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../constants/taskOptions';
@@ -436,6 +436,17 @@ const TodoPage = () => {
     </tr>
   );
 
+  const renderTaskStatusCell = (task) => {
+    if (task.status === 'in-review') {
+      return <StatusBadge status="advisory">In review</StatusBadge>;
+    }
+    return <StatusBadge status={task.status}>{formatTaskStatus(task?.status)}</StatusBadge>;
+  };
+
+  const renderTaskPriorityCell = (task) => (
+    <StatusBadge status={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</StatusBadge>
+  );
+
   const renderTaskCard = (task) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
       return <div key={task?._id} className="p-4"><DataLoading /></div>;
@@ -474,8 +485,8 @@ const TodoPage = () => {
         )}
         secondary={(
           <div className="flex flex-wrap gap-2 mt-2">
-            <Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge>
-            <Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge>
+            {renderTaskStatusCell(task)}
+            {renderTaskPriorityCell(task)}
             {assignerUser && <UserLabel user={assignerUser} size="xs" />}
             <span className="text-[10px] text-[var(--color-text-muted)]">{formatDueDate(dueRaw)}{overdue && !isDone ? ' · Overdue' : ''}</span>
           </div>
@@ -525,12 +536,12 @@ const TodoPage = () => {
             <span className="text-xs text-[var(--color-text-muted)]">—</span>
           )}
         </td>
-        <td className="px-4 py-2"><Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge></td>
-        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge></td>
+        <td className="px-4 py-2">{renderTaskStatusCell(task)}</td>
+        <td className="px-4 py-2">{renderTaskPriorityCell(task)}</td>
         <td className="px-4 py-2">
           {overdue && dueRaw ? (
             <div className="flex flex-col items-start gap-1">
-              <Badge variant="overdue">Overdue</Badge>
+              <StatusBadge status="overdue">Overdue</StatusBadge>
               <span className="text-xs text-[var(--color-text-muted)]">{formatDisplayDateShort(startOfDay(new Date(dueRaw)))}</span>
             </div>
           ) : (
@@ -601,7 +612,6 @@ const TodoPage = () => {
       searchBar={(
         <SearchInput
           variant="toolbar"
-          label="Search"
           placeholder="Search tasks..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -609,6 +619,13 @@ const TodoPage = () => {
         />
       )}
     >
+      {statFilter === 'in-review' && (
+        <Banner
+          variant="advisory"
+          message="Tasks you submitted are awaiting reviewer approval."
+          className="mb-4"
+        />
+      )}
       {isError && (
         <QueryErrorBanner
           message={getQueryErrorMessage(error, 'Failed to load tasks')}
@@ -618,7 +635,6 @@ const TodoPage = () => {
       <FlashHighlightListener />
 
       <div className="lg:hidden space-y-3">
-        {isLoading && <DataLoading />}
         {!isLoading && tasks.length === 0 && (
           <EmptyState
             title="No tasks match filters"
@@ -658,9 +674,6 @@ const TodoPage = () => {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr><td colSpan={7}><DataLoading /></td></tr>
-              )}
               {!isLoading && statusFilter !== 'done' && activeTasks.length === 0 && !showCompletedSection && (
                 <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
               )}

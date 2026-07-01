@@ -21,7 +21,7 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
           <BarChart2 size={14} /> Cumulative Campaign Performance (By Event Tag)
         </h3>
-        <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-secondary)] custom-scrollbar">
+        <div className="border border-[var(--color-bg-border)] rounded-xl bg-[var(--color-bg-secondary)]">
           <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
             <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)]">
               <tr>

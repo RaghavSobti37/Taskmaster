@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { ListTodo } from 'lucide-react';
-import { DataLoading } from '../ui';
-import { LOADING_SHOW_PHRASE_DASHBOARD } from '../../lib/loadingDisplay';
+import { Skeleton } from '../ui';
 import DashboardWidgetFrame from './DashboardWidgetFrame';
 import DashboardTaskRow from './DashboardTaskRow';
 import { useDashboardLayout } from './DashboardLayoutContext';
@@ -48,7 +47,19 @@ export default function MyTasksDashboardCard({
       title={`My tasks (${subtitle})`}
       icon={ListTodo}
     >
-      {loading && <DataLoading className="!py-3 px-3" showPhrase={LOADING_SHOW_PHRASE_DASHBOARD} />}
+      {loading && (
+        <div className="divide-y divide-[var(--color-bg-border)] px-3 py-1" aria-hidden>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-3 items-center py-2.5">
+              <Skeleton variant="circle" width="20px" height="20px" />
+              <div className="flex-1 space-y-1">
+                <Skeleton width={`${65 + i * 5}%`} height="10px" />
+                <Skeleton width="35%" height="8px" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {!loading && todayItems.length === 0 && (
         <p className="tm-caption italic text-center py-4 px-3">No tasks due. You&apos;re clear.</p>
       )}

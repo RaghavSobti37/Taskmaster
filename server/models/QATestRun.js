@@ -16,7 +16,6 @@ const qaTestRunSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'in-progress', 'completed', 'error', 'cancelled'],
     default: 'pending',
-    index: true
   },
   startedAt: {
     type: Date,

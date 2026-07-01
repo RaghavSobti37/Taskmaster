@@ -23,26 +23,73 @@ export const brand = {
   siteUrl: 'https://tsccoreknot.com/',
 };
 
+export const landingNavLinks = [
+  { label: 'Features', href: '#features' },
+  { label: 'Solutions', href: '#solutions' },
+  { label: 'Resources', href: '#resources' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'About', href: '#about' },
+];
+
 export const landingHero = {
   eyebrow: 'Introducing CoreKnot Workspace',
-  title: 'Master Your Team',
-  titleAccent: 'Workflows & Campaigns',
+  title: 'Unify Your Projects, Team & Campaigns',
   description:
-    'CoreKnot unifies project tracking, CRM pipeline management, email campaigns, and team operations in one secure workspace.',
-  qualifiers: [
-    'Projects, tasks, CRM, and email in one place',
-    'Built for coordinated team operations',
-    'Secure sign-in with role-based access',
+    'The all-in-one workspace for modern teams — manage projects, nurture client relationships, run email campaigns, and keep everyone aligned without switching tools.',
+  trustBadges: [
+    { label: 'No credit card required', icon: 'CreditCard' },
+    { label: 'Secure & role-based access', icon: 'Shield' },
+    { label: 'Built for growing teams', icon: 'Users' },
   ],
-  ctaPrimary: 'Sign In to Workspace',
-  ctaSecondary: 'Create Free Account',
+  ctaPrimary: 'Get Started Free',
+  ctaSecondary: 'Book a Demo',
 };
 
 export const landingSections = {
   features: {
     title: 'Purpose-Built for Modern Operations',
     description:
-      'Replace fragmented tooling with coordinated workflows — from daily tasks and attendance to CRM follow-ups and campaign dispatch.',
+      'Everything your team needs to plan, execute, and grow — coordinated in one secure workspace.',
+  },
+  metrics: {
+    headline: 'Trusted by teams that get things done',
+    stats: [
+      { value: '500+', label: 'Active Teams' },
+      { value: '10K+', label: 'Projects Managed' },
+      { value: '98%', label: 'Customer Satisfaction' },
+    ],
+  },
+  testimonials: {
+    title: 'Loved by Teams, Proven by Results',
+    items: [
+      {
+        quote:
+          'CoreKnot replaced four separate tools for us. Our project delivery time dropped by 30% in the first quarter.',
+        name: 'Sarah Chen',
+        role: 'Operations Director',
+        initials: 'SC',
+      },
+      {
+        quote:
+          'The CRM pipeline and email campaigns in one place changed how we follow up with clients. Nothing falls through the cracks anymore.',
+        name: 'Marcus Rivera',
+        role: 'Head of Growth',
+        initials: 'MR',
+      },
+      {
+        quote:
+          'Finally a workspace that our whole team actually uses. Onboarding was smooth and the calendar sync just works.',
+        name: 'Priya Sharma',
+        role: 'Project Lead',
+        initials: 'PS',
+      },
+    ],
+  },
+  finalCta: {
+    title: 'Ready to simplify your workflow?',
+    description: 'Start your free account today. No credit card required.',
+    ctaPrimary: 'Get Started Free',
+    ctaSecondary: 'Book a Demo',
   },
 };
 

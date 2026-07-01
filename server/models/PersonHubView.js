@@ -7,7 +7,7 @@ const PersonHubViewSchema = new mongoose.Schema({
   email: { type: String, index: true, sparse: true },
   phone: { type: String, index: true, sparse: true },
   city: { type: String },
-  inletKeys: [{ type: String, index: true }],
+  inletKeys: [{ type: String }],
   inletCount: { type: Number, default: 0, index: true },
   isMultiInlet: { type: Boolean, default: false, index: true },
   emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending' },

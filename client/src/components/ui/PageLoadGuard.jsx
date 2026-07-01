@@ -1,11 +1,12 @@
 import React from 'react';
-import { PageContainer } from './primitives';
-import PageSkeleton from './PageSkeleton';
+import ListPageSkeleton from './ListPageSkeleton';
 import QueryErrorSlot from './QueryErrorSlot';
-import SkeletonReveal from './SkeletonReveal';
+
+const listShellClass = (className = '') =>
+  `tm-page-container min-w-0 w-full overflow-x-clip ${className}`.trim();
 
 /**
- * PageLoadGuard — skeleton pulse + reveal when route/query loads.
+ * PageLoadGuard — full-page skeleton swap while primary query loads (no ghost overlay).
  */
 const PageLoadGuard = ({
   loading,
@@ -14,29 +15,27 @@ const PageLoadGuard = ({
   onRetry,
   queryErrorFallback = 'Failed to load data',
   children,
-  skeleton: Skeleton = PageSkeleton,
+  skeleton: Skeleton = ListPageSkeleton,
   className = '',
 }) => {
   if (isError) {
     return (
-      <PageContainer className={className}>
+      <div className={listShellClass(className)}>
         <QueryErrorSlot
           isError
           error={error}
           onRetry={onRetry}
           fallback={queryErrorFallback}
         />
-      </PageContainer>
+      </div>
     );
   }
 
-  return (
-    <PageContainer className={className}>
-      <SkeletonReveal loading={loading} skeleton={<Skeleton />}>
-        {children}
-      </SkeletonReveal>
-    </PageContainer>
-  );
+  if (loading) {
+    return <Skeleton className={className} />;
+  }
+
+  return children;
 };
 
 export default PageLoadGuard;

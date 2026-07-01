@@ -22,7 +22,7 @@ const taskTotal = (m) => PRIORITY_KEYS.reduce((s, k) => s + (m.tasksByPriority?.
 const MemberBreakdownTable = ({ members = [] }) => (
   <div>
     <p className="tm-widget-label mb-3">Member breakdown</p>
-    <div className="overflow-x-auto">
+    <div>
     {members.length === 0 ? (
       <p className="text-xs text-[var(--color-text-muted)] opacity-60">No member activity in this period.</p>
     ) : (
@@ -70,7 +70,7 @@ const MemberTasksByPriorityTable = ({ members = [] }) => {
   return (
     <div>
       <p className="tm-widget-label mb-3">Tasks by member &amp; priority</p>
-      <div className="overflow-x-auto">
+      <div>
       {rows.length === 0 ? (
         <p className="text-xs text-[var(--color-text-muted)] opacity-60">
           No assigned tasks in this period.

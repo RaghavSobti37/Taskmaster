@@ -5,11 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MobilePullToRefresh from './MobilePullToRefresh';
 
-const mockUseIsMobile = vi.fn();
+const mockUsePullToRefreshEnabled = vi.fn();
 const mockUsePullToRefresh = vi.fn();
 
 vi.mock('../../hooks/useBreakpoint', () => ({
-  useIsMobile: () => mockUseIsMobile(),
+  usePullToRefreshEnabled: () => mockUsePullToRefreshEnabled(),
 }));
 
 vi.mock('../../hooks/usePullToRefresh', async () => {
@@ -42,7 +42,7 @@ function renderPtr(path = '/dashboard') {
 describe('MobilePullToRefresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseIsMobile.mockReturnValue(true);
+    mockUsePullToRefreshEnabled.mockReturnValue(true);
     mockUsePullToRefresh.mockReturnValue({
       pullDistance: 0,
       isRefreshing: false,
@@ -51,10 +51,15 @@ describe('MobilePullToRefresh', () => {
     });
   });
 
-  it('renders nothing on desktop', () => {
-    mockUseIsMobile.mockReturnValue(false);
+  it('renders nothing on desktop layout', () => {
+    mockUsePullToRefreshEnabled.mockReturnValue(false);
     const { container } = renderPtr();
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('does not mount indicator DOM until pull is active', () => {
+    renderPtr();
+    expect(screen.queryByTestId('mobile-ptr-indicator')).not.toBeInTheDocument();
   });
 
   it('shows indicator when pulling on mobile', () => {

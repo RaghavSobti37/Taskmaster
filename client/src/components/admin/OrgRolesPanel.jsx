@@ -429,7 +429,7 @@ const OrgRolesPanel = ({ orgRoles = [] }) => {
           </Button>
           <Button
             size="sm"
-            variant="success"
+            variant="primary"
             onClick={handleSaveEdit}
             disabled={!hasEdits || !editName.trim() || updateMutation.isPending}
           >

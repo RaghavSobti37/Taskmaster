@@ -75,7 +75,7 @@ export default function ArtistTeamTab({ artistId, membership, canManageTeam = fa
         {list.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">No team members yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">

@@ -10,6 +10,7 @@ import {
 import {
   Badge, ProgressBar, Button, Input, PageSkeleton,
   ListPageLayout, SearchInput, QueryErrorBanner, getQueryErrorMessage, EmptyState,
+  StatusBadge,
 } from '../../components/ui';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { NexusModal } from '../../components/ui/modals';
@@ -35,7 +36,7 @@ import { buildProjectsActiveFilterChips } from '../../utils/activeFilterChips';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-const STATUS_VARIANT = { active: 'mint', completed: 'success', archived: 'slate', planning: 'info' };
+const STATUS_ROLE = { active: 'positive', completed: 'complete', archived: 'neutral', planning: 'active' };
 
 function relativeDate(dateStr) {
   if (!dateStr) return null;
@@ -88,7 +89,7 @@ const ProjectPreview = ({
   project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd,
   reviewCount = 0, overdueCount = 0, onMoveClick, isSelected = false, onSelect, showSelect = false,
 }) => {
-  const statusVariant = STATUS_VARIANT[project.status] || 'info';
+  const statusRole = STATUS_ROLE[project.status] || 'active';
   return (
     <div
       className={`relative p-2.5 bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-colors cursor-pointer group/preview min-w-0 ${projectCardAccentClass({ reviewCount, overdueCount })} ${isSelected ? 'ring-1 ring-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5' : ''}`}
@@ -112,9 +113,9 @@ const ProjectPreview = ({
           </h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Badge variant={statusVariant} className="!py-0 !px-1 !text-[7px] shrink-0 hidden sm:inline-flex">
+          <StatusBadge status={statusRole} className="!py-0 !px-1 !text-[7px] shrink-0 hidden sm:inline-flex">
             {project.status || 'active'}
-          </Badge>
+          </StatusBadge>
           <ProjectCardStatusOverlay reviewCount={reviewCount} overdueCount={overdueCount} />
           {canMove && (
             <>
@@ -206,9 +207,9 @@ const TableRow = ({ project, accent, reviewCount, overdueCount, canMove, onNavig
       <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">{project.workspace || 'GENERAL'}</span>
     </td>
     <td className="px-2 py-2">
-      <Badge variant={STATUS_VARIANT[project.status] || 'info'} className="!py-0 !px-1.5 !text-[8px]">
+      <StatusBadge status={STATUS_ROLE[project.status] || 'active'} className="!py-0 !px-1.5 !text-[8px]">
         {project.status || 'active'}
-      </Badge>
+      </StatusBadge>
     </td>
     <td className="px-2 py-2 w-28 hidden lg:table-cell">
       <div className="flex items-center gap-1.5">
@@ -1090,7 +1091,7 @@ const ProjectsView = () => {
 
             {viewMode === 'table' ? (
               /* ── TABLE VIEW (P2-1) ── */
-              <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+              <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
@@ -1204,9 +1205,9 @@ const ProjectsView = () => {
                                   </div>
                                 )}
                                 {/* P0-4: status badge (all view) */}
-                                <Badge variant={STATUS_VARIANT[project.status] || 'info'} className="!py-0 !px-1.5 !text-[8px]">
+                                <StatusBadge status={STATUS_ROLE[project.status] || 'active'} className="!py-0 !px-1.5 !text-[8px]">
                                   {project.status || 'Active'}
-                                </Badge>
+                                </StatusBadge>
                                 <button
                                   onClick={(e) => toggleStar(e, project)}
                                   className="p-1 rounded-lg transition-all hover:scale-110 hover:bg-[var(--color-bg-border)]"

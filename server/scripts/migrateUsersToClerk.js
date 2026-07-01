@@ -6,6 +6,7 @@
  *   node server/scripts/migrateUsersToClerk.js --email user@example.com
  *   node server/scripts/migrateUsersToClerk.js --staff-only --source local
  *   node server/scripts/migrateUsersToClerk.js --staff-only --source prod
+ *   node server/scripts/migrateUsersToClerk.js --staff-only --source prod --write-source local
  *   node server/scripts/migrateUsersToClerk.js --staff-only --source both
  *   node server/scripts/migrateUsersToClerk.js --domain example.com --dry-run
  */
@@ -47,6 +48,7 @@ const migrateAll = hasFlag('--all');
 const staffOnly = hasFlag('--staff-only');
 const includeTest = hasFlag('--include-test');
 const sourceArg = (readArg('--source') || 'local').toLowerCase();
+const writeSourceArg = (readArg('--write-source') || sourceArg).toLowerCase();
 
 const resolveMongoUri = (source) => {
   if (source === 'prod') {
@@ -212,7 +214,7 @@ const migrateOne = async (dbUser) => {
 
   if (dbUser.clerkId !== clerkUser.id) {
     await User.updateOne(
-      { _id: dbUser._id },
+      { email },
       { $set: { clerkId: clerkUser.id } },
     ).setOptions({ bypassTenant: true });
   }
@@ -270,6 +272,10 @@ async function main() {
     console.error('--source must be local, prod, or both');
     process.exit(1);
   }
+  if (!['local', 'prod'].includes(writeSourceArg)) {
+    console.error('--write-source must be local or prod');
+    process.exit(1);
+  }
 
   const sources = sourceArg === 'both' ? ['local', 'prod'] : [sourceArg];
   const byEmail = new Map();
@@ -289,35 +295,44 @@ async function main() {
   }
 
   const primarySource = users[0]._source || sources[0];
-  await mongoose.connect(resolveMongoUri(primarySource));
+  const writeUri = resolveMongoUri(writeSourceArg);
+  await mongoose.connect(writeUri);
 
   const results = [];
   for (const dbUser of users) {
-    const writeSource = dbUser._source || primarySource;
+    const readSource = dbUser._source || primarySource;
     try {
-      if (writeSource !== primarySource) {
+      if (readSource !== writeSourceArg) {
         await mongoose.disconnect();
-        await mongoose.connect(resolveMongoUri(writeSource));
+        await mongoose.connect(resolveMongoUri(readSource));
+        const fresh = await User.findById(dbUser._id)
+          .select('+password email name clerkId phone role')
+          .setOptions({ bypassTenant: true })
+          .lean();
+        await mongoose.disconnect();
+        await mongoose.connect(writeUri);
+        if (fresh) Object.assign(dbUser, fresh);
       }
       const outcome = await migrateOne(dbUser);
-      results.push({ ...outcome, source: writeSource });
+      results.push({ ...outcome, source: readSource, writeSource: writeSourceArg });
 
       if (outcome.status === 'ok' && outcome.clerkUserId && sourceArg === 'both') {
         for (const mirrorSource of ['local', 'prod']) {
-          if (mirrorSource === writeSource) continue;
+          if (mirrorSource === writeSourceArg) continue;
           try {
             await syncClerkIdByEmail(resolveMongoUri(mirrorSource), dbUser.email, outcome.clerkUserId);
           } catch {
             // ponytail: best-effort mirror clerkId across env DBs
           }
         }
-        await mongoose.connect(resolveMongoUri(writeSource));
+        await mongoose.connect(writeUri);
       }
     } catch (err) {
       results.push({
         email: dbUser.email,
         status: 'error',
-        source: writeSource,
+        source: readSource,
+        writeSource: writeSourceArg,
         reason: err?.errors?.[0]?.message || err?.message || String(err),
       });
     }
@@ -331,6 +346,7 @@ async function main() {
         staffOnly,
         includeTest,
         source: sourceArg,
+        writeSource: writeSourceArg,
         orgId: orgId || null,
         count: results.length,
         joined: results.filter((r) => r.orgMembership?.joined).length,

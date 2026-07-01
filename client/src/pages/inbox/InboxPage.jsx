@@ -280,7 +280,6 @@ const InboxPage = () => {
       }
     >
       <div className="min-w-0">
-        {isLoading && <DataLoading />}
         {!isLoading && filtered.length === 0 && (
           <EmptyState title="No notifications" variant="subtle" className="!py-10" />
         )}

@@ -62,7 +62,7 @@ const CalculationTable = ({ summary }) => {
           Each row is one action type. Subtotals sum to the monthly total.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div>
         <table className="w-full text-left text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-[var(--color-bg-border)] text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">

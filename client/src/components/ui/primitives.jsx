@@ -9,6 +9,8 @@ import NumberPopIn from './NumberPopIn';
 import DeltaBadge from './DeltaBadge';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
+import { coerceTableRows } from '../../utils/coerceTableRows';
+import TableSkeleton from './TableSkeleton';
 
 /** Default rows per page for DataTable and TablePagination */
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
@@ -98,7 +100,6 @@ export const Card = ({ children, className = '', hover = false, variant = 'flat'
 
 export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
   <div
-    data-page-root
     className={`mx-auto tm-page-container min-w-0 max-w-full overflow-x-clip ${className}`}
     style={{ maxWidth }}
   >
@@ -310,29 +311,22 @@ export const InfoButton = ({ text }) => {
   );
 };
 
-export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, highlights = [], children, onClick, className = '', active = false, delta }) => {
-  const accentColors = {
-    info: 'border-l-[var(--color-pastel-blue-text)]',
-    mint: 'border-l-[var(--color-pastel-mint-text)]',
-    rose: 'border-l-[var(--color-pastel-rose-text)]',
-    apricot: 'border-l-[var(--color-pastel-apricot-text)]',
-    slate: 'border-l-[var(--color-pastel-slate-text)]',
-  };
-
-  return (
-    <div 
-      onClick={onClick} 
-      className={`p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${accentColors[variant] || accentColors.slate} ${active ? 'ring-1 ring-[var(--color-action-primary)]' : ''} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} h-full ${className}`}
+export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, highlights = [], children, onClick, className = '', active = false, delta }) => (
+    <div
+      onClick={onClick}
+      className={`tm-stat-shell p-4 flex flex-col gap-2 h-full ${active ? 'ring-1 ring-[var(--color-action-primary)]' : ''} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} ${className}`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          {Icon && <Icon size={12} strokeWidth={2.5} className="text-[var(--color-text-muted)]" />}
-          <span className="tm-widget-label leading-none">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {Icon && (
+            <Icon size={13} strokeWidth={2.5} className="text-[var(--color-action-primary)] shrink-0" aria-hidden />
+          )}
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none truncate">
             {label}
             {info && <InfoButton text={info} />}
           </span>
         </div>
-        {subValue && <Badge variant={variant} className="!py-0 !px-1.5 !text-[9px]">{subValue}</Badge>}
+        {subValue && <Badge variant={variant} className="!py-0 !px-1.5 !text-[9px] shrink-0">{subValue}</Badge>}
       </div>
       <div className="flex items-end justify-between gap-2 mt-auto">
         <div className="flex items-baseline gap-2 min-w-0">
@@ -361,8 +355,7 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
         </ul>
       )}
     </div>
-  );
-};
+);
 
 export const TablePagination = ({
   pageSize = DEFAULT_TABLE_PAGE_SIZE,
@@ -462,16 +455,18 @@ export const DataTable = ({
   mobileRowRender,
   mobileRowClassName = '',
   rowEstimateSize = 52,
-  tableMaxHeight = '600px',
-  virtualize = true,
+  tableMaxHeight: _tableMaxHeight,
+  virtualize = false,
   density = 'default',
 }) => {
+  const tableRows = useMemo(() => coerceTableRows(data), [data]);
+
   const [localSortState, setLocalSortState] = useState(null);
   const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
   const setSortState = onSortChange || setLocalSortState;
 
   const sortedData = useMemo(() => {
-    if (serverSide || !sortState?.key || !sortState.direction) return data;
+    if (serverSide || !sortState?.key || !sortState.direction) return tableRows;
     const col = columns.find((c) => (c.sortKey || c.key) === sortState.key);
     const getVal = (row) => {
       if (col?.sortFn) return col.sortFn(row);
@@ -479,8 +474,8 @@ export const DataTable = ({
       return row[sortState.key];
     };
     const dir = sortState.direction === 'asc' ? 1 : -1;
-    return [...data].sort((a, b) => compareSortValues(getVal(a), getVal(b)) * dir);
-  }, [data, sortState, serverSide, columns]);
+    return [...tableRows].sort((a, b) => compareSortValues(getVal(a), getVal(b)) * dir);
+  }, [tableRows, sortState, serverSide, columns]);
 
   const handleSortClick = useCallback(
     (col) => {
@@ -572,17 +567,13 @@ export const DataTable = ({
   const actionColumns = columns.filter((c) => c.mobileAction);
 
   const isComfortable = density === 'comfortable';
-  const thCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-2.5' : 'px-4 py-2';
-  const tdCellPad = isComfortable ? 'px-4 py-2 lg:px-5 lg:py-3' : 'px-4 py-2';
+  const thCellPad = isComfortable ? 'px-4 py-3 lg:px-5 lg:py-3' : 'px-4 py-3';
+  const tdCellPad = isComfortable ? 'px-4 py-3 lg:px-5 lg:py-3' : 'px-4 py-3';
   const tableDensityClass = isComfortable ? 'data-table--comfortable' : '';
 
   return (
     <div className={`w-full flex flex-col ${className}`}>
-      <div
-        ref={parentRef}
-        className={`w-full ${isMobile ? 'overflow-visible' : 'overflow-y-auto'} custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
-        style={isMobile ? undefined : { maxHeight: tableMaxHeight }}
-      >
+      <div ref={parentRef} className="data-table-shell w-full overflow-visible">
         <table
           className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'} ${tableDensityClass}`}
         >
@@ -631,17 +622,22 @@ export const DataTable = ({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <Spinner size="md" />
+                <td colSpan={columns.length} className="p-0">
+                  <TableSkeleton rows={6} className="border-0 rounded-none" />
                 </td>
               </tr>
             ) : showEmpty ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
-                  {emptyDescription && (
-                    <p className="mt-2 text-xs text-[var(--color-text-secondary)] max-w-sm mx-auto">{emptyDescription}</p>
-                  )}
+                <td colSpan={columns.length} className="p-0">
+                  <div className="py-12 px-4 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]" aria-hidden>
+                      <span className="text-lg font-bold">∅</span>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{emptyTitle}</p>
+                    {emptyDescription && (
+                      <p className="mt-2 text-xs text-[var(--color-text-muted)] max-w-sm mx-auto">{emptyDescription}</p>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : useRowVirtualizer ? (
@@ -716,13 +712,16 @@ export const DataTable = ({
         {/* Mobile Responsive Card Stack (< lg) */}
         <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
           {isLoading ? (
-            <div className="px-4 py-12 text-center flex flex-col items-center gap-2">
-              <Spinner size="md" />
+            <div className="p-0">
+              <TableSkeleton rows={5} className="border-0 rounded-none" />
             </div>
           ) : showEmpty ? (
             <div className="px-4 py-12 text-center">
-              <p className="tm-widget-label">{emptyTitle}</p>
-              {emptyDescription && <p className="mt-2 tm-data-meta">{emptyDescription}</p>}
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]" aria-hidden>
+                <span className="text-lg font-bold">∅</span>
+              </div>
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">{emptyTitle}</p>
+              {emptyDescription && <p className="mt-2 text-xs text-[var(--color-text-muted)]">{emptyDescription}</p>}
             </div>
           ) : paginatedData.map((row, i) => (
             <div

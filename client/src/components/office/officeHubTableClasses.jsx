@@ -16,7 +16,7 @@ export const OFFICE_TABLE_PROPS = {
   className: 'office-hub-table',
   fitWidth: true,
   rowEstimateSize: 60,
-  tableMaxHeight: '70vh',
+  virtualize: false,
 };
 
 /** Primary column: title + optional subtitle with truncate + tooltip. */

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Badge } from '../ui/primitives';
+import StatusBadge, { resolveStatusRole } from '../ui/StatusBadge';
 
+/** @deprecated Import resolveStatusRole from StatusBadge directly */
 export const equipmentStatusVariant = (status) => {
-  if (status === 'Available') return 'success';
-  if (status === 'In Use') return 'info';
-  if (status === 'Maintenance') return 'warning';
-  return 'danger';
+  const role = resolveStatusRole(status);
+  if (role === 'positive') return 'success';
+  if (role === 'active') return 'info';
+  if (role === 'advisory') return 'warning';
+  if (role === 'error') return 'danger';
+  return 'neutral';
 };
 
 const compactBadge = '!text-[9px] !px-1.5 !py-0 shrink-0';
@@ -25,9 +28,7 @@ export default function EquipmentMobileRow({ asset }) {
           {asset.name}
         </span>
         {asset.status ? (
-          <Badge variant={equipmentStatusVariant(asset.status)} className={compactBadge}>
-            {asset.status}
-          </Badge>
+          <StatusBadge status={asset.status} className={compactBadge} />
         ) : null}
       </div>
 
@@ -40,9 +41,9 @@ export default function EquipmentMobileRow({ asset }) {
       {(category || assigned) ? (
         <div className="flex items-center gap-1.5 min-w-0 text-[10px] text-[var(--color-text-muted)]">
           {category ? (
-            <Badge variant="info" className={`${compactBadge} max-w-[55%] truncate`} title={category}>
+            <StatusBadge role="neutral" className={`${compactBadge} max-w-[55%] truncate`} title={category}>
               {category}
-            </Badge>
+            </StatusBadge>
           ) : null}
           {category && assigned ? (
             <span className="text-[var(--color-text-muted)]/70 shrink-0" aria-hidden>

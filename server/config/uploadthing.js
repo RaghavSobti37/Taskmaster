@@ -1,15 +1,7 @@
 const { createUploadthing } = require('uploadthing/express');
-const { getTokenFromRequest } = require('../utils/authCookie');
+const { requireAuthenticatedUpload } = require('../utils/uploadAuth');
 
 const f = createUploadthing();
-
-const requireAuthenticatedUpload = (req) => {
-  const token = getTokenFromRequest(req);
-  if (!token && !req.user) {
-    throw new Error('Unauthorized — sign in again and retry the upload');
-  }
-  return { userId: req.user?._id?.toString() || 'authenticated-user' };
-};
 
 const uploadRouter = {
   imageUploader: f({ image: { maxFileSize: "16MB", maxFileCount: 5 } })

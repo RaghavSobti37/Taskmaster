@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
 import { DataTable, Button, Badge } from '../../components/ui/primitives';
+import StatusBadge from '../../components/ui/StatusBadge';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import SearchInput from '../../components/ui/SearchInput';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
@@ -340,9 +341,9 @@ export function DataHubContent() {
     {
       header: 'Email status',
       render: (item) => (
-        <Badge variant={item.emailStatus === 'Active' ? 'mint' : item.emailStatus === 'Unsubscribed' ? 'warning' : 'neutral'}>
+        <StatusBadge status={item.emailStatus === 'Active' ? 'available' : item.emailStatus === 'Unsubscribed' ? 'advisory' : 'neutral'}>
           {item.emailStatus || 'Pending'}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {
@@ -507,7 +508,6 @@ export function DataHubContent() {
             onPageChange={setPage}
             onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
             rowEstimateSize={56}
-            tableMaxHeight="calc(100vh - 18rem)"
           />
         </div>
       </ListPageLayout>

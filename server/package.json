@@ -59,7 +59,7 @@
     "backup:verify-supabase": "node scripts/verifySupabaseBackup.js"
   },
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^5.1.6",
+    "@clerk/backend": "^1.25.0",
     "@coreknot/contracts": "1.0.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.108.2",

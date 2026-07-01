@@ -46,6 +46,7 @@ const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
 const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
 const FeaturesPage = lazyWithRetry(() => import('./pages/marketing/FeaturesPage'));
 const GoogleSuccessPage = lazyWithRetry(() => import('./pages/auth/GoogleSuccessPage'));
+const ClerkCallbackPage = lazyWithRetry(() => import('./pages/auth/ClerkCallbackPage'));
 const ArtistsCollection = lazyWithRetry(() => import('./pages/artists/ArtistsCollection'));
 const ArtistDetail = lazyWithRetry(() => import('./pages/artists/ArtistDetail'));
 const ArtistWorkspaceDetail = lazyWithRetry(() => import('./pages/artists/workspace/ArtistWorkspaceDetail'));
@@ -144,6 +145,7 @@ const marketingAuthRoutes = (
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/relegends" element={<OTPVerificationPage />} />
+    <Route path="/sso-callback" element={<ClerkCallbackPage />} />
     <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
     <Route path="/privacy" element={<PrivacyPolicy />} />
     <Route path="/userdata" element={<UserDataDeletion />} />

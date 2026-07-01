@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
+import ClerkAuthProvider from './components/auth/ClerkAuthProvider'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { BrowserRouter } from 'react-router-dom'
@@ -129,7 +130,8 @@ const MotionConfigBridge = ({ children }) => {
 const appTree = (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
+      <ClerkAuthProvider>
+        <AuthProvider>
         <ThemeProvider>
           <MotionConfigBridge>
             <SidebarProvider>
@@ -153,7 +155,8 @@ const appTree = (
             </SidebarProvider>
           </MotionConfigBridge>
         </ThemeProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ClerkAuthProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );

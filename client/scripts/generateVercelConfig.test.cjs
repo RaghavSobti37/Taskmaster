@@ -4,6 +4,7 @@ const {
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
+  existingRewritesLookValid,
 } = require('./generateVercelConfig.cjs');
 
 const templateRewrites = [
@@ -34,4 +35,19 @@ test('composeRewrites drops duplicate PostHog rules from template', () => {
   const phRules = rewrites.filter((rule) => String(rule.source).startsWith('/ph/'));
 
   assert.equal(phRules.length, 3);
+});
+
+test('existingRewritesLookValid accepts live Render host, rejects placeholder', () => {
+  assert.equal(
+    existingRewritesLookValid({
+      rewrites: [{ source: '/api/(.*)', destination: 'https://taskmaster-jfw0.onrender.com/api/$1' }],
+    }),
+    true,
+  );
+  assert.equal(
+    existingRewritesLookValid({
+      rewrites: [{ source: '/api/(.*)', destination: 'https://YOUR-RENDER-SERVICE.onrender.com/api/$1' }],
+    }),
+    false,
+  );
 });

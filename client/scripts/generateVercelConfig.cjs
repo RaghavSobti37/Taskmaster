@@ -196,18 +196,21 @@ const proxyUrl = pickProxyUrl();
 const nestProxyUrl = pickNestProxyUrl();
 const onVercel = process.env.VERCEL === '1';
 
-if (onVercel && !proxyUrl) {
+if (!proxyUrl) {
   const existing = readExistingClientVercelJson();
   if (existingRewritesLookValid(existing)) {
-    console.warn(
-      '[generateVercelConfig] RENDER_API_PROXY_URL unset on Vercel — keeping committed client/vercel.json rewrites',
-    );
+    const msg = onVercel
+      ? '[generateVercelConfig] RENDER_API_PROXY_URL unset on Vercel — keeping committed client/vercel.json rewrites'
+      : '[generateVercelConfig] keeping committed client/vercel.json rewrites (postinstall must not clobber prod proxy)';
+    console.warn(msg);
     process.exit(0);
   }
-  console.error(
-    '[generateVercelConfig] RENDER_API_PROXY_URL required on Vercel — mobile login /api proxy will 404.'
-  );
-  process.exit(1);
+  if (onVercel) {
+    console.error(
+      '[generateVercelConfig] RENDER_API_PROXY_URL required on Vercel — mobile login /api proxy will 404.'
+    );
+    process.exit(1);
+  }
 }
 
 const templatePath = path.join(CLIENT_ROOT, 'vercel.json.example');
@@ -346,6 +349,7 @@ module.exports = {
   composeRewrites,
   buildPostHogRewrites,
   mapTemplateRewrites,
+  existingRewritesLookValid,
 };
 
 if (require.main === module) {

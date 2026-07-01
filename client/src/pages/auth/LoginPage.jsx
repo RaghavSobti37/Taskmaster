@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../../contexts/AuthContext';
 import AppBootError from '../../components/AppBootError';
 import BootScreen from '../../components/BootScreen';
@@ -9,41 +10,36 @@ import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
-import { consumeAuthReturnPath } from '../../lib/authUnauthorized';
-import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 export default function LoginPage() {
-  const { user, loading: authLoading, bootError, retryBoot } = useAuth();
+  const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const navigatedRef = useRef(false);
   const [installGuideOpen, setInstallGuideOpen] = React.useState(false);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
   const clerkReady = isClerkConfigured();
-
-  const resolveReturnPath = React.useCallback(
-    () => resolveLoginReturnPath({
-      stateFrom: location.state?.from,
-      search: location.search,
-      storedReturnPath: consumeAuthReturnPath(),
-    }),
-    [location.state, location.search],
-  );
+  const clerkEstablishing = clerkReady && clerkLoaded && clerkSignedIn && (!user || !sessionReady);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      navigateAfterAuth(navigate, resolveReturnPath());
+    if (!user || !sessionReady) {
+      navigatedRef.current = false;
+      return;
     }
-  }, [authLoading, user, navigate, resolveReturnPath]);
+    if (authLoading || navigatedRef.current) return;
+    navigatedRef.current = true;
+    navigateAfterAuth(navigate, '/dashboard');
+  }, [authLoading, user, sessionReady, navigate]);
 
   if (bootError) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
   }
 
-  if (authLoading) {
+  if (authLoading || clerkEstablishing) {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 

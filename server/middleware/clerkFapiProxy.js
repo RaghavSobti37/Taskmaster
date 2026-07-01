@@ -5,7 +5,10 @@
 
 const express = require('express');
 
-const CLERK_FAPI = 'https://frontend-api.clerk.services';
+// ponytail: proxy upstream is always generic FAPI — never clerk.tsccoreknot.com (CF error 1000)
+const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || '')
+  .trim()
+  .replace(/\/$/, '') || 'https://frontend-api.clerk.services';
 const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';
 
 const hopByHop = new Set([
@@ -30,7 +33,8 @@ const clientIp = (req) => {
 
 const buildTargetUrl = (req) => {
   const suffix = String(req.originalUrl || req.url || '').replace(/^\/__clerk\/?/, '/');
-  return `${CLERK_FAPI}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+  const base = CLERK_FAPI.startsWith('http') ? CLERK_FAPI : `https://${CLERK_FAPI}`;
+  return `${base}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
 };
 
 const proxyHandler = async (req, res) => {
@@ -58,6 +62,7 @@ const proxyHandler = async (req, res) => {
     method: req.method,
     headers,
     redirect: 'manual',
+    signal: AbortSignal.timeout(25_000),
   };
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
     if (req.rawBody) {
@@ -71,7 +76,8 @@ const proxyHandler = async (req, res) => {
   try {
     upstream = await fetch(targetUrl, init);
   } catch (err) {
-    res.status(502).json({ error: 'Clerk upstream unreachable', detail: err.message });
+    const detail = err?.cause?.message || err.message;
+    res.status(502).json({ error: 'Clerk upstream unreachable', detail });
     return;
   }
 

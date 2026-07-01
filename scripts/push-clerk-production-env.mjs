@@ -63,7 +63,12 @@ function loadKeys() {
     || local.CLERK_SECRET_KEY_LIVE
     || server.CLERK_SECRET_KEY_LIVE
     || '';
-  return { pk, sk };
+  const orgId =
+    local.VITE_CLERK_ORGANIZATION_ID
+    || local.CLERK_ORGANIZATION_ID_LIVE
+    || server.CLERK_ORGANIZATION_ID_LIVE
+    || '';
+  return { pk, sk, orgId };
 }
 
 function assertLiveKeys({ pk, sk }) {
@@ -113,7 +118,7 @@ function loadRenderApiKey() {
   return process.env.RENDER_API_KEY || '';
 }
 
-async function renderUpsert(sk) {
+async function renderUpsert(sk, orgId) {
   const token = loadRenderApiKey();
   if (!token) {
     console.warn('  Render: skipped (no RENDER_API_KEY)');
@@ -121,7 +126,10 @@ async function renderUpsert(sk) {
   }
   const upserts = [
     ['CLERK_SECRET_KEY', sk],
+    ['CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services'],
+    ['CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk'],
   ];
+  if (orgId) upserts.push(['CLERK_ORGANIZATION_ID', orgId]);
 
   for (const [key, value] of upserts) {
     // Add-or-update single env var: PUT .../env-vars/{key} — POST is not supported here.
@@ -138,16 +146,14 @@ async function renderUpsert(sk) {
     console.log(`  Render production: ${key}`);
   }
 
-  // ponytail: clear org pin — users-only auth (organizations removed)
-  const delUrl = `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars/CLERK_ORGANIZATION_ID`;
-  const del = await fetch(delUrl, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (del.ok || del.status === 404) {
-    console.log('  Render production: CLERK_ORGANIZATION_ID removed (if present)');
-  } else {
-    console.warn(`  Render: could not remove CLERK_ORGANIZATION_ID (${del.status})`);
+  for (const staleKey of ['CLERK_FRONTEND_API']) {
+    const staleDel = await fetch(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars/${staleKey}`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (staleDel.ok || staleDel.status === 404) {
+      console.log(`  Render production: ${staleKey} removed (if present)`);
+    }
   }
 }
 
@@ -169,24 +175,25 @@ function deployProjects() {
 
 const keys = loadKeys();
 assertLiveKeys(keys);
+if (!keys.orgId) {
+  console.warn('  Warning: no VITE_CLERK_ORGANIZATION_ID — org-gated auth may fail until set');
+}
 
 console.log('Pushing Clerk production keys…');
 for (const { cwd, needsClerkSecret } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
+  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', 'https://tsccoreknot.com/__clerk');
+  if (keys.orgId) {
+    vercelUpsert(cwd, 'VITE_CLERK_ORGANIZATION_ID', keys.orgId);
+  }
   if (needsClerkSecret) {
     vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
-  }
-  // Remove legacy org pin from Vercel if present
-  for (const env of ['production']) {
-    spawnSync('npx', ['--yes', 'vercel@latest', 'env', 'rm', 'VITE_CLERK_ORGANIZATION_ID', env, '--yes'], {
-      cwd,
-      stdio: 'ignore',
-      shell: true,
-    });
+    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services');
+    vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk');
   }
 }
-await renderUpsert(keys.sk);
+await renderUpsert(keys.sk, keys.orgId);
 
 console.log('Applying Clerk Dashboard proxy + origins…');
 const cfg = spawnSync('node', ['server/scripts/configureClerkProduction.mjs'], {

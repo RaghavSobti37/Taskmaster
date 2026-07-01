@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from './contexts/AuthContext';
+import { isClerkConfigured } from './config/clerk';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
@@ -8,7 +10,6 @@ import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootError from './components/AppBootError';
 import BootScreen from './components/BootScreen';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
-import MobilePullToRefresh from './components/mobile/MobilePullToRefresh';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
 import ExternalAuthRedirect from './components/ExternalAuthRedirect';
 import ExternalLandingRedirect from './components/ExternalLandingRedirect';
@@ -119,14 +120,30 @@ const LegacyArtistAnalyticsRedirect = () => {
 
 function AppRootRedirect() {
   const { user, loading, bootError, retryBoot } = useAuth();
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
+
+  const clerkSessionPending = isClerkConfigured()
+    && clerkLoaded
+    && clerkSignedIn
+    && !user
+    && !bootError;
+
+  const clerkBoot = isClerkConfigured() && !clerkLoaded;
+
   if (bootError) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
   }
-  if (loading) return <BootScreen onRefresh={() => retryBoot()} />;
+
+  if (loading || clerkBoot || clerkSessionPending) {
+    return <BootScreen onRefresh={() => retryBoot()} />;
+  }
+
   if (user) return <Navigate to="/dashboard" replace />;
+
   if (usesExternalLandingHost()) {
     return <ExternalLandingRedirect />;
   }
+
   return <Navigate to="/landing" replace />;
 }
 
@@ -166,7 +183,6 @@ function App() {
   return (
     <Suspense fallback={<BootScreen />}>
       <RouteErrorBoundary>
-        <MobilePullToRefresh />
         <Routes>
           {isLandingSite() && (
             <>

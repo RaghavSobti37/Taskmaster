@@ -1,27 +1,32 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/react';
 import {
   Briefcase,
   Mail,
   Users,
-  ArrowRight,
-  Sparkles,
   Calendar,
+  CreditCard,
+  Shield,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import MarketingPageBackground from '../components/MarketingPageBackground';
-import MarketingThemeToggle from '../components/MarketingThemeToggle';
+import BootScreen from '../components/BootScreen';
 import BrandLogo from '../components/brand/BrandLogo';
+import LandingDashboardPreview from '../components/landing/LandingDashboardPreview';
 import { authUrl, appUrl, hasSameOriginAuthRoutes } from '../config/siteUrls';
+import { isClerkConfigured } from '../config/clerk';
 import {
   brand,
   footer,
   landingFeaturePillars,
   landingHero,
+  landingNavLinks,
   landingSections,
 } from '../constants/marketingContent';
 
 const FEATURE_ICONS = { Briefcase, Mail, Users, Calendar };
+const TRUST_ICONS = { CreditCard, Shield, Users };
 
 function AuthLink({ to, className, children, ...props }) {
   if (hasSameOriginAuthRoutes()) {
@@ -38,8 +43,26 @@ function AuthLink({ to, className, children, ...props }) {
   );
 }
 
+function NavAnchor({ href, className, children }) {
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  );
+}
+
 export default function LandingPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
+
+  const clerkSessionPending = isClerkConfigured()
+    && clerkLoaded
+    && clerkSignedIn
+    && !user;
+
+  if (loading || clerkSessionPending) {
+    return <BootScreen />;
+  }
 
   if (user) {
     if (hasSameOriginAuthRoutes()) {
@@ -49,128 +72,292 @@ export default function LandingPage() {
     return null;
   }
 
-  return (
-    <div className="tm-marketing-page min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
-      <MarketingPageBackground />
+  const demoHref = `mailto:${brand.supportEmail}?subject=CoreKnot%20Demo%20Request`;
 
+  return (
+    <div className="tm-marketing-page tm-landing min-h-screen bg-[var(--landing-beige-wash)] text-[var(--landing-green-dark)] flex flex-col font-sans">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:shadow-lg"
       >
         Skip to main content
       </a>
 
-      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 relative z-10">
-          <BrandLogo size={40} />
-          <div>
-            <span className="font-bold text-base tracking-tight text-foreground block">{brand.name}</span>
-            <span className="text-[10px] text-[var(--color-text-secondary)] font-mono">{brand.tagline}</span>
+      {/* Navigation */}
+      <header className="sticky top-0 z-50 border-b border-[var(--landing-beige)] bg-white/90 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <BrandLogo size={36} />
+            <div className="leading-tight">
+              <span className="font-bold text-sm tracking-tight block">{brand.name}</span>
+              <span className="text-[10px] text-[var(--landing-green-mid)]">{brand.tagline}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3 relative z-10">
-          <MarketingThemeToggle />
-          <Link to="/privacy" className="text-xs text-[var(--color-text-secondary)] hover:text-foreground transition hidden sm:inline">
-            {footer.privacyLabel}
-          </Link>
-          <AuthLink to="/login" className="px-4 py-2 rounded-xl bg-card hover:bg-background border border-border text-xs font-bold text-foreground transition">
-            Sign In
-          </AuthLink>
-          <AuthLink to="/register" className="px-4 py-2 rounded-xl bg-[var(--color-brand-teal)] hover:bg-[var(--color-action-hover)] text-xs font-bold text-[var(--color-brand-cream)] transition shadow-lg shadow-[var(--color-brand-teal)]/20">
-            Get Started
-          </AuthLink>
+
+          <nav
+            className="hidden lg:flex items-center gap-6 text-sm font-medium text-[var(--landing-green-mid)]"
+            aria-label="Primary"
+          >
+            {landingNavLinks.map((link) => (
+              <NavAnchor
+                key={link.href}
+                href={link.href}
+                className="hover:text-[var(--landing-green-dark)] transition-colors"
+              >
+                {link.label}
+              </NavAnchor>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <AuthLink
+              to="/login"
+              className="px-3.5 py-2 rounded-lg border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/50 text-xs sm:text-sm font-semibold text-[var(--landing-green-dark)] transition"
+            >
+              Sign In
+            </AuthLink>
+            <AuthLink
+              to="/register"
+              className="px-3.5 py-2 rounded-lg bg-[var(--landing-green-dark)] hover:bg-[var(--landing-green-mid)] text-xs sm:text-sm font-semibold text-white transition shadow-sm"
+            >
+              Get Started
+            </AuthLink>
+          </div>
         </div>
       </header>
 
-      <main id="main-content">
-        <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex flex-col justify-center relative z-10" aria-labelledby="landing-hero-title">
-          <div className="w-full max-w-3xl mx-auto space-y-8">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold">
-              <Sparkles size={12} aria-hidden /> {landingHero.eyebrow}
-            </div>
-            <h1 id="landing-hero-title" className="w-full text-4xl sm:text-6xl font-black tracking-tight text-foreground leading-tight text-balance">
-              {landingHero.title}{' '}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-brand-teal)] to-[var(--color-action-primary)]">
-                {landingHero.titleAccent}
+      <main id="main-content" className="flex-1">
+        {/* Hero */}
+        <section
+          className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 pb-14 sm:pb-20"
+          aria-labelledby="landing-hero-title"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <div className="space-y-6 text-left">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-[var(--landing-accent)]/15 border border-[var(--landing-accent)]/30 text-[var(--landing-green-dark)] text-xs font-bold">
+                {landingHero.eyebrow}
               </span>
-            </h1>
-            <p className="block w-full mx-auto text-base md:text-lg text-[var(--color-text-secondary)] text-center leading-relaxed font-medium" style={{ maxWidth: '700px' }}>
-              {landingHero.description}
-            </p>
-            <ul className="mx-auto max-w-xl space-y-1.5 text-left text-sm text-[var(--color-text-secondary)]" aria-label="What CoreKnot includes">
-              {landingHero.qualifiers.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-brand-pumpkin)]" aria-hidden />
-                  {item}
-                </li>
-              ))}
-            </ul>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
-              <AuthLink
-                to="/login"
-                className="px-6 py-3.5 rounded-xl bg-[var(--color-brand-teal)] hover:bg-[var(--color-action-hover)] text-[var(--color-brand-cream)] font-bold text-sm transition flex items-center gap-2 shadow-xl shadow-[var(--color-brand-teal)]/25 group"
+              <h1
+                id="landing-hero-title"
+                className="text-3xl sm:text-4xl lg:text-[2.75rem] font-black tracking-tight text-[var(--landing-green-dark)] leading-[1.1] text-balance"
               >
-                {landingHero.ctaPrimary} <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" aria-hidden />
-              </AuthLink>
-              <AuthLink
-                to="/register"
-                className="px-6 py-3.5 rounded-xl bg-card hover:bg-background text-foreground border border-border font-bold text-sm transition"
-              >
-                {landingHero.ctaSecondary}
-              </AuthLink>
+                {landingHero.title}
+              </h1>
+
+              <p className="text-base sm:text-lg text-[var(--landing-green-mid)] leading-relaxed max-w-xl">
+                {landingHero.description}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <AuthLink
+                  to="/register"
+                  className="px-5 py-3 rounded-xl bg-[var(--landing-green-dark)] hover:bg-[var(--landing-green-mid)] text-white font-bold text-sm transition shadow-lg shadow-[var(--landing-green-dark)]/20"
+                >
+                  {landingHero.ctaPrimary}
+                </AuthLink>
+                <a
+                  href={demoHref}
+                  className="px-5 py-3 rounded-xl border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
+                >
+                  {landingHero.ctaSecondary}
+                </a>
+              </div>
+
+              <ul className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-5 pt-2" aria-label="Trust indicators">
+                {landingHero.trustBadges.map((badge) => {
+                  const Icon = TRUST_ICONS[badge.icon] ?? Shield;
+                  return (
+                    <li key={badge.label} className="flex items-center gap-2 text-xs text-[var(--landing-green-mid)]">
+                      <Icon size={14} className="text-[var(--landing-accent)] shrink-0" aria-hidden />
+                      {badge.label}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
+
+            <LandingDashboardPreview />
           </div>
         </section>
 
-        <section className="bg-card/90 backdrop-blur-sm border-y border-border py-16 relative z-10" aria-labelledby="landing-features-title">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row gap-8 items-start w-full max-w-6xl mx-auto mb-12">
-              <h2 id="landing-features-title" className="w-full md:w-1/3 text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+        {/* Features */}
+        <section
+          id="features"
+          className="bg-white border-y border-[var(--landing-beige)] py-16 sm:py-20 scroll-mt-20"
+          aria-labelledby="landing-features-title"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
+              <h2
+                id="landing-features-title"
+                className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--landing-green-dark)]"
+              >
                 {landingSections.features.title}
               </h2>
-              <p className="w-full md:w-2/3 text-[var(--color-text-secondary)] text-base md:text-lg leading-relaxed whitespace-normal">
+              <p className="text-[var(--landing-green-mid)] text-base leading-relaxed">
                 {landingSections.features.description}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {landingFeaturePillars.map((feat) => {
                 const Icon = FEATURE_ICONS[feat.icon] ?? Briefcase;
                 return (
                   <div
                     key={feat.title}
-                    className="p-6 rounded-2xl bg-background border border-border flex gap-4 items-start hover:border-[var(--color-brand-teal)] transition shadow-sm hover:shadow-md"
+                    className="p-5 rounded-xl bg-white border border-[var(--landing-beige)] flex flex-col gap-3 hover:border-[var(--landing-green-mid)]/40 transition"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-[var(--color-brand-teal)]/10 border border-[var(--color-brand-teal)]/20 text-[var(--color-brand-teal)] flex items-center justify-center shrink-0">
-                      <Icon size={24} aria-hidden />
+                    <div className="w-11 h-11 rounded-lg bg-[var(--landing-green-dark)]/8 text-[var(--landing-green-dark)] flex items-center justify-center">
+                      <Icon size={22} aria-hidden />
                     </div>
-                    <div className="space-y-2 min-w-0">
-                      <h3 className="font-bold text-base text-foreground">{feat.title}</h3>
-                      <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{feat.description}</p>
-                    </div>
+                    <h3 className="font-bold text-sm text-[var(--landing-green-dark)]">{feat.title}</h3>
+                    <p className="text-sm text-[var(--landing-green-mid)] leading-relaxed">{feat.description}</p>
                   </div>
                 );
               })}
             </div>
           </div>
         </section>
+
+        {/* Metrics & social proof */}
+        <section
+          id="solutions"
+          className="bg-[var(--landing-beige)] py-10 sm:py-12 scroll-mt-20"
+          aria-label="Social proof"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+              <p className="text-sm sm:text-base font-semibold text-[var(--landing-green-dark)] text-center lg:text-left shrink-0">
+                {landingSections.metrics.headline}
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-8 sm:gap-12">
+                {landingSections.metrics.stats.map((stat) => (
+                  <div key={stat.label} className="text-center">
+                    <div className="text-2xl sm:text-3xl font-black text-[var(--landing-green-dark)]">
+                      {stat.value}
+                    </div>
+                    <div className="text-xs text-[var(--landing-green-mid)] font-medium mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-6 opacity-40" aria-hidden="true">
+                {['Logo', 'Logo', 'Logo'].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-6 w-20 rounded bg-[var(--landing-green-mid)]/20 flex items-center justify-center text-[9px] font-bold text-[var(--landing-green-mid)] uppercase tracking-widest"
+                  >
+                    Partner
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section
+          id="resources"
+          className="bg-[var(--landing-beige-wash)] py-16 sm:py-20 scroll-mt-20"
+          aria-labelledby="landing-testimonials-title"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <h2
+              id="landing-testimonials-title"
+              className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--landing-green-dark)] text-center mb-12"
+            >
+              {landingSections.testimonials.title}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {landingSections.testimonials.items.map((item) => (
+                <article
+                  key={item.name}
+                  className="p-6 rounded-xl bg-white border border-[var(--landing-beige)] flex flex-col gap-4"
+                >
+                  <div className="flex gap-0.5" aria-label="5 out of 5 stars">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={14}
+                        className="fill-[var(--landing-accent)] text-[var(--landing-accent)]"
+                        aria-hidden
+                      />
+                    ))}
+                  </div>
+                  <blockquote className="text-sm text-[var(--landing-green-mid)] leading-relaxed italic flex-1">
+                    &ldquo;{item.quote}&rdquo;
+                  </blockquote>
+                  <footer className="flex items-center gap-3 pt-2 border-t border-[var(--landing-beige)]">
+                    <div
+                      className="w-9 h-9 rounded-full bg-[var(--landing-green-dark)] text-white text-xs font-bold flex items-center justify-center shrink-0"
+                      aria-hidden
+                    >
+                      {item.initials}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[var(--landing-green-dark)]">{item.name}</div>
+                      <div className="text-xs text-[var(--landing-green-mid)]">{item.role}</div>
+                    </div>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section
+          id="pricing"
+          className="bg-[var(--landing-green-dark)] py-14 sm:py-16 scroll-mt-20"
+          aria-labelledby="landing-cta-title"
+        >
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center space-y-6">
+            <h2 id="landing-cta-title" className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              {landingSections.finalCta.title}
+            </h2>
+            <p className="text-white/75 text-base">{landingSections.finalCta.description}</p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <AuthLink
+                to="/register"
+                className="px-6 py-3 rounded-xl bg-[var(--landing-accent)] hover:brightness-105 text-[var(--landing-green-dark)] font-bold text-sm transition shadow-lg"
+              >
+                {landingSections.finalCta.ctaPrimary}
+              </AuthLink>
+              <a
+                href={demoHref}
+                className="px-6 py-3 rounded-xl border border-white/30 text-white hover:bg-white/10 font-bold text-sm transition"
+              >
+                {landingSections.finalCta.ctaSecondary}
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="bg-background border-t border-border py-12 relative z-10">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row sm:items-start items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <BrandLogo size={32} />
-            <span className="font-bold text-sm text-foreground">{brand.name}</span>
+      {/* Footer */}
+      <footer id="about" className="bg-white border-t border-[var(--landing-beige)] py-10 scroll-mt-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-2.5 justify-center sm:justify-start">
+            <BrandLogo size={28} />
+            <span className="font-bold text-sm text-[var(--landing-green-dark)]">{brand.name}</span>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-6 text-xs text-[var(--color-text-secondary)] font-medium">
-            <Link to="/privacy" className="hover:text-foreground">{footer.privacyLabel}</Link>
-            <Link to="/userdata" className="hover:text-foreground">{footer.userDataLabel}</Link>
-            <a href={`mailto:${brand.supportEmail}`} className="hover:text-foreground">{footer.contactLabel}</a>
+          <div className="flex flex-wrap justify-center gap-5 text-xs text-[var(--landing-green-mid)] font-medium">
+            <Link to="/privacy" className="hover:text-[var(--landing-green-dark)] transition">
+              {footer.privacyLabel}
+            </Link>
+            <Link to="/userdata" className="hover:text-[var(--landing-green-dark)] transition">
+              {footer.userDataLabel}
+            </Link>
+            <a href={`mailto:${brand.supportEmail}`} className="hover:text-[var(--landing-green-dark)] transition">
+              {footer.contactLabel}
+            </a>
           </div>
 
-          <span className="text-xs text-[var(--color-text-secondary)] font-medium">
+          <span className="text-xs text-[var(--landing-green-mid)] font-medium text-center sm:text-right">
             {footer.copyright()}
           </span>
         </div>

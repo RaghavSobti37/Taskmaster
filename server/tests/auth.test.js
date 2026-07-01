@@ -138,7 +138,8 @@ describe('Authentication API', () => {
     it('returns 200 authenticated false when logged out', async () => {
       const res = await request(app).get('/api/auth/session');
       expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({ authenticated: false });
+      expect(res.body).toMatchObject({ authenticated: false });
+      expect(res.body.traceId).toEqual(expect.any(String));
     });
 
     it('returns authenticated true with user when logged in', async () => {

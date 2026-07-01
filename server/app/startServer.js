@@ -46,10 +46,13 @@ function connectMongo() {
 
   mongoose.connect(dbUri, getMongooseConnectOptions())
     .then(() => {
-      const { ensurePerformanceIndexes } = require('../scripts/ensureIndexes');
-      ensurePerformanceIndexes().catch((err) => {
-        logger.warn('INDEX', 'Performance index sync skipped', { error: err.message });
-      });
+      // Defer index sync so first API requests after boot are not competing with syncIndexes.
+      setTimeout(() => {
+        const { ensurePerformanceIndexes } = require('../scripts/ensureIndexes');
+        ensurePerformanceIndexes().catch((err) => {
+          logger.warn('INDEX', 'Performance index sync skipped', { error: err.message });
+        });
+      }, 60_000);
 
       const { ensureDataHubBootstrap } = require('../utils/ensureDataHubBootstrap');
       ensureDataHubBootstrap().catch(() => {});

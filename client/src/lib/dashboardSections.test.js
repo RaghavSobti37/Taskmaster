@@ -4,6 +4,7 @@ import {
   prepareDailyActionRenderList,
   repackDashboardElements,
   sortWidgetsForMobileStack,
+  normalizeDashboardElements,
 } from './dashboardSections';
 
 describe('dashboardSections grid layout', () => {
@@ -47,5 +48,20 @@ describe('dashboardSections grid layout', () => {
       'my-tasks',
       'review-queue',
     ]);
+  });
+
+  it('drops legacy per-env render log widgets and promotes render-logs', () => {
+    const normalized = normalizeDashboardElements(
+      [
+        { componentId: 'render-logs-production', visible: true, order: 1 },
+        { componentId: 'render-logs-staging-api', visible: true, order: 2 },
+        { componentId: 'render-logs', visible: false, order: 3 },
+      ],
+      'admin',
+    );
+    const ids = normalized.map((e) => e.componentId);
+    expect(ids).not.toContain('render-logs-production');
+    expect(ids).not.toContain('render-logs-staging-api');
+    expect(normalized.find((e) => e.componentId === 'render-logs')?.visible).toBe(true);
   });
 });

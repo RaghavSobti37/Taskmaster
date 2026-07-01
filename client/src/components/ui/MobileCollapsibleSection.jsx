@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 
 /**
- * Collapsible section for mobile — analytics, insights, etc.
+ * Collapsible section for mobile — accordion expand (transitions.dev).
  */
 export default function MobileCollapsibleSection({
   title,
@@ -20,20 +20,26 @@ export default function MobileCollapsibleSection({
   }
 
   return (
-    <div className={`rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-hidden ${className}`}>
+    <div
+      className={`t-acc rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-hidden ${className}`}
+      data-open={open ? 'true' : 'false'}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 min-h-[44px] text-left"
+        aria-expanded={open}
+        className="t-acc-head w-full flex items-center justify-between px-4 py-3 min-h-[44px] text-left"
       >
         <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">{title}</span>
-        {open ? (
-          <ChevronUp size={16} className="text-[var(--color-text-muted)] shrink-0" />
-        ) : (
-          <ChevronDown size={16} className="text-[var(--color-text-muted)] shrink-0" />
-        )}
+        <span className="t-acc-chevron text-[var(--color-text-muted)] shrink-0" aria-hidden>
+          <ChevronDown size={16} />
+        </span>
       </button>
-      {open && <div className="px-4 pb-4 space-y-3 border-t border-[var(--color-bg-border)] pt-3">{children}</div>}
+      <div className="t-acc-panel">
+        <div className="t-acc-panel-inner px-4 pb-4 space-y-3 border-t border-[var(--color-bg-border)] pt-3">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

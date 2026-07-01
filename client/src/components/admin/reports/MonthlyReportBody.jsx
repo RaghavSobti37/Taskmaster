@@ -1,23 +1,10 @@
 import React from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  PieChart, Pie, Cell,
-} from 'recharts';
 import DailyLogHoursChart from './DailyLogHoursChart';
 import ReportProjectsTable from './ReportProjectsTable';
 import ReportCalendarTable from './ReportCalendarTable';
 import DailyLogsTable from '../DailyLogsTable';
 import ReportMembersTable from './ReportMembersTable';
-
-const PIE_COLORS = ['#10b981', '#f59e0b', '#6366f1', '#94a3b8'];
-
-const formatAttendanceTooltip = (value) => {
-  if (value === 1) return ['Present', 'Attendance'];
-  if (value === 0.5) return ['Half Day', 'Attendance'];
-  return ['Absent', 'Attendance'];
-};
-
-const formatTaskPieTooltip = (value, name) => [`${value} tasks`, name];
+import { BklitBreakdownBars, BklitCategoryBarChart } from '../../charts/bklitInsightsCharts';
 
 const MonthlyReportBody = ({
   report,
@@ -34,7 +21,10 @@ const MonthlyReportBody = ({
   ].filter((d) => d.value > 0);
 
   const chartDays = report.window?.days || 30;
-  const attendanceChart = report.attendance.chart.slice(-chartDays);
+  const attendanceChart = report.attendance.chart.slice(-chartDays).map((row) => ({
+    ...row,
+    label: row.date?.slice(5) || row.date,
+  }));
 
   return (
     <div ref={printRef} className="space-y-4">
@@ -66,29 +56,25 @@ const MonthlyReportBody = ({
           <p className="tm-widget-label text-[var(--color-text-muted)] mb-3">
             Attendance by Day
           </p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={attendanceChart}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-              <YAxis tick={{ fontSize: 9 }} domain={[0, 1]} />
-              <Tooltip formatter={formatAttendanceTooltip} />
-              <Bar dataKey="value" name="Attendance" fill="#10b981" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <BklitCategoryBarChart
+            emptyLabel="No attendance in range"
+            fill="#10b981"
+            height={200}
+            labelKey="label"
+            series={attendanceChart}
+            valueKey="value"
+          />
         </section>
 
         <section className="py-4 border-t border-[var(--color-bg-border)] lg:border-t-0">
           <p className="tm-widget-label text-[var(--color-text-muted)] mb-3">
             Task Status
           </p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={taskPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                {taskPie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={formatTaskPieTooltip} />
-            </PieChart>
-          </ResponsiveContainer>
+          <BklitBreakdownBars
+            emptyLabel="No tasks in range"
+            height={200}
+            items={taskPie}
+          />
         </section>
 
         <DailyLogHoursChart
@@ -98,16 +84,12 @@ const MonthlyReportBody = ({
       </div>
 
       {report.members?.length > 0 && <ReportMembersTable members={report.members} />}
-
-      {showProjects && report.projects?.items?.length > 0 && (
-        <ReportProjectsTable items={report.projects.items} />
+      {showMember && report.member && (
+        <ReportMembersTable members={[report.member]} single />
       )}
-
-      {showCalendar && report.calendar?.events?.length > 0 && (
-        <ReportCalendarTable events={report.calendar.events} />
-      )}
-
-      <DailyLogsTable entries={report.logs.entries || []} showMember={showMember} />
+      {showProjects && <ReportProjectsTable projects={report.projects} />}
+      {showCalendar && <ReportCalendarTable events={report.calendar} />}
+      <DailyLogsTable entries={report.logs.entries} />
     </div>
   );
 };

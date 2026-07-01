@@ -1,12 +1,10 @@
-import { formatDateKeyForDisplay, formatDisplayDate } from '../../../utils/dateDisplay';
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import React, { useMemo } from 'react';
-import { format, parseISO } from 'date-fns';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from 'recharts';
+import { parseISO } from 'date-fns';
 import { Badge } from '../../ui';
+import { BklitAreaSeriesChart } from '../../charts/bklitInsightsCharts';
 
-const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueLabel }) => (
+const LogTrendChart = ({ title, data, dataKey, stroke, badge, emptyLabel }) => (
   <section className="py-4 border-t border-[var(--color-bg-border)] h-full flex flex-col">
     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -17,27 +15,15 @@ const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueL
       )}
     </div>
     <div className="flex-1 min-h-[200px]">
-      {data.length === 0 ? (
-        <div className="h-[200px] flex items-center justify-center text-xs text-[var(--color-text-muted)] opacity-60">
-          No data for this period
-        </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="label" tick={{ fontSize: 9 }} />
-            <YAxis tick={{ fontSize: 9 }} allowDecimals={dataKey === 'hours'} />
-            <Tooltip
-              formatter={(value) => [formatValue(value), valueLabel]}
-              labelFormatter={(label) => {
-                const row = data.find((d) => d.label === label);
-                return row?.date ? formatDisplayDate(parseISO(row.date)) : label;
-              }}
-            />
-            <Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={2} dot={false} name={valueLabel} />
-          </LineChart>
-        </ResponsiveContainer>
-      )}
+      <BklitAreaSeriesChart
+        curve={undefined}
+        dataKey={dataKey}
+        emptyLabel={emptyLabel}
+        fill={stroke}
+        height={200}
+        series={data}
+        xKey="label"
+      />
     </div>
   </section>
 );
@@ -49,8 +35,9 @@ const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
       count: d.count ?? d.logCount ?? 0,
       hours: Number(d.hours || 0),
       label: d.date?.slice(5) || d.date,
+      dateLabel: d.date ? formatDisplayDate(parseISO(d.date)) : d.label,
     })),
-    [byDay]
+    [byDay],
   );
 
   const totalLogs = totalEntries || chartData.reduce((s, d) => s + (d.count || 0), 0);
@@ -58,23 +45,21 @@ const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
 
   return (
     <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <LogLineChart
-        title="Daily Log Hours"
+      <LogTrendChart
+        badge={`${totalHours.toFixed(1)}h total`}
         data={chartData}
         dataKey="hours"
+        emptyLabel="No hours logged for this period"
         stroke="#6366f1"
-        badge={`${totalHours.toFixed(1)}h total`}
-        formatValue={(v) => `${Number(v).toFixed(1)}h`}
-        valueLabel="Hours"
+        title="Daily Log Hours"
       />
-      <LogLineChart
-        title="Logs per Day"
+      <LogTrendChart
+        badge={`${totalLogs} logs`}
         data={chartData}
         dataKey="count"
+        emptyLabel="No logs for this period"
         stroke="#f59e0b"
-        badge={`${totalLogs} logs`}
-        formatValue={(v) => String(Math.round(Number(v)))}
-        valueLabel="Logs"
+        title="Logs per Day"
       />
     </div>
   );

@@ -556,8 +556,8 @@ const ComponentsShowcase = () => {
               },
               {
                 id: 'showcase-insights-bar',
-                title: 'InsightsChartGrid bar',
-                type: 'bar',
+                title: 'InsightsChartGrid area',
+                type: 'area',
                 data: [
                   { date: 'Email', value: 92 },
                   { date: 'Calls', value: 63 },

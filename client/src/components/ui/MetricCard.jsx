@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import TransitionCard from './TransitionCard';
 
 const ACCENT = {
   info: 'border-l-[var(--color-pastel-blue-text)]',
@@ -47,11 +48,8 @@ export default function MetricCard({
   const isDown = trend === 'down';
   const deltaClass = isDown ? 'tm-delta-negative' : trend === 'up' ? 'tm-delta-positive' : 'text-[var(--color-text-muted)]';
 
-  return (
-    <div
-      onClick={onClick}
-      className={`p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${ACCENT[variant] || ACCENT.slate} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} ${fill ? 'h-full' : ''} ${className}`}
-    >
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="tm-widget-label leading-none truncate">{label}</span>
         {periodLabel && (
@@ -78,6 +76,27 @@ export default function MetricCard({
           <div className="flex-shrink-0 flex items-center justify-end">{sparkline}</div>
         )}
       </div>
+    </>
+  );
+
+  const shellClass = `p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${ACCENT[variant] || ACCENT.slate} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} ${fill ? 'h-full' : ''} ${className}`;
+
+  if (onClick) {
+    return (
+      <TransitionCard
+        onClick={onClick}
+        className={fill ? 'h-full' : ''}
+        innerClassName={shellClass}
+        maxDeg={8}
+      >
+        {body}
+      </TransitionCard>
+    );
+  }
+
+  return (
+    <div className={shellClass}>
+      {body}
     </div>
   );
 }

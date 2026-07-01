@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { renderServiceLogsUrl } from './renderLogs';
+import { getRenderLogTarget, RENDER_SERVICE_ID_DEFAULTS } from './renderLogs';
 
-describe('renderServiceLogsUrl', () => {
-  it('builds Render dashboard logs URL from service id', () => {
-    expect(renderServiceLogsUrl('srv-abc123')).toBe(
-      'https://dashboard.render.com/web/srv-abc123/logs',
+describe('getRenderLogTarget', () => {
+  it('resolves production API logs from built-in service id fallback', () => {
+    const target = getRenderLogTarget('production-api');
+    expect(target).not.toBeNull();
+    expect(target.url).toBe(
+      `https://dashboard.render.com/web/${RENDER_SERVICE_ID_DEFAULTS.production}/logs`,
     );
+    expect(target.label).toBe('Production API');
   });
 
-  it('returns null when service id missing', () => {
-    expect(renderServiceLogsUrl('')).toBeNull();
-    expect(renderServiceLogsUrl(null)).toBeNull();
+  it('resolves staging nest from built-in fallback', () => {
+    const target = getRenderLogTarget('staging-nest');
+    expect(target?.serviceName).toBe('coreknot-nest-staging');
+    expect(target?.url).toContain(RENDER_SERVICE_ID_DEFAULTS.stagingNest);
   });
 });

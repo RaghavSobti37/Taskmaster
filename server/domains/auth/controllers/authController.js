@@ -20,6 +20,7 @@ const { attachProfileCompletion } = require('../../../utils/profileCompleteness'
 const { getDefaultSeedPassword } = require('../../../utils/defaultPassword');
 const { sendSystemEmail } = require('../../../utils/sendSystemEmail');
 const { apiError } = require('../../../utils/apiResponse');
+const { captureServerEvent, identifyServerUser } = require('../../../utils/posthog');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
 
@@ -69,6 +70,12 @@ const formatAuthUser = (populated) => attachProfileCompletion(
 const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
   await finishAuthSession(req, res, populated._id);
   if (authMethod) {
+    const userObj = populated.toObject ? populated.toObject() : populated;
+    identifyServerUser(userObj);
+    captureServerEvent(userObj._id, 'user_logged_in', {
+      auth_method: authMethod,
+      source: 'server',
+    });
   }
   return res.json(formatAuthUser(populated));
 };

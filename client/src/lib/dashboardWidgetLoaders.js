@@ -27,6 +27,7 @@ export const DASHBOARD_WIDGET_LOADERS = {
   'attendance-overview': () => import('../components/dashboard/AttendanceOverviewCard'),
   'last-backup': () => import('../components/dashboard/LastBackupCard'),
   'render-logs': () => import('../components/dashboard/RenderLogsCard'),
+  posthog: () => import('../components/dashboard/PostHogCard'),
 };
 
 const lazyWidgetCache = new Map();

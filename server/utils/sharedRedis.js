@@ -7,6 +7,9 @@ const getSharedRedis = () => {
   if (sharedRedis) return sharedRedis;
 
   sharedRedis = new Redis(getRedisUrl(), {
+    lazyConnect: true,
+    enableOfflineQueue: false,
+    connectTimeout: 2000,
     retryStrategy: (times) => {
       if (times > 3) return null;
       return Math.min(times * 50, 2000);

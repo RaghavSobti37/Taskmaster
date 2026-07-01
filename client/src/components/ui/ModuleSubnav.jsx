@@ -1,9 +1,10 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useLayoutEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useSlidingTabs } from '../../hooks/transitions';
 
 const tabBase =
-  'inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 rounded-md transition-colors';
-const tabActive = 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]';
+  't-tab inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 rounded-md transition-colors';
+const tabActive = 'is-active text-[var(--tabs-text-active)]';
 const tabInactive =
   'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]/50';
 
@@ -71,12 +72,20 @@ export default function ModuleSubnav({
   ariaLabel = 'Section navigation',
   className = '',
 }) {
+  const location = useLocation();
+  const { barRef, pillRef, movePill } = useSlidingTabs();
+
+  useLayoutEffect(() => {
+    movePill(true);
+  }, [activeId, location.pathname, items.length, movePill]);
+
   const renderRouteItem = (item) => (
     <NavLink
       key={item.id}
       to={item.to}
       end={item.end}
       className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
+      aria-selected={undefined}
     >
       <ItemContent {...item} />
     </NavLink>
@@ -114,10 +123,12 @@ export default function ModuleSubnav({
       )}
 
       <nav
+        ref={barRef}
         role={mode === 'tabs' ? 'tablist' : 'navigation'}
         aria-label={ariaLabel}
-        className="flex gap-1 overflow-x-auto custom-scrollbar min-w-0 flex-1 lg:justify-center"
+        className="t-tabs flex gap-1 overflow-x-auto custom-scrollbar min-w-0 flex-1 lg:justify-center"
       >
+        <div ref={pillRef} className="t-tabs-pill" aria-hidden />
         {items.map(mode === 'route' ? renderRouteItem : renderTabItem)}
       </nav>
 

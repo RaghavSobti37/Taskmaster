@@ -1,4 +1,5 @@
 import React from 'react';
+import NumberPopIn from './NumberPopIn';
 
 const TONE_CLASS = {
   mint: 'text-[var(--color-pastel-mint-text)]',
@@ -36,7 +37,7 @@ export default function MetricBlock({
         className={`${valueSize} font-black font-mono tabular-nums leading-tight mt-0.5 ${toneClass}`}
         title={title}
       >
-        {value}
+        <NumberPopIn value={value} />
       </p>
       {sub && (
         <p className="text-[9px] font-semibold text-[var(--color-text-muted)] mt-0.5">{sub}</p>

@@ -1,10 +1,13 @@
 import React from 'react';
 
-/** Displays one loading phrase (caller picks via useLoadingPhrase — full-screen / heavy loaders only). */
+/** Displays one loading phrase with shimmer (transitions.dev shimmer-text). */
 export function LoadingPhrase({ phrase, className = '' }) {
   if (!phrase) return null;
   return (
-    <p className={`text-sm font-medium text-[var(--color-text-secondary)] text-center max-w-md px-4 ${className}`}>
+    <p
+      className={`t-shimmer text-sm font-medium text-center max-w-md px-4 ${className}`}
+      data-text={phrase}
+    >
       {phrase}
     </p>
   );

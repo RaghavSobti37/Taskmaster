@@ -16,7 +16,7 @@ const VARIANT = {
 };
 
 /**
- * Numeric indicator pill. Use size="sm" in dashboard widgets; size="md" elsewhere.
+ * Numeric indicator pill with notification-badge pop (transitions.dev).
  */
 export default function CountBadge({
   count,
@@ -31,11 +31,12 @@ export default function CountBadge({
   if (n <= 0) return null;
   const label = n > max ? `${max}+` : String(n);
   return (
-    <span
-      title={title}
-      className={`inline-flex items-center justify-center rounded-full font-bold tabular-nums shrink-0 border-2 border-[var(--color-bg-surface)] ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.rose} ${pulse ? 'animate-pulse' : ''} ${className}`}
-    >
-      {label}
+    <span className={`t-badge t-badge--inline relative inline-flex ${className}`} data-open="true" title={title}>
+      <span
+        className={`t-badge-dot inline-flex items-center justify-center rounded-full font-bold tabular-nums shrink-0 border-2 border-[var(--color-bg-surface)] ${SIZE[size] || SIZE.md} ${VARIANT[variant] || VARIANT.rose} ${pulse ? 'animate-pulse' : ''}`}
+      >
+        {label}
+      </span>
     </span>
   );
 }

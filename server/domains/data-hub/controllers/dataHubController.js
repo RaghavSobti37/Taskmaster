@@ -8,6 +8,10 @@ const {
 } = require('../../../services/databaseBackupService');
 const { notifyBackupResult } = require('../../../services/backupNotificationService');
 const logger = require('../../../utils/logger');
+const { getCache, setCache } = require('../../../services/cacheService');
+
+const BACKUPS_LIST_CACHE_KEY = 'data-hub:backups:list:v1';
+const BACKUPS_LIST_TTL_SECONDS = 30;
 
 let backupInProgress = false;
 
@@ -124,12 +128,19 @@ exports.getSyncStatus = async (req, res) => {
 
 exports.listBackups = async (req, res) => {
   try {
+    const cached = await getCache(BACKUPS_LIST_CACHE_KEY);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const listing = await listAvailableBackups();
-    res.json({
+    const payload = {
       destination: listing.destination || getBackupDestination(),
       backupDatabase: listing.backupDatabase,
       snapshots: listing.snapshots || [],
-    });
+    };
+    await setCache(BACKUPS_LIST_CACHE_KEY, payload, BACKUPS_LIST_TTL_SECONDS);
+    res.json(payload);
   } catch (error) {
     logger.error('dataHubController', 'listBackups', { error: error.message });
     res.status(500).json({ error: error.message || 'Failed to list backups' });

@@ -2,9 +2,10 @@ import React from 'react';
 import { PageContainer } from './primitives';
 import PageSkeleton from './PageSkeleton';
 import QueryErrorSlot from './QueryErrorSlot';
+import SkeletonReveal from './SkeletonReveal';
 
 /**
- * PageLoadGuard — PageSkeleton while route/query loads; optional error banner; children when ready.
+ * PageLoadGuard — skeleton pulse + reveal when route/query loads.
  */
 const PageLoadGuard = ({
   loading,
@@ -28,14 +29,14 @@ const PageLoadGuard = ({
       </PageContainer>
     );
   }
-  if (loading) {
-    return (
-      <PageContainer className={className}>
-        <Skeleton />
-      </PageContainer>
-    );
-  }
-  return children;
+
+  return (
+    <PageContainer className={className}>
+      <SkeletonReveal loading={loading} skeleton={<Skeleton />}>
+        {children}
+      </SkeletonReveal>
+    </PageContainer>
+  );
 };
 
 export default PageLoadGuard;

@@ -33,12 +33,8 @@ router.get('/status-counts', protect, async (req, res) => {
     const todayEnd = endOfDay(now);
 
     const todoStatsBase = await buildUserTodoStatsFilter(req.user._id);
-    const todoStats = await TaskService.getTodoStats(todoStatsBase);
-    const overdueTasksCount = todoStats.overdue || 0;
-    const todayTasksCount = todoStats.today || 0;
-    const inReviewTasksCount = todoStats.inReview || 0;
 
-    const [followupAgg] = await aggregateWithTenant(Lead, [
+    const followupPipeline = [
       {
         $match: {
           assignedRepId: req.user._id,
@@ -67,39 +63,46 @@ router.get('/status-counts', protect, async (req, res) => {
           },
         },
       },
+    ];
+
+    const [
+      todoStats,
+      followupRows,
+      todayCalendarCount,
+      reviewCounts,
+      projectOverdueCount,
+      allowed,
+      unreadNotifications,
+    ] = await Promise.all([
+      TaskService.getTodoStats(todoStatsBase),
+      aggregateWithTenant(Lead, followupPipeline),
+      CalendarEvent.countDocuments({
+        $or: [{ createdBy: req.user._id }, { visibility: 'public' }],
+        date: { $gte: todayStart, $lte: todayEnd },
+      }),
+      TaskService.countReviewQueue(req.user).catch((reviewErr) => {
+        logger.warn('status-counts review queue', reviewErr?.message);
+        return { pending: 0, projectReview: 0 };
+      }),
+      countProjectOverdueTasks(req.user).catch((projectErr) => {
+        logger.warn('status-counts project overdue', projectErr?.message);
+        return 0;
+      }),
+      getAllowedCategoriesForUser(req.user),
+      Notification.find({
+        recipient: req.user._id,
+        read: false,
+      }).select('category').lean(),
     ]);
 
+    const followupAgg = followupRows?.[0];
+    const overdueTasksCount = todoStats.overdue || 0;
+    const todayTasksCount = todoStats.today || 0;
+    const inReviewTasksCount = todoStats.inReview || 0;
     const overdueFollowupsCount = followupAgg?.overdue || 0;
     const todayFollowupsCount = followupAgg?.today || 0;
-
-    const todayCalendarCount = await CalendarEvent.countDocuments({
-      $or: [{ createdBy: req.user._id }, { visibility: 'public' }],
-      date: { $gte: todayStart, $lte: todayEnd }
-    });
-
-    let reviewPendingCount = 0;
-    let projectReviewCount = 0;
-    try {
-      const reviewCounts = await TaskService.countReviewQueue(req.user);
-      reviewPendingCount = reviewCounts.pending;
-      projectReviewCount = reviewCounts.projectReview;
-    } catch (reviewErr) {
-      logger.warn('status-counts review queue', reviewErr?.message);
-    }
-
-    let projectOverdueCount = 0;
-    try {
-      projectOverdueCount = await countProjectOverdueTasks(req.user);
-    } catch (projectErr) {
-      logger.warn('status-counts project overdue', projectErr?.message);
-    }
-
-    const allowed = await getAllowedCategoriesForUser(req.user);
-
-    const unreadNotifications = await Notification.find({
-      recipient: req.user._id,
-      read: false,
-    }).select('category').lean();
+    const reviewPendingCount = reviewCounts.pending;
+    const projectReviewCount = reviewCounts.projectReview;
     const unreadByCategory = {};
     for (const row of unreadNotifications) {
       if (row.category) unreadByCategory[row.category] = (unreadByCategory[row.category] || 0) + 1;
@@ -174,13 +177,15 @@ router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), a
 
 router.get('/', protect, async (req, res) => {
   try {
-    const allowed = await getAllowedCategoriesForUser(req.user);
-    const user = await User.findById(req.user._id).populate('departmentId', 'slug name');
-    const rows = await Notification.find({ recipient: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .populate('actorId', 'name avatar')
-      .lean();
+    const [allowed, user, rows] = await Promise.all([
+      getAllowedCategoriesForUser(req.user),
+      User.findById(req.user._id).populate('departmentId', 'slug name'),
+      Notification.find({ recipient: req.user._id })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .populate('actorId', 'name avatar')
+        .lean(),
+    ]);
 
     const notifications = rows.map((row) => ({
       ...row,

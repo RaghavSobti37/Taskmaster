@@ -4,6 +4,7 @@ const ArtistMetrics = require('../../../models/ArtistMetrics');
 const ArtistAuth = require('../../../models/ArtistAuth');
 const {
   getConnectionsForArtist,
+  getConnectionsForArtists,
   sanitizeConnection,
   buildLegacyOAuthShape,
   migrateAuthDocToConnections,
@@ -81,24 +82,18 @@ async function enrichAllArtists() {
   if (!artists.length) return [];
 
   const ids = artists.map((a) => a._id);
-  const metricsList = await ArtistMetrics.find({ artistId: { $in: ids } }).lean();
+  const [metricsList, connByArtist] = await Promise.all([
+    ArtistMetrics.find({ artistId: { $in: ids } }).lean(),
+    getConnectionsForArtists(ids, { includeTokens: true }),
+  ]);
   const metricsMap = new Map(metricsList.map((m) => [String(m.artistId), m]));
 
-  const connByArtist = new Map();
-  for (const id of ids) {
-    connByArtist.set(String(id), []);
-  }
-
-  const allConnections = await Promise.all(
-    ids.map(async (id) => {
-      const conns = await loadConnections(id);
-      return { id: String(id), conns };
-    })
-  );
-  allConnections.forEach(({ id, conns }) => connByArtist.set(id, conns));
-
   return artists.map((artist) =>
-    enrichOne(artist, metricsMap.get(String(artist._id)), connByArtist.get(String(artist._id)) || [])
+    enrichOne(
+      artist,
+      metricsMap.get(String(artist._id)),
+      connByArtist.get(String(artist._id)) || [],
+    ),
   );
 }
 

@@ -24,6 +24,7 @@ import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/disp
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import CookieBanner from './components/CookieBanner';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
+import PostHogAnalytics from './components/analytics/PostHogAnalytics';
 import { Analytics } from '@vercel/analytics/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
 const AgentationDev = __AGENTATION_ENABLED__
@@ -92,6 +93,7 @@ const appTree = (
                   <UnsavedChangesProvider>
                     <LocalFirstRoot>
                       <App />
+                      <PostHogAnalytics />
                     </LocalFirstRoot>
                     <CookieBanner />
                     {import.meta.env.PROD ? <Analytics /> : null}

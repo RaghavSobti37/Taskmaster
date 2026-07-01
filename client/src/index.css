@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "@coreknot/design-tokens";
 @import "./styles/tokens/index.css";
+@import "./styles/transitions.css";
 
 /* Shadow policy: shadows allowed only on floating elements (.tm-floating). Static surfaces use rule dividers. */
 
@@ -48,6 +49,13 @@
 
   --color-action-primary: var(--brand-green);
   --color-action-hover: var(--brand-teal-deep);
+
+  /* Chart series — funnel + insights */
+  --chart-1: var(--brand-teal-deep);
+  --chart-2: var(--brand-teal-mid);
+  --chart-3: var(--brand-pumpkin);
+  --chart-4: var(--brand-burgundy);
+  --chart-5: var(--brand-green);
 
   /* Analytics delta tokens */
   --color-delta-positive-text: var(--brand-green);
@@ -124,6 +132,33 @@
   --page-bottom-nav-clearance: calc(5rem + env(safe-area-inset-bottom, 0px));
   --page-scroll-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   color-scheme: light;
+  --chart-1: var(--color-pastel-mint-text);
+  --chart-2: var(--color-pastel-apricot-text);
+  --chart-3: var(--color-pastel-blue-text);
+  --chart-4: var(--color-pastel-rose-text);
+  --chart-5: var(--color-brand-teal);
+  --chart-background: oklch(1 0 0);
+  --chart-foreground: oklch(0.145 0.004 285);
+  --chart-foreground-muted: oklch(0.55 0.014 260);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.4 0.1828 274.34);
+  --chart-grid: oklch(0.9 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);
+  --chart-tooltip-foreground: oklch(0.985 0 0);
+  --chart-tooltip-muted: oklch(0.65 0.01 260);
+  --chart-marker-background: oklch(0.97 0.005 260);
+  --chart-marker-border: oklch(0.85 0.01 260);
+  --chart-marker-foreground: oklch(0.3 0.01 260);
+  --chart-label: oklch(0.45 0.01 260);
+  --chart-scale-01: oklch(0.98 0.003 106);
+  --chart-scale-02: oklch(0.92 0.008 106);
+  --chart-scale-03: oklch(0.82 0.015 106);
+  --chart-scale-04: oklch(0.68 0.02 106);
+  --chart-scale-05: oklch(0.55 0.025 106);
+  --chart-scale-pattern-color: oklch(0.96 0.005 106);
+  --muted-foreground: var(--color-text-muted);
 }
 
 .tm-page-shell {
@@ -189,6 +224,12 @@
   --color-action-primary: var(--brand-green);
   --color-action-hover: color-mix(in srgb, var(--brand-green) 82%, #ffffff);
 
+  --chart-1: var(--brand-green-muted);
+  --chart-2: var(--brand-teal-mid);
+  --chart-3: color-mix(in srgb, var(--brand-amber) 82%, #ffffff);
+  --chart-4: #e08a7a;
+  --chart-5: var(--brand-green);
+
   /* Semantic Pastel System - Dark */
   --color-pastel-mint-bg: color-mix(in srgb, var(--brand-green) 14%, transparent);
   --color-pastel-mint-text: var(--brand-green-muted);
@@ -209,6 +250,22 @@
   --border: var(--global-hairline);
   --input: var(--global-surface-2);
   color-scheme: dark;
+  --chart-background: oklch(0.145 0 0);
+  --chart-foreground: oklch(0.45 0 0);
+  --chart-foreground-muted: oklch(0.65 0.01 260);
+  --chart-crosshair: oklch(0.45 0 0);
+  --chart-grid: oklch(0.25 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-marker-background: oklch(0.25 0.01 260);
+  --chart-marker-border: oklch(0.4 0.01 260);
+  --chart-marker-foreground: oklch(0.9 0 0);
+  --chart-label: oklch(0.75 0.01 260);
+  --chart-scale-01: oklch(0.28 0.03 270);
+  --chart-scale-02: oklch(0.38 0.04 270);
+  --chart-scale-03: oklch(0.48 0.05 270);
+  --chart-scale-04: oklch(0.58 0.06 270);
+  --chart-scale-05: oklch(0.68 0.07 270);
+  --chart-scale-pattern-color: oklch(0.145 0 0);
 }
 
 select option {
@@ -340,7 +397,7 @@ select option {
 .tm-data-row {
   border-bottom: 1px solid var(--color-bg-border);
   padding: 0.625rem 0.875rem;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-quick) var(--ease-out);
 }
 
 @media (min-width: 1024px) {
@@ -587,7 +644,7 @@ a.tm-hashtag-chip:hover {
   background-image: linear-gradient(to top right, var(--tm-workspace-tint), transparent);
   border-bottom: 1px solid var(--color-bg-border);
   border-left: 3px solid var(--workspace-accent, #64748b);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-quick) var(--ease-out);
 }
 .tm-task-row:hover {
   background-color: transparent !important;
@@ -610,31 +667,13 @@ a.tm-hashtag-chip:hover {
   --tm-workspace-tint: color-mix(in srgb, var(--workspace-accent, var(--brand-green)) 38%, transparent);
 }
 
-@keyframes tm-modal-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes tm-modal-panel-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.tm-modal-backdrop {
-  animation: tm-modal-backdrop-in 0.15s ease-out;
-}
-
-.tm-modal-panel-enter {
-  animation: tm-modal-panel-in 0.15s ease-out;
-}
-
 @keyframes tm-unsaved-bar-in {
   from { opacity: 0; transform: translate(-50%, 100%); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .tm-unsaved-bar-enter {
-  animation: tm-unsaved-bar-in 0.2s ease-out;
+  animation: tm-unsaved-bar-in var(--duration-fast) var(--ease-smooth-out);
 }
 
 /* Modal layout system — flex-centered panels collapse to min-content without explicit width */
@@ -865,7 +904,10 @@ a.tm-hashtag-chip:hover {
   padding: 0.5rem 0.55rem 0.5rem 0.45rem;
   color: var(--color-text-muted);
   font-weight: 700;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out);
 }
 
 .tm-sidebar-nav-label {
@@ -966,6 +1008,32 @@ a.tm-hashtag-chip:hover {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-primary: var(--color-action-primary);
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --chart-line-secondary: var(--chart-line-secondary);
+  --chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
 }
 
 .dashboard-widget-grid {
@@ -1119,13 +1187,13 @@ a.tm-hashtag-chip:hover {
   }
 
   .mobile-desktop-gate {
-    animation: mobile-gate-in 0.35s ease-out;
+    animation: mobile-gate-in var(--duration-medium) var(--ease-smooth-out);
   }
 
   @keyframes mobile-gate-in {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(var(--distance-medium));
     }
     to {
       opacity: 1;

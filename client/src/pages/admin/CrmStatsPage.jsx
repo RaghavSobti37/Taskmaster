@@ -21,6 +21,7 @@ import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/Quer
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { useCrmStats, useCrmStatsTrends } from '../../hooks/queries/crmStats';
+import { FUNNEL_CHART_COLORS } from '../../components/ui/FunnelChart';
 
 const LOOKBACK_OPTIONS = [
   { value: 1, label: 'Today' },
@@ -81,13 +82,17 @@ function repActivitySummary(dailyStats, lookbackDays) {
 
 function buildFunnelStages(overview) {
   const all = overview?.all || {};
-  return [
+  const rows = [
     { label: 'Assigned', value: all.totalLeads ?? 0 },
     { label: 'Connected', value: all.connected ?? 0 },
     { label: 'Meaningful', value: all.meaningful ?? 0 },
     { label: 'Warm', value: all.warmLeads ?? 0 },
     { label: 'Converted', value: all.converted ?? 0 },
   ];
+  return rows.map((row, index) => ({
+    ...row,
+    color: FUNNEL_CHART_COLORS[index % FUNNEL_CHART_COLORS.length],
+  }));
 }
 
 function MonthBusinessCard({ segment }) {
@@ -284,8 +289,9 @@ export default function CrmStatsPage() {
         title: 'Pipeline funnel',
         type: 'funnel',
         stages: funnelStages,
+        layers: 3,
         loading: isLoading && !overview,
-        height: 220,
+        height: 260,
         emptyLabel: 'No leads in pipeline yet',
         headerAction: (
           <div className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-pastel-mint-text)]">

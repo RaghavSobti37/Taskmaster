@@ -1,6 +1,10 @@
 const logger = require('../utils/logger');
 
-const SLOW_THRESHOLD_MS = 500;
+// ponytail: dashboard fan-out + cold Mongo on dev; 5s default = real regressions only
+const SLOW_THRESHOLD_MS = Math.max(
+  1000,
+  Number.parseInt(process.env.SLOW_REQUEST_THRESHOLD_MS || '5000', 10) || 5000,
+);
 
 function perfMiddleware(req, res, next) {
   const start = process.hrtime.bigint();

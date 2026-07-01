@@ -1,7 +1,8 @@
 import React from 'react';
+import TransitionCard from './TransitionCard';
 
 /**
- * Card row for mobile lists (Todo, Assets, etc.) — touch-friendly, no horizontal scroll.
+ * Card row for mobile lists (Todo, Assets, etc.) — touch-friendly, card hover tilt.
  */
 export default function ListCard({
   onClick,
@@ -16,11 +17,12 @@ export default function ListCard({
   trailing,
 }) {
   return (
-    <div
-      data-highlight-id={highlightId || undefined}
+    <TransitionCard
       onClick={onClick}
+      data-highlight-id={highlightId || undefined}
       style={style}
-      className={`p-4 border-b border-[var(--color-bg-border)] bg-transparent cursor-pointer active:scale-[0.99] transition-transform ${className}`}
+      maxDeg={6}
+      innerClassName={`p-4 border-b border-[var(--color-bg-border)] bg-transparent cursor-pointer ${className}`}
     >
       <div className="flex items-start gap-3 min-w-0">
         {leading && <div className="shrink-0 flex items-center min-h-[44px]">{leading}</div>}
@@ -41,6 +43,6 @@ export default function ListCard({
           {actions}
         </div>
       )}
-    </div>
+    </TransitionCard>
   );
 }

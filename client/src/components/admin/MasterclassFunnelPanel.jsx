@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Button, DeltaBadge, Skeleton } from '../ui';
+import FunnelChart, { FUNNEL_CHART_COLORS } from '../ui/FunnelChart';
 import { formatInr, formatPercent } from '../../utils/exlyFormatters';
 import { shortMentorName } from '../../utils/exlyCourseLabels';
 import ExlyPageLegend from './ExlyPageLegend';
@@ -395,6 +396,22 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
     return `${summary.totalRegistrations.toLocaleString('en-IN')} regs → ${summary.totalCourseEnrollments.toLocaleString('en-IN')} course`;
   }, [summary]);
 
+  const funnelChartData = useMemo(() => {
+    if (!summary) return [];
+    return [
+      {
+        label: 'Masterclass regs',
+        value: summary.totalRegistrations,
+        color: FUNNEL_CHART_COLORS[0],
+      },
+      {
+        label: 'Course enrolled',
+        value: summary.totalCourseEnrollments,
+        color: FUNNEL_CHART_COLORS[1],
+      },
+    ];
+  }, [summary]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--color-bg-border)]">
@@ -466,6 +483,13 @@ const MasterclassFunnelPanel = ({ onOpenSession }) => {
               deltaLabel={periodDeltas?.periodLabel}
             />
           </div>
+
+          <section className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+              Conversion funnel
+            </p>
+            <FunnelChart data={funnelChartData} layers={3} minHeight={140} />
+          </section>
 
           <div className="flex gap-2 border-b border-[var(--color-bg-border)]">
             {[

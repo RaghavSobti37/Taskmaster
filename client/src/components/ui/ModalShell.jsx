@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useTransitionSurface } from '../../hooks/transitions';
 
 /** Pixel widths — inline styles so modals never collapse when Tailwind max-w isn't applied */
 export const MODAL_WIDTH_PX = {
@@ -75,10 +76,14 @@ export const ModalShell = ({
 }) => {
   const panelRef = React.useRef(null);
   const titleId = React.useId();
-  useFocusTrap(isOpen, panelRef);
+  const { mounted, surfaceClass } = useTransitionSurface(isOpen, {
+    closeVar: '--modal-close-dur',
+    closeFallback: 150,
+  });
+  useFocusTrap(mounted, panelRef);
 
   React.useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!mounted) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape' && closeOnEscape) onClose?.();
     };
@@ -88,14 +93,14 @@ export const ModalShell = ({
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [isOpen, onClose, closeOnEscape]);
+  }, [mounted, onClose, closeOnEscape]);
 
   if (typeof document === 'undefined') return null;
 
   const panelStyle = getModalPanelStyle(widthPx ?? size);
   const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   return createPortal(
     <div
@@ -104,7 +109,7 @@ export const ModalShell = ({
       role="presentation"
     >
       <div
-        className="tm-modal-backdrop absolute inset-0 bg-black/40"
+        className={`tm-modal-backdrop t-modal-backdrop absolute inset-0 bg-black/40 ${surfaceClass}`}
         onClick={handleBackdropClick}
       />
       <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
@@ -114,7 +119,7 @@ export const ModalShell = ({
             ...panelStyle,
             width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
           }}
-          className={`${MODAL_PANEL_CLASS} tm-modal-panel-enter tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden w-full ${panelClassName}`}
+          className={`t-modal ${MODAL_PANEL_CLASS} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden w-full ${surfaceClass} ${panelClassName}`}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"

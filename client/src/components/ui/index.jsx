@@ -34,6 +34,8 @@ export { default as IconButton } from './IconButton';
 export { default as SectionCard } from './SectionCard';
 export { default as AddMembers } from './AddMembers';
 export { default as PageLoadGuard } from './PageLoadGuard';
+export { default as SkeletonReveal } from './SkeletonReveal';
+export { default as TransitionCard } from './TransitionCard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
 export { LoadingPhrase } from './LoadingPhrase';
@@ -61,6 +63,6 @@ export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner'
 export { default as ModuleSubnav } from './ModuleSubnav';
 export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as PageSkeleton } from './PageSkeleton';
-export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';
+export { default as NumberPopIn } from './NumberPopIn';
 
 // Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

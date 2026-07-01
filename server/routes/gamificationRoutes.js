@@ -5,8 +5,11 @@ const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
-const { getCurrentWeekRange, getPreviousWeekRange } = require('../utils/attendanceDate');
+const { getCurrentWeekRange, getPreviousWeekRange, todayStart, todayEnd } = require('../utils/attendanceDate');
 const { ACTION_LABELS } = require('../../shared/gamificationRules');
+const { getCache, setCache } = require('../services/cacheService');
+
+const LEADERBOARD_CACHE_TTL_SECONDS = 60;
 
 const toSimpleMessage = (log) => {
   if (log.action === 'XP_RECALC_ADJUSTMENT') {
@@ -29,8 +32,8 @@ const toSimpleMessage = (log) => {
 
 router.get('/missions', protect, async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const dayStart = todayStart();
+    const dayEnd = todayEnd();
     const { weekStartKey } = getCurrentWeekRange();
 
     await GamificationService.generateDailyMissions(req.user._id);
@@ -39,7 +42,7 @@ router.get('/missions', protect, async (req, res) => {
     const missions = await DailyMission.find({
       userId: req.user._id,
       $or: [
-        { cadence: { $ne: 'weekly' }, date: { $gte: today } },
+        { cadence: { $ne: 'weekly' }, date: { $gte: dayStart, $lte: dayEnd } },
         { cadence: 'weekly', weekKey: weekStartKey },
       ],
     }).sort({ cadence: 1, date: 1 });
@@ -121,22 +124,35 @@ router.get('/leaderboard', protect, async (req, res) => {
     const XPAuditLog = require('../models/XPAuditLog');
     const GamificationConfig = require('../models/GamificationConfig');
     const weekly = await GamificationService.getWeeklyLeaderboard();
-    const config = await GamificationService.getConfigPlain();
-    const configDoc = await GamificationConfig.findOne()
-      .select('lastRecalculatedAt lastRecalcWeeklyPrior')
-      .lean();
+    const cacheKey = `leaderboard:v2:${weekly.weekStartKey}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      res.set('Cache-Control', 'private, max-age=60');
+      return res.json(cached);
+    }
+
+    const [config, configDoc, allUsers] = await Promise.all([
+      GamificationService.getConfigPlain(),
+      GamificationConfig.findOne()
+        .select('lastRecalculatedAt lastRecalcWeeklyPrior')
+        .lean(),
+      User.find({}, 'name avatar exp level').sort({ name: 1 }).lean(),
+    ]);
     const lastRecalculatedAt = configDoc?.lastRecalculatedAt || null;
     const weeklyPriorSnapshot = configDoc?.lastRecalcWeeklyPrior || null;
 
-    const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
     const tenantUserIds = allUsers.map((u) => u._id);
 
-    const weekLogs = await XPAuditLog.find({
-      userId: { $in: tenantUserIds },
-      createdAt: { $gte: weekly.weekStart, $lte: weekly.weekEnd },
-    })
-      .select('userId action amount details previousAmount recalculatedAt recalcReason')
-      .lean();
+    const prevWeek = getPreviousWeekRange();
+    const [weekLogs, lastWeekWeekly] = await Promise.all([
+      XPAuditLog.find({
+        userId: { $in: tenantUserIds },
+        createdAt: { $gte: weekly.weekStart, $lte: weekly.weekEnd },
+      })
+        .select('userId action amount details previousAmount recalculatedAt recalcReason')
+        .lean(),
+      GamificationService.getWeeklyLeaderboard(null, prevWeek.weekStartKey),
+    ]);
     const backfillMaps = await GamificationService.fetchHoursBackfillMaps(weekLogs);
     const recalcMetaByUser = GamificationService.buildWeeklyRecalcMetaByUser(
       weekLogs,
@@ -149,8 +165,6 @@ router.get('/leaderboard', protect, async (req, res) => {
       weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
     );
 
-    const prevWeek = getPreviousWeekRange();
-    const lastWeekWeekly = await GamificationService.getWeeklyLeaderboard(null, prevWeek.weekStartKey);
     const lastWeekXpByUserId = new Map(
       lastWeekWeekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
     );
@@ -226,8 +240,7 @@ router.get('/leaderboard', protect, async (req, res) => {
       cacheHit: false,
     });
 
-    res.set('Cache-Control', 'private, max-age=60');
-    res.json({
+    const payload = {
       entries: top,
       meta: {
         weekStartKey: weekly.weekStartKey,
@@ -238,7 +251,11 @@ router.get('/leaderboard', protect, async (req, res) => {
         lastWeekStartKey: prevWeek.weekStartKey,
         lastWeekEndKey: prevWeek.weekEndKey,
       },
-    });
+    };
+
+    await setCache(cacheKey, payload, LEADERBOARD_CACHE_TTL_SECONDS);
+    res.set('Cache-Control', 'private, max-age=60');
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

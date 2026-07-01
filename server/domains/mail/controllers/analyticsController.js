@@ -2,15 +2,30 @@ const MailCampaign = require('../models/MailCampaign');
 const MailEvent = require('../models/MailEvent');
 const Campaign = require('../models/Campaign');
 const { scanBounces, updateEmailTags } = require('../services/mailService');
+const { getCache, setCache } = require('../../../services/cacheService');
+
+const MAIL_STATS_CACHE_KEY = 'mail:stats:v1';
+const MAIL_STATS_TTL_SECONDS = 60;
 
 exports.getStats = async (req, res) => {
   try {
-    const mailCampaigns = await MailCampaign.find({}).select('-recipients -content').lean();
-    const coreCampaigns = await Campaign.find({}).select('-recipients -content').lean();
+    const cached = await getCache(MAIL_STATS_CACHE_KEY);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const [mailCampaigns, coreCampaigns, totalUnsubscribed] = await Promise.all([
+      MailCampaign.find({}).select('-recipients -content').lean(),
+      Campaign.find({}).select('-recipients -content').lean(),
+      (async () => {
+        const Contact = require('../../../models/Contact');
+        return Contact.countDocuments({ unsubscribed: true });
+      })(),
+    ]);
     const allCampaigns = [...mailCampaigns, ...coreCampaigns];
 
     let totalCampaigns = allCampaigns.length;
-    let totalSent = 0; let totalOpened = 0; let totalClicked = 0; let totalBounced = 0; let totalUnsubscribed = 0;
+    let totalSent = 0; let totalOpened = 0; let totalClicked = 0; let totalBounced = 0;
 
     allCampaigns.forEach((camp) => {
       const stats = camp.stats || {};
@@ -20,10 +35,17 @@ exports.getStats = async (req, res) => {
       totalClicked += metrics.clicked ?? stats.clicked ?? 0;
       totalBounced += metrics.bounced ?? stats.bounced ?? 0;
     });
-    const Contact = require('../../../models/Contact');
-    totalUnsubscribed = await Contact.countDocuments({ unsubscribed: true });
 
-    res.json({ totalCampaigns, totalSent, totalBounced, totalOpened, totalClicked, totalUnsubscribed });
+    const payload = {
+      totalCampaigns,
+      totalSent,
+      totalBounced,
+      totalOpened,
+      totalClicked,
+      totalUnsubscribed,
+    };
+    await setCache(MAIL_STATS_CACHE_KEY, payload, MAIL_STATS_TTL_SECONDS);
+    res.json(payload);
   } catch (err) {
     console.error('Get stats error:', err);
     res.status(500).json({ error: err.message });

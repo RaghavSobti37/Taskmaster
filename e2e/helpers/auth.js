@@ -16,21 +16,30 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
 
   await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
 
+  try {
+    await page.getByRole('button', { name: /^accept all$/i }).click({ timeout: 4_000 });
+  } catch {
+    /* cookie banner optional */
+  }
+
   const identifier = page
     .locator('input[name="identifier"], input[type="email"], .cl-formFieldInput__identifier input')
     .first();
   await identifier.waitFor({ state: 'visible', timeout: 60_000 });
   await identifier.fill(email);
 
-  const continueBtn = page.getByRole('button', { name: /^continue$/i }).first();
-  await continueBtn.click();
-
   const passwordField = page
     .locator('input[name="password"], input[type="password"], .cl-formFieldInput__password input')
     .first();
-  await passwordField.waitFor({ state: 'visible', timeout: 30_000 });
+
+  const passwordOnSameStep = await passwordField.isVisible().catch(() => false);
+  if (!passwordOnSameStep) {
+    await page.locator('button.cl-formButtonPrimary, .cl-formButtonPrimary').first().click();
+    await passwordField.waitFor({ state: 'visible', timeout: 30_000 });
+  }
+
   await passwordField.fill(password);
-  await continueBtn.click();
+  await page.locator('button.cl-formButtonPrimary, .cl-formButtonPrimary').last().click();
 
   const hostPattern = expectHost ? new RegExp(expectHost.replace(/\./g, '\\.')) : /\/dashboard/;
   await page.waitForURL(

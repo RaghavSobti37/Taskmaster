@@ -15,6 +15,10 @@ const matchesAllowedDomain = (email, allowedDomain) => {
 const pinnedClerkOrganizationId = () =>
   String(process.env.CLERK_ORGANIZATION_ID || '').trim() || null;
 
+/** Opt-in org gate — pinned CLERK_ORGANIZATION_ID alone does not block users-only login. */
+const shouldEnforceClerkOrganization = () =>
+  String(process.env.CLERK_REQUIRE_ORGANIZATION || '').trim().toLowerCase() === 'true';
+
 const resolveClerkOrganizationId = ({ bodyOrganizationId, tokenOrganizationId } = {}) => {
   const pinned = pinnedClerkOrganizationId();
   if (pinned) return pinned;
@@ -127,6 +131,7 @@ module.exports = {
   emailDomain,
   matchesAllowedDomain,
   pinnedClerkOrganizationId,
+  shouldEnforceClerkOrganization,
   resolveClerkOrganizationId,
   resolveTenantForOrganization,
   tenantAllowedDomain,

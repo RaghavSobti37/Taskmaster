@@ -2,19 +2,34 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth as useClerkAuth } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
-import { isClerkConfigured } from '../../config/clerk';
+import { isClerkConfigured, getPinnedClerkOrganizationId } from '../../config/clerk';
 import { isAuthSite } from '../../config/siteMode';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
+import {
+  clearClerkEstablishError,
+  setClerkEstablishError,
+} from '../../lib/clerkEstablishRegistry';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 /** Dedupe establish across React StrictMode remounts. */
 let establishInflight = null;
 let establishForClerkSession = null;
 
-const resetEstablishState = () => {
+const clearEstablishInflight = () => {
   establishInflight = null;
   establishForClerkSession = null;
+};
+
+const resetEstablishState = () => {
+  clearEstablishInflight();
+  clearClerkEstablishError();
+};
+
+const extractEstablishError = (err, fallback) => {
+  const status = err?.response?.status;
+  const message = err?.response?.data?.error || err?.message || fallback;
+  return { status, message };
 };
 
 const ESTABLISH_RETRY_MS = 1500;
@@ -30,7 +45,8 @@ export default function ClerkSessionBridge() {
 }
 
 function ClerkSessionBridgeInner() {
-  const { isLoaded, isSignedIn, getToken, signOut, userId } = useClerkAuth();
+  const { isLoaded, isSignedIn, getToken, signOut, userId, orgId } = useClerkAuth();
+  const pinnedOrgId = getPinnedClerkOrganizationId();
   const { user, sessionReady, login, applySessionUser } = useAuth();
   const signOutRef = useRef(signOut);
   const redirectedRef = useRef(false);
@@ -80,6 +96,9 @@ function ClerkSessionBridgeInner() {
       resetEstablishState();
       return undefined;
     }
+    if (pinnedOrgId && orgId !== pinnedOrgId) {
+      return undefined;
+    }
 
     const clerkKey = userId || 'active';
     if (establishForClerkSession === clerkKey && establishInflight) {
@@ -91,20 +110,30 @@ function ClerkSessionBridgeInner() {
 
     establishInflight = (async () => {
       try {
-        const token = await getToken();
+        const token = await getToken(
+          pinnedOrgId ? { organizationId: pinnedOrgId } : undefined,
+        );
         if (!token || cancelled) return;
 
         let establishResponse;
         try {
           establishResponse = await axios.post(
             '/api/auth/clerk-establish',
-            { token },
+            {
+              token,
+              ...(pinnedOrgId ? { organizationId: pinnedOrgId } : {}),
+            },
             { withCredentials: true, ...AXIOS_SKIP_TOAST },
           );
         } catch (err) {
           const status = err?.response?.status;
+          const { message } = extractEstablishError(
+            err,
+            'Could not start your CoreKnot session after Clerk sign-in.',
+          );
           if (status === 401 || status === 403) {
-            resetEstablishState();
+            setClerkEstablishError({ status, message });
+            clearEstablishInflight();
             try {
               await signOutRef.current();
             } catch {
@@ -117,22 +146,31 @@ function ClerkSessionBridgeInner() {
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
+          } else {
+            setClerkEstablishError({ status, message });
           }
           return;
         }
 
         if (establishResponse?.data?._id) {
+          clearClerkEstablishError();
           applySessionUser(establishResponse.data);
         }
 
         try {
           await login();
-        } catch {
+        } catch (loginErr) {
+          const { message } = extractEstablishError(
+            loginErr,
+            'Signed in with Clerk but could not load your workspace session.',
+          );
           if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
             establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
+          } else {
+            setClerkEstablishError({ message });
           }
           return;
         }
@@ -150,6 +188,8 @@ function ClerkSessionBridgeInner() {
     isLoaded,
     isSignedIn,
     userId,
+    orgId,
+    pinnedOrgId,
     user,
     sessionReady,
     getToken,

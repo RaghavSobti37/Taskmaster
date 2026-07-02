@@ -31,6 +31,7 @@ const {
   resolveClerkOrganizationId,
   resolveTenantForOrganization,
   ensureClerkOrganizationAccess,
+  shouldEnforceClerkOrganization,
 } = require('../../../utils/organizationAccess');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
@@ -558,7 +559,7 @@ exports.clerkEstablishSession = async (req, res) => {
     const tenant = await resolveTenantForOrganization(clerkOrganizationId);
     let orgAccessGranted = false;
 
-    if (clerkOrganizationId) {
+    if (shouldEnforceClerkOrganization() && clerkOrganizationId) {
       await ensureClerkOrganizationAccess({
         clerkClient,
         clerkUserId: profile.clerkUserId,

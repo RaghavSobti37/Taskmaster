@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,6 +13,7 @@ import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -36,9 +37,12 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
   const location = useLocation();
   const navigatedRef = useRef(false);
   const [installGuideOpen, setInstallGuideOpen] = React.useState(false);
+  const [establishError, setEstablishError] = useState(null);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
   const clerkReady = isClerkConfigured();
-  const clerkEstablishing = clerkReady && clerkLoaded && clerkSignedIn && (!user || !sessionReady);
+  const clerkEstablishing = clerkReady && clerkLoaded && clerkSignedIn && (!user || !sessionReady) && !establishError;
+
+  useEffect(() => subscribeClerkEstablishError(setEstablishError), []);
 
   useEffect(() => {
     if (!user || !sessionReady) {
@@ -83,9 +87,20 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
             Clerk is not configured. Set <code className="text-xs">VITE_CLERK_PUBLISHABLE_KEY</code> in client env.
           </p>
         ) : (
-          <ClerkSignInBlock />
+          <>
+            {establishError ? (
+              <div
+                className="mb-4 rounded-lg border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-100 text-center"
+                role="alert"
+              >
+                <p className="font-medium">Workspace session failed</p>
+                <p className="mt-1 text-red-100/90">{establishError.message}</p>
+              </div>
+            ) : null}
+            <ClerkSignInBlock />
+          </>
         )}
-        <ClearSessionCookiesButton bootError={Boolean(bootError)} />
+        <ClearSessionCookiesButton bootError={Boolean(bootError) || Boolean(establishError)} />
       </AuthMarketingShell>
       <InstallGuideModal isOpen={installGuideOpen} onClose={() => setInstallGuideOpen(false)} />
     </>

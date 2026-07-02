@@ -4,6 +4,7 @@ const {
   pinnedClerkOrganizationId,
   resolveClerkOrganizationId,
   ensureClerkOrganizationAccess,
+  shouldEnforceClerkOrganization,
 } = require('../utils/organizationAccess');
 
 describe('organizationAccess', () => {
@@ -32,6 +33,17 @@ describe('organizationAccess', () => {
       bodyOrganizationId: 'org_body',
       tokenOrganizationId: 'org_token',
     })).toBe('org_pinned');
+  });
+
+  it('shouldEnforceClerkOrganization is opt-in via CLERK_REQUIRE_ORGANIZATION', () => {
+    delete process.env.CLERK_REQUIRE_ORGANIZATION;
+    expect(shouldEnforceClerkOrganization()).toBe(false);
+    process.env.CLERK_REQUIRE_ORGANIZATION = 'true';
+    expect(shouldEnforceClerkOrganization()).toBe(true);
+    process.env.CLERK_REQUIRE_ORGANIZATION = 'TRUE';
+    expect(shouldEnforceClerkOrganization()).toBe(true);
+    process.env.CLERK_REQUIRE_ORGANIZATION = '0';
+    expect(shouldEnforceClerkOrganization()).toBe(false);
   });
 
   it('ensureClerkOrganizationAccess is no-op without organization id', async () => {

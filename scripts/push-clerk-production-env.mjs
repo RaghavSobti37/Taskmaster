@@ -136,7 +136,7 @@ async function renderUpsert(sk, orgId) {
   }
   const upserts = [
     ['CLERK_SECRET_KEY', sk],
-    ['CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services'],
+    ['CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.dev'],
     ['CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk'],
   ];
   if (orgId) upserts.push(['CLERK_ORGANIZATION_ID', orgId]);
@@ -199,7 +199,7 @@ for (const { cwd, needsClerkSecret, clerkProxyUrl } of VERCEL_PROJECTS) {
   }
   if (needsClerkSecret) {
     vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
-    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.services');
+    vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.dev');
     vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk');
   }
 }

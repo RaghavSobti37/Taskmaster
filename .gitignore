@@ -10,6 +10,7 @@ server/data/*.csv
 .cursor/production-hosts.local.json
 .cursor/render-api.local.env
 .cursor/clerk-production.local.env
+.cursor/cloudflare-api.local.env
 .cursor/git-promotion.json
 .cursor/multiagent/*-ledger.json
 .local/

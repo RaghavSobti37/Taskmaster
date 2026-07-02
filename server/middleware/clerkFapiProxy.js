@@ -5,10 +5,10 @@
 
 const express = require('express');
 
-// ponytail: proxy upstream is always generic FAPI — never clerk.tsccoreknot.com (CF error 1000)
+// ponytail: .clerk.services TLS fails on Render/Node — use .clerk.dev (Clerk proxy docs)
 const CLERK_FAPI = String(process.env.CLERK_FAPI_UPSTREAM || '')
   .trim()
-  .replace(/\/$/, '') || 'https://frontend-api.clerk.services';
+  .replace(/\/$/, '') || 'https://frontend-api.clerk.dev';
 const DEFAULT_PROXY_URL = 'https://tsccoreknot.com/__clerk';
 
 const hopByHop = new Set([

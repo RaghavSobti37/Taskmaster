@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from './contexts/AuthContext';
 import { isClerkConfigured } from './config/clerk';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
@@ -10,6 +9,7 @@ import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootError from './components/AppBootError';
 import BootScreen from './components/BootScreen';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
+import WithClerkWhenConfigured from './components/auth/WithClerkWhenConfigured';
 import { createLazyWithRetry } from './utils/lazyWithRetry';
 import ExternalAuthRedirect from './components/ExternalAuthRedirect';
 import ExternalLandingRedirect from './components/ExternalLandingRedirect';
@@ -118,9 +118,8 @@ const LegacyArtistAnalyticsRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
-function AppRootRedirect() {
+function AppRootRedirectInner({ clerkLoaded, clerkSignedIn }) {
   const { user, loading, bootError, retryBoot } = useAuth();
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
 
   const clerkSessionPending = isClerkConfigured()
     && clerkLoaded
@@ -145,6 +144,19 @@ function AppRootRedirect() {
   }
 
   return <Navigate to="/landing" replace />;
+}
+
+function AppRootRedirect() {
+  return (
+    <WithClerkWhenConfigured>
+      {({ isLoaded: clerkLoaded, isSignedIn: clerkSignedIn }) => (
+        <AppRootRedirectInner
+          clerkLoaded={clerkLoaded}
+          clerkSignedIn={clerkSignedIn}
+        />
+      )}
+    </WithClerkWhenConfigured>
+  );
 }
 
 const externalAuthRouteElements = (

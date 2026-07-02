@@ -28,16 +28,11 @@ describe('clerkFapiProxy', () => {
     delete process.env.CLERK_FRONTEND_API;
   });
 
-  it('buildProxyPublicUrl uses auth satellite host when forwarded', () => {
-    const req = { headers: { 'x-forwarded-host': 'auth.tsccoreknot.com' } };
-    expect(buildProxyPublicUrl(req)).toBe('https://auth.tsccoreknot.com/__clerk');
-  });
-
-  it('buildProxyPublicUrl falls back to env default on app host', () => {
+  it('buildProxyPublicUrl always uses registered primary proxy URL', () => {
     process.env.CLERK_PROXY_PUBLIC_URL = 'https://tsccoreknot.com/__clerk';
-    const req = { headers: { 'x-forwarded-host': 'tsccoreknot.com' } };
-    expect(buildProxyPublicUrl(req)).toBe('https://tsccoreknot.com/__clerk');
+    expect(buildProxyPublicUrl()).toBe('https://tsccoreknot.com/__clerk');
     delete process.env.CLERK_PROXY_PUBLIC_URL;
+    expect(buildProxyPublicUrl()).toBe('https://tsccoreknot.com/__clerk');
   });
 
   it('returns 503 when CLERK_SECRET_KEY is missing', async () => {
@@ -73,7 +68,7 @@ describe('clerkFapiProxy', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [, init] = global.fetch.mock.calls[0];
     expect(init.headers.get('Clerk-Secret-Key')).toBe('sk_test_proxy');
-    expect(init.headers.get('Clerk-Proxy-Url')).toBe('https://auth.tsccoreknot.com/__clerk');
+    expect(init.headers.get('Clerk-Proxy-Url')).toBe('https://tsccoreknot.com/__clerk');
     expect(init.headers.get('X-Forwarded-For')).toBe('203.0.113.1');
   });
 

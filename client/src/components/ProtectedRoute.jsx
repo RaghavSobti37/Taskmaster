@@ -1,16 +1,15 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../contexts/AuthContext';
 import { isClerkConfigured } from '../config/clerk';
 import AppBootError from './AppBootError';
 import BootScreen from './BootScreen';
 import ExternalRedirect from './ExternalRedirect';
+import WithClerkWhenConfigured from './auth/WithClerkWhenConfigured';
 import { authUrl, usesExternalAuthHost } from '../config/siteUrls';
 
-const ProtectedRoute = () => {
+function ProtectedRouteInner({ clerkLoaded, clerkSignedIn }) {
   const { user, loading, sessionReady, bootError, retryBoot } = useAuth();
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
   const location = useLocation();
 
   const clerkBoot = isClerkConfigured() && !clerkLoaded;
@@ -43,6 +42,14 @@ const ProtectedRoute = () => {
   }
 
   return <Outlet />;
-};
+}
+
+const ProtectedRoute = () => (
+  <WithClerkWhenConfigured>
+    {({ isLoaded: clerkLoaded, isSignedIn: clerkSignedIn }) => (
+      <ProtectedRouteInner clerkLoaded={clerkLoaded} clerkSignedIn={clerkSignedIn} />
+    )}
+  </WithClerkWhenConfigured>
+);
 
 export default ProtectedRoute;

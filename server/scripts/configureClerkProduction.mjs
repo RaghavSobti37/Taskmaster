@@ -26,8 +26,11 @@ const ORIGINS = [
   'https://landing.tsccoreknot.com',
 ];
 
+/** Single registered FAPI proxy (primary host). Auth/landing hit same proxy via Vercel rewrite. */
 const PROXY_URL = 'https://tsccoreknot.com/__clerk';
 const DOMAIN_ID = 'dmn_3FtqpweK7eocmCYx3YevJrczYne';
+
+/** Satellite domains with per-host proxy_url require Clerk paid plan (API 402). */
 
 if (!sk.startsWith('sk_live_')) {
   console.error('sk_live_ required in .cursor/clerk-production.local.env');

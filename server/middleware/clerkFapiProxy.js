@@ -31,16 +31,14 @@ const clientIp = (req) => {
   return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
 
-const buildProxyPublicUrl = (req) => {
-  const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-  if (forwardedHost) {
-    const host = forwardedHost.replace(/:\d+$/, '');
-    if (host.includes('auth.') || host.includes('landing.')) {
-      return `https://${host}/__clerk`;
-    }
-  }
-  return String(process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL).trim();
-};
+/**
+ * Clerk Dashboard registers one Frontend API proxy URL (primary app host).
+ * Browser may hit auth/landing satellites, but Clerk-Proxy-Url must stay the
+ * registered URL or FAPI returns 400 host_invalid (satellite domains = paid plan).
+ */
+const buildProxyPublicUrl = () => String(
+  process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL,
+).trim();
 
 const buildTargetUrl = (req) => {
   const suffix = String(req.originalUrl || req.url || '').replace(/^\/__clerk\/?/, '/');
@@ -85,7 +83,7 @@ const proxyHandler = async (req, res) => {
       headers.set(key, value);
     }
   }
-  headers.set('Clerk-Proxy-Url', buildProxyPublicUrl(req));
+  headers.set('Clerk-Proxy-Url', buildProxyPublicUrl());
   headers.set('Clerk-Secret-Key', secret);
   headers.set('X-Forwarded-For', clientIp(req));
 

@@ -7,6 +7,7 @@ import { formatClockTimeForDisplay } from './attendanceUtils';
 export const EDIT_WINDOW_DAYS = 14;
 export const TIMELINE_DAY_START_MIN = 6 * 60;
 export const TIMELINE_DAY_END_MIN = 22 * 60;
+export const TIMELINE_RANGE_PAD_MIN = 30;
 
 export function parseClockToMinutes(timeStr) {
   if (!timeStr || !String(timeStr).includes(':')) return null;
@@ -180,6 +181,66 @@ export function getLogTimelineBounds(logs = []) {
 
   blocks.sort((a, b) => a.startMin - b.startMin);
   return { firstIn, lastOut, blocks };
+}
+
+export function assignTimelineLanes(blocks = []) {
+  const sorted = [...blocks].sort(
+    (a, b) => a.startMin - b.startMin || a.endMin - b.endMin,
+  );
+  const laneEnds = [];
+  const laned = sorted.map((block) => {
+    let lane = 0;
+    while (laneEnds[lane] != null && laneEnds[lane] > block.startMin) {
+      lane += 1;
+    }
+    laneEnds[lane] = block.endMin;
+    return { ...block, lane };
+  });
+  return { blocks: laned, laneCount: Math.max(1, laneEnds.length) };
+}
+
+export function computeTimelineDisplayRange({
+  firstIn,
+  lastOut,
+  padMin = TIMELINE_RANGE_PAD_MIN,
+} = {}) {
+  if (firstIn == null && lastOut == null) {
+    return {
+      rangeStart: TIMELINE_DAY_START_MIN,
+      rangeEnd: TIMELINE_DAY_END_MIN,
+      span: TIMELINE_DAY_END_MIN - TIMELINE_DAY_START_MIN,
+    };
+  }
+  const rangeStart = firstIn != null
+    ? Math.max(0, firstIn - padMin)
+    : TIMELINE_DAY_START_MIN;
+  const rangeEnd = lastOut != null
+    ? lastOut + padMin
+    : TIMELINE_DAY_END_MIN;
+  const span = Math.max(60, rangeEnd - rangeStart);
+  return { rangeStart, rangeEnd, span };
+}
+
+export function getLogTimelineDisplay(logs = [], { attendanceInMin, attendanceOutMin } = {}) {
+  const { firstIn, lastOut, blocks } = getLogTimelineBounds(logs);
+  const inCandidates = [firstIn, attendanceInMin].filter((n) => n != null);
+  const outCandidates = [lastOut, attendanceOutMin].filter((n) => n != null);
+  const mergedFirst = inCandidates.length ? Math.min(...inCandidates) : null;
+  const mergedLast = outCandidates.length ? Math.max(...outCandidates) : null;
+  const { blocks: lanedBlocks, laneCount } = assignTimelineLanes(blocks);
+  const { rangeStart, rangeEnd, span } = computeTimelineDisplayRange({
+    firstIn: mergedFirst,
+    lastOut: mergedLast,
+  });
+  return {
+    firstIn: mergedFirst,
+    lastOut: mergedLast,
+    blocks: lanedBlocks,
+    laneCount,
+    rangeStart,
+    rangeEnd,
+    span,
+  };
 }
 
 export function formatLogInterval(log) {

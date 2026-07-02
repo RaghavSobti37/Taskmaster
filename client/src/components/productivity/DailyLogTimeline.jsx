@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import {
-  getLogTimelineBounds,
+  getLogTimelineDisplay,
   minutesToClock,
-  TIMELINE_DAY_END_MIN,
-  TIMELINE_DAY_START_MIN,
+  parseClockToMinutes,
 } from '../../utils/dailyLogDetails';
 import { formatAttendanceRecordTime } from '../../utils/attendanceUtils';
 
@@ -19,34 +18,40 @@ const COLORS = [
 const pct = (minutes, start, span) =>
   Math.min(100, Math.max(0, ((minutes - start) / span) * 100));
 
-const displayClock = (minutes) =>
-  minutesToClock(minutes > 24 * 60 ? minutes - 24 * 60 : minutes);
-
 const formatBlockRange = (block) => {
-  const range = `${displayClock(block.startMin)} – ${displayClock(block.endMin)}`;
+  const range = `${minutesToClock(block.startMin)} – ${minutesToClock(block.endMin)}`;
   return block.estimated ? `~${range}` : range;
 };
 
+const attendanceRecordToMinutes = (record) => {
+  const clock = formatAttendanceRecordTime(record);
+  return clock ? parseClockToMinutes(clock) : null;
+};
+
 export default function DailyLogTimeline({ logs = [], attendanceEntry = null, className = '' }) {
-  const { firstIn, lastOut, blocks } = useMemo(
-    () => getLogTimelineBounds(logs),
-    [logs]
+  const attendanceInMin = attendanceRecordToMinutes(attendanceEntry?.inTimeRecord);
+  const attendanceOutMin = attendanceRecordToMinutes(attendanceEntry?.outTimeRecord);
+
+  const {
+    firstIn,
+    lastOut,
+    blocks,
+    laneCount,
+    rangeStart,
+    rangeEnd,
+    span,
+  } = useMemo(
+    () => getLogTimelineDisplay(logs, { attendanceInMin, attendanceOutMin }),
+    [logs, attendanceInMin, attendanceOutMin],
   );
 
   const attendanceIn = formatAttendanceRecordTime(attendanceEntry?.inTimeRecord);
   const attendanceOut = formatAttendanceRecordTime(attendanceEntry?.outTimeRecord);
   const headerIn = attendanceIn || (firstIn != null ? minutesToClock(firstIn) : '--');
-  const headerOut = attendanceOut || (lastOut != null
-    ? minutesToClock(lastOut > 24 * 60 ? lastOut - 24 * 60 : lastOut)
-    : '--');
+  const headerOut = attendanceOut || (lastOut != null ? minutesToClock(lastOut) : '--');
 
-  const rangeStart = firstIn != null
-    ? Math.max(TIMELINE_DAY_START_MIN, firstIn - 30)
-    : TIMELINE_DAY_START_MIN;
-  const rangeEnd = lastOut != null
-    ? Math.min(TIMELINE_DAY_END_MIN, lastOut + 30)
-    : TIMELINE_DAY_END_MIN;
-  const span = Math.max(60, rangeEnd - rangeStart);
+  const trackHeight = Math.max(32, laneCount * 14 + 8);
+  const laneShare = 100 / laneCount;
 
   if (!logs.length) {
     return (
@@ -73,23 +78,34 @@ export default function DailyLogTimeline({ logs = [], attendanceEntry = null, cl
         </div>
       </div>
 
-      <div className="relative h-8 rounded-full bg-[var(--color-bg-border)] overflow-hidden">
-        {blocks.map((block, i) => (
-          <div
-            key={block.id}
-            className={`absolute inset-y-1 rounded-md ${COLORS[i % COLORS.length]} border border-white/10`}
-            style={{
-              left: `${pct(block.startMin, rangeStart, span)}%`,
-              width: `${Math.max(2, pct(block.endMin, rangeStart, span) - pct(block.startMin, rangeStart, span))}%`,
-            }}
-            title={`${block.title} (${formatBlockRange(block)}${block.estimated ? ', estimated' : ''})`}
-          />
-        ))}
+      <div
+        className="relative rounded-full bg-[var(--color-bg-border)] overflow-hidden"
+        style={{ height: trackHeight }}
+      >
+        {blocks.map((block, i) => {
+          const left = pct(block.startMin, rangeStart, span);
+          const right = pct(block.endMin, rangeStart, span);
+          const width = Math.max(1.5, right - left);
+          const top = block.lane * laneShare;
+          return (
+            <div
+              key={block.id}
+              className={`absolute rounded-md ${COLORS[i % COLORS.length]} border border-white/10`}
+              style={{
+                left: `${left}%`,
+                width: `${width}%`,
+                top: `calc(${top}% + 2px)`,
+                height: `calc(${laneShare}% - 4px)`,
+              }}
+              title={`${block.title} (${formatBlockRange(block)}${block.estimated ? ', estimated' : ''})`}
+            />
+          );
+        })}
       </div>
 
       <div className="flex justify-between text-[9px] font-bold text-[var(--color-text-muted)] tabular-nums">
         <span>{minutesToClock(rangeStart)}</span>
-        <span>{minutesToClock(rangeEnd > 24 * 60 ? rangeEnd - 24 * 60 : rangeEnd)}</span>
+        <span>{minutesToClock(rangeEnd)}</span>
       </div>
 
       <ul className="space-y-1.5 pt-1 border-t border-[var(--color-bg-border)]">

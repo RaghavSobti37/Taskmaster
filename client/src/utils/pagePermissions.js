@@ -102,7 +102,7 @@ export function getUserPagePermissions(user) {
 export function hasPageAccess(user, pageKey) {
   if (!pageKey) return true;
   // Mail hub + campaign detail: any authenticated user
-  if ((pageKey === 'emails' || pageKey === 'campaigns') && user) return true;
+  if ((pageKey === 'emails' || pageKey === 'campaigns' || pageKey === 'settings') && user) return true;
   if (pageKey === 'admin_artist_path') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);

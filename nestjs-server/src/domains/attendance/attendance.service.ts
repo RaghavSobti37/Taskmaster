@@ -96,7 +96,7 @@ export class AttendanceService {
     });
 
     await Promise.all(
-      rows.map((row) => {
+      rows.map((row: Attendance) => {
         const inRecord = asTimeRecord(row.inTimeRecord);
         const outRecord = asTimeRecord(row.outTimeRecord);
         if (inRecord?.manualTimestamp && outRecord?.manualTimestamp) {

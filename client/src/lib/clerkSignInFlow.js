@@ -11,6 +11,19 @@ const PENDING_SIGN_IN_SEGMENTS = new Set([
   'choose-wallet',
 ]);
 
+/**
+ * Clerk path routing can update the browser URL before React Router pathname catches up.
+ * Prefer the more specific /login/* segment when both are available.
+ */
+export function resolveClerkSignInPathname(routerPathname = '/') {
+  const router = String(routerPathname || '');
+  if (typeof window === 'undefined') return router;
+  const browser = window.location.pathname || '';
+  if (!browser.startsWith('/login')) return router;
+  if (!router.startsWith('/login')) return browser;
+  return browser.length >= router.length ? browser : router;
+}
+
 export function isClerkSignInSubflowPath(pathname) {
   const match = String(pathname || '').match(/^\/login\/([^/?#]+)/);
   if (!match) return false;
@@ -49,10 +62,18 @@ export function computeLoginUiState({
   if (!clerkReady) return 'SHOW_SIGN_IN';
   if (!clerkLoaded) return 'BOOT_LOADING';
   if (establishError) return 'ESTABLISH_ERROR';
+
+  const signInPath = resolveClerkSignInPathname(pathname);
+
+  // Never tear down Clerk SignIn or show establish/redirect chrome during OTP/MFA subflows.
+  if (isClerkSignInSubflowPath(signInPath)) {
+    return 'SHOW_SIGN_IN';
+  }
+
   if (user && sessionReady) return 'REDIRECTING';
 
   const readyForEstablish = isClerkReadyForCoreKnotEstablish({
-    pathname,
+    pathname: signInPath,
     isLoaded: clerkLoaded,
     isSignedIn: clerkSignedIn,
     sessionId: clerkSessionId,

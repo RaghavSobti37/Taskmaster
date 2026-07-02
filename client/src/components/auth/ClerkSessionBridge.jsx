@@ -13,7 +13,7 @@ import {
   setClerkEstablishError,
 } from '../../lib/clerkEstablishRegistry';
 import { fetchClerkEstablishToken } from '../../lib/clerkEstablishToken';
-import { isClerkReadyForCoreKnotEstablish } from '../../lib/clerkSignInFlow';
+import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 /** Dedupe establish across React StrictMode remounts. */
@@ -102,7 +102,7 @@ function ClerkSessionBridgeInner() {
       return undefined;
     }
     if (!isClerkReadyForCoreKnotEstablish({
-      pathname: location.pathname,
+      pathname: resolveClerkSignInPathname(location.pathname),
       isLoaded,
       isSignedIn,
       sessionId,

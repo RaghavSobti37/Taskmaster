@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
 import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
-import { isClerkSignInSubflowPath } from '../../lib/clerkSignInFlow';
+import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import {
   clerkAuthAppearance,
   clerkAuthLocalization,
@@ -28,14 +28,20 @@ export default function ClerkSignInBlock() {
 }
 
 function ClerkSignInInner() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, sessionId } = useAuth();
   const location = useLocation();
   const clerkRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
   const appearance = useMemo(() => clerkAuthAppearance, []);
   const localization = useMemo(() => clerkAuthLocalization, []);
-  const inClerkSubflow = isClerkSignInSubflowPath(location.pathname);
+  const signInPath = resolveClerkSignInPathname(location.pathname);
+  const readyToHideSignIn = isClerkReadyForCoreKnotEstablish({
+    pathname: signInPath,
+    isLoaded,
+    isSignedIn,
+    sessionId,
+  });
 
-  if (isLoaded && isSignedIn && !inClerkSubflow) {
+  if (readyToHideSignIn) {
     return null;
   }
 

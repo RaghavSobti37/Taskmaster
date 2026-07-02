@@ -13,7 +13,7 @@ import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
-import { computeLoginUiState } from '../../lib/clerkSignInFlow';
+import { computeLoginUiState, isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 import { Spinner } from '../../components/ui/Spinner';
 
@@ -60,12 +60,15 @@ function LoginPageView({
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
   const clerkReady = isClerkConfigured();
 
+  const signInPath = resolveClerkSignInPathname(pathname || location.pathname);
+  const inClerkSubflow = isClerkSignInSubflowPath(signInPath);
+
   const uiState = computeLoginUiState({
     clerkReady,
     clerkLoaded,
     clerkSignedIn,
     clerkSessionId,
-    pathname: pathname || location.pathname,
+    pathname: signInPath,
     authLoading,
     user,
     sessionReady,
@@ -149,7 +152,7 @@ function LoginPageView({
             {showSignInShell ? (
               <div className="relative">
                 <ClerkSignInBlock />
-                {uiState === 'ESTABLISHING' ? (
+                {uiState === 'ESTABLISHING' && !inClerkSubflow ? (
                   <div
                     className="absolute inset-0 z-[310] flex min-h-[12rem] flex-col items-center justify-center gap-3 rounded-lg bg-[var(--brand-panel-teal,#0B3B31)]/90 py-8"
                     aria-live="polite"

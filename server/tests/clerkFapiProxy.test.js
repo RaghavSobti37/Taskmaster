@@ -72,6 +72,32 @@ describe('clerkFapiProxy', () => {
     expect(init.headers.get('X-Forwarded-For')).toBe('203.0.113.1');
   });
 
+  it('proxies POST body when mounted before express.json (sign_ins form data)', async () => {
+    process.env.CLERK_SECRET_KEY = 'sk_test_proxy';
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      arrayBuffer: async () => Buffer.from('{"status":"needs_first_factor"}'),
+    }));
+
+    const router = require('../middleware/clerkFapiProxy');
+    const app = express();
+    app.use('/__clerk', router);
+
+    const formBody = 'identifier=user%40example.com&password=secret&strategy=password';
+    const res = await request(app)
+      .post('/__clerk/v1/client/sign_ins')
+      .set('Content-Type', 'application/x-www-form-urlencoded')
+      .send(formBody);
+
+    expect(res.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [, init] = global.fetch.mock.calls[0];
+    expect(Buffer.isBuffer(init.body)).toBe(true);
+    expect(init.body.toString('utf8')).toBe(formBody);
+    expect(init.headers.get('content-type')).toBe('application/x-www-form-urlencoded');
+  });
+
   it('follows upstream redirect and returns final body without Location header', async () => {
     process.env.CLERK_SECRET_KEY = 'sk_test_proxy';
     global.fetch = jest.fn()

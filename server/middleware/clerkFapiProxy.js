@@ -49,6 +49,15 @@ const buildTargetUrl = (req) => {
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 4;
 
+/** Mounted before express.json — must drain the socket for POST/PUT/PATCH bodies. */
+const readRawBody = (req) =>
+  new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+
 /** Follow Clerk version-pin redirects server-side so browsers get JS body, not 307 to app host. */
 const fetchClerkUpstream = async (startUrl, init) => {
   let url = startUrl;
@@ -94,10 +103,19 @@ const proxyHandler = async (req, res) => {
     signal: AbortSignal.timeout(25_000),
   };
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
-    if (req.rawBody) {
+    if (Buffer.isBuffer(req.rawBody) && req.rawBody.length > 0) {
       init.body = req.rawBody;
-    } else if (req.body != null) {
-      init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    } else if (typeof req.body === 'string' && req.body.length > 0) {
+      init.body = req.body;
+    } else if (
+      req.body != null
+      && typeof req.body === 'object'
+      && Object.keys(req.body).length > 0
+    ) {
+      init.body = JSON.stringify(req.body);
+    } else {
+      const raw = await readRawBody(req);
+      if (raw.length > 0) init.body = raw;
     }
   }
 
@@ -128,3 +146,4 @@ module.exports = router;
 module.exports.buildTargetUrl = buildTargetUrl;
 module.exports.buildProxyPublicUrl = buildProxyPublicUrl;
 module.exports.DEFAULT_PROXY_URL = DEFAULT_PROXY_URL;
+module.exports.readRawBody = readRawBody;

@@ -4,6 +4,9 @@ import {
   computeTimeSpentFromInterval,
   getLogWorkDateKey,
   getLogTimelineBounds,
+  getLogTimelineDisplay,
+  assignTimelineLanes,
+  computeTimelineDisplayRange,
   normalizeDailyLogDetails,
   isLogEditable,
   formatLogInterval,
@@ -86,5 +89,33 @@ describe('dailyLogDetails', () => {
     expect(formatLogInterval({
       details: { startTime: '9:00', endTime: '11:30' },
     })).toBe('09:00 – 11:30');
+  });
+
+  it('extends timeline range past 22:00 when work ends later', () => {
+    const { rangeStart, rangeEnd } = computeTimelineDisplayRange({
+      firstIn: 9 * 60 + 2,
+      lastOut: 22 * 60 + 40,
+    });
+    expect(rangeStart).toBe(8 * 60 + 32);
+    expect(rangeEnd).toBe(23 * 60 + 10);
+  });
+
+  it('assigns separate lanes for overlapping blocks', () => {
+    const { blocks, laneCount } = assignTimelineLanes([
+      { id: 'a', startMin: 540, endMin: 600, title: 'A' },
+      { id: 'b', startMin: 545, endMin: 605, title: 'B' },
+    ]);
+    expect(laneCount).toBe(2);
+    expect(blocks.find((b) => b.id === 'a')?.lane).toBe(0);
+    expect(blocks.find((b) => b.id === 'b')?.lane).toBe(1);
+  });
+
+  it('merges attendance bounds into timeline display range', () => {
+    const display = getLogTimelineDisplay(
+      [{ _id: 'x', details: { title: 'Late', startTime: '21:40', endTime: '22:40' } }],
+      { attendanceInMin: 9 * 60 + 2, attendanceOutMin: 22 * 60 + 40 },
+    );
+    expect(display.rangeEnd).toBe(23 * 60 + 10);
+    expect(display.lastOut).toBe(22 * 60 + 40);
   });
 });

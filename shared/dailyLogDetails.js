@@ -139,6 +139,7 @@ function buildDailyLogDateRangeFilter(startDate, endDate) {
 
 const TIMELINE_FALLBACK_DURATION_MIN = 30;
 const TIMELINE_MIN_BLOCK_MIN = 15;
+export const TIMELINE_RANGE_PAD_MIN = 30;
 
 function parseCreatedAtToMinutes(createdAt) {
   if (!createdAt) return null;
@@ -216,6 +217,68 @@ function getLogTimelineBounds(logs = []) {
   return { firstIn, lastOut, blocks };
 }
 
+/** Stack overlapping intervals into lanes so the bar shows every block. */
+function assignTimelineLanes(blocks = []) {
+  const sorted = [...blocks].sort(
+    (a, b) => a.startMin - b.startMin || a.endMin - b.endMin,
+  );
+  const laneEnds = [];
+  const laned = sorted.map((block) => {
+    let lane = 0;
+    while (laneEnds[lane] != null && laneEnds[lane] > block.startMin) {
+      lane += 1;
+    }
+    laneEnds[lane] = block.endMin;
+    return { ...block, lane };
+  });
+  return { blocks: laned, laneCount: Math.max(1, laneEnds.length) };
+}
+
+/** Visible axis for the day bar — follows actual work bounds, not a hard 22:00 cap. */
+function computeTimelineDisplayRange({
+  firstIn,
+  lastOut,
+  padMin = TIMELINE_RANGE_PAD_MIN,
+} = {}) {
+  if (firstIn == null && lastOut == null) {
+    return {
+      rangeStart: TIMELINE_DAY_START_MIN,
+      rangeEnd: TIMELINE_DAY_END_MIN,
+      span: TIMELINE_DAY_END_MIN - TIMELINE_DAY_START_MIN,
+    };
+  }
+  const rangeStart = firstIn != null
+    ? Math.max(0, firstIn - padMin)
+    : TIMELINE_DAY_START_MIN;
+  const rangeEnd = lastOut != null
+    ? lastOut + padMin
+    : TIMELINE_DAY_END_MIN;
+  const span = Math.max(60, rangeEnd - rangeStart);
+  return { rangeStart, rangeEnd, span };
+}
+
+function getLogTimelineDisplay(logs = [], { attendanceInMin, attendanceOutMin } = {}) {
+  const { firstIn, lastOut, blocks } = getLogTimelineBounds(logs);
+  const inCandidates = [firstIn, attendanceInMin].filter((n) => n != null);
+  const outCandidates = [lastOut, attendanceOutMin].filter((n) => n != null);
+  const mergedFirst = inCandidates.length ? Math.min(...inCandidates) : null;
+  const mergedLast = outCandidates.length ? Math.max(...outCandidates) : null;
+  const { blocks: lanedBlocks, laneCount } = assignTimelineLanes(blocks);
+  const { rangeStart, rangeEnd, span } = computeTimelineDisplayRange({
+    firstIn: mergedFirst,
+    lastOut: mergedLast,
+  });
+  return {
+    firstIn: mergedFirst,
+    lastOut: mergedLast,
+    blocks: lanedBlocks,
+    laneCount,
+    rangeStart,
+    rangeEnd,
+    span,
+  };
+}
+
 module.exports = {
   EDIT_WINDOW_DAYS,
   TIMELINE_DAY_START_MIN,
@@ -231,4 +294,8 @@ module.exports = {
   isLogEditable,
   buildDailyLogDateRangeFilter,
   getLogTimelineBounds,
+  assignTimelineLanes,
+  computeTimelineDisplayRange,
+  getLogTimelineDisplay,
+  TIMELINE_RANGE_PAD_MIN,
 };

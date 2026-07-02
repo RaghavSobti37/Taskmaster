@@ -40,7 +40,7 @@ const VERCEL_SECURITY_HEADERS = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com "
         + `${CLERK_SCRIPT_ORIGINS} ${GOOGLE_AUTH_ORIGINS}`,
-      "style-src 'self' 'unsafe-inline'",
+      `style-src 'self' 'unsafe-inline' ${GOOGLE_AUTH_ORIGINS}`,
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https: wss:",

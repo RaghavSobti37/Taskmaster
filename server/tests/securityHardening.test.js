@@ -112,11 +112,14 @@ describe('security hardening', () => {
       expect(headers[0].headers.some((h) => h.key === 'Strict-Transport-Security')).toBe(true);
     });
 
-    it('allows Google Identity Services in script-src and frame-src', () => {
+    it('allows Google Identity Services in script-src, style-src, and frame-src', () => {
       const headers = buildVercelHeaders([]);
       const csp = headers[0].headers.find((h) => h.key === 'Content-Security-Policy')?.value || '';
       expect(csp).toContain('https://accounts.google.com');
       expect(csp).toContain('https://*.google.com');
+      const styleSrc = csp.split(';').find((d) => d.trim().startsWith('style-src')) || '';
+      expect(styleSrc).toContain('https://accounts.google.com');
+      expect(styleSrc).toContain('https://*.google.com');
     });
   });
 });

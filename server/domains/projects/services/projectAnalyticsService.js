@@ -10,6 +10,7 @@ const { resolveRollingRange, inRollingWindow } = require('../../../../shared/rep
 const { getDateKey, startOfDayFromKey, endOfDayFromKey } = require('../../../utils/attendanceDate');
 const { isAdminUser } = require('../../../utils/departmentPermissions');
 const { canAccessProject, getAccessibleProjectsFilter } = require('../../../utils/projectAccess');
+const { ACTIVE_LOG_FILTER } = require('../../../utils/taskDailyLogs');
 
 const TASK_LOG_TYPES = new Set(['TASK_COMPLETION', 'TASK_REVIEW']);
 const roundHours = (n) => Math.round(n * 100) / 100;
@@ -17,6 +18,7 @@ const roundHours = (n) => Math.round(n * 100) / 100;
 const emptyPriorityCounts = () => ({ critical: 0, high: 0, medium: 0, low: 0 });
 
 const buildProjectLogFilter = (project, rangeStart, rangeEnd) => ({
+  ...ACTIVE_LOG_FILTER,
   action: 'DAILY_LOG',
   createdAt: { $gte: rangeStart, $lte: rangeEnd },
   $or: [
@@ -345,6 +347,7 @@ const buildProjectsAnalyticsSummary = async (user, rangeQuery = {}) => {
   const projectById = Object.fromEntries(projects.map((p) => [p._id.toString(), p]));
 
   const logs = await Log.find({
+    ...ACTIVE_LOG_FILTER,
     action: 'DAILY_LOG',
     createdAt: { $gte: rangeStart, $lte: rangeEnd },
     $or: [

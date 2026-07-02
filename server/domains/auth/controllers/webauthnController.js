@@ -70,7 +70,12 @@ const registerVerify = asyncHandler(async (req, res) => {
   return apiOk(res, { registered: true });
 });
 
+const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
+
 const loginOptions = asyncHandler(async (req, res) => {
+  if (isClerkProductionAuth()) {
+    return respondClerkOnlyAuth(res);
+  }
   const { email } = req.body || {};
   if (!email) return apiError(res, 'email required', 400);
   const user = await User.findOne({ email: email.toLowerCase().trim() });

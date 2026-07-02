@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../server');
 const User = require('../models/User');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 
@@ -112,19 +113,9 @@ describe('Authentication API', () => {
       expect(String(loginRes.body.error || '')).toMatch(/suspended/i);
 
       const agent = request.agent(app);
-      const okLogin = await agent.post('/api/auth/login').send({
-        email: 'test@example.com',
-        password: TEST_PASSWORD,
-      });
-      expect(okLogin.statusCode).toEqual(403);
-
       await User.updateOne({ email: 'test@example.com' }, { $set: { suspended: false, suspendedAt: null } })
         .setOptions({ bypassTenant: true });
-      const freshLogin = await agent.post('/api/auth/login').send({
-        email: 'test@example.com',
-        password: TEST_PASSWORD,
-      });
-      expect(freshLogin.statusCode).toEqual(200);
+      await mintSessionAgent(agent, created._id);
 
       await User.updateOne({ email: 'test@example.com' }, { $set: { suspended: true, suspendedAt: new Date() } })
         .setOptions({ bypassTenant: true });
@@ -143,7 +134,7 @@ describe('Authentication API', () => {
     });
 
     it('returns authenticated true with user when logged in', async () => {
-      await request(app)
+      const reg = await request(app)
         .post('/api/auth/register')
         .send({
           name: 'Session User',
@@ -153,15 +144,48 @@ describe('Authentication API', () => {
         });
 
       const agent = request.agent(app);
-      await agent.post('/api/auth/login').send({
-        email: 'session@example.com',
-        password: TEST_PASSWORD,
-      });
+      await mintSessionAgent(agent, reg.body._id);
 
       const res = await agent.get('/api/auth/session');
       expect(res.statusCode).toEqual(200);
       expect(res.body.authenticated).toBe(true);
       expect(res.body.user.email).toEqual('session@example.com');
+    });
+  });
+
+  describe('Clerk-only production guards', () => {
+    const prevSecret = process.env.CLERK_SECRET_KEY;
+    const prevAllowLegacy = process.env.ALLOW_LEGACY_LOGIN;
+
+    beforeAll(() => {
+      process.env.CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY || 'sk_test_clerk_only_gate';
+      delete process.env.ALLOW_LEGACY_LOGIN;
+    });
+
+    afterAll(() => {
+      if (prevSecret === undefined) delete process.env.CLERK_SECRET_KEY;
+      else process.env.CLERK_SECRET_KEY = prevSecret;
+      if (prevAllowLegacy === undefined) delete process.env.ALLOW_LEGACY_LOGIN;
+      else process.env.ALLOW_LEGACY_LOGIN = prevAllowLegacy;
+    });
+
+    it('returns 410 for password login when Clerk is configured', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: TEST_PASSWORD });
+      expect(res.statusCode).toEqual(410);
+    });
+
+    it('returns 410 for register when Clerk is configured', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Blocked',
+          email: 'blocked@example.com',
+          password: TEST_PASSWORD,
+          gender: 'male',
+        });
+      expect(res.statusCode).toEqual(410);
     });
   });
 });

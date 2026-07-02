@@ -1,20 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
+import { getClerkSignInRedirectProps } from '../../config/siteUrls';
+import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
+import { Spinner } from '../ui/Spinner';
 import {
   clerkAuthAppearance,
   clerkAuthLocalization,
   clerkAuthShellClass,
 } from '../../config/clerkAppearance';
 
-function ClerkSignInSkeleton() {
+function ClerkSignInLoading() {
   return (
-    <div className="w-full space-y-4 animate-pulse" aria-hidden>
-      <div className="h-7 rounded-lg bg-white/10" />
-      <div className="h-4 w-2/3 rounded bg-white/5" />
-      <div className="h-11 rounded-lg bg-white/10" />
-      <div className="h-11 rounded-lg bg-white/8" />
-      <div className="h-11 rounded-lg bg-teal-300/20" />
+    <div className="flex min-h-[12rem] items-center justify-center py-8" aria-busy="true" aria-live="polite">
+      <Spinner size="lg" />
     </div>
   );
 }
@@ -25,24 +25,42 @@ export default function ClerkSignInBlock() {
 }
 
 function ClerkSignInInner() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, sessionId } = useAuth();
+  const location = useLocation();
+  const signInRedirectProps = useMemo(() => getClerkSignInRedirectProps(), []);
+  const appearance = useMemo(() => clerkAuthAppearance, []);
+  const localization = useMemo(() => clerkAuthLocalization, []);
+  const signInPath = resolveClerkSignInPathname(location.pathname);
+  const readyToHideSignIn = isClerkReadyForCoreKnotEstablish({
+    pathname: signInPath,
+    isLoaded,
+    isSignedIn,
+    sessionId,
+  });
 
-  if (isLoaded && isSignedIn) {
+  if (readyToHideSignIn) {
     return null;
   }
 
-  return (
-    <div className={clerkAuthShellClass}>
-      {!isLoaded ? <ClerkSignInSkeleton /> : null}
-      <div className={isLoaded ? 'w-full' : 'sr-only'}>
-        <SignIn
-          routing="path"
-          path="/login"
-          signUpUrl="/register"
-          appearance={clerkAuthAppearance}
-          localization={clerkAuthLocalization}
-        />
+  if (!isLoaded) {
+    return (
+      <div className={clerkAuthShellClass} data-clerk-sign-in-shell>
+        <ClerkSignInLoading />
       </div>
+    );
+  }
+
+  return (
+    <div className={clerkAuthShellClass} data-clerk-sign-in-shell>
+      <SignIn
+        key="coreknot-sign-in"
+        routing="path"
+        path="/login"
+        signUpUrl="/register"
+        {...signInRedirectProps}
+        appearance={appearance}
+        localization={localization}
+      />
     </div>
   );
 }

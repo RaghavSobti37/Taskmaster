@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, staging]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, staging]
 
 env:
   NPM_VERSION: "11.13.0"
@@ -21,11 +21,14 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
-      - name: Dependency audit (high+)
-        run: npm audit --workspace=coreknot-server --audit-level=high
-        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Dependency audit (critical)
+        run: npm audit --workspace=coreknot-server --audit-level=critical
+      - name: OpenAPI version drift check
+        run: node scripts/generate-openapi.mjs --check
+      - name: Tenant bypass static suite
+        run: node server/scripts/runQaSuite3Static.js
       - name: Jest
         run: npm test --workspace=coreknot-server -- --coverage
         env:
@@ -43,11 +46,10 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
-      - name: Dependency audit (high+)
-        run: npm audit --workspace=CoreKnot-client --audit-level=high
-        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Dependency audit (critical)
+        run: npm audit --workspace=CoreKnot-client --audit-level=critical
       - name: Lint
         run: npm run lint --workspace=CoreKnot-client -- --quiet
       - name: Unit tests
@@ -189,3 +191,23 @@ jobs:
           E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
           E2E_BASE_URL: http://127.0.0.1:4173
+
+  production-auth-smoke:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.SKIP_PRODUCTION_AUTH_E2E != '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Production auth smoke
+        run: npm run test:e2e:production-auth
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}

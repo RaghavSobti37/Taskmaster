@@ -32,6 +32,21 @@ const errorHandler = (err, req, res, next) => {
 
   if (statusCode >= 500) {
     logger.error('errorMiddleware', message, { ...logMeta, stack: err.stack });
+    try {
+      const { Sentry, sentryEnabled } = require('../instrument');
+      if (sentryEnabled) {
+        Sentry.withScope((scope) => {
+          scope.setTag('route', req.originalUrl);
+          scope.setTag('method', req.method);
+          if (req.traceId) scope.setTag('traceId', req.traceId);
+          if (req.user?._id) scope.setUser({ id: String(req.user._id), email: req.user.email });
+          if (req.tenantId) scope.setTag('tenantId', String(req.tenantId));
+          Sentry.captureException(err);
+        });
+      }
+    } catch {
+      /* sentry optional */
+    }
     capturePostHogException(err, req, {
       route: req.originalUrl,
       method: req.method,

@@ -180,6 +180,27 @@ const removeSession = async (userId, jti) => {
   writeMemory(userId, list);
 };
 
+/** Revoke every active session for a user (admin suspend / offboarding). */
+const revokeAllUserSessions = async (userId, { expFallbackSec = 60 * 60 * 24 * 7 } = {}) => {
+  if (!userId) return { revoked: 0 };
+  const { revokeToken } = require('./tokenRevocation');
+  const fromRedis = await redisGetAll(userId);
+  const sessions = fromRedis ?? readMemory(userId);
+  let revoked = 0;
+  for (const session of sessions) {
+    if (!session?.jti) continue;
+    const exp = session.expiresAt
+      ? Math.floor(session.expiresAt / 1000)
+      : Math.floor(Date.now() / 1000) + expFallbackSec;
+    // eslint-disable-next-line no-await-in-loop
+    await revokeToken({ jti: session.jti, exp });
+    // eslint-disable-next-line no-await-in-loop
+    await removeSession(userId, session.jti);
+    revoked += 1;
+  }
+  return { revoked };
+};
+
 const decodeToken = (token) => {
   if (!token) return null;
   try {
@@ -203,6 +224,7 @@ module.exports = {
   touchSession,
   rotateSession,
   removeSession,
+  revokeAllUserSessions,
   finishAuthSession,
   decodeToken,
   _resetForTests: () => {

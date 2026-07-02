@@ -1,16 +1,17 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import OutletSidebar from './OutletSidebar';
 import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
 import QuickAddMenu from './QuickAddMenu';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
-import { useWindowSize, DESKTOP_MIN } from '../hooks/useBreakpoint';
+import { useIsDesktop } from '../hooks/useBreakpoint';
 import MobileRouteGuard from './mobile/MobileRouteGuard';
 import MobilePullToRefresh from './mobile/MobilePullToRefresh';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import RouteContentSkeleton from './ui/RouteContentSkeleton';
+import BrandedLoadingPanel from './ui/BrandedLoadingPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
@@ -20,6 +21,31 @@ import { createLazyWithRetry } from '../utils/lazyWithRetry';
 const lazyWithRetry = createLazyWithRetry;
 
 const AttendancePromptModal = lazyWithRetry(() => import('./attendance/AttendancePromptModal'));
+
+function MainRouteSuspenseFallback() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7593/ingest/75bc4ee5-8ab2-4010-83b9-7267b331142a', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c0551d' },
+      body: JSON.stringify({
+        sessionId: 'c0551d',
+        runId: 'pre-fix',
+        hypothesisId: 'C',
+        location: 'MainLayout.jsx:MainRouteSuspenseFallback',
+        message: 'route suspense skeleton shown',
+        data: { pathname },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [pathname]);
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    return <BrandedLoadingPanel />;
+  }
+  return <RouteContentSkeleton />;
+}
 
 const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
 const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
@@ -33,9 +59,9 @@ const GChordHint = lazyWithRetry(() => import('./GChordHint'));
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
-  const { width } = useWindowSize();
-  // ponytail: viewport width beats PWA-desktop hook below lg — no margin when sidebar is off-screen
-  const applySidebarMargin = width >= DESKTOP_MIN;
+  const isDesktop = useIsDesktop();
+  // ponytail: useIsDesktop matches OutletSidebar — PWA installed app keeps sidebar margin + footer nav
+  const applySidebarMargin = isDesktop;
   const { user } = useAuth();
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
 
@@ -85,7 +111,7 @@ const MainLayout = () => {
       )}
 
       <div
-        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out max-lg:!ml-0"
+        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out"
         style={{
           marginLeft: applySidebarMargin
             ? (isOpen ? SIDEBAR_SHELL_WIDTH_OPEN : SIDEBAR_SHELL_WIDTH_COLLAPSED)
@@ -105,7 +131,7 @@ const MainLayout = () => {
             </Suspense>
             <MobileRouteGuard>
               <RouteErrorBoundary>
-                <Suspense fallback={<RouteContentSkeleton />}>
+                <Suspense fallback={<MainRouteSuspenseFallback />}>
                   <Outlet />
                 </Suspense>
               </RouteErrorBoundary>

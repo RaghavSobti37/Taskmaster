@@ -14,6 +14,21 @@ export default function SkeletonReveal({ loading, skeleton, children, className 
   }, [loading, reveal]);
 
   if (loading) {
+    // #region agent log
+    fetch('http://127.0.0.1:7593/ingest/75bc4ee5-8ab2-4010-83b9-7267b331142a', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c0551d' },
+      body: JSON.stringify({
+        sessionId: 'c0551d',
+        runId: 'pre-fix',
+        hypothesisId: 'B',
+        location: 'SkeletonReveal.jsx:loading',
+        message: 'SkeletonReveal loading layer',
+        data: { reveal, className },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return (
       <div className={`t-skel ${className}`.trim()} data-state="loading" aria-busy="true">
         <div className="t-skel-skeleton is-pulsing relative min-h-[8rem]">{skeleton}</div>

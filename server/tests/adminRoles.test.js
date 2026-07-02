@@ -5,6 +5,7 @@ const Department = require('../models/Department');
 const adminRolesService = require('../services/adminRolesService');
 const { seedDepartments } = require('../services/departmentService');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
 
 const TEST_EMAIL = `admin-roles-${Date.now()}@coreknot-test.local`;
@@ -31,11 +32,7 @@ async function loginAsAdmin(agent) {
   expect(reg.statusCode).toBe(201);
   await User.findByIdAndUpdate(reg.body._id, { departmentId: adminDept._id });
 
-  const login = await agent.post('/api/auth/login').send({
-    email: TEST_EMAIL,
-    password: DEV_DEFAULT_PASSWORD,
-  });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, reg.body._id);
   return { adminDept, userId: reg.body._id };
 }
 

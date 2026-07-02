@@ -15,6 +15,9 @@ const traceMiddleware = (req, res, next) => {
   const traceId = resolveTraceId(incoming);
   req.traceId = traceId;
   res.setHeader('X-Trace-Id', traceId);
+  const requestId = req.headers['x-request-id'] || traceId;
+  req.requestId = requestId;
+  res.setHeader('X-Request-Id', requestId);
 
   tenantStorage.run({
     traceId,

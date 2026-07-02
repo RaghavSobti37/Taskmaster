@@ -80,6 +80,12 @@ export const WIDGET_SECTION_MAP = {
   'daily-missions': 'more',
 };
 
+export const STATUS_STRIP_WIDGET_IDS = new Set(
+  Object.entries(WIDGET_SECTION_MAP)
+    .filter(([, sectionId]) => sectionId === 'status-strip')
+    .map(([componentId]) => componentId),
+);
+
 /** Navigate on card header / body click */
 export const WIDGET_ROUTES = {
   'mark-attendance': '/attendance',

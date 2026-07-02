@@ -5,7 +5,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useTransitionSurface } from '../../hooks/transitions';
 import { shouldSubmitModalOnEnter, triggerModalPrimarySubmit } from '../../lib/modalEnter';
 
-/** Pixel widths for compact (sm) modals — inline styles prevent flex collapse */
+/** Pixel widths for centered modals — inline styles prevent flex collapse */
 export const MODAL_WIDTH_PX = {
   sm: 448,
   md: 512,
@@ -13,29 +13,33 @@ export const MODAL_WIDTH_PX = {
   xl: 896,
   '2xl': 1024,
   full: 1200,
-  /** @deprecated task modals use fullscreen layout */
+  /** Task detail — fullscreen layout with optional width cap via panelClassName */
   task: 1400,
   fullscreen: null,
 };
 
-const isCompactModalSize = (size) => size === 'sm';
+const CENTERED_SIZE_TOKENS = new Set(['sm', 'md', 'lg', 'xl', '2xl', 'full']);
+
+export const isFullscreenSize = (size) => size === 'fullscreen' || size === 'task';
+
+const normalizeCenteredSize = (size) => (CENTERED_SIZE_TOKENS.has(size) ? size : 'md');
 
 export const MODAL_PANEL_CLASS = 'tm-modal-panel';
 export const MODAL_OVERLAY_CLASS = 'tm-modal-overlay';
 
 const getModalPanelClassName = (size = 'fullscreen', extra = '') => {
-  if (isCompactModalSize(size)) {
-    return [MODAL_PANEL_CLASS, 'tm-modal-sm', 'tm-modal-compact', extra].filter(Boolean).join(' ');
+  if (isFullscreenSize(size)) {
+    return [MODAL_PANEL_CLASS, 'tm-modal-fullscreen', extra].filter(Boolean).join(' ');
   }
-  return [MODAL_PANEL_CLASS, 'tm-modal-fullscreen', extra].filter(Boolean).join(' ');
+  const token = normalizeCenteredSize(size);
+  return [MODAL_PANEL_CLASS, `tm-modal-${token}`, 'tm-modal-compact', extra].filter(Boolean).join(' ');
 };
 
-export const getModalPanelStyle = (sizeOrPx = 'fullscreen') => {
-  if (isCompactModalSize(sizeOrPx)) {
-    const px = MODAL_WIDTH_PX.sm;
+export const getModalPanelStyle = (sizeOrPx = 'fullscreen', widthPx) => {
+  if (widthPx != null) {
     return {
-      ['--tm-modal-width']: `${px}px`,
-      width: `min(calc(100vw - 2rem), ${px}px)`,
+      ['--tm-modal-width']: `${widthPx}px`,
+      width: `min(calc(100vw - 2rem), ${widthPx}px)`,
       minWidth: 'min(320px, calc(100vw - 2rem))',
       maxWidth: 'calc(100vw - 2rem)',
       flexShrink: 0,
@@ -43,32 +47,28 @@ export const getModalPanelStyle = (sizeOrPx = 'fullscreen') => {
       boxSizing: 'border-box',
     };
   }
+  if (isFullscreenSize(sizeOrPx)) {
+    return {
+      boxSizing: 'border-box',
+      flexShrink: 0,
+      flexGrow: 0,
+    };
+  }
+  const token = normalizeCenteredSize(sizeOrPx);
+  const px = MODAL_WIDTH_PX[token] ?? MODAL_WIDTH_PX.md;
   return {
-    boxSizing: 'border-box',
+    ['--tm-modal-width']: `${px}px`,
+    width: `min(calc(100vw - 2rem), ${px}px)`,
+    minWidth: 'min(320px, calc(100vw - 2rem))',
+    maxWidth: 'calc(100vw - 2rem)',
     flexShrink: 0,
     flexGrow: 0,
+    boxSizing: 'border-box',
   };
 };
 
-/** Composable modal shell — prefer NexusModal first; use ModalShell directly when layout is custom */
-const ModalOverlay = ({
-  children,
-  className = '',
-  zIndex = 1000,
-  onBackdropClick,
-  padding = true,
-}) => (
-  <div
-    className={`${MODAL_OVERLAY_CLASS} fixed inset-0 ${padding ? 'p-4 sm:p-6' : ''} ${className}`}
-    style={{ zIndex }}
-    onClick={onBackdropClick}
-    role="presentation"
-  >
-    {children}
-  </div>
-);
-
 const ModalTitleIdContext = React.createContext(null);
+const ModalLayoutContext = React.createContext({ fullscreen: true });
 
 /**
  * Shared modal overlay + panel shell.
@@ -88,7 +88,8 @@ export const ModalShell = ({
   submitOnEnter = true,
   ariaLabel,
 }) => {
-  const compact = isCompactModalSize(size) && widthPx == null;
+  const fullscreen = isFullscreenSize(size);
+  const centered = !fullscreen;
   const panelRef = React.useRef(null);
   const titleId = React.useId();
   const { mounted, surfaceClass } = useTransitionSurface(isOpen, {
@@ -124,13 +125,13 @@ export const ModalShell = ({
 
   if (typeof document === 'undefined') return null;
 
-  const panelStyle = getModalPanelStyle(compact ? 'sm' : 'fullscreen');
+  const panelStyle = getModalPanelStyle(size, widthPx);
   const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
-  const overlayPadding = compact
+  const overlayPadding = centered
     ? 'px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6'
     : 'p-0';
-  const panelLayout = compact
-    ? 'rounded-[var(--radius-lg)] max-h-[min(85vh,900px)] shadow-2xl'
+  const panelLayout = centered
+    ? 'h-auto rounded-[var(--radius-lg)] max-h-[min(85vh,900px)] shadow-2xl'
     : 'rounded-none h-[100dvh] max-h-[100dvh] shadow-none border-x-0 border-t-0';
 
   if (!mounted) return null;
@@ -145,11 +146,11 @@ export const ModalShell = ({
         className={`tm-modal-backdrop t-modal-backdrop absolute inset-0 bg-black/40 ${surfaceClass}`}
         onClick={handleBackdropClick}
       />
-      <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} ${compact ? '' : 'tm-modal-overlay--fullscreen'} ${overlayPadding} pointer-events-none overflow-y-auto`}>
+      <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} ${fullscreen ? 'tm-modal-overlay--fullscreen' : 'tm-modal-overlay--centered'} ${overlayPadding} pointer-events-none overflow-y-auto`}>
         <div
           ref={panelRef}
           style={panelStyle}
-          className={`t-modal ${getModalPanelClassName(compact ? 'sm' : size)} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] flex flex-col overflow-hidden w-full ${panelLayout} ${surfaceClass} ${panelClassName}`}
+          className={`t-modal ${getModalPanelClassName(size)} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] flex flex-col overflow-hidden w-full ${panelLayout} ${surfaceClass} ${panelClassName}`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handlePanelKeyDown}
           role="dialog"
@@ -157,9 +158,11 @@ export const ModalShell = ({
           aria-label={ariaLabel}
           aria-labelledby={ariaLabel ? undefined : titleId}
         >
-          <ModalTitleIdContext.Provider value={titleId}>
-            {children}
-          </ModalTitleIdContext.Provider>
+          <ModalLayoutContext.Provider value={{ fullscreen }}>
+            <ModalTitleIdContext.Provider value={titleId}>
+              {children}
+            </ModalTitleIdContext.Provider>
+          </ModalLayoutContext.Provider>
         </div>
       </div>
     </div>,
@@ -216,9 +219,17 @@ export const ModalHeader = ({
   );
 };
 
-export const ModalBody = ({ children, className = '' }) => (
-  <div className={`tm-modal-scroll p-6 space-y-4 flex-1 min-h-0 ${className}`}>{children}</div>
-);
+export const ModalBody = ({ children, className = '', scrollable }) => {
+  const { fullscreen } = React.useContext(ModalLayoutContext);
+  const grow = scrollable ?? fullscreen;
+  return (
+    <div
+      className={`tm-modal-scroll p-6 space-y-4 ${grow ? 'flex-1 min-h-0' : 'tm-modal-scroll--content'} ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
 
 export const ModalFooter = ({ children, className = '' }) => (
   <div

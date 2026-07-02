@@ -50,6 +50,28 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
   });
 
+  it('omits Clerk force redirect on auth host so client-trust subflow can render', async () => {
+    import.meta.env.VITE_SITE_MODE = 'auth';
+
+    const {
+      resolveClerkForceRedirectUrl,
+      getClerkSignInRedirectProps,
+      getClerkProviderRedirectProps,
+    } = await import('./siteUrls.js');
+
+    expect(resolveClerkForceRedirectUrl()).toBe('/login');
+    expect(getClerkSignInRedirectProps()).toEqual({});
+    expect(getClerkProviderRedirectProps()).toEqual({});
+  });
+
+  it('sends Clerk straight to dashboard on app site', async () => {
+    import.meta.env.VITE_SITE_MODE = 'app';
+
+    const { resolveClerkForceRedirectUrl } = await import('./siteUrls.js');
+
+    expect(resolveClerkForceRedirectUrl()).toBe('/dashboard');
+  });
+
   it('links landing subdomain auth CTAs to configured auth host', async () => {
     import.meta.env.VITE_SITE_MODE = 'landing';
     import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';

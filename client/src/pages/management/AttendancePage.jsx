@@ -30,6 +30,7 @@ import {
   shouldUseSplitLayout,
   getMergedCellLabel,
   formatDateKeyIST,
+  getISTTodayDate,
   resolveAttendanceStatus,
   inferEditScope,
 } from '../../utils/attendanceUtils';
@@ -154,12 +155,8 @@ const AttendancePage = () => {
   const [editInBaseline, setEditInBaseline] = useState(null);
   const [editOutBaseline, setEditOutBaseline] = useState(null);
 
-  const today = useMemo(() => {
-    const value = new Date();
-    value.setHours(0, 0, 0, 0);
-    return value;
-  }, []);
-  const todayKey = formatDateKeyIST(today);
+  const todayKey = formatDateKeyIST();
+  const today = useMemo(() => getISTTodayDate(), [todayKey]);
 
   const dateColumns = useMemo(() => {
     if (viewMode === VIEW_MODES.DAILY) return [{ key: 'today', label: 'Today', date: today }];
@@ -215,9 +212,6 @@ const AttendancePage = () => {
     { start: format(startOfMonth(monthView), 'yyyy-MM-dd'), end: format(endOfMonth(monthView), 'yyyy-MM-dd'), mine: 'true' },
     true // always fetch for self-view
   );
-  
-  const { data: selfTodayRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
-  const selfTodayEntry = selfTodayRows[0];
 
   const deferPendingLeaves = useDeferredQueryEnabled(!isLoading);
   const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit && deferPendingLeaves);
@@ -259,6 +253,17 @@ const AttendancePage = () => {
     });
     return map;
   }, [selfMonthRows]);
+
+  const selfTodayEntry = useMemo(() => {
+    if (!user?._id) return undefined;
+    const uid = String(user._id);
+    const fromMap = selfRowMap.get(`${uid}_${todayKey}`);
+    if (fromMap) return fromMap;
+    return selfMonthRows.find(
+      (row) => String(row.userId?._id || row.userId) === uid
+        && formatDateKeyIST(new Date(row.date)) === todayKey
+    );
+  }, [selfRowMap, selfMonthRows, user?._id, todayKey]);
 
   const resolveStatus = (entry, date) => resolveAttendanceStatus(entry, date);
 

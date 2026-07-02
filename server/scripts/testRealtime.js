@@ -17,7 +17,11 @@ async function run() {
   const user = await User.findOne();
   if (!user) throw new Error('No user in DB for test');
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const token = jwt.sign(
+    { id: user._id.toString(), scope: 'realtime', jti: crypto.randomBytes(8).toString('hex') },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' },
+  );
 
   const httpServer = http.createServer();
   initRealtime(httpServer, new Set(['http://localhost:5173']));

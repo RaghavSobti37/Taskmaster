@@ -4,6 +4,7 @@ const { protect, requirePageAccess } = require('../../middleware/authMiddleware'
 
 const dataHubAccess = requirePageAccess('admin_data');
 const dataHubController = require('./controllers/dataHubController');
+const { auditSensitiveMutation } = require('../../services/securityAuditService');
 const { validateQuery } = require('../../validation/validateQuery');
 const {
   dataHubPeopleQuery,
@@ -19,9 +20,9 @@ router.get('/people/:id', protect, dataHubAccess, validateQuery(dataHubPersonQue
 router.get('/analytics', protect, dataHubAccess, validateQuery(dataHubAnalyticsQuery), dataHubController.getAnalytics);
 router.get('/analytics/overlap', protect, dataHubAccess, dataHubController.getOverlap);
 router.get('/sync-status', protect, dataHubAccess, dataHubController.getSyncStatus);
-router.post('/reconcile', protect, dataHubAccess, validateQuery(dataHubReconcileQuery), dataHubController.reconcile);
+router.post('/reconcile', protect, dataHubAccess, auditSensitiveMutation({ resourceType: 'DataHub', action: 'RECONCILE' }), validateQuery(dataHubReconcileQuery), dataHubController.reconcile);
 router.get('/backups', protect, dataHubAccess, dataHubController.listBackups);
 router.get('/backup/progress', protect, dataHubAccess, dataHubController.getBackupProgress);
-router.post('/backup', protect, dataHubAccess, validateQuery(dataHubBackupQuery), dataHubController.runProductionBackup);
+router.post('/backup', protect, dataHubAccess, auditSensitiveMutation({ resourceType: 'DataHub', action: 'BACKUP' }), validateQuery(dataHubBackupQuery), dataHubController.runProductionBackup);
 
 module.exports = router;

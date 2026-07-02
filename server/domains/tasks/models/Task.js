@@ -36,7 +36,7 @@ const taskSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  /** @mentioned users in project/workspace scope — view access, not assignees */
+  /** @mentioned users in project/workspace scope — view access only (not assignees). */
   mentionAccessIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   notifiedOverdue: { type: Boolean, default: false },
   color: { type: String }

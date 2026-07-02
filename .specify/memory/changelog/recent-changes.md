@@ -4,6 +4,15 @@ Session deltas appended by `/git-push` and agent ship workflows. Newest first.
 
 ---
 
+## 2026-07-02 — Documentation reorganization + COREKNOT_MASTER page catalog
+
+- **What:** Reorganized `docs/` into `reference/`, `operations/`, `architecture/`, `features/`, `auth/`, `archive/`. Merged Artist OS + Google OAuth docs. Added `docs/reference/COREKNOT_MASTER.md` (1,710 lines, all 120 page files with routes/hooks/APIs). Scripts: `generate-page-inventory.mjs`, `generate-master-doc.mjs`. README rewritten for engineers. Redirect stubs at legacy paths.
+- **Why:** Single canonical product bible; reduce duplicate/outdated agent context.
+- **Files:** `docs/**`, `README.md`, `.specify/memory/INDEX.md`, `scripts/generate-*.mjs`
+- **Regenerate master:** `node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs`
+
+---
+
 ## 2026-06-27 — Attendance overview metric card layout
 
 - **What:** `MetricCard` no longer stretches to full height by default (`fill` prop for grid use); attendance widget drops redundant period label and keeps metric + chart compact.

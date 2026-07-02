@@ -58,22 +58,36 @@ export const canUserRollbackTask = (user, task, assignments, { platformOwnerId, 
   if (status !== 'in-review' && status !== 'done') return false;
   if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
   if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
-  if (canUserApproveReview(user, assignments)) return true;
-  return (assignments || []).some((a) => assignmentUserId(a) === uid);
+  return canUserApproveReview(user, assignments);
 };
 
-export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy = null } = {}) => {
+export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false } = {}) => {
   if (mentionOnly) return true;
   const uid = normalizeId(userId);
   if (!uid) return false;
-  const mine = getAssignmentForUser(assignments, uid);
-  if (!mine) return false;
-  if (assignmentAssignerId(mine) === uid) return false;
-  if (requiresReviewForUser(assignments, uid)) return true;
+
   const delegated = getDelegatedAssignments(assignments);
-  if (delegated.length > 0 && !canUserApproveReview({ _id: uid }, assignments)) return true;
-  if (taskCreatedBy && normalizeId(taskCreatedBy) !== uid) return true;
-  return false;
+
+  if (delegated.length > 0 && !canUserApproveReview({ _id: uid }, assignments)) {
+    return true;
+  }
+
+  const mine = getAssignmentForUser(assignments, uid);
+  if (!mine) {
+    return delegated.length > 0;
+  }
+
+  if (assignmentAssignerId(mine) === uid) return false;
+
+  return requiresReviewForUser(assignments, uid);
+};
+
+export const canCreatorMarkDelegatedTaskDone = (assignments, userId, taskCreatedBy) => {
+  const uid = normalizeId(userId);
+  const creatorId = normalizeId(taskCreatedBy);
+  if (!uid || !creatorId || uid !== creatorId) return true;
+  if (getDelegatedAssignments(assignments).length === 0) return true;
+  return Boolean(getAssignmentForUser(assignments, uid));
 };
 
 export const normalizeAssigneeIds = (assigneeIds, creatorId) => {

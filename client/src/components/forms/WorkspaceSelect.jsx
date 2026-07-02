@@ -10,7 +10,7 @@ export const WorkspaceDot = ({ color, className = '' }) => (
   />
 );
 
-const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = false, placeholder = 'Select workspace...', className = '' }) => {
+const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = false, placeholder = 'Select workspace...', className = '', required = false, invalid = false }) => {
   const { data: workspaces = [] } = useWorkspaces();
 
   const options = workspaces.map((w) => ({
@@ -37,6 +37,8 @@ const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = fals
       className={className}
       renderOption={renderOption}
       searchable
+      required={required}
+      invalid={invalid}
     />
   );
 };

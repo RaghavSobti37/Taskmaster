@@ -31,16 +31,14 @@ const clientIp = (req) => {
   return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
 
-const buildProxyPublicUrl = (req) => {
-  const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-  if (forwardedHost) {
-    const host = forwardedHost.replace(/:\d+$/, '');
-    if (host.includes('auth.') || host.includes('landing.')) {
-      return `https://${host}/__clerk`;
-    }
-  }
-  return String(process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL).trim();
-};
+/**
+ * Clerk Dashboard registers one Frontend API proxy URL (primary app host).
+ * Browser may hit auth/landing satellites, but Clerk-Proxy-Url must stay the
+ * registered URL or FAPI returns 400 host_invalid (satellite domains = paid plan).
+ */
+const buildProxyPublicUrl = () => String(
+  process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL,
+).trim();
 
 const buildTargetUrl = (req) => {
   const suffix = String(req.originalUrl || req.url || '').replace(/^\/__clerk\/?/, '/');
@@ -50,6 +48,15 @@ const buildTargetUrl = (req) => {
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_REDIRECTS = 4;
+
+/** Mounted before express.json — must drain the socket for POST/PUT/PATCH bodies. */
+const readRawBody = (req) =>
+  new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
 
 /** Follow Clerk version-pin redirects server-side so browsers get JS body, not 307 to app host. */
 const fetchClerkUpstream = async (startUrl, init) => {
@@ -85,7 +92,7 @@ const proxyHandler = async (req, res) => {
       headers.set(key, value);
     }
   }
-  headers.set('Clerk-Proxy-Url', buildProxyPublicUrl(req));
+  headers.set('Clerk-Proxy-Url', buildProxyPublicUrl());
   headers.set('Clerk-Secret-Key', secret);
   headers.set('X-Forwarded-For', clientIp(req));
 
@@ -96,10 +103,19 @@ const proxyHandler = async (req, res) => {
     signal: AbortSignal.timeout(25_000),
   };
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
-    if (req.rawBody) {
+    if (Buffer.isBuffer(req.rawBody) && req.rawBody.length > 0) {
       init.body = req.rawBody;
-    } else if (req.body != null) {
-      init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    } else if (typeof req.body === 'string' && req.body.length > 0) {
+      init.body = req.body;
+    } else if (
+      req.body != null
+      && typeof req.body === 'object'
+      && Object.keys(req.body).length > 0
+    ) {
+      init.body = JSON.stringify(req.body);
+    } else {
+      const raw = await readRawBody(req);
+      if (raw.length > 0) init.body = raw;
     }
   }
 
@@ -130,3 +146,4 @@ module.exports = router;
 module.exports.buildTargetUrl = buildTargetUrl;
 module.exports.buildProxyPublicUrl = buildProxyPublicUrl;
 module.exports.DEFAULT_PROXY_URL = DEFAULT_PROXY_URL;
+module.exports.readRawBody = readRawBody;

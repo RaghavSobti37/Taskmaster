@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarDays, Clock } from 'lucide-react';
 import WorkspaceSelect from './WorkspaceSelect';
 import ProjectSelect from './ProjectSelect';
 import MemberSelect from './MemberSelect';
@@ -6,10 +7,11 @@ import StatusSelect from './StatusSelect';
 import PrioritySelect from './PrioritySelect';
 import TaskCategorySelect from './TaskCategorySelect';
 import NexusDropdown from '../ui/NexusDropdown';
+import DateKeyInput from './DateKeyInput';
 import MentionTextarea from '../mentions/MentionTextarea';
 import MentionInput from '../mentions/MentionInput';
-import { SLOT_OPTIONS } from '../../constants/taskOptions';
-import { normalizeTaskCategory } from '../../constants/taskOptions';
+import { SLOT_OPTIONS, normalizeTaskCategory } from '../../constants/taskOptions';
+import { useTaskCategoryOptions } from '../../hooks/useTaskCategoryOptions';
 import { computeDueDateFromStart } from '../../utils/taskPriorityDates';
 import { getTodayDateKey, validateTaskTimelineFields } from '../../utils/dateValidation';
 
@@ -45,11 +47,15 @@ const TaskFormFields = ({
   mentionSessionKey,
   inlineEdit = false,
   afterTitle = null,
-  collapseCategoryWhenSelected = false,
+  compactMetadataLayout = false,
 }) => {
   const inputClass = inlineEdit ? ghostInputClass : fieldInputClass;
   const set = (field, val) => onChange({ ...values, [field]: val });
   const todayKey = getTodayDateKey();
+  const { options: categoryOptions, addCategory } = useTaskCategoryOptions();
+  const persistCategory = async (label) => {
+    await addCategory.mutateAsync(label);
+  };
 
   const resolveStartDate = () => values.scheduleDate || todayKey;
 
@@ -102,6 +108,85 @@ const TaskFormFields = ({
   };
 
   const categoryValue = normalizeTaskCategory(values.type);
+  const workspaceMissing = !values.workspace;
+
+  const metadataGrid = compactMetadataLayout ? (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full pt-4 border-t border-[var(--color-bg-border)] [&>*]:min-w-0">
+      <div className="space-y-4 min-w-0">
+        {showWorkspace && (
+          <WorkspaceSelect
+            value={values.workspace || 'General'}
+            onChange={handleWorkspaceChange}
+            disabled={disabled}
+            required
+            invalid={workspaceMissing}
+          />
+        )}
+        {showSchedule && (
+          <div className="w-full min-w-0">
+            <label className={`${fieldLabelClass} inline-flex items-center gap-1.5`}>
+              <Clock size={11} className="text-[var(--color-text-muted)]" aria-hidden />
+              Slot
+            </label>
+            <NexusDropdown
+              options={SLOT_OPTIONS}
+              value={values.scheduleSlot || 'FULL'}
+              onChange={(scheduleSlot) => set('scheduleSlot', scheduleSlot)}
+              disabled={disabled || timelineDisabled}
+            />
+          </div>
+        )}
+        <PrioritySelect
+          value={values.priority}
+          onChange={handlePriorityChange}
+          disabled={disabled}
+        />
+      </div>
+      <div className="space-y-4 min-w-0">
+        <TaskCategorySelect
+          label="Category"
+          value={categoryValue}
+          onChange={(type) => set('type', type)}
+          disabled={disabled}
+          allowAdd
+          options={categoryOptions}
+          onAddCategory={persistCategory}
+        />
+        {showSchedule && (
+          <div className="w-full min-w-0">
+            <label className={`${fieldLabelClass} inline-flex items-center gap-1.5`}>
+              <CalendarDays size={11} className="text-[var(--color-text-muted)]" aria-hidden />
+              Start Date
+            </label>
+            <DateKeyInput
+              value={values.scheduleDate || ''}
+              min={todayKey}
+              disabled={disabled || timelineDisabled}
+              onChange={handleScheduleDateChange}
+              displayClassName={inputClass}
+              aria-label="Start date"
+            />
+          </div>
+        )}
+        {showSchedule && (
+          <div className="w-full min-w-0">
+            <label className={`${fieldLabelClass} inline-flex items-center gap-1.5`}>
+              <CalendarDays size={11} className="text-[var(--color-text-muted)]" aria-hidden />
+              Due Date
+            </label>
+            <DateKeyInput
+              value={values.dueDate || ''}
+              min={values.scheduleDate && values.scheduleDate >= todayKey ? values.scheduleDate : todayKey}
+              disabled={disabled || timelineDisabled}
+              onChange={handleDueDateChange}
+              displayClassName={inputClass}
+              aria-label="Due date"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-4 w-full min-w-0">
@@ -122,6 +207,10 @@ const TaskFormFields = ({
 
       {afterTitle}
 
+      {compactMetadataLayout ? (
+        metadataGrid
+      ) : (
+        <>
       {(showWorkspace || (showProject && !lockProject)) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
           {showWorkspace && (
@@ -195,7 +284,9 @@ const TaskFormFields = ({
           value={categoryValue}
           onChange={(type) => set('type', type)}
           disabled={disabled}
-          collapseWhenSelected={collapseCategoryWhenSelected}
+          allowAdd
+          options={categoryOptions}
+          onAddCategory={persistCategory}
         />
         {showSchedule && (
           <NexusDropdown
@@ -241,6 +332,8 @@ const TaskFormFields = ({
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

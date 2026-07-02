@@ -1,8 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { TASK_CATEGORY_OPTIONS } from '../../constants/taskOptions';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
+import {
+  TASK_CATEGORY_OPTIONS,
+  slugTaskCategoryLabel,
+  slugifyTaskCategoryInput,
+} from '../../constants/taskOptions';
+
+const categoryButtonClass = (isSelected, disabled) => `
+  min-h-[2.25rem] px-2 py-2 rounded-[var(--radius-atomic)] border text-xs font-semibold transition-all
+  ${isSelected
+    ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]'
+    : 'border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-action-primary)]/40'}
+  ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+`;
 
 /**
- * TaskCategorySelect — general task nature categories (replaces granular department types).
+ * TaskCategorySelect — always-visible category grid with optional custom "Add".
  */
 const TaskCategorySelect = ({
   value,
@@ -11,20 +24,58 @@ const TaskCategorySelect = ({
   disabled = false,
   options = TASK_CATEGORY_OPTIONS,
   className = '',
-  collapseWhenSelected = false,
+  allowAdd = true,
+  onAddCategory = null,
 }) => {
-  const selected = options.find((opt) => opt.value === value) || options.find((o) => o.value === 'general');
-  const [showPicker, setShowPicker] = useState(!collapseWhenSelected || !value);
+  const [customOptions, setCustomOptions] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [savingAdd, setSavingAdd] = useState(false);
 
   useEffect(() => {
-    if (collapseWhenSelected && value) {
-      setShowPicker(false);
-    }
-  }, [collapseWhenSelected, value]);
+    if (!value) return;
+    const inBase = options.some((o) => o.value === value);
+    if (inBase) return;
+    setCustomOptions((prev) => {
+      if (prev.some((o) => o.value === value)) return prev;
+      return [...prev, { value, label: slugTaskCategoryLabel(value) }];
+    });
+  }, [value, options]);
 
-  const handleSelect = (next) => {
-    onChange(next);
-    if (collapseWhenSelected) setShowPicker(false);
+  const allOptions = useMemo(() => {
+    const seen = new Set(options.map((o) => o.value));
+    const merged = [...options];
+    for (const entry of customOptions) {
+      if (!seen.has(entry.value)) {
+        merged.push(entry);
+        seen.add(entry.value);
+      }
+    }
+    return merged;
+  }, [options, customOptions]);
+
+  const commitAdd = async () => {
+    const slug = slugifyTaskCategoryInput(draft);
+    if (!slug || savingAdd) return;
+    const entry = { value: slug, label: draft.trim() || slugTaskCategoryLabel(slug) };
+    setSavingAdd(true);
+    try {
+      if (onAddCategory) {
+        await onAddCategory(draft.trim() || slug);
+      } else if (!allOptions.some((o) => o.value === slug)) {
+        setCustomOptions((prev) => [...prev, entry]);
+      }
+      onChange(slug);
+      setDraft('');
+      setAdding(false);
+    } finally {
+      setSavingAdd(false);
+    }
+  };
+
+  const cancelAdd = () => {
+    setDraft('');
+    setAdding(false);
   };
 
   return (
@@ -35,47 +86,59 @@ const TaskCategorySelect = ({
         </span>
       )}
 
-      {collapseWhenSelected && value && !showPicker ? (
-        <div className="flex items-center gap-2 min-h-[2.5rem]">
-          <span
-            className="flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-xs font-semibold text-[var(--color-action-primary)]"
-          >
-            {selected?.label || value}
-          </span>
-          {!disabled && (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
+        {allOptions.map((opt) => {
+          const isSelected = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              disabled={disabled || savingAdd}
+              onClick={() => onChange(opt.value)}
+              className={categoryButtonClass(isSelected, disabled)}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+
+        {allowAdd && !disabled && (
+          adding ? (
+            <input
+              type="text"
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitAdd();
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelAdd();
+                }
+              }}
+              onBlur={() => {
+                if (draft.trim()) commitAdd();
+                else cancelAdd();
+              }}
+              placeholder="New category"
+              className="min-h-[2.25rem] px-2 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-action-primary)]/50 bg-[var(--color-bg-primary)] text-xs text-[var(--color-text-primary)] outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30"
+              aria-label="New category name"
+            />
+          ) : (
             <button
               type="button"
-              onClick={() => setShowPicker(true)}
-              className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[var(--color-action-primary)] hover:underline"
+              onClick={() => setAdding(true)}
+              className={`${categoryButtonClass(false, false)} border-dashed inline-flex items-center justify-center gap-1`}
             >
-              Change
+              <Plus size={14} aria-hidden />
+              Add
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
-          {options.map((opt) => {
-            const isSelected = value === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={disabled}
-                onClick={() => handleSelect(opt.value)}
-                className={`
-                  min-h-[2.25rem] px-2 py-2 rounded-[var(--radius-atomic)] border text-xs font-semibold transition-all
-                  ${isSelected
-                    ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]'
-                    : 'border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-action-primary)]/40'}
-                  ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+          )
+        )}
+      </div>
     </div>
   );
 };

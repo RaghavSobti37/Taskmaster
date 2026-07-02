@@ -6,9 +6,9 @@ const { isE2eTestUser } = require('../../utils/e2eTestUsers');
 const authForgotPasswordLimiter = authRateLimit;
 const router = express.Router();
 const {
-  register, login, logout, getMe, getSession, changeRequiredPassword, googleLogin,
+  register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, clerkEstablishSession, forgotPassword, resetPassword,
-  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken,
+  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions,
 } = require('./controllers/authController');
 const {
   registerOptions, registerVerify, loginOptions,
@@ -50,6 +50,27 @@ const authSignupLimiter = rateLimit({
   skip: () => process.env.NODE_ENV === 'test',
 });
 
+const clerkEstablishLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
+  skip: () => process.env.NODE_ENV === 'test',
+  keyGenerator: (req) => {
+    const raw = req.body?.token;
+    if (typeof raw === 'string' && raw.includes('.')) {
+      try {
+        const payload = JSON.parse(Buffer.from(raw.split('.')[1], 'base64url').toString('utf8'));
+        if (payload?.sub) return `clerk-establish:${payload.sub}`;
+      } catch {
+        /* fall through */
+      }
+    }
+    return `clerk-establish-ip:${ipKeyGenerator(req)}`;
+  },
+});
+
 router.post('/register', authSignupLimiter, validateBody(registerBody), register);
 router.post('/login', authLoginLimiter, validateBody(loginBody), login);
 router.post('/forgot-password', authForgotPasswordLimiter, validateBody(forgotPasswordBody), forgotPassword);
@@ -57,13 +78,14 @@ router.post('/reset-password', authForgotPasswordLimiter, validateBody(resetPass
 router.post('/logout', logout);
 router.post('/google-login', googleLogin);
 router.post('/oauth-establish', authLoginLimiter, validateBody(oauthEstablishBody), oauthEstablishSession);
-router.post('/clerk-establish', authLoginLimiter, validateBody(clerkEstablishBody), clerkEstablishSession);
+router.post('/clerk-establish', clerkEstablishLimiter, validateBody(clerkEstablishBody), clerkEstablishSession);
 router.get('/google/redirect-uri', (req, res) => {
   const { resolveGoogleRedirectUri } = require('../../utils/googleAuth');
   res.json({ redirectUri: resolveGoogleRedirectUri(req) });
 });
 router.get('/google', googleAuthRedirect);
 router.get('/google/callback', googleAuthCallback);
+router.get('/config', getAuthConfig);
 router.get('/session', optionalAuthenticate, getSession);
 router.get('/me', protect, getMe);
 router.get('/realtime-token', protect, getRealtimeToken);

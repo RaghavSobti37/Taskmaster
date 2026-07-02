@@ -1,4 +1,12 @@
 import React from 'react';
+import {
+  Sparkles,
+  UserPlus,
+  ArrowRightLeft,
+  Pencil,
+  RotateCcw,
+  MessageSquare,
+} from 'lucide-react';
 import { formatActivityTime } from '../../utils/formatActivityTime';
 import { UserLabel } from '../ui/UserAvatar';
 import MentionTitle from '../mentions/MentionTitle';
@@ -23,18 +31,41 @@ function StatusPill({ status }) {
   );
 }
 
+function EventIcon({ type }) {
+  const base = 'shrink-0 p-1 rounded-md';
+  switch (type) {
+    case 'created':
+      return <Sparkles size={14} className={`${base} text-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10`} aria-hidden />;
+    case 'assignment':
+      return <UserPlus size={14} className={`${base} text-[var(--color-brand-teal)] bg-[var(--color-brand-teal)]/10`} aria-hidden />;
+    case 'status_change':
+      return <ArrowRightLeft size={14} className={`${base} text-purple-500 bg-purple-500/10`} aria-hidden />;
+    case 'field_change':
+      return <Pencil size={14} className={`${base} text-amber-500 bg-amber-500/10`} aria-hidden />;
+    case 'rollback':
+      return <RotateCcw size={14} className={`${base} text-rose-500 bg-rose-500/10`} aria-hidden />;
+    case 'message':
+      return <MessageSquare size={14} className={`${base} text-[var(--color-text-secondary)] bg-[var(--color-bg-border)]/60`} aria-hidden />;
+    default:
+      return null;
+  }
+}
+
 function ActivityEvent({ item }) {
   const time = formatActivityTime(item.createdAt);
 
   if (item.type === 'created') {
     return (
-      <div className="flex flex-wrap items-center gap-2 text-xs py-1.5 border-l-2 border-[var(--color-action-primary)]/40 pl-3">
+      <div className="flex items-start gap-2 text-xs py-1.5 border-l-2 border-[var(--color-action-primary)]/40 pl-3">
+        <EventIcon type="created" />
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-action-primary)]">Created</span>
         <span className="text-[var(--color-text-muted)]">·</span>
         <span className="text-[var(--color-text-muted)] shrink-0">{time}</span>
         {item.actor && (
           <UserLabel user={item.actor} name={item.actor.name} size="xs" nameClassName="text-xs font-semibold" />
         )}
+        </div>
       </div>
     );
   }
@@ -43,7 +74,9 @@ function ActivityEvent({ item }) {
     const assignee = item.assignee;
     const assignedBy = item.assignedBy || item.actor;
     return (
-      <div className="flex flex-wrap items-center gap-2 text-xs py-1.5 border-l-2 border-[var(--color-brand-teal)]/40 pl-3">
+      <div className="flex items-start gap-2 text-xs py-1.5 border-l-2 border-[var(--color-brand-teal)]/40 pl-3">
+        <EventIcon type="assignment" />
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
         <span className="text-[var(--color-text-muted)] shrink-0">{time}</span>
         <span className="text-[var(--color-text-muted)]">Assigned to</span>
         {assignee && (
@@ -55,6 +88,7 @@ function ActivityEvent({ item }) {
             <UserLabel user={assignedBy} name={assignedBy.name} size="xs" nameClassName="text-xs" />
           </>
         )}
+        </div>
       </div>
     );
   }
@@ -65,6 +99,7 @@ function ActivityEvent({ item }) {
     return (
       <div className="rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/60 p-3 space-y-1.5 border-l-4 border-l-purple-500/50">
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          <EventIcon type="status_change" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 shrink-0">
             Status
           </span>
@@ -93,6 +128,7 @@ function ActivityEvent({ item }) {
     return (
       <div className="rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/60 p-3 space-y-1.5 border-l-4 border-l-amber-500/50">
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          <EventIcon type="field_change" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 shrink-0">
             {fieldLabel}
           </span>
@@ -119,6 +155,7 @@ function ActivityEvent({ item }) {
     return (
       <div className="rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/60 p-3 space-y-1.5 border-l-4 border-l-rose-500/50">
         <div className="flex flex-wrap items-center gap-2 text-xs">
+          <EventIcon type="rollback" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 shrink-0">
             Rolled back
           </span>
@@ -139,8 +176,9 @@ function ActivityEvent({ item }) {
 
   if (item.type === 'message') {
     return (
-      <div className="rounded-lg border border-[var(--color-bg-border)] p-3 space-y-1.5">
+      <div className="rounded-lg border border-[var(--color-bg-border)] p-3 space-y-1.5 border-l-4 border-l-[var(--color-bg-border)]">
         <div className="flex flex-wrap items-center gap-2">
+          <EventIcon type="message" />
           {item.actor && (
             <UserLabel user={item.actor} name={item.actor.name} size="xs" nameClassName="text-xs font-bold" />
           )}

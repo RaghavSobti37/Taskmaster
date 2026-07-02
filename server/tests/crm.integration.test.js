@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const Lead = require('../domains/crm/models/Lead');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
 
 async function ensureSalesDept() {
@@ -29,12 +30,7 @@ async function registerAndLogin(agent, email, name) {
       gender: 'male',
     });
   expect(reg.statusCode).toBe(201);
-
-  const login = await agent.post('/api/auth/login').send({
-    email,
-    password: DEV_DEFAULT_PASSWORD,
-  });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, reg.body._id);
   return reg.body._id;
 }
 

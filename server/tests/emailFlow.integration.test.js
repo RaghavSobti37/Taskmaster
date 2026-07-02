@@ -9,6 +9,7 @@ const Department = require('../models/Department');
 const Campaign = require('../models/Campaign');
 const MailTemplate = require('../models/MailTemplate');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { buildFinalEmailHtml, personalizeEmailContent } = require('../utils/buildFinalEmailHtml');
 
 const QUILL_INDENT_HTML = '<p class="ql-indent-2" style="padding-left: 3em;">Hello {1}</p>';
@@ -41,8 +42,7 @@ describe('Email flow integration', () => {
     await User.findByIdAndUpdate(reg.body._id, { departmentId: adminDept._id });
 
     agent = request.agent(app);
-    const login = await agent.post('/api/auth/login').send({ email: testEmail, password: DEV_DEFAULT_PASSWORD });
-    expect(login.statusCode).toBe(200);
+    await mintSessionAgent(agent, reg.body._id);
   }, 30000);
 
   describe('buildFinalEmailHtml pipeline', () => {

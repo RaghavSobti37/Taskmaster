@@ -13,6 +13,11 @@ export function hasAuthCreds() {
   return hasExplicit || hasSeeded;
 }
 
+/** Production Clerk login — requires real account creds, not seeded local users. */
+export function hasProductionAuthCreds() {
+  return Boolean(process.env.E2E_EMAIL && process.env.E2E_PASSWORD);
+}
+
 /** Primary login user for authenticated smoke — dept-admin when using seeded creds. */
 export function getTestUserCreds() {
   const password = process.env.E2E_PASSWORD || DEFAULT_SEED_PASSWORD;

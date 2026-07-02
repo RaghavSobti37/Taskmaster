@@ -80,14 +80,10 @@ const buildClerkProxyRewriteMainApp = (apiDestination) => {
   return { source: '/__clerk/:path*', destination: `${origin}/__clerk/:path*` };
 };
 
-/** Auth/landing satellites forward Clerk to primary app host (Clerk rejects proxy on other hosts). */
-const buildClerkProxyRewriteSatellite = () => {
-  const appOrigin = normalizeProxyUrl(
-    process.env.VITE_APP_URL || process.env.PRODUCTION_APP_URL || 'https://tsccoreknot.com',
-  );
-  if (!appOrigin) return null;
-  return { source: '/__clerk/:path*', destination: `${appOrigin}/__clerk/:path*` };
-};
+/** Auth/landing satellites proxy /__clerk directly to Render (same hop as primary app). */
+const buildClerkProxyRewriteSatellite = (apiDestination) => (
+  buildClerkProxyRewriteMainApp(apiDestination)
+);
 
 /** @deprecated alias */
 const buildClerkProxyRewrite = (apiDestination) => buildClerkProxyRewriteMainApp(apiDestination);
@@ -321,7 +317,7 @@ const payload = {
 };
 
 const buildSitePayload = (buildCommand) => {
-  const satelliteClerk = buildClerkProxyRewriteSatellite();
+  const satelliteClerk = buildClerkProxyRewriteSatellite(apiDestination);
   const siteRewrites = composeRewrites(
     template.rewrites,
     apiDestination,

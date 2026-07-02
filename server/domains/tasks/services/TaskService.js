@@ -21,6 +21,8 @@ const {
   assignmentUserId: rulesAssignmentUserId,
   normalizeId: rulesNormalizeId,
   isAssignerOnlyReviewer,
+  isDelegatedAssignment,
+  canCreatorMarkDelegatedTaskDone,
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
 } = require('../../../../shared/taskReviewRules');
@@ -43,9 +45,16 @@ const {
   normalizeAssigneeIds: normalizeTaskAssigneeIds,
   filterUserIdsByTaskScope,
   assertAssigneesAreTenantUsers,
+  assertAssigneesInTaskScope,
   syncMentionAccessIds,
   userHasTaskScopeAccess,
 } = require('../../../utils/taskAccess');
+const { canMentionOnlyUserUpdateTask } = require('../../../utils/taskAdminBypass');
+const {
+  findActiveTaskDailyLog,
+  voidTaskDailyLogsForTask,
+} = require('../../../utils/taskDailyLogs');
+const GamificationService = require('../../../services/gamificationService');
 const { isQaSyncGamification } = require('../../../utils/qaProbeContext');
 const {
   publishTaskCreated,
@@ -105,10 +114,13 @@ const TASK_LIST_ASSIGNEE_POPULATE = {
 
 exports.TASK_LIST_ASSIGNEE_POPULATE = TASK_LIST_ASSIGNEE_POPULATE;
 
-const queueTaskCompletedGamification = async (userId, task) => {
+const queueTaskCompletedGamification = async (userId, task, assignments = []) => {
   if (!userId || !task?._id) return;
+  const mine = getAssignmentForUser(assignments, userId);
+  const selfAssigned = mine ? isDelegatedAssignment(mine) === false : false;
   const job = queueGamificationEvent('TASK_COMPLETED', {
     userId,
+    selfAssigned,
     task: {
       _id: task._id,
       title: task.title,
@@ -295,14 +307,29 @@ const getProjectNameForTask = async (task, session) => {
   return projectDoc?.name || 'Unassigned';
 };
 
-const findTaskDailyLog = async (userId, taskId, type, session) => Log.findOne({
-  userId,
-  targetId: taskId,
-  targetType: 'Task',
-  action: 'DAILY_LOG',
-  'details.type': type,
-}).session(session);
+const findTaskDailyLog = findActiveTaskDailyLog;
 
+const resolveApprovedActualHours = (updates = {}, task = {}) => {
+  if (updates.approvedActualHours == null || !Number.isFinite(Number(updates.approvedActualHours))) {
+    return null;
+  }
+  const proposed = Math.max(0, Number(updates.approvedActualHours));
+  const reported = Math.max(
+    Number(task.actualHours) || 0,
+    MIN_COMPLETION_MINUTES / 60
+  );
+  return clampXpHours(Math.min(proposed, reported));
+};
+
+const removeReviewLogsForTask = async (taskId, assigneeIds, reviewerId, session) => {
+  const userIds = [...new Set([...(assigneeIds || []), reviewerId].filter(Boolean))];
+  await voidTaskDailyLogsForTask({
+    taskId,
+    userIds: userIds.length ? userIds : undefined,
+    reason: 'task_rollback',
+    session,
+  });
+};
 const createTaskDailyLog = async ({
   userId, task, type, hours, message, title, session,
 }) => {
@@ -345,17 +372,6 @@ const finalizeTaskApproval = async (task, session) => {
       { session }
     );
   }
-};
-
-const removeReviewLogsForTask = async (taskId, assigneeIds, reviewerId, session) => {
-  const userIds = [...new Set([...(assigneeIds || []), reviewerId].filter(Boolean))];
-  if (!userIds.length) return;
-  await Log.deleteMany({
-    targetId: taskId,
-    targetType: 'Task',
-    userId: { $in: userIds },
-    'details.type': { $in: ['TASK_COMPLETION', 'TASK_REVIEW'] },
-  }).session(session);
 };
 
 const createReviewSubmitLogs = async ({
@@ -537,7 +553,13 @@ exports.createTask = async (taskData, user, session) => {
   const others = othersExcludeActorAndRaghav(assigneeIds, actorId, platformOwnerId);
 
   if (others.length) {
-    await assertAssigneesAreTenantUsers({ assigneeIds: others, session });
+    await assertAssigneesInTaskScope({
+      taskScope: { projectId: coreData.projectId, workspace: coreData.workspace },
+      assigneeIds: others,
+      actingUser: user,
+      project,
+      session,
+    });
   }
 
   const [task] = await Task.create([{ ...coreData, createdBy: user._id }], { session });
@@ -790,16 +812,19 @@ exports.updateTask = async (taskId, updates, user, session) => {
     reviewAction,
     reviewHours: _reviewHours,
     reviewMinutes: _reviewMinutes,
+    rollbackReason: rollbackReasonField,
+    approvedActualHours: _approvedActualHours,
     ...coreUpdates
   } = updates;
   const reviewHoursForApproval = resolveReviewHoursFromUpdates(updates);
+  const approvedActualHours = resolveApprovedActualHours(updates, existing);
 
   const { sanitizeName } = require('../../../utils/sanitizer');
   if (coreUpdates.title !== undefined) coreUpdates.title = sanitizeName(coreUpdates.title);
   if (coreUpdates.description !== undefined) coreUpdates.description = sanitizeName(coreUpdates.description);
 
   const rollbackReasonText = reviewAction === 'rollback'
-    ? String(coreUpdates.description || '').trim()
+    ? String(rollbackReasonField || coreUpdates.description || '').trim()
     : '';
   if (reviewAction === 'rollback') {
     delete coreUpdates.description;
@@ -843,7 +868,11 @@ exports.updateTask = async (taskId, updates, user, session) => {
     isReviewer = true;
   }
 
-  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember && !isMentioned) {
+  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember) {
+    throw new Error('Not authorized to update this task');
+  }
+
+  if (mentionOnly && !canMentionOnlyUserUpdateTask()) {
     throw new Error('Not authorized to update this task');
   }
 
@@ -878,6 +907,9 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
     if (reviewAction === 'approve') {
       coreUpdates.status = 'done';
+      if (approvedActualHours != null) {
+        coreUpdates.actualHours = approvedActualHours;
+      }
     } else {
       coreUpdates.status = 'in-progress';
       coreUpdates.completedAt = null;
@@ -911,7 +943,16 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (
     coreUpdates.status === 'done'
     && !reviewAction
-    && !isCreator
+    && !canCreatorMarkDelegatedTaskDone(assignments, user._id, existing.createdBy)
+  ) {
+    throw new Error(
+      'Delegated assignees must complete this task before it can be marked done'
+    );
+  }
+
+  if (
+    coreUpdates.status === 'done'
+    && !reviewAction
     && isAssignerOnlyReviewer(assignments, user._id)
   ) {
     throw new Error(
@@ -934,22 +975,16 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
-    const needsReview = !isCreator && needsReviewOnComplete(assignments, user._id, {
+    const needsReview = needsReviewOnComplete(assignments, user._id, {
       mentionOnly,
-      taskCreatedBy: existing.createdBy,
     });
     if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
       coreUpdates.status = 'in-review';
-    }
-    if (coreUpdates.status === 'in-review' && !reviewAction && !needsReview) {
-      coreUpdates.status = 'done';
     }
     if (coreUpdates.status === 'done') {
       coreUpdates.completedAt = new Date();
       coreUpdates.progress = 100;
     } else if (coreUpdates.status === 'in-review') {
-      coreUpdates.completedAt = null;
-    } else if (coreUpdates.status === 'in-progress') {
       coreUpdates.completedAt = null;
     }
   } else if (coreUpdates.status) {
@@ -970,6 +1005,11 @@ exports.updateTask = async (taskId, updates, user, session) => {
       .filter(Boolean);
     const logUserIds = [...new Set([...assigneeIdsToClear, ...reviewerIdsToClear, user._id.toString()])];
     await removeReviewLogsForTask(existing._id, logUserIds, null, session);
+    const reopenClawback = GamificationService.clawbackTaskXp(existing._id, {
+      session,
+      reason: 'task_reopen',
+    });
+    if (isQaSyncGamification() || process.env.NODE_ENV === 'test') await reopenClawback;
   }
 
   const oldDueDate = existing.dueDate;
@@ -1060,17 +1100,28 @@ exports.updateTask = async (taskId, updates, user, session) => {
       );
     }
 
-    if (!assigneesUnchanged && addingOthers) {
-      const othersToValidate = newAssignees.filter(
-        (id) => id !== user._id.toString() && id !== platformOwnerId
-      );
-      await assertAssigneesAreTenantUsers({ assigneeIds: othersToValidate, session });
+    const taskScopeProject = sourceProject
+      || (existing.projectId
+        ? await Project.findById(existing.projectId).session(session)
+        : null);
+    const scopeAssigneeIds = (assigneesUnchanged ? oldAssignees : newAssignees)
+      .filter((id) => id !== platformOwnerId);
+    if (!assigneesUnchanged && scopeAssigneeIds.length) {
+      await assertAssigneesInTaskScope({
+        taskScope: {
+          projectId: existing.projectId,
+          workspace: existing.workspace,
+        },
+        assigneeIds: scopeAssigneeIds,
+        actingUser: user,
+        project: taskScopeProject,
+        session,
+      });
     }
 
     if (!assigneesUnchanged) {
       assigneesChanged = true;
-      await Task.findByIdAndUpdate(task._id, { createdBy: user._id }, { session });
-      task.createdBy = user._id;
+      const existingCreatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
       const oldAssignmentsSnapshot = [...assignments];
       let insertedAssignments = [];
       if (newAssignees.length > 0) {
@@ -1078,7 +1129,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
           task._id,
           newAssignees,
           user._id,
-          assignerCreatorId,
+          existingCreatorId || assignerCreatorId,
           assignments
         );
       }
@@ -1183,7 +1234,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
       const completionTargets = delegated.length ? delegated : freshAssignments;
       for (const a of completionTargets) {
         const assigneeId = assignmentUserId(a.userId);
-        if (assigneeId) await queueTaskCompletedGamification(assigneeId, task);
+        if (assigneeId) await queueTaskCompletedGamification(assigneeId, task, freshAssignments);
       }
       const reviewXpJob = queueGamificationEvent('REVIEW_APPROVED', {
         reviewerId: user._id,
@@ -1209,16 +1260,18 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (reviewAction === 'rollback') {
-      const TaskActivityService = require('./TaskActivityService');
-      if (rollbackReasonText) {
-        await TaskActivityService.recordRollback(
-          task._id,
-          user,
-          rollbackReasonText,
-          existing.status,
-          session
-        );
+      if (!rollbackReasonText) {
+        throw new Error('Rollback reason is required');
       }
+
+      const TaskActivityService = require('./TaskActivityService');
+      await TaskActivityService.recordRollback(
+        task._id,
+        user,
+        rollbackReasonText,
+        existing.status,
+        session
+      );
 
       const actorId = user._id.toString();
       const wasDone = String(existing.status || '').toLowerCase() === 'done';
@@ -1238,6 +1291,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
         .filter(Boolean);
       const logUserIds = [...new Set([...assigneeIdsToClear, ...reviewerIdsToClear, actorId])];
       await removeReviewLogsForTask(task._id, logUserIds, null, session);
+
+      const clawbackJob = GamificationService.clawbackTaskXp(task._id, {
+        session,
+        reason: 'task_rollback',
+      });
+      if (isQaSyncGamification() || process.env.NODE_ENV === 'test') await clawbackJob;
 
       const reopenTitle = wasDone ? 'Task Reopened' : 'Revision Required';
       const reopenMessage = wasDone
@@ -1270,9 +1329,9 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (String(task.status || '').toLowerCase() === 'done' && !reviewAction) {
-      if (!needsReviewOnComplete(assignments, user._id, { mentionOnly, taskCreatedBy: existing.createdBy })) {
+      if (!needsReviewOnComplete(assignments, user._id, { mentionOnly })) {
         await finalizeTaskCompletion(task, user, session);
-        await queueTaskCompletedGamification(user._id, task);
+        await queueTaskCompletedGamification(user._id, task, assignments);
       }
     }
 

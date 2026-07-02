@@ -27,7 +27,7 @@ Related: [COMPONENT_STANDARDS.md](../COMPONENT_STANDARDS.md) (UDIF implementatio
 | New module hub (CRM, Management, Office) | Use `HubPageLayout` / `TabHubLayout` |
 | Visual tokens / colors | `client/src/index.css`, `@coreknot/design-tokens` — one accent from logo teal |
 | Dates in UI | `formatDisplayDate` etc. — **DD/MM/YYYY** only |
-| Deeper component API | `docs/COMPONENT_STANDARDS.md` |
+| Deeper component API | `docs/reference/COMPONENT_STANDARDS.md` |
 
 Cursor rule: `.cursor/rules/coreknot-design-reference.mdc` (auto-attached on `client/**` edits).
 

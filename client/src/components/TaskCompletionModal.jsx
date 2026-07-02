@@ -4,6 +4,7 @@ import { ModalShell, ModalBody, ModalFooter } from './ui/modals';;
 import MentionTitle from './mentions/MentionTitle';
 import {
   hoursMinutesToDecimal,
+  decimalToHoursMinutes,
   isValidCompletionMinutes,
   isValidReviewMinutes,
   REVIEW_TIME_MINUTES,
@@ -20,6 +21,8 @@ const TaskCompletionModal = ({
 }) => {
   const [hoursInput, setHoursInput] = useState('0');
   const [minutesInput, setMinutesInput] = useState(String(MIN_COMPLETION_MINUTES));
+  const [assigneeHoursInput, setAssigneeHoursInput] = useState('0');
+  const [assigneeMinutesInput, setAssigneeMinutesInput] = useState(String(MIN_COMPLETION_MINUTES));
   const [timeError, setTimeError] = useState('');
 
   useEffect(() => {
@@ -29,30 +32,54 @@ const TaskCompletionModal = ({
         const reviewMins = REVIEW_TIME_MINUTES % 60;
         setHoursInput(String(reviewHours));
         setMinutesInput(String(reviewMins));
+        const reported = Math.max(
+          Number(task?.actualHours) || 0,
+          MIN_COMPLETION_MINUTES / 60
+        );
+        const { hours, minutes } = decimalToHoursMinutes(reported);
+        setAssigneeHoursInput(String(hours));
+        setAssigneeMinutesInput(String(minutes));
       } else {
         setHoursInput('0');
         setMinutesInput(String(MIN_COMPLETION_MINUTES));
       }
       setTimeError('');
     }
-  }, [isOpen, approveReview]);
+  }, [isOpen, approveReview, task?.actualHours]);
 
   if (!task) return null;
 
+  const reportedDecimal = Math.max(
+    Number(task.actualHours) || 0,
+    MIN_COMPLETION_MINUTES / 60
+  );
+  const approvedDecimal = hoursMinutesToDecimal(assigneeHoursInput, assigneeMinutesInput);
+
   const isValidTime = approveReview
     ? isValidReviewMinutes(hoursInput, minutesInput)
+      && isValidCompletionMinutes(assigneeHoursInput, assigneeMinutesInput)
+      && approvedDecimal <= reportedDecimal + 0.001
     : isValidCompletionMinutes(hoursInput, minutesInput);
 
   const handleMarkDone = () => {
     if (!isValidTime) {
+      if (approveReview && approvedDecimal > reportedDecimal + 0.001) {
+        setTimeError('Approved work hours cannot exceed what the assignee reported.');
+        return;
+      }
       setTimeError(
         approveReview
-          ? 'Enter at least 1 minute.'
+          ? 'Enter valid review and assignee work times.'
           : 'Hours and minutes cannot both be zero.'
       );
       return;
     }
-    onSubmit(task, hoursMinutesToDecimal(hoursInput, minutesInput));
+    const workHours = hoursMinutesToDecimal(hoursInput, minutesInput);
+    if (approveReview) {
+      onSubmit(task, workHours, approvedDecimal);
+    } else {
+      onSubmit(task, workHours);
+    }
     onClose();
   };
 
@@ -72,9 +99,54 @@ const TaskCompletionModal = ({
             <MentionTitle text={task.title} />
           </div>
 
+          {approveReview && (
+            <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] mb-4">
+              <label className="block text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-3">
+                Approved Assignee Work Time
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={assigneeHoursInput}
+                    onChange={(e) => { setAssigneeHoursInput(e.target.value); setTimeError(''); }}
+                    className="w-full text-lg font-bold text-[var(--color-action-primary)] text-center"
+                    aria-label="Assignee hours"
+                  />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-center mt-1.5">
+                    Hours
+                  </p>
+                </div>
+                <span className="text-xl font-bold text-[var(--color-text-muted)] pb-5">:</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="59"
+                    step="1"
+                    inputMode="numeric"
+                    value={assigneeMinutesInput}
+                    onChange={(e) => { setAssigneeMinutesInput(e.target.value); setTimeError(''); }}
+                    className="w-full text-lg font-bold text-[var(--color-action-primary)] text-center"
+                    aria-label="Assignee minutes"
+                  />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-center mt-1.5">
+                    Minutes
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)] mt-3">
+                Cap or lower assignee-reported time before XP is calculated. Cannot exceed reported amount.
+              </p>
+            </div>
+          )}
+
           <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-action-primary)]/20">
             <label className="block text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-3">
-              {approveReview ? 'Review Time' : 'Time Invested'}
+              {approveReview ? 'Your Review Time' : 'Time Invested'}
             </label>
             <div className="flex items-center gap-3">
               <div className="flex-1">
@@ -86,7 +158,7 @@ const TaskCompletionModal = ({
                   value={hoursInput}
                   onChange={(e) => { setHoursInput(e.target.value); setTimeError(''); }}
                   className="w-full text-lg font-bold text-[var(--color-action-primary)] text-center"
-                  autoFocus
+                  autoFocus={!approveReview}
                   aria-label="Hours"
                 />
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-center mt-1.5">

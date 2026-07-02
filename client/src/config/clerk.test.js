@@ -13,18 +13,24 @@ describe('clerk config', () => {
 
   beforeEach(() => {
     env.VITE_CLERK_PUBLISHABLE_KEY = '';
+    env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = '';
     env.VITE_CLERK_DASHBOARD_URL = '';
     env.VITE_CLERK_DASHBOARD_APP_PATH = '';
     env.VITE_CLERK_PROXY_URL = '';
     env.VITE_APP_URL = '';
+    env.VITE_CLERK_ORGANIZATION_ID = '';
+    env.NEXT_PUBLIC_CLERK_ORGANIZATION_ID = '';
   });
 
   afterEach(() => {
     env.VITE_CLERK_PUBLISHABLE_KEY = '';
+    env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = '';
     env.VITE_CLERK_DASHBOARD_URL = '';
     env.VITE_CLERK_DASHBOARD_APP_PATH = '';
     env.VITE_CLERK_PROXY_URL = '';
     env.VITE_APP_URL = '';
+    env.VITE_CLERK_ORGANIZATION_ID = '';
+    env.NEXT_PUBLIC_CLERK_ORGANIZATION_ID = '';
   });
 
   it('isClerkConfigured is false without publishable key', () => {
@@ -33,6 +39,11 @@ describe('clerk config', () => {
 
   it('isClerkConfigured is true with real-looking key', () => {
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_test_abc';
+    expect(isClerkConfigured()).toBe(true);
+  });
+
+  it('isClerkConfigured is true with NEXT_PUBLIC alias', () => {
+    env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_abc';
     expect(isClerkConfigured()).toBe(true);
   });
 

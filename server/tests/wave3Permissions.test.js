@@ -3,6 +3,7 @@ const app = require('../server');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const {
   hasPageAccess,
   getUserPagePermissions,
@@ -58,11 +59,7 @@ describe('Wave 3 page permissions', () => {
     await User.findByIdAndUpdate(reg.body._id, { departmentId: salesDept._id });
 
     const agent = request.agent(app);
-    const login = await agent.post('/api/auth/login').send({
-      email,
-      password: DEV_DEFAULT_PASSWORD,
-    });
-    expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, reg.body._id);
 
     const opsDept = await Department.findOne({ slug: 'ops' })
       || await Department.create({

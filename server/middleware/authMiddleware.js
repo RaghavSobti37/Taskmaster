@@ -4,18 +4,12 @@ const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
 const { loadAuthUser } = require('../utils/authUserLookup');
 const { idFilter } = require('../utils/mongoId');
-const {
-  isClerkConfigured,
-  verifyClerkSessionToken,
-  resolveUserFromClerkProfile,
-} = require('../utils/clerkAuth');
 
 const authContext = (req, user) => ({
   tenantId: user.tenantId,
   userId: user._id?.toString?.() || user._id,
   traceId: req.traceId || getTraceId(),
 });
-const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 const {
   isAdminUser,
   isOpsUser,
@@ -29,20 +23,6 @@ const { clearAuthCookie } = require('../utils/authCookie');
 
 const populateDepartment = (query) =>
   query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-
-const isRegistrationAllowedForClerk = (emailLower) => {
-  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
-  if (process.env.REGISTRATION_DISABLED === 'true' && process.env.NODE_ENV === 'production') {
-    return { ok: false, error: 'Registration is disabled. Contact an administrator.' };
-  }
-  if (process.env.NODE_ENV !== 'production') return { ok: true };
-  const domain = emailLower.split('@')[1] || '';
-  if (ALLOWED_DOMAIN && domain !== ALLOWED_DOMAIN && emailLower !== ADMIN_EMAIL) {
-    return { ok: false, error: 'Registration restricted to authorized email domain' };
-  }
-  return { ok: true };
-};
 
 const lastOnlineWrites = new Map();
 const LAST_ONLINE_INTERVAL_MS = 5 * 60 * 1000;
@@ -58,7 +38,7 @@ const touchLastOnline = (userId) => {
   }).setOptions({ bypassTenant: true }).catch(() => {});
 };
 
-const { getTokenFromRequest } = require('../utils/authCookie');
+const { COOKIE_NAME } = require('../utils/authCookie');
 
 /** Localhost dev bypass — never enabled in production (T0-14). */
 const isDebugBypassEnabled = () => {
@@ -67,12 +47,20 @@ const isDebugBypassEnabled = () => {
     && String(process.env.DEBUG_BYPASS || '').trim() === 'true';
 };
 
+/** CoreKnot session cookie only — never Clerk JWT via Authorization header. */
+const getSessionTokenFromRequest = (req) => {
+  if (req.cookies?.[COOKIE_NAME]) {
+    return req.cookies[COOKIE_NAME];
+  }
+  return null;
+};
+
 /**
  * Resolve CoreKnot user from cookie/JWT without writing HTTP responses.
  * @returns {Promise<{ user: object|null, suspended?: boolean, bypassUnavailable?: boolean }>}
  */
 const resolveRequestUser = async (req) => {
-  const token = getTokenFromRequest(req);
+  const token = getSessionTokenFromRequest(req);
   if (!token) return { user: null };
 
   try {
@@ -86,20 +74,6 @@ const resolveRequestUser = async (req) => {
         : null;
       if (adminUser) return { user: adminUser };
       return { user: null, bypassUnavailable: true };
-    }
-
-    if (isClerkConfigured()) {
-      const clerkProfile = await verifyClerkSessionToken(token);
-      if (clerkProfile) {
-        const dbUser = await resolveUserFromClerkProfile(clerkProfile, {
-          isRegistrationAllowed: isRegistrationAllowedForClerk,
-        });
-        if (dbUser?.suspended) return { user: null, suspended: true };
-        if (dbUser) {
-          touchLastOnline(dbUser._id);
-          return { user: dbUser };
-        }
-      }
     }
 
     const decoded = verifySessionToken(token);
@@ -140,7 +114,7 @@ const optionalAuthenticate = async (req, res, next) => {
 };
 
 const protect = async (req, res, next) => {
-  const token = getTokenFromRequest(req);
+  const token = getSessionTokenFromRequest(req);
   if (!token) {
     return res.status(401).json({ error: 'Not authorized, no token' });
   }

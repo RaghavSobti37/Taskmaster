@@ -60,7 +60,14 @@ export function markChunkRecoveryComplete() {
 }
 
 export async function hardReloadApp() {
-  await clearAppCaches();
+  try {
+    await Promise.race([
+      clearAppCaches(),
+      new Promise((resolve) => { window.setTimeout(resolve, 1500); }),
+    ]);
+  } catch {
+    // ponytail: still reload if SW/cache teardown fails
+  }
   markChunkRecoveryComplete();
   window.location.reload();
 }

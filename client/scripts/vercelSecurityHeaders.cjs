@@ -6,6 +6,12 @@ const CLERK_SCRIPT_ORIGINS = [
   'https://landing.tsccoreknot.com',
 ].join(' ');
 
+/** Google Identity Services + OAuth popups (Clerk social sign-in). */
+const GOOGLE_AUTH_ORIGINS = [
+  'https://accounts.google.com',
+  'https://*.google.com',
+].join(' ');
+
 /** Shared security headers for Vercel static SPA deployments. */
 const VERCEL_SECURITY_HEADERS = [
   {
@@ -33,12 +39,12 @@ const VERCEL_SECURITY_HEADERS = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com "
-        + CLERK_SCRIPT_ORIGINS,
-      "style-src 'self' 'unsafe-inline'",
+        + `${CLERK_SCRIPT_ORIGINS} ${GOOGLE_AUTH_ORIGINS}`,
+      `style-src 'self' 'unsafe-inline' ${GOOGLE_AUTH_ORIGINS}`,
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https: wss:",
-      "frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
+      `frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
       "worker-src 'self' blob:",
     ].join('; '),
   },

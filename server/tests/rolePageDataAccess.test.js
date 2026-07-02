@@ -3,6 +3,7 @@ const app = require('../server');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const {
   PRESET_PAGES,
   hasPageAccess,
@@ -39,15 +40,14 @@ async function loginAsDept(agent, slug, stamp) {
   const dept = await ensureDept(slug);
   const email = `role-${slug}-${stamp}@coreknot-test.local`;
   await User.deleteOne({ email });
-  await User.create({
+  const user = await User.create({
     name: `${slug} user`,
     email,
     password: DEV_DEFAULT_PASSWORD,
     gender: 'male',
     departmentId: dept._id,
   });
-  const login = await agent.post('/api/auth/login').send({ email, password: DEV_DEFAULT_PASSWORD });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, user._id);
 }
 
 describe('Role page + data access matrix', () => {

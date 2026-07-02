@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClipboardCheck, Check, ExternalLink } from 'lucide-react';
+import { ClipboardCheck, Check, ExternalLink, RotateCcw } from 'lucide-react';
 import { DashboardWidgetShell, Button, CountBadge, Skeleton } from '../ui';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
@@ -11,7 +11,9 @@ const ReviewTaskRow = ({
   projects,
   workspaces,
   onApprove,
+  onRollback,
   approvingTaskId,
+  rollingBackTaskId,
   onOpenProject,
 }) => {
   const taskId = resolveTaskId(task);
@@ -21,6 +23,8 @@ const ReviewTaskRow = ({
   const projectName = task.projectId?.name || projects.find((p) => String(p._id) === String(projectId))?.name;
   const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
   const isApproving = approvingTaskId === taskId;
+  const isRollingBack = rollingBackTaskId === taskId;
+  const isBusy = isApproving || isRollingBack;
 
   return (
     <div
@@ -60,16 +64,28 @@ const ReviewTaskRow = ({
             Assigned by: {displayPersonName(assigner, 'Unknown')}
           </span>
         </div>
-        <Button
-          type="button"
-          variant="success"
-          size="xs"
-          disabled={isApproving}
-          onClick={() => onApprove?.(task)}
-        >
-          <Check size={12} className="mr-1" />
-          {isApproving ? 'Approving…' : 'Approve & Close'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="success"
+            size="xs"
+            disabled={isBusy}
+            onClick={() => onApprove?.(task)}
+          >
+            <Check size={12} className="mr-1" />
+            {isApproving ? 'Approving…' : 'Approve & Close'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            disabled={isBusy}
+            onClick={() => onRollback?.(task)}
+          >
+            <RotateCcw size={12} className="mr-1" />
+            {isRollingBack ? 'Rolling back…' : 'Rollback'}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -98,7 +114,9 @@ const ReviewQueueCard = ({
   workspaces = [],
   loading,
   onApprove,
+  onRollback,
   approvingTaskId = null,
+  rollingBackTaskId = null,
   onOpenProject,
 }) => {
   return (
@@ -125,7 +143,9 @@ const ReviewQueueCard = ({
                 projects={projects}
                 workspaces={workspaces}
                 onApprove={onApprove}
+                onRollback={onRollback}
                 approvingTaskId={approvingTaskId}
+                rollingBackTaskId={rollingBackTaskId}
                 onOpenProject={onOpenProject}
               />
             ))}

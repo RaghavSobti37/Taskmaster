@@ -15,6 +15,7 @@ export default function TaskTeamAddChip({
   lockedAssigneeIds = [],
   onAdd,
   disabled = false,
+  variant = 'chip',
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -102,21 +103,33 @@ export default function TaskTeamAddChip({
 
   if (disabled) return null;
 
+  const isStack = variant === 'stack';
+
   return (
     <>
-      <li className="list-none">
+      <li className={`list-none ${isStack ? '-ml-2 relative z-0' : ''}`}>
         <button
           ref={triggerRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className={`${TEAM_CHIP_CLASS} border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]/40 text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/50 hover:text-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-colors`}
+          className={
+            isStack
+              ? 'w-7 h-7 rounded-full border border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/50 hover:text-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-colors flex items-center justify-center shrink-0 ring-2 ring-[var(--color-bg-workspace)]'
+              : `${TEAM_CHIP_CLASS} border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]/40 text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/50 hover:text-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-colors`
+          }
           aria-label="Add team member"
           aria-expanded={open}
         >
-          <span className="w-5 h-5 rounded-full border border-dashed border-current flex items-center justify-center shrink-0">
+          {isStack ? (
             <Plus size={12} strokeWidth={2.5} />
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider pr-0.5">Add</span>
+          ) : (
+            <>
+              <span className="w-5 h-5 rounded-full border border-dashed border-current flex items-center justify-center shrink-0">
+                <Plus size={12} strokeWidth={2.5} />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider pr-0.5">Add</span>
+            </>
+          )}
         </button>
       </li>
 

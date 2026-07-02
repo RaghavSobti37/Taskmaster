@@ -145,6 +145,11 @@ export const AuthProvider = ({ children }) => {
     setBootError(null);
     capturePostHogEvent('user_logged_out');
     clearPostHogUser();
+    try {
+      sessionStorage.setItem('coreknot_just_logged_out', String(Date.now()));
+    } catch {
+      /* ignore */
+    }
     setLoading(false);
   }, [queryClient]);
 

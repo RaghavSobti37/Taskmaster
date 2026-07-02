@@ -139,6 +139,19 @@ describe('RouteErrorFallback', () => {
     renderFallback();
     expect(screen.getByRole('button', { name: /copy error details/i })).toBeInTheDocument();
   });
+
+  it('copies technical error from what happened panel', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    renderFallback();
+
+    await user.click(screen.getByRole('button', { name: /what happened/i }));
+    await user.click(screen.getByRole('button', { name: /copy error message/i }));
+
+    expect(writeText).toHaveBeenCalledWith('Error: Loading chunk 9 failed');
+    vi.unstubAllGlobals();
+  });
 });
 
 describe('RouteErrorBoundary', () => {

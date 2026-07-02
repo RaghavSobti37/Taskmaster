@@ -1,6 +1,6 @@
 /**
- * Phrases: full-screen boot + heavy pages only (showPhrase on Spinner / LoadingState / DataLoading).
- * Dashboard widgets and inline loaders: spinner-only — no phrase rotation.
+ * Branded boot: BootScreen / AppBootFallback / BrandedLoadingPanel (ribbon + phrase).
+ * Dashboard widgets: no skeleton grids — defer mount or inline widget spinners only.
  */
 
 export const LOADING_SHOW_PHRASE_DASHBOARD = false;

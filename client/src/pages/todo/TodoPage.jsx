@@ -11,7 +11,8 @@ import { UserLabel } from '../../components/ui/UserAvatar';
 import { StatusBadge, Banner, TablePagination, EmptyState, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import { DataLoading } from '../../components/ui/DataLoading';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
-import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant, STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS } from '../../constants/taskOptions';
+import { normalizeTaskCategory, getPriorityBadgeVariant, STATUS_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS, taskCategoryLabel } from '../../constants/taskOptions';
+import { useTaskCategoryOptions } from '../../hooks/useTaskCategoryOptions';
 import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTodoTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
@@ -131,6 +132,7 @@ const TodoPage = () => {
   const { data: projects = [] } = useProjects(deferTodoFilters);
   const { data: workspaces = [] } = useWorkspaces(deferTodoFilters);
   const { data: users = [] } = useUserDirectory(deferTodoFilters);
+  const { options: categoryOptions } = useTaskCategoryOptions();
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);
@@ -191,8 +193,8 @@ const TodoPage = () => {
   );
 
   const typeOptions = useMemo(
-    () => [{ value: 'all', label: 'All categories' }, ...TASK_CATEGORY_OPTIONS],
-    []
+    () => [{ value: 'all', label: 'All categories' }, ...categoryOptions],
+    [categoryOptions]
   );
 
   const workspaceFilterOptions = useMemo(
@@ -763,7 +765,3 @@ const TodoPage = () => {
 };
 
 export default TodoPage;
-
-function taskCategoryLabel(type) {
-  return TASK_CATEGORY_OPTIONS.find((o) => o.value === type)?.label || type || '—';
-}

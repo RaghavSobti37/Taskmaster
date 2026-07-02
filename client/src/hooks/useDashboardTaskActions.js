@@ -7,6 +7,7 @@ import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../lib/notifications';
 import {
   taskCompletionToast,
   taskApprovalToast,
+  taskRollbackToast,
   resolveTaskId,
   canMarkTaskComplete,
   normalizeCompletionHours,
@@ -22,12 +23,14 @@ export function useDashboardTaskActions({ user, projects, users }) {
   const { addToast } = useSystemToast();
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [taskToApprove, setTaskToApprove] = useState(null);
+  const [taskToRollback, setTaskToRollback] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const [approvingReviewId, setApprovingReviewId] = useState(null);
+  const [rollingBackReviewId, setRollingBackReviewId] = useState(null);
 
   const handleApproveReview = useCallback(
-    async (task, reviewHours) => {
+    async (task, reviewHours, approvedActualHours) => {
       const taskId = resolveTaskId(task);
       if (!taskId) return;
       suppressAutoToasts(5000);
@@ -36,7 +39,11 @@ export function useDashboardTaskActions({ user, projects, users }) {
       try {
         const taskRes = await axios.put(
           `/api/tasks/${taskId}`,
-          { reviewAction: 'approve', reviewHours },
+          {
+            reviewAction: 'approve',
+            reviewHours,
+            ...(approvedActualHours != null ? { approvedActualHours } : {}),
+          },
           AXIOS_SKIP_TOAST
         );
         addToast({
@@ -59,6 +66,44 @@ export function useDashboardTaskActions({ user, projects, users }) {
         });
       } finally {
         setApprovingReviewId(null);
+      }
+    },
+    [queryClient, addToast]
+  );
+
+  const handleRollbackReview = useCallback(
+    async (task, reason) => {
+      const taskId = resolveTaskId(task);
+      if (!taskId || !reason?.trim()) return;
+      suppressAutoToasts(5000);
+      setRollingBackReviewId(taskId);
+      setTaskToRollback(null);
+      try {
+        const taskRes = await axios.put(
+          `/api/tasks/${taskId}`,
+          { reviewAction: 'rollback', rollbackReason: reason.trim() },
+          AXIOS_SKIP_TOAST
+        );
+        addToast({
+          ...taskRollbackToast(task.title),
+          duration: 5000,
+          module: MODULE.PROJECTS,
+        });
+        updateAllTaskQueries(queryClient, (list) =>
+          (list || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
+        );
+        invalidateReviewTasks(queryClient);
+        invalidateTaskDomain(queryClient);
+        queryClient.invalidateQueries({ queryKey: ['logs'] });
+      } catch (err) {
+        addToast({
+          title: 'Rollback Failed',
+          message: err.response?.data?.error || err.response?.data?.message || 'Could not rollback task.',
+          type: 'error',
+          module: MODULE.PROJECTS,
+        });
+      } finally {
+        setRollingBackReviewId(null);
       }
     },
     [queryClient, addToast]
@@ -134,11 +179,15 @@ export function useDashboardTaskActions({ user, projects, users }) {
     setTaskToComplete,
     taskToApprove,
     setTaskToApprove,
+    taskToRollback,
+    setTaskToRollback,
     completionSubmitForReview,
     completingTaskId,
     approvingReviewId,
+    rollingBackReviewId,
     handleCompleteRequest,
     handleCompleteSubmit,
     handleApproveReview,
+    handleRollbackReview,
   };
 }

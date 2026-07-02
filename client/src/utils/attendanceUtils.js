@@ -123,10 +123,13 @@ export const formatDateKeyIST = (date = new Date()) => {
   }).format(value);
 };
 
-const dateKeyToLocalDate = (dateKey) => {
+export const dateKeyToLocalDate = (dateKey) => {
   const [y, m, d] = dateKey.split('-').map(Number);
   return new Date(y, m - 1, d);
 };
+
+/** Calendar date for "today" in attendance timezone (Asia/Kolkata). */
+export const getISTTodayDate = () => dateKeyToLocalDate(formatDateKeyIST());
 
 export const getMondayDateKeyIST = (referenceDate = new Date()) => {
   const dateKey = typeof referenceDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(referenceDate.trim())

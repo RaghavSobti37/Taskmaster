@@ -93,8 +93,11 @@ const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPla
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));
 const LeadAuditsPage = lazyWithRetry(() => import('./pages/admin/LeadAuditsPage'));
+const SecurityAuditPage = lazyWithRetry(() => import('./pages/admin/SecurityAuditPage'));
+const AdminTenantSsoPage = lazyWithRetry(() => import('./pages/admin/AdminTenantSsoPage'));
 const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
+const KnowledgeEnginePage = lazyWithRetry(() => import('./pages/admin/KnowledgeEnginePage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
@@ -348,12 +351,14 @@ function App() {
                 <Route path="/admin/qa" element={<QATestingPage />} />
                 <Route path="/admin/media-list" element={<MediaListPage />} />
                 <Route path="/admin/lead-audits" element={<LeadAuditsPage />} />
+                <Route path="/admin/security-audit" element={<SecurityAuditPage />} />
                 <Route path="/admin/crm-stats" element={<CrmStatsPage />} />
                 <Route path="/admin/audits" element={<Navigate to="/admin/lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
+                <Route path="/admin/tenant-sso" element={<AdminTenantSsoPage />} />
               </Route>
               <Route element={<PageRoute page="admin_teams" />}>
                 <Route path="/admin/teams" element={<AdminTeamsPage />} />
@@ -372,6 +377,9 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_ops_hub" />}>
                 <Route path="/admin/ops-hub" element={<OpsHubPage />} />
+              </Route>
+              <Route element={<PageRoute pages={['admin_knowledge_engine', 'admin_data']} />}>
+                <Route path="/admin/knowledge-engine" element={<KnowledgeEnginePage />} />
               </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />

@@ -4,7 +4,7 @@
  */
 
 const { REDIS_CACHE_KEYS } = require('../../shared/dataOwnership');
-const { getCache, setCache } = require('./cacheService');
+const { getCache, setCache, bustCacheByPrefix } = require('./cacheService');
 const { getSharedRedis } = require('../utils/sharedRedis');
 
 const DEFAULT_TTL = 300;
@@ -47,7 +47,8 @@ async function setTaskListCountsCache(tenantId, userId, scopeKey, value, ttlSeco
 
 async function bustAttendanceCacheForUser(userId) {
   if (!userId) return;
-  await bustPattern(fillKey(REDIS_CACHE_KEYS.ATTENDANCE_STATS, { userId: userId, rangeKey: '*' }));
+  const prefix = fillKey(REDIS_CACHE_KEYS.ATTENDANCE_STATS, { userId, rangeKey: '' });
+  await bustCacheByPrefix(prefix);
 }
 
 async function bustTaskCountsForTenant(tenantId) {

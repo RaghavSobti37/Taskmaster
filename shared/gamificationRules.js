@@ -9,6 +9,9 @@ const TIME_BASED_XP_ACTIONS = new Set(['COMPLETE_TASK', 'DAILY_LOG', 'ATTENDANCE
 /** Max hours credited toward XP for a single time-based award (anti-inflation). */
 const MAX_XP_HOURS_PER_EVENT = 12;
 
+/** Self-assigned completion earns at this fraction of the normal taskCompletion rate. */
+const SELF_ASSIGN_TASK_XP_MULTIPLIER = 0.5;
+
 /** Manual daily log: first N hours at base rate; hours above earn overtime rate (1.5× base by default). */
 const DAILY_LOG_OVERTIME_THRESHOLD_HOURS = 8;
 const DAILY_LOG_OVERTIME_RATE_MULTIPLIER = 1.5;
@@ -35,7 +38,7 @@ const DEFAULT_XP = {
 
 /** Max times per action per user per calendar day (IST). null = unlimited. */
 const DEFAULT_DAILY_CAPS = {
-  taskCompletion: null,
+  taskCompletion: 25,
   dailyLog: 5,
   taskCreation: 10,
   projectCreation: 3,
@@ -175,7 +178,8 @@ const FAIRNESS_PRINCIPLES = [
   'Outcome over setup — completing work earns more than creating tasks or projects.',
   'Role-balanced paths — sales (leads), creatives (tasks + assets), ops (attendance + invoices), reviewers (approvals) can all climb the board.',
   'Daily caps on low-effort actions stop admins and managers from spamming the leaderboard.',
-  'Task completion XP is once per task per person — no farming the same item.',
+  'Task completion XP is once per task per person — no farming the same item; max 25 completions credited per day.',
+  'Self-assigned (unreviewed) completions earn 50% of the normal task completion XP rate.',
   'Auto daily logs from task completion do not grant log XP — task completion XP uses hours × XP/hour instead.',
   'Manual daily logs: up to 5 awards per day (task auto-logs excluded); first 8h × rate, hours above 8 at 1.5× rate (max 12h per log). Task completion = hours × rate. Full-day attendance XP = once per day after ops locks both check-in and check-out.',
   'Monthly leaderboard uses audit log totals — everyone starts fresh each calendar month.',
@@ -191,7 +195,7 @@ const ROLE_PATHS = [
 
 /** Admin UI rule rows — configKey links to editable GamificationConfig field. */
 const XP_RULE_ROWS = [
-  { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'XP per hour — actualHours on the task × rate (min 30m if unset)' },
+  { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'XP per hour — actualHours × rate (min 30m if unset); self-assigned 50% rate; max 25 awards/day' },
   { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'First 8h × rate, hours above 8 at 1.5× rate; max 5 manual awards/day — task auto-logs do not count' },
   { configKey: 'taskCreation', action: 'CREATE_TASK', label: 'Task creation', capKey: 'taskCreation', who: 'Creator', note: 'Low — prevents manager spam' },
   { configKey: 'projectCreation', action: 'CREATE_PROJECT', label: 'Project creation', capKey: 'projectCreation', who: 'Creator', note: 'Low — prevents admin spam' },
@@ -220,6 +224,7 @@ const NO_XP_ACTIONS = [
 module.exports = {
   DEFAULT_XP,
   DEFAULT_DAILY_CAPS,
+  SELF_ASSIGN_TASK_XP_MULTIPLIER,
   TIME_BASED_XP_ACTIONS,
   RECALC_HISTORY_ACTIONS,
   LEGACY_ACTION_ALIASES,

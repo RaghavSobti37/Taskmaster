@@ -48,6 +48,8 @@ export default defineConfig(({ mode }) => {
   assetsInclude: ['**/*.wasm'],
   optimizeDeps: {
     exclude: ['@sqlite.org/sqlite-wasm'],
+    // ponytail: react-icons/fa is huge — on-demand optimize can 504 and break lazy chunks (e.g. ArtistPathProfileSlider)
+    include: ['react-icons/fa', 'react-icons/si'],
   },
   plugins: [
     react(),

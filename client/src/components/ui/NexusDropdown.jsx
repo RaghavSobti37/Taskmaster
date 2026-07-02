@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ChevronDown, Check, Search } from 'lucide-react';
+import { ChevronDown, Check, Search, AlertCircle } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import { useTransitionSurface } from '../../hooks/transitions';
 import MobileSelectSheet from './MobileSelectSheet';
@@ -23,6 +23,7 @@ const NexusDropdown = ({
   searchable = false,
   variant = 'default',
   required = false,
+  invalid = false,
   isMulti = false,
   multi = false,
   renderOption = null,
@@ -315,6 +316,7 @@ const NexusDropdown = ({
           ${!isToolbar && !isCompact ? `min-h-[2.5rem] px-3 py-2 ${isMobile ? 'text-base' : 'text-sm'}` : ''}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] cursor-pointer'}
           ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
+          ${invalid && !hasSelection ? 'border-amber-500/70 ring-1 ring-amber-500/25' : ''}
         `}
       >
         <span
@@ -324,6 +326,9 @@ const NexusDropdown = ({
         >
           {displayText}
         </span>
+        {invalid && !hasSelection && (
+          <AlertCircle size={14} className="text-amber-500 shrink-0" aria-hidden />
+        )}
         <ChevronDown
           size={isCompact ? 12 : 14}
           className={`text-[var(--color-text-muted)] transition-transform duration-200 shrink-0 ${

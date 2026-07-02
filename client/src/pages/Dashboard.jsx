@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { PageContainer, Button } from '../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../components/ui/QueryErrorBanner';
-import DashboardWidgetSkeleton from '../components/ui/DashboardWidgetSkeleton';
-import DashboardPageSkeleton from '../components/ui/DashboardPageSkeleton';
+import BrandedLoadingPanel from '../components/ui/BrandedLoadingPanel';
 import { useAuth } from '../contexts/AuthContext';
 import {
   useDashboardTasks,
@@ -19,6 +18,7 @@ import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import DashboardTierLayout from '../components/dashboard/DashboardTierLayout';
 const TaskCompletionModal = lazy(() => import('../components/TaskCompletionModal'));
+const TaskRollbackModal = lazy(() => import('../components/TaskRollbackModal'));
 const MobileAttendanceBar = lazy(() => import('../components/mobile/MobileAttendanceBar'));
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
@@ -32,6 +32,7 @@ import {
   normalizeDashboardElements,
   repackDashboardElements,
 } from '../lib/dashboardSections';
+import { isDashboardBooting, shouldDeferWidgetRender } from '../lib/dashboardBootState';
 import { getLazyDashboardWidget } from '../lib/dashboardWidgetLoaders';
 import { isAdminUser } from '../utils/departmentPermissions';
 
@@ -39,20 +40,12 @@ const renderLazyWidget = (componentId, props = {}) => {
   const LazyComp = getLazyDashboardWidget(componentId);
   if (!LazyComp) return null;
   return (
-    <Suspense fallback={<DashboardWidgetSkeleton />}>
+    <Suspense fallback={null}>
       <LazyComp {...props} />
     </Suspense>
   );
 };
 
-const PRIORITY_WIDGET_IDS = new Set([
-  'mark-attendance',
-  'todos-today',
-  'schedule',
-  'announcements',
-  'review-queue',
-  'todos-overdue',
-]);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -95,20 +88,19 @@ const Dashboard = () => {
     setTaskToComplete,
     taskToApprove,
     setTaskToApprove,
+    taskToRollback,
+    setTaskToRollback,
     completionSubmitForReview,
     completingTaskId,
     approvingReviewId,
+    rollingBackReviewId,
     handleCompleteRequest,
     handleCompleteSubmit,
     handleApproveReview,
+    handleRollbackReview,
   } = useDashboardTaskActions({ user, projects, users });
 
-  const today = useMemo(() => {
-    const value = new Date();
-    value.setHours(0, 0, 0, 0);
-    return value;
-  }, []);
-  const todayKey = formatDateKeyIST(today);
+  const todayKey = formatDateKeyIST();
   const {
     data: attendanceRows = [],
     isError: attendanceError,
@@ -153,11 +145,13 @@ const Dashboard = () => {
   }, []);
 
   const renderComponent = (componentId, _options = {}) => {
-    if (!secondaryWidgetsReady && !PRIORITY_WIDGET_IDS.has(componentId) && !isAnalyticsWidget(componentId)) {
-      return <DashboardWidgetSkeleton />;
-    }
-    if (!heavyWidgetsReady && isAnalyticsWidget(componentId)) {
-      return <DashboardWidgetSkeleton />;
+    const analytics = isAnalyticsWidget(componentId);
+    if (shouldDeferWidgetRender(componentId, {
+      secondaryWidgetsReady,
+      heavyWidgetsReady,
+      isAnalytics: analytics,
+    })) {
+      return null;
     }
 
     switch (componentId) {
@@ -178,7 +172,9 @@ const Dashboard = () => {
           workspaces,
           loading: reviewLoading,
           onApprove: (task) => setTaskToApprove(task),
+          onRollback: (task) => setTaskToRollback(task),
           approvingTaskId: approvingReviewId,
+          rollingBackTaskId: rollingBackReviewId,
           onOpenProject: (projectId) => navigate(`/projects/${projectId}`),
         });
       case 'todos-today':
@@ -245,7 +241,13 @@ const Dashboard = () => {
     }
   };
 
-  const widgetsBooting = queriesEnabled && summaryLoading && tasksLoading && projectsLoading;
+  const dashboardBooting = isDashboardBooting({
+    queriesEnabled,
+    summaryLoading,
+    tasksLoading,
+    projectsLoading,
+    reviewLoading,
+  });
 
   return (
     <PageContainer>
@@ -282,6 +284,10 @@ const Dashboard = () => {
       <Suspense fallback={null}>
         <MobileAttendanceBar />
       </Suspense>
+      {dashboardBooting ? (
+        <BrandedLoadingPanel minHeight="min-h-[60vh]" />
+      ) : (
+        <>
       <div className="flex items-center justify-between gap-3 mb-3 -mt-1">
         <h1 className="text-xl font-semibold text-[var(--color-text-primary)] tracking-tight truncate">
           Welcome, {user?.name || 'there'}
@@ -299,9 +305,6 @@ const Dashboard = () => {
         </Button>
       </div>
       <PinBoardProvider>
-        {widgetsBooting ? (
-          <DashboardPageSkeleton />
-        ) : (
         <DashboardTierLayout
           elements={layoutElements}
           permissionPreset={permissionPreset}
@@ -314,8 +317,9 @@ const Dashboard = () => {
           onComplete={handleCompleteRequest}
           completingTaskId={completingTaskId}
         />
-        )}
       </PinBoardProvider>
+        </>
+      )}
 
       <Suspense fallback={null}>
         <TaskCompletionModal
@@ -331,6 +335,13 @@ const Dashboard = () => {
           onClose={() => setTaskToApprove(null)}
           onSubmit={handleApproveReview}
           approveReview
+        />
+        <TaskRollbackModal
+          task={taskToRollback}
+          isOpen={!!taskToRollback}
+          onClose={() => setTaskToRollback(null)}
+          onSubmit={handleRollbackReview}
+          isSubmitting={!!rollingBackReviewId}
         />
       </Suspense>
     </PageContainer>

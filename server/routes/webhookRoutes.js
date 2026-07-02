@@ -96,7 +96,9 @@ router.post('/instagram', (req, res) => {
 });
 
 const { handleApiResendWebhook } = require('../domains/mail/webhooks/resendWebhookHandler');
+const { handleClerkWebhook } = require('../domains/auth/webhooks/clerkWebhookHandler');
 
 router.post('/resend', handleApiResendWebhook);
+router.post('/clerk', handleClerkWebhook);
 
 module.exports = router;

@@ -93,6 +93,23 @@ const LEGACY_TYPE_MAP = {
   general: 'general',
 };
 
+export function slugTaskCategoryLabel(value) {
+  return String(value || '')
+    .split('-')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+export function slugifyTaskCategoryInput(label) {
+  return String(label || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40);
+}
+
 export function normalizeTaskCategory(type) {
   if (!type) return 'general';
   const key = String(type).trim().toLowerCase();
@@ -101,12 +118,30 @@ export function normalizeTaskCategory(type) {
   for (const [legacy, category] of Object.entries(LEGACY_TYPE_MAP)) {
     if (key.includes(legacy)) return category;
   }
+  // ponytail: preserve user-added slug categories
+  const slug = slugifyTaskCategoryInput(key);
+  if (slug && /^[a-z][a-z0-9-]*$/.test(slug)) return slug;
   return 'general';
 }
 
-function taskCategoryLabel(value) {
+export function taskCategoryLabel(value) {
   const normalized = normalizeTaskCategory(value);
-  return TASK_CATEGORY_OPTIONS.find((c) => c.value === normalized)?.label || 'General';
+  return TASK_CATEGORY_OPTIONS.find((c) => c.value === normalized)?.label || slugTaskCategoryLabel(normalized) || 'General';
+}
+
+/** Merge built-in categories with workspace TaskType rows from the API. */
+export function mergeTaskCategoryOptions(remoteTypes = []) {
+  const seen = new Set(TASK_CATEGORY_OPTIONS.map((o) => o.value));
+  const merged = [...TASK_CATEGORY_OPTIONS];
+  for (const row of remoteTypes) {
+    const raw = row?.name || row?.value;
+    if (!raw) continue;
+    const value = normalizeTaskCategory(raw);
+    if (!value || seen.has(value)) continue;
+    merged.push({ value, label: slugTaskCategoryLabel(value) });
+    seen.add(value);
+  }
+  return merged;
 }
 
 export const SLOT_OPTIONS = [

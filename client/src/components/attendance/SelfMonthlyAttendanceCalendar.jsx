@@ -104,7 +104,7 @@ const SelfMonthlyAttendanceCalendar = ({
               <tr key={idx} className="border-b last:border-b-0 border-[var(--color-bg-border)]">
                 {week.map(date => {
                   const dateKey = formatDateKeyIST(date);
-                  const mapKey = `${userId}_${dateKey}`;
+                  const mapKey = `${String(userId)}_${dateKey}`;
                   const entry = rowMap.get(mapKey);
                   const status = resolveStatus(entry, date);
                   const isCurrentMonth = format(date, 'yyyy-MM') === format(month, 'yyyy-MM');

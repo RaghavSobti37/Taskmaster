@@ -723,6 +723,34 @@ exports.revokeOtherSessions = async (req, res) => {
   }
 };
 
+/** Admin: revoke all sessions for any user (compromised org / offboarding). */
+exports.adminRevokeAllUserSessions = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    if (!targetId) return res.status(400).json({ error: 'Missing user id' });
+
+    const targetUser = await User.findById(targetId).select('_id suspended');
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
+    const { revoked } = await revokeAllUserSessions(targetId.toString());
+
+    const isSelf = req.user._id.toString() === targetId.toString();
+    if (isSelf) clearAuthCookie(res, req);
+
+    logger.info('authController', 'adminRevokeAllUserSessions', {
+      actorId: req.user._id.toString(),
+      targetId: targetId.toString(),
+      revoked,
+    });
+
+    return res.json({ success: true, revoked });
+  } catch (error) {
+    logger.error('authController', 'adminRevokeAllUserSessions failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to revoke user sessions' });
+  }
+};
+
 exports.forgotPassword = async (req, res) => {
   if (blockLegacyAuth(res)) return;
   try {

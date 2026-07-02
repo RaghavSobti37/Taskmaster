@@ -9,6 +9,8 @@ const schema = new mongoose.Schema({
   previousAmount: { type: Number },
   recalculatedAt: { type: Date },
   recalcReason: { type: String },
+  clawedBackAt: { type: Date },
+  clawReason: { type: String },
   /** Stable key for entity-scoped awards — prevents duplicate inserts under concurrent upserts. */
   dedupeKey: { type: String },
   createdAt: { type: Date, default: Date.now },

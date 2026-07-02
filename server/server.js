@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+require('./instrument');
+
 const { loadConfig } = require('./config');
 loadConfig();
 

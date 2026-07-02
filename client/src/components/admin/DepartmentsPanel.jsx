@@ -418,7 +418,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
         </ModalFooter>
       </ModalShell>
 
-      <ModalShell isOpen={!!reportDept} onClose={() => setReportDept(null)} size="full">
+      <ModalShell isOpen={!!reportDept} onClose={() => setReportDept(null)} size="fullscreen">
         <ModalHeader
           title="Department report"
           subtitle={reportDept?.name}
@@ -434,7 +434,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
         </ModalBody>
       </ModalShell>
 
-      <ModalShell isOpen={teamReportOpen} onClose={() => setTeamReportOpen(false)} size="full">
+      <ModalShell isOpen={teamReportOpen} onClose={() => setTeamReportOpen(false)} size="fullscreen">
         <ModalHeader title="Team report" onClose={() => setTeamReportOpen(false)} />
         <ModalBody>
           <TeamMonthlyReportPanel isOpen={teamReportOpen} />

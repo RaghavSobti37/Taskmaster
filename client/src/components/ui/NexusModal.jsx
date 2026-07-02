@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Info, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from './primitives';
-import { ModalShell, ModalHeader, ModalBody, ModalFooter, MODAL_WIDTH_PX } from './ModalShell';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter, MODAL_WIDTH_PX, isFullscreenSize } from './ModalShell';
 
 const MODAL_SIZES = {
   sm: 'sm',
@@ -39,13 +39,14 @@ export const NexusModal = ({
   isConfirm = false,
   showFooter = true,
   footer,
-  size = 'fullscreen',
+  size = 'lg',
   width,
   bodyClassName = '',
   children,
 }) => {
   const resolvedSize = (width && LEGACY_WIDTH_MAP[width]) || (width && MODAL_WIDTH_PX[width] ? width : null) || size;
   const shellSize = isConfirm ? 'sm' : resolvedSize;
+  const formGrowClass = isFullscreenSize(shellSize) ? 'flex-1 min-h-0' : '';
 
   const typeConfig = {
     info: {
@@ -85,7 +86,7 @@ export const NexusModal = ({
 
   return (
     <ModalShell isOpen={isOpen} onClose={onClose} size={shellSize}>
-      <form className="flex flex-col flex-1 min-h-0 overflow-hidden" onSubmit={handleFormSubmit}>
+      <form className={`flex flex-col overflow-hidden ${formGrowClass}`} onSubmit={handleFormSubmit}>
         <ModalHeader
           title={title}
           subtitle={subtitle}

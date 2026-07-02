@@ -85,6 +85,35 @@ describe('Attendance API integration', () => {
     expect(second.body.error).toMatch(/Already marked in/i);
   });
 
+  it('returns fresh month list after check-in (cache bust)', async () => {
+    const { getDateKey, getCurrentMonthRange } = require('../utils/attendanceDate');
+    const { monthStartKey, monthEndKey } = getCurrentMonthRange();
+
+    const before = await userAgent.get('/api/attendance').query({
+      start: monthStartKey,
+      end: monthEndKey,
+      mine: 'true',
+    });
+    expect(before.statusCode).toBe(200);
+
+    const checkIn = await userAgent.post('/api/attendance/check').send({
+      type: 'in',
+      manualTime: '11:30',
+      workMode: 'office',
+    });
+    expect(checkIn.statusCode).toBe(200);
+
+    const after = await userAgent.get('/api/attendance').query({
+      start: monthStartKey,
+      end: monthEndKey,
+      mine: 'true',
+    });
+    expect(after.statusCode).toBe(200);
+    const todayKey = getDateKey();
+    const todayRow = after.body.find((row) => getDateKey(row.date) === todayKey);
+    expect(todayRow?.inTimeRecord?.manualTimestamp).toBe('11:30');
+  });
+
   it('rejects unauthenticated attendance list', async () => {
     const res = await request(app).get('/api/attendance');
     expect(res.statusCode).toBe(401);

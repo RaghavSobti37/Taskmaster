@@ -13,9 +13,8 @@ import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
-import { computeLoginUiState, isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
+import { computeLoginUiState, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
-import { Spinner } from '../../components/ui/Spinner';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -61,7 +60,6 @@ function LoginPageView({
   const clerkReady = isClerkConfigured();
 
   const signInPath = resolveClerkSignInPathname(pathname || location.pathname);
-  const inClerkSubflow = isClerkSignInSubflowPath(signInPath);
 
   const uiState = computeLoginUiState({
     clerkReady,
@@ -118,11 +116,10 @@ function LoginPageView({
     );
   }
 
-  if (uiState === 'BOOT_LOADING') {
+  if (uiState === 'BOOT_LOADING' || uiState === 'ESTABLISHING' || uiState === 'REDIRECTING') {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
-  const showSignInShell = uiState === 'SHOW_SIGN_IN' || uiState === 'ESTABLISHING';
   const showRecovery = uiState !== 'SHOW_SIGN_IN';
 
   return (
@@ -149,32 +146,13 @@ function LoginPageView({
                 ) : null}
               </div>
             ) : null}
-            {showSignInShell ? (
-              <div className="relative">
-                <ClerkSignInBlock />
-                {uiState === 'ESTABLISHING' && !inClerkSubflow ? (
-                  <div
-                    className="absolute inset-0 z-[310] flex min-h-[12rem] flex-col items-center justify-center gap-3 rounded-lg bg-[var(--brand-panel-teal,#0B3B31)]/90 py-8"
-                    aria-live="polite"
-                    aria-busy="true"
-                  >
-                    <Spinner size="lg" />
-                    <p className="text-sm text-white/80 text-center">Opening your workspace…</p>
-                  </div>
-                ) : null}
-              </div>
-            ) : uiState === 'REDIRECTING' ? (
-              <div className="flex min-h-[12rem] flex-col items-center justify-center gap-3 py-8">
-                <Spinner size="lg" />
-                <p className="text-sm text-white/80 text-center">Redirecting…</p>
-              </div>
-            ) : null}
+            <ClerkSignInBlock />
           </>
         )}
         {showRecovery ? (
           <ClearSessionCookiesButton
             bootError={Boolean(bootError) || Boolean(establishError)}
-            stuckLogin={uiState === 'ESTABLISHING' || uiState === 'ESTABLISH_ERROR'}
+            stuckLogin={uiState === 'ESTABLISH_ERROR'}
           />
         ) : (
           <ClearSessionCookiesButton bootError={false} />

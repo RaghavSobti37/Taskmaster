@@ -35,6 +35,7 @@
     "@hookform/resolvers": "^5.4.0",
     "@number-flow/react": "^0.6.1",
     "@posthog/react": "^1.10.3",
+    "@sentry/react": "^9.47.1",
     "@tailwindcss/vite": "^4.3.2",
     "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-virtual": "^3.14.4",

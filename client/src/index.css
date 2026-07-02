@@ -1024,18 +1024,24 @@ a.tm-hashtag-chip:hover {
   .tm-modal-2xl { --tm-modal-width: 1024px; }
   .tm-modal-full { --tm-modal-width: 1200px; }
 
-  /* Fullscreen modals — edge-to-edge viewport (default for ModalShell + legacy overlays) */
+  /* Centered modals — content-sized, viewport-centered */
+  .tm-modal-overlay--centered,
+  .tm-modal-overlay:has(> .tm-modal-panel.tm-modal-compact) {
+    display: grid !important;
+    place-items: center !important;
+    align-content: center !important;
+  }
+
+  /* Fullscreen modals — edge-to-edge viewport */
   .tm-modal-overlay--fullscreen,
-  .tm-modal-overlay:has(> .tm-modal-panel.tm-modal-fullscreen),
-  .tm-modal-overlay:has(> .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm)) {
+  .tm-modal-overlay:has(> .tm-modal-panel.tm-modal-fullscreen) {
     display: grid !important;
     place-items: stretch !important;
     padding: 0 !important;
   }
 
   .tm-modal-panel.tm-modal-fullscreen,
-  .tm-modal-overlay > .tm-modal-panel.tm-modal-fullscreen,
-  .tm-modal-overlay > .tm-modal-panel:not(.tm-modal-compact):not(.tm-modal-sm) {
+  .tm-modal-overlay > .tm-modal-panel.tm-modal-fullscreen {
     width: 100vw !important;
     height: 100dvh !important;
     max-width: 100vw !important;
@@ -1046,15 +1052,24 @@ a.tm-hashtag-chip:hover {
     box-sizing: border-box;
   }
 
-  /* Compact (confirm) modals keep centered floating card */
-  .tm-modal-panel.tm-modal-compact,
-  .tm-modal-panel.tm-modal-sm.tm-modal-compact {
+  /* Compact centered modals keep floating card radius */
+  .tm-modal-panel.tm-modal-compact {
     border-radius: var(--radius-lg);
+    height: auto !important;
+    max-height: min(85vh, 900px) !important;
   }
 
   /* Scrollable modal body + pinned footer (form uses flex column on panel) */
   .tm-modal-scroll {
     flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tm-modal-scroll.tm-modal-scroll--content {
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;

@@ -19,6 +19,17 @@ export function getTodayDateKey(timeZone = DEFAULT_TZ) {
   return toDateKey(new Date(), timeZone);
 }
 
+/** Native date inputs block form submit when value < min — skip min for legacy past values. */
+export function resolveDateInputMin(currentValue, proposedMin, timeZone = DEFAULT_TZ) {
+  if (!proposedMin) return undefined;
+  const minKey = toDateKey(proposedMin, timeZone);
+  if (!minKey) return proposedMin;
+  if (currentValue == null || currentValue === '') return minKey;
+  const valueKey = toDateKey(currentValue, timeZone);
+  if (valueKey && valueKey < minKey) return undefined;
+  return minKey;
+}
+
 export function assertDateKeyNotBeforeToday(dateKey, { label = 'Date', timeZone = DEFAULT_TZ } = {}) {
   if (dateKey == null || dateKey === '') return { ok: true };
   const key = toDateKey(dateKey, timeZone);

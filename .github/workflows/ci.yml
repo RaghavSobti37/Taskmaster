@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, staging]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, staging]
 
 env:
   NPM_VERSION: "11.13.0"
@@ -23,9 +23,12 @@ jobs:
         run: node scripts/checkCommittedExposure.js
       - name: Dependency audit (high+)
         run: npm audit --workspace=coreknot-server --audit-level=high
-        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: OpenAPI version drift check
+        run: node scripts/generate-openapi.mjs --check
+      - name: Tenant bypass static suite
+        run: node server/scripts/runQaSuite3Static.js
       - name: Jest
         run: npm test --workspace=coreknot-server -- --coverage
         env:
@@ -45,7 +48,6 @@ jobs:
         run: node scripts/checkCommittedExposure.js
       - name: Dependency audit (high+)
         run: npm audit --workspace=CoreKnot-client --audit-level=high
-        continue-on-error: true
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Lint

@@ -44,14 +44,16 @@ describe('CI production readiness smoke', () => {
   });
 
   it('rollback runbook exists', () => {
-    expect(fs.existsSync(path.join(repoRoot, 'docs/DEPLOY_ROLLBACK.md'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'docs/operations/DEPLOY_ROLLBACK.md'))).toBe(true);
   });
 
   it('Render logging doc exists', () => {
-    expect(fs.existsSync(path.join(repoRoot, 'docs/RENDER_LOGGING.md'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'docs/operations/RENDER_LOGGING.md'))).toBe(true);
   });
 
   it('monitoring docs exist', () => {
-    expect(fs.existsSync(path.join(repoRoot, 'docs/MONITORING_ALERTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'docs/operations/MONITORING_ALERTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'docs/operations/observability.md'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'docs/operations/incident-response.md'))).toBe(true);
   });
 });

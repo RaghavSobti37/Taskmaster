@@ -33,15 +33,33 @@ describe('task review workflow', () => {
   test('delegated assignment requires review on complete', () => {
     const assignments = [{ userId: assignee._id, assignedBy: creator._id }];
     expect(
-      needsReviewOnComplete(assignments, assignee._id, { taskCreatedBy: creator._id })
+      needsReviewOnComplete(assignments, assignee._id)
     ).toBe(true);
   });
 
   test('self-assigned bug assignee skips review even when reporter created task', () => {
     const assignments = [{ userId: platformOwner._id, assignedBy: platformOwner._id }];
     expect(
-      needsReviewOnComplete(assignments, platformOwner._id, { taskCreatedBy: creator._id })
+      needsReviewOnComplete(assignments, platformOwner._id)
     ).toBe(false);
+  });
+
+  test('self-assigned creator can explicitly set in-review without auto-done', async () => {
+    const task = await Task.create({
+      title: 'Self review hold',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: creator._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(task._id, { status: 'in-review' }, creator, null);
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-review');
   });
 
   test('assignee re-submit after rollback routes back to in-review', async () => {
@@ -68,7 +86,7 @@ describe('task review workflow', () => {
 
     await TaskService.updateTask(
       task._id,
-      { reviewAction: 'rollback', description: 'Missing acceptance criteria' },
+      { reviewAction: 'rollback', rollbackReason: 'Missing acceptance criteria' },
       creator,
       null
     );
@@ -91,7 +109,7 @@ describe('task review workflow', () => {
     expect(updated.status).toBe('in-review');
   });
 
-  test('creator can mark delegated task done without assignee completing', async () => {
+  test('creator cannot mark delegated task done without assignee completing', async () => {
     const task = await Task.create({
       title: 'Creator bypass',
       createdBy: creator._id,
@@ -103,15 +121,14 @@ describe('task review workflow', () => {
       assignedBy: creator._id,
     });
 
-    await TaskService.updateTask(task._id, { status: 'done' }, creator, null);
-
-    const updated = await Task.findById(task._id).lean();
-    expect(updated.status).toBe('done');
+    await expect(
+      TaskService.updateTask(task._id, { status: 'done' }, creator, null)
+    ).rejects.toThrow('Delegated assignees must complete');
   });
 
-  test('involved user can change status away from done', async () => {
+  test('only creator can reopen completed task', async () => {
     const task = await Task.create({
-      title: 'Status reopen',
+      title: 'Done reopen',
       createdBy: creator._id,
       status: 'done',
       completedAt: new Date(),
@@ -123,21 +140,48 @@ describe('task review workflow', () => {
       assignedBy: creator._id,
     });
 
+    await expect(
+      TaskService.updateTask(
+        task._id,
+        { reviewAction: 'rollback', rollbackReason: 'Reopened for additional work' },
+        assignee,
+        null
+      )
+    ).rejects.toThrow('not allowed to roll back');
+
     await TaskService.updateTask(
       task._id,
-      { status: 'todo', progress: 0 },
-      assignee,
+      { reviewAction: 'rollback', rollbackReason: 'Reopened for additional work' },
+      creator,
       null
     );
 
     const updated = await Task.findById(task._id).lean();
-    expect(updated.status).toBe('todo');
+    expect(updated.status).toBe('in-progress');
     expect(updated.completedAt).toBeFalsy();
+
+    const rollbackRow = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
+    expect(rollbackRow?.body).toBe('Reopened for additional work');
+    expect(rollbackRow?.statusFrom).toBe('done');
   });
 
   test('assignee list edits preserve original assigner when assignees unchanged', async () => {
+    const Project = require('../models/Project');
+    const project = await Project.create({
+      name: `[TEST] Preserve assigner ${Date.now()}`,
+      outletId: 'test-outlet',
+      owner: creator._id,
+      members: [creator._id, assignee._id],
+      memberRoles: [
+        { user: creator._id, role: 'admin' },
+        { user: assignee._id, role: 'member' },
+      ],
+      workspace: 'GENERAL',
+      status: 'active',
+    });
     const task = await Task.create({
       title: 'Preserve assigner',
+      projectId: project._id,
       createdBy: creator._id,
       status: 'in-progress',
     });
@@ -160,13 +204,28 @@ describe('task review workflow', () => {
     expect(persisted.createdBy.toString()).toBe(creator._id.toString());
   });
 
-  test('reassigning task sets assigner as creator and assignedBy', async () => {
+  test('reassigning task preserves original creator', async () => {
+    const Project = require('../models/Project');
     const otherAssignee = await User.create({
       name: 'Other Assignee',
       email: `other-assignee-${Date.now()}@test.com`,
     });
+    const project = await Project.create({
+      name: `[TEST] Reassign ${Date.now()}`,
+      outletId: 'test-outlet',
+      owner: creator._id,
+      members: [creator._id, assignee._id, otherAssignee._id],
+      memberRoles: [
+        { user: creator._id, role: 'admin' },
+        { user: assignee._id, role: 'member' },
+        { user: otherAssignee._id, role: 'member' },
+      ],
+      workspace: 'GENERAL',
+      status: 'active',
+    });
     const task = await Task.create({
       title: 'Reassign creator',
+      projectId: project._id,
       createdBy: creator._id,
       status: 'in-progress',
     });
@@ -187,16 +246,14 @@ describe('task review workflow', () => {
     expect(row.userId.toString()).toBe(otherAssignee._id.toString());
     expect(row.assignedBy.toString()).toBe(assignee._id.toString());
     const persisted = await Task.findById(task._id).lean();
-    expect(persisted.createdBy.toString()).toBe(assignee._id.toString());
+    expect(persisted.createdBy.toString()).toBe(creator._id.toString());
   });
 
-  test('assignee can reopen completed task', async () => {
+  test('rollback requires a reason', async () => {
     const task = await Task.create({
-      title: 'Done reopen',
+      title: 'Rollback reason required',
       createdBy: creator._id,
-      status: 'done',
-      completedAt: new Date(),
-      progress: 100,
+      status: 'in-review',
     });
     await TaskAssignment.create({
       taskId: task._id,
@@ -204,20 +261,9 @@ describe('task review workflow', () => {
       assignedBy: creator._id,
     });
 
-    await TaskService.updateTask(
-      task._id,
-      { reviewAction: 'rollback', description: 'Reopened for additional work' },
-      assignee,
-      null
-    );
-
-    const updated = await Task.findById(task._id).lean();
-    expect(updated.status).toBe('in-progress');
-    expect(updated.completedAt).toBeFalsy();
-
-    const rollbackRow = await TaskActivity.findOne({ taskId: task._id, type: 'rollback' }).lean();
-    expect(rollbackRow?.body).toBe('Reopened for additional work');
-    expect(rollbackRow?.statusFrom).toBe('done');
+    await expect(
+      TaskService.updateTask(task._id, { reviewAction: 'rollback' }, creator, null)
+    ).rejects.toThrow('Rollback reason is required');
   });
 
   test('rollback on non-rollbackable status rejects with clear error (BUG-T13)', async () => {
@@ -235,7 +281,7 @@ describe('task review workflow', () => {
     await expect(
       TaskService.updateTask(
         task._id,
-        { reviewAction: 'rollback', description: 'Should fail' },
+        { reviewAction: 'rollback', rollbackReason: 'Should fail' },
         creator,
         null
       )
@@ -290,7 +336,7 @@ describe('task review workflow', () => {
 
     await TaskService.updateTask(
       task._id,
-      { reviewAction: 'rollback' },
+      { reviewAction: 'rollback', rollbackReason: 'Owner revision' },
       platformOwner,
       null
     );

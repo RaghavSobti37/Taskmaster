@@ -9,7 +9,7 @@ const adminActor = (user) => ({
   departmentId: { slug: 'admin', permissionPreset: 'admin' },
 });
 
-describe('task assignee scope (open assignment)', () => {
+describe('task assignee scope', () => {
   let sandbox;
   let projectLead;
   let projectMember;
@@ -48,12 +48,12 @@ describe('task assignee scope (open assignment)', () => {
     });
   });
 
-  test('project lead can assign any tenant user on create', async () => {
+  test('project lead can assign project member on create', async () => {
     const { taskDto } = await TaskService.createTask(
       {
-        title: 'Off-project create',
+        title: 'Member create',
         projectId: sandbox._id,
-        assignees: [offProjectUser._id.toString()],
+        assignees: [projectMember._id.toString()],
       },
       adminActor(projectLead),
       null
@@ -63,11 +63,34 @@ describe('task assignee scope (open assignment)', () => {
     expect(taskDto.createdBy?._id?.toString?.() || taskDto.createdBy?.toString?.())
       .toBe(projectLead._id.toString());
     const row = await TaskAssignment.findOne({ taskId: taskDto._id }).lean();
-    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
+    expect(row.userId.toString()).toBe(projectMember._id.toString());
     expect(row.assignedBy.toString()).toBe(projectLead._id.toString());
   });
 
-  test('project lead can assign any tenant user on update; assigner becomes creator', async () => {
+  test('project lead cannot assign off-project user on create', async () => {
+    await expect(
+      TaskService.createTask(
+        {
+          title: 'Off-project create',
+          projectId: sandbox._id,
+          assignees: [offProjectUser._id.toString()],
+        },
+        adminActor(projectLead),
+        null
+      )
+    ).rejects.toThrow('Not authorized: assignee must be a project member');
+  });
+
+  test('project lead can reassign between project members; original creator preserved', async () => {
+    const thirdMember = await User.create({
+      name: 'Third Member',
+      email: `third-scope-${Date.now()}@test.com`,
+    });
+    await Project.findByIdAndUpdate(sandbox._id, {
+      $addToSet: { members: thirdMember._id },
+      $push: { memberRoles: { user: thirdMember._id, role: 'member' } },
+    });
+
     const { taskDto } = await TaskService.createTask(
       {
         title: 'Reassign scope',
@@ -80,19 +103,19 @@ describe('task assignee scope (open assignment)', () => {
 
     const updated = await TaskService.updateTask(
       taskDto._id,
-      { assignees: [offProjectUser._id.toString()] },
+      { assignees: [thirdMember._id.toString()] },
       adminActor(projectLead),
       null
     );
 
     const row = await TaskAssignment.findOne({ taskId: taskDto._id }).lean();
-    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
+    expect(row.userId.toString()).toBe(thirdMember._id.toString());
     expect(row.assignedBy.toString()).toBe(projectLead._id.toString());
     const creatorId = updated.taskDto.createdBy?._id || updated.taskDto.createdBy;
     expect(creatorId.toString()).toBe(projectLead._id.toString());
   });
 
-  test('project member assignee can assign any tenant user', async () => {
+  test('project member assignee cannot assign off-project user', async () => {
     const task = await Task.create({
       title: 'Member assign attempt',
       projectId: sandbox._id,
@@ -105,17 +128,14 @@ describe('task assignee scope (open assignment)', () => {
       assignedBy: projectLead._id,
     });
 
-    const updated = await TaskService.updateTask(
-      task._id,
-      { assignees: [offProjectUser._id.toString()] },
-      projectMember,
-      null
-    );
-
-    const row = await TaskAssignment.findOne({ taskId: task._id }).lean();
-    expect(row.userId.toString()).toBe(offProjectUser._id.toString());
-    const creatorId = updated.taskDto.createdBy?._id || updated.taskDto.createdBy;
-    expect(creatorId.toString()).toBe(projectMember._id.toString());
+    await expect(
+      TaskService.updateTask(
+        task._id,
+        { assignees: [offProjectUser._id.toString()] },
+        projectMember,
+        null
+      )
+    ).rejects.toThrow('Not authorized: assignee must be a project member');
   });
 
   test('platform admin not on project may assign off-project user', async () => {
@@ -134,23 +154,16 @@ describe('task assignee scope (open assignment)', () => {
     expect(row.userId.toString()).toBe(offProjectUser._id.toString());
   });
 
-  test('reassign succeeds when legacy assignment row lacks tenantId', async () => {
+  test('reassign rejects off-project user', async () => {
     const { taskDto } = await TaskService.createTask(
       {
-        title: 'Legacy assignment row',
+        title: 'Off-project reassign',
         projectId: sandbox._id,
         assignees: [projectMember._id.toString()],
       },
       adminActor(projectLead),
       null
     );
-
-    await TaskAssignment.collection.insertOne({
-      taskId: taskDto._id,
-      userId: offProjectUser._id,
-      assignedBy: projectLead._id,
-      assignedAt: new Date(),
-    });
 
     await expect(
       TaskService.updateTask(
@@ -159,15 +172,6 @@ describe('task assignee scope (open assignment)', () => {
         adminActor(projectLead),
         null
       )
-    ).resolves.toBeTruthy();
-
-    const rows = await TaskAssignment.find({ taskId: taskDto._id })
-      .setOptions({ bypassTenant: true })
-      .lean();
-    expect(rows).toHaveLength(2);
-    const userIds = rows.map((r) => r.userId.toString()).sort();
-    expect(userIds).toEqual(
-      [projectMember._id.toString(), offProjectUser._id.toString()].sort()
-    );
+    ).rejects.toThrow('Not authorized: assignee must be a project member');
   });
 });

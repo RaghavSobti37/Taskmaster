@@ -39,6 +39,13 @@ const CRON_JOBS = [
     schedule: '15 */6 * * *',
     description: 'Mirror Mongo changes to Supabase',
   },
+  {
+    id: 'knowledge-engine-scheduler',
+    module: '../workers/knowledgeEngineScheduler',
+    init: 'initKnowledgeEngineScheduler',
+    schedule: '0 0 * * *',
+    description: 'Knowledge Engine daily cron registration',
+  },
 ];
 
 const QUEUE_WORKERS = [
@@ -76,6 +83,13 @@ const QUEUE_WORKERS = [
     init: 'initCampaignEmailWorker',
     queue: 'campaign-email',
     description: 'Background campaign email dispatch (BullMQ)',
+  },
+  {
+    id: 'knowledge-engine',
+    module: '../workers/knowledgeEngineWorker',
+    init: 'initKnowledgeEngineWorker',
+    queue: 'knowledge-engine',
+    description: 'TSC Knowledge Engine content pipeline (BullMQ)',
   },
 ];
 

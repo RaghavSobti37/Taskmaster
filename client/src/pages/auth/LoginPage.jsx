@@ -11,10 +11,10 @@ import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
-import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
-import { isClerkReadyForCoreKnotEstablish } from '../../lib/clerkSignInFlow';
+import { computeLoginUiState } from '../../lib/clerkSignInFlow';
+import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 import { Spinner } from '../../components/ui/Spinner';
 
 const linkClass =
@@ -59,21 +59,28 @@ function LoginPageView({
   const [establishError, setEstablishError] = useState(null);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
   const clerkReady = isClerkConfigured();
-  const clerkReadyForEstablish = isClerkReadyForCoreKnotEstablish({
+
+  const uiState = computeLoginUiState({
+    clerkReady,
+    clerkLoaded,
+    clerkSignedIn,
+    clerkSessionId,
     pathname: pathname || location.pathname,
-    isLoaded: clerkLoaded,
-    isSignedIn: clerkSignedIn,
-    sessionId: clerkSessionId,
+    authLoading,
+    user,
+    sessionReady,
+    establishError,
+    bootError,
   });
-  const clerkEstablishing = clerkReady
-    && clerkReadyForEstablish
-    && (!user || !sessionReady)
-    && !establishError;
+
+  useEffect(() => {
+    resetNavigateGuard();
+  }, []);
 
   useEffect(() => subscribeClerkEstablishError(setEstablishError), []);
 
   useEffect(() => {
-    if (!user || !sessionReady) {
+    if (uiState !== 'REDIRECTING') {
       navigatedRef.current = false;
       return;
     }
@@ -83,16 +90,8 @@ function LoginPageView({
       stateFrom: location.state?.from,
       search: location.search,
     });
-    navigateAfterAuth(navigate, target);
-  }, [authLoading, user, sessionReady, navigate, location.state, location.search]);
-
-  if (bootError) {
-    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
-  }
-
-  if (authLoading) {
-    return <BootScreen onRefresh={() => retryBoot()} />;
-  }
+    navigateOnce(navigate, target);
+  }, [uiState, authLoading, navigate, location.state, location.search]);
 
   const asideLinks = (
     <>
@@ -107,6 +106,22 @@ function LoginPageView({
     </>
   );
 
+  if (uiState === 'BOOT_ERROR') {
+    return (
+      <>
+        <AppBootError message={bootError} onRefresh={() => retryBoot()} />
+        <ClearSessionCookiesButton bootError />
+      </>
+    );
+  }
+
+  if (uiState === 'BOOT_LOADING') {
+    return <BootScreen onRefresh={() => retryBoot()} />;
+  }
+
+  const showSignInShell = uiState === 'SHOW_SIGN_IN' || uiState === 'ESTABLISHING';
+  const showRecovery = uiState !== 'SHOW_SIGN_IN';
+
   return (
     <>
       <AuthMarketingShell subtitle={loginCopy.subtitle} asideLinks={asideLinks}>
@@ -116,26 +131,51 @@ function LoginPageView({
           </p>
         ) : (
           <>
-            {establishError ? (
+            {uiState === 'ESTABLISH_ERROR' && establishError ? (
               <div
                 className="mb-4 rounded-lg border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-100 text-center"
                 role="alert"
               >
                 <p className="font-medium">Workspace session failed</p>
                 <p className="mt-1 text-red-100/90">{establishError.message}</p>
+                {establishError.stage ? (
+                  <p className="mt-1 text-xs text-red-200/70">Stage: {establishError.stage}</p>
+                ) : null}
+                {establishError.debugCode ? (
+                  <p className="mt-1 text-xs text-red-200/70">{establishError.debugCode}</p>
+                ) : null}
               </div>
             ) : null}
-            {clerkEstablishing ? (
+            {showSignInShell ? (
+              <div className="relative">
+                <ClerkSignInBlock />
+                {uiState === 'ESTABLISHING' ? (
+                  <div
+                    className="absolute inset-0 z-[310] flex min-h-[12rem] flex-col items-center justify-center gap-3 rounded-lg bg-[var(--brand-panel-teal,#0B3B31)]/90 py-8"
+                    aria-live="polite"
+                    aria-busy="true"
+                  >
+                    <Spinner size="lg" />
+                    <p className="text-sm text-white/80 text-center">Opening your workspace…</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : uiState === 'REDIRECTING' ? (
               <div className="flex min-h-[12rem] flex-col items-center justify-center gap-3 py-8">
                 <Spinner size="lg" />
-                <p className="text-sm text-white/80 text-center">Opening your workspace…</p>
+                <p className="text-sm text-white/80 text-center">Redirecting…</p>
               </div>
-            ) : (
-              <ClerkSignInBlock />
-            )}
+            ) : null}
           </>
         )}
-        <ClearSessionCookiesButton bootError={Boolean(bootError) || Boolean(establishError)} />
+        {showRecovery ? (
+          <ClearSessionCookiesButton
+            bootError={Boolean(bootError) || Boolean(establishError)}
+            stuckLogin={uiState === 'ESTABLISHING' || uiState === 'ESTABLISH_ERROR'}
+          />
+        ) : (
+          <ClearSessionCookiesButton bootError={false} />
+        )}
       </AuthMarketingShell>
       <InstallGuideModal isOpen={installGuideOpen} onClose={() => setInstallGuideOpen(false)} />
     </>

@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured, getPinnedClerkOrganizationId } from '../../config/clerk';
 import { isAuthSite } from '../../config/siteMode';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+import { externalRedirectOnce } from '../../lib/postLoginRedirect';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
 import {
   clearClerkEstablishError,
@@ -79,7 +80,7 @@ function ClerkSessionBridgeInner() {
       return undefined;
     }
     redirectedRef.current = true;
-    window.location.replace(target);
+    externalRedirectOnce(target);
     return undefined;
   }, [user?._id, sessionReady]);
 
@@ -139,7 +140,11 @@ function ClerkSessionBridgeInner() {
             }, ESTABLISH_RETRY_MS);
             return;
           }
-          setClerkEstablishError(tokenResult.error);
+          setClerkEstablishError({
+            ...tokenResult.error,
+            stage: 'clerk-token',
+            debugCode: tokenResult.code || tokenResult.debugCode,
+          });
           if (!tokenResult.retryable) {
             clearEstablishInflight();
             try {
@@ -170,7 +175,7 @@ function ClerkSessionBridgeInner() {
             'Could not start your CoreKnot session after Clerk sign-in.',
           );
           if (status === 401 || status === 403) {
-            setClerkEstablishError({ status, message });
+            setClerkEstablishError({ status, message, stage: 'establish' });
             clearEstablishInflight();
             try {
               await signOutRef.current();
@@ -185,7 +190,7 @@ function ClerkSessionBridgeInner() {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
           } else {
-            setClerkEstablishError({ status, message });
+            setClerkEstablishError({ status, message, stage: 'establish' });
           }
           return;
         }
@@ -208,7 +213,7 @@ function ClerkSessionBridgeInner() {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
           } else {
-            setClerkEstablishError({ message });
+            setClerkEstablishError({ message, stage: 'unknown' });
           }
           return;
         }

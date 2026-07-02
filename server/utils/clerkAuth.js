@@ -1,6 +1,6 @@
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
+const crypto = require('crypto');
 const User = require('../models/User');
-const { getDefaultSeedPassword } = require('./defaultPassword');
 
 const MOCK_SECRET = 'mock_clerk_secret';
 
@@ -84,7 +84,7 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
     const createPayload = {
       name: profile.name || email.split('@')[0],
       email,
-      password: getDefaultSeedPassword(),
+      password: crypto.randomBytes(32).toString('hex'),
       mustChangePassword: true,
       clerkId: profile.clerkUserId,
     };

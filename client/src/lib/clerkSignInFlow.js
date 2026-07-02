@@ -28,3 +28,42 @@ export function isClerkReadyForCoreKnotEstablish({
   if (isClerkSignInSubflowPath(pathname)) return false;
   return true;
 }
+
+/**
+ * Exhaustive login UI states for auth host.
+ * @returns {'BOOT_ERROR'|'BOOT_LOADING'|'ESTABLISH_ERROR'|'ESTABLISHING'|'REDIRECTING'|'SHOW_SIGN_IN'}
+ */
+export function computeLoginUiState({
+  clerkReady,
+  clerkLoaded,
+  clerkSignedIn,
+  clerkSessionId,
+  pathname,
+  authLoading,
+  user,
+  sessionReady,
+  establishError,
+  bootError,
+}) {
+  if (bootError) return 'BOOT_ERROR';
+  if (!clerkReady) return 'SHOW_SIGN_IN';
+  if (!clerkLoaded) return 'BOOT_LOADING';
+  if (establishError) return 'ESTABLISH_ERROR';
+  if (user && sessionReady) return 'REDIRECTING';
+
+  const readyForEstablish = isClerkReadyForCoreKnotEstablish({
+    pathname,
+    isLoaded: clerkLoaded,
+    isSignedIn: clerkSignedIn,
+    sessionId: clerkSessionId,
+  });
+
+  if (readyForEstablish && (!user || !sessionReady)) {
+    return 'ESTABLISHING';
+  }
+
+  // Session probe — don't tear down SignIn while user is typing credentials
+  if (authLoading && !clerkSignedIn) return 'BOOT_LOADING';
+
+  return 'SHOW_SIGN_IN';
+}

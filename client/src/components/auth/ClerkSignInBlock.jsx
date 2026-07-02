@@ -31,6 +31,8 @@ function ClerkSignInInner() {
   const { isLoaded, isSignedIn } = useAuth();
   const location = useLocation();
   const clerkRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
+  const appearance = useMemo(() => clerkAuthAppearance, []);
+  const localization = useMemo(() => clerkAuthLocalization, []);
   const inClerkSubflow = isClerkSignInSubflowPath(location.pathname);
 
   if (isLoaded && isSignedIn && !inClerkSubflow) {
@@ -54,8 +56,8 @@ function ClerkSignInInner() {
         signUpUrl="/register"
         fallbackRedirectUrl={clerkRedirect}
         forceRedirectUrl={clerkRedirect}
-        appearance={clerkAuthAppearance}
-        localization={clerkAuthLocalization}
+        appearance={appearance}
+        localization={localization}
       />
     </div>
   );

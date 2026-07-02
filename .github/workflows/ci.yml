@@ -189,3 +189,24 @@ jobs:
           E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
           E2E_BASE_URL: http://127.0.0.1:4173
+
+  production-auth-smoke:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.SKIP_PRODUCTION_AUTH_E2E != '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Production auth smoke
+        run: node e2e/run-production-auth.mjs
+        working-directory: coreknot/Taskmaster
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}

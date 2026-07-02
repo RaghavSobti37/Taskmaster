@@ -30,6 +30,7 @@ Google Identity Services (GIS) only allows the button/One Tap on origins listed 
 
    | Origin |
    |--------|
+   | `https://clerk.tsccoreknot.com` | Clerk OAuth callback host |
    | `https://auth.tsccoreknot.com` |
    | `https://tsccoreknot.com` |
    | `https://www.tsccoreknot.com` |
@@ -58,6 +59,19 @@ Google Identity Services (GIS) only allows the button/One Tap on origins listed 
 ---
 
 ## 2. Clerk Dashboard (confirm — usually already correct)
+
+### Sign-in checklist (production login)
+
+| Check | Where |
+|-------|--------|
+| Email enabled as **first factor** (not contact-only) | Configure → Email, Phone, Username |
+| **Force organization selection** OFF (domain-only policy) | Configure → Organizations |
+| Google SSO uses custom credentials (section below) | SSO connections → Google |
+| `pk_live_` on Vercel auth build matches `sk_live_` on Render | API Keys |
+| Frontend API proxy URL registered | Domains → Advanced → Proxy (`https://tsccoreknot.com/__clerk`) |
+| Pinned org exists if `VITE_CLERK_ORGANIZATION_ID` set | Organizations |
+
+**Verify identifier step:** DevTools → Network → filter `sign_ins` → after Continue, request body must include email (not `identifier: null`).
 
 **SSO connections → Google → Use custom credentials**
 

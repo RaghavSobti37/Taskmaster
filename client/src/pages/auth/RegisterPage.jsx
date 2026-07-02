@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,49 +11,87 @@ import { isClerkConfigured } from '../../config/clerk';
 import { registerCopy } from '../../constants/marketingContent';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
+import { computeLoginUiState } from '../../lib/clerkSignInFlow';
+import { Spinner } from '../../components/ui/Spinner';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 export default function RegisterPage() {
   if (!isClerkConfigured()) {
-    return <RegisterPageView clerkLoaded clerkSignedIn={false} />;
+    return <RegisterPageView clerkLoaded clerkSignedIn={false} clerkSessionId={null} pathname="/register" />;
   }
   return <RegisterPageWithClerk />;
 }
 
 function RegisterPageWithClerk() {
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
-  return <RegisterPageView clerkLoaded={clerkLoaded} clerkSignedIn={clerkSignedIn} />;
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn, sessionId: clerkSessionId } = useClerkAuth();
+  const location = useLocation();
+  return (
+    <RegisterPageView
+      clerkLoaded={clerkLoaded}
+      clerkSignedIn={clerkSignedIn}
+      clerkSessionId={clerkSessionId}
+      pathname={location.pathname}
+    />
+  );
 }
 
-function RegisterPageView({ clerkLoaded, clerkSignedIn }) {
+function RegisterPageView({
+  clerkLoaded,
+  clerkSignedIn,
+  clerkSessionId = null,
+  pathname = '/register',
+}) {
   const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const navigatedRef = useRef(false);
+  const [establishError, setEstablishError] = useState(null);
   const clerkReady = isClerkConfigured();
-  const clerkEstablishing = clerkReady && clerkLoaded && clerkSignedIn && (!user || !sessionReady);
+
+  const uiState = computeLoginUiState({
+    clerkReady,
+    clerkLoaded,
+    clerkSignedIn,
+    clerkSessionId,
+    pathname,
+    authLoading,
+    user,
+    sessionReady,
+    establishError,
+    bootError,
+  });
 
   useEffect(() => {
-    if (!user || !sessionReady) {
+    return subscribeClerkEstablishError(setEstablishError);
+  }, []);
+
+  useEffect(() => {
+    if (uiState !== 'REDIRECTING') {
       navigatedRef.current = false;
       return;
     }
-    if (authLoading || navigatedRef.current) return;
+    if (navigatedRef.current) return;
     navigatedRef.current = true;
     const target = resolveLoginReturnPath({
       stateFrom: location.state?.from,
       search: location.search,
     });
     navigateAfterAuth(navigate, target);
-  }, [authLoading, user, sessionReady, navigate, location.state, location.search]);
+  }, [uiState, navigate, location.state, location.search]);
 
-  if (bootError) {
-    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
+  if (uiState === 'BOOT_ERROR') {
+    return (
+      <>
+        <AppBootError message={bootError} onRefresh={() => retryBoot()} />
+        <ClearSessionCookiesButton bootError stuckLogin className="mt-4" />
+      </>
+    );
   }
 
-  if (authLoading || clerkEstablishing) {
+  if (uiState === 'BOOT_LOADING') {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
@@ -65,6 +103,10 @@ function RegisterPageView({ clerkLoaded, clerkSignedIn }) {
       </Link>
     </>
   );
+
+  const showSignUp = uiState === 'SHOW_SIGN_IN' || uiState === 'ESTABLISHING';
+  const showEstablishOverlay = uiState === 'ESTABLISHING';
+  const showEstablishError = uiState === 'ESTABLISH_ERROR';
 
   return (
     <AuthMarketingShell
@@ -78,8 +120,26 @@ function RegisterPageView({ clerkLoaded, clerkSignedIn }) {
         </p>
       ) : (
         <>
-          <ClerkSignUpBlock />
-          <ClearSessionCookiesButton bootError={Boolean(bootError)} />
+          {showEstablishError && (
+            <p className="mb-3 text-sm text-red-200 text-center" role="alert">
+              {establishError?.message || 'Could not finish sign-up.'}
+              {establishError?.stage ? ` (${establishError.stage})` : ''}
+            </p>
+          )}
+          <div className="relative">
+            {showSignUp && <ClerkSignUpBlock />}
+            {showEstablishOverlay && (
+              <div className="absolute inset-0 z-[310] flex items-center justify-center bg-black/40 rounded-xl">
+                <Spinner className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          {(showEstablishError || showEstablishOverlay) && (
+            <ClearSessionCookiesButton stuckLogin className="mt-4" />
+          )}
+          {!showEstablishOverlay && !showEstablishError && (
+            <ClearSessionCookiesButton bootError={Boolean(bootError)} />
+          )}
         </>
       )}
     </AuthMarketingShell>

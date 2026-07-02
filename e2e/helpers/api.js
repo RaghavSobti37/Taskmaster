@@ -37,6 +37,11 @@ export async function apiLogin(api, { email, password }) {
   const res = await api.post(`${getApiBase()}/api/auth/login`, {
     data: { email, password },
   });
+  if (res.status() === 410) {
+    throw new Error(
+      'API password login disabled (Clerk-only). Use browser Clerk sign-in or set ALLOW_LEGACY_LOGIN=true for local API setup.',
+    );
+  }
   if (!res.ok()) {
     const body = await res.text();
     throw new Error(`API login failed (${res.status()}): ${body}`);

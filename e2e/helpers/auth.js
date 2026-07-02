@@ -2,8 +2,6 @@
 import { getTestUserCreds } from './creds.js';
 import { getApiBase } from './api.js';
 
-const LOGIN_RETRY_DELAYS_MS = [0, 1_500, 3_000];
-
 /**
  * Clerk SignIn on auth.tsccoreknot.com (identifier → password → continue).
  * @param {import('@playwright/test').Page} page
@@ -50,7 +48,7 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
 }
 
 /**
- * Sign in via the login page (legacy form or Clerk).
+ * Sign in via Clerk on auth host (legacy password form removed in production).
  * @param {import('@playwright/test').Page} page
  * @param {{ email: string, password: string, returnPath?: string, loginUrl?: string, expectHost?: string }} creds
  */
@@ -65,58 +63,7 @@ export async function login(page, { email, password, returnPath, loginUrl, expec
       ? `/login?redirect=${encodeURIComponent(returnPath)}`
       : '/login';
 
-  const loginError = page.getByText(/authentication failed|too many login attempts|couldn't find your account/i);
-  let lastError = 'Login failed';
-
-  for (let attempt = 0; attempt < LOGIN_RETRY_DELAYS_MS.length; attempt += 1) {
-    if (LOGIN_RETRY_DELAYS_MS[attempt] > 0) {
-      await page.waitForTimeout(LOGIN_RETRY_DELAYS_MS[attempt]);
-    }
-
-    await page.goto(loginPath, { waitUntil: 'domcontentloaded' });
-
-    const legacyUser = page.locator('input[autocomplete="username"]');
-    const clerkShell = page.locator('[data-clerk-sign-in-shell], .cl-rootBox, input[name="identifier"]');
-
-    const formKind = await Promise.race([
-      legacyUser.waitFor({ state: 'visible', timeout: 12_000 }).then(() => 'legacy'),
-      clerkShell.first().waitFor({ state: 'visible', timeout: 12_000 }).then(() => 'clerk'),
-    ]).catch(() => null);
-
-    if (formKind === 'clerk') {
-      await loginWithClerk(page, { email, password, loginUrl: loginPath, expectHost });
-      return;
-    }
-
-    if (formKind !== 'legacy') {
-      lastError = 'Login form did not appear';
-      continue;
-    }
-
-    await legacyUser.fill(email);
-    await page.locator('input[autocomplete="current-password"]').fill(password);
-    await page.locator('button[type="submit"]').click();
-
-    const outcome = await Promise.race([
-      page
-        .waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 30_000 })
-        .then(() => 'ok'),
-      loginError.waitFor({ state: 'visible', timeout: 30_000 }).then(() => 'login_error'),
-    ]);
-
-    if (outcome === 'ok') {
-      await dismissOnboardingTourIfVisible(page);
-      return;
-    }
-
-    lastError = (await loginError.textContent())?.trim() || 'Login failed';
-    const transient =
-      /too many login attempts/i.test(lastError) ||
-      /network|fetch|proxy|connection|reset|refused/i.test(lastError);
-    if (!transient) break;
-  }
-
-  throw new Error(`${lastError} — check E2E credentials and API health`);
+  await loginWithClerk(page, { email, password, loginUrl: loginPath, expectHost });
 }
 
 /**

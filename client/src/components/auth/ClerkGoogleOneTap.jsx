@@ -19,7 +19,18 @@ function ClerkGoogleOneTapInner() {
   const { pathname } = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  if (authLoading || user) return null;
+  const suppressOneTap = (() => {
+    try {
+      const raw = sessionStorage.getItem('coreknot_just_logged_out');
+      if (!raw) return false;
+      const ts = Number(raw);
+      return Number.isFinite(ts) && Date.now() - ts < 10_000;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (authLoading || user || suppressOneTap) return null;
   if (!isPublicThemeRoute(pathname)) return null;
 
   const clerkRedirect = resolveClerkForceRedirectUrl();

@@ -30,9 +30,9 @@ export function markSessionResetDone() {
   localStorage.setItem(SESSION_RESET_DONE_KEY, '1');
 }
 
-/** Show until user clears once; always offer when boot is failing. */
-export function shouldOfferSessionReset({ bootError = false } = {}) {
-  if (bootError) return true;
+/** Show until user clears once; always offer when boot is failing or login is stuck. */
+export function shouldOfferSessionReset({ bootError = false, stuckLogin = false } = {}) {
+  if (bootError || stuckLogin) return true;
   return !hasCompletedSessionReset();
 }
 

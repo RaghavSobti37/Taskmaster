@@ -34,7 +34,18 @@ const {
   shouldEnforceClerkOrganization,
 } = require('../../../utils/organizationAccess');
 
-const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
+const { assertEstablishAllowed } = require('../utils/establishAccess');
+const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
+
+const blockLegacyAuth = (res) => {
+  if (isClerkProductionAuth()) {
+    respondClerkOnlyAuth(res);
+    return true;
+  }
+  return false;
+};
+
+const getSessionCookie = (req) => req.cookies?.[require('../../../utils/authCookie').COOKIE_NAME] || null;
 
 const { isE2eTestUser } = require('../../../utils/e2eTestUsers');
 
@@ -117,6 +128,7 @@ const resolveSignupDepartment = async (departmentId) => {
 };
 
 exports.register = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { name, email, password, gender, departmentId } = req.body;
 
@@ -176,6 +188,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { email, password } = req.body;
 
@@ -244,6 +257,7 @@ exports.login = async (req, res) => {
 };
 
 exports.googleLogin = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { tokenId } = req.body;
     const ticket = await oauth2Client.verifyIdToken({
@@ -324,6 +338,18 @@ exports.getMe = async (req, res) => {
   }
 };
 
+/** Public auth deploy self-check — no secrets. */
+exports.getAuthConfig = (req, res) => {
+  const pk = String(process.env.CLERK_PUBLISHABLE_KEY || '').trim();
+  const publishableKeyPrefix = pk.length >= 12 ? pk.slice(0, 12) : pk || null;
+  return res.json({
+    clerkConfigured: isClerkConfigured(),
+    publishableKeyPrefix,
+    apiGitSha: String(process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || '').slice(0, 7) || 'unknown',
+    cookieDomain: process.env.COOKIE_DOMAIN || '.tsccoreknot.com',
+  });
+};
+
 /** Silent session bootstrap — 200 with authenticated:false when logged out (no 401 noise in DevTools). */
 exports.getSession = async (req, res) => {
   try {
@@ -351,12 +377,18 @@ exports.getSession = async (req, res) => {
   }
 };
 
-/** Session JWT for cross-origin Socket.io (httpOnly cookie not sent to Render API host). */
+/** Short-lived scoped JWT for Socket.io — not the session cookie value. */
 exports.getRealtimeToken = (req, res) => {
-  const token = getTokenFromRequest(req);
-  if (!token) {
-    return apiError(res, 'Not authorized', 401);
+  const secret = process.env.SOCKET_JWT_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    return apiError(res, 'Realtime auth not configured', 503);
   }
+  const jti = crypto.randomBytes(16).toString('hex');
+  const token = jwt.sign(
+    { id: req.user._id.toString(), scope: 'realtime', jti },
+    secret,
+    { expiresIn: '5m' },
+  );
   return res.json({ token });
 };
 
@@ -410,6 +442,9 @@ exports.changeRequiredPassword = async (req, res) => {
 };
 
 exports.googleAuthRedirect = (req, res) => {
+  if (isClerkProductionAuth()) {
+    return res.redirect(`${resolveAuthFrontendUrl()}/login`);
+  }
   if (req.headers['user-agent'] && req.headers['user-agent'].toLowerCase().includes('axios')) {
     return res.status(401).json({ error: 'Unauthorized API access' });
   }
@@ -474,6 +509,10 @@ exports.googleAuthCallback = async (req, res) => {
       return res.redirect(`${resolveAuthFrontendUrl()}/auth/google/success?link=success`);
     }
 
+    if (isClerkProductionAuth()) {
+      return res.redirect(`${resolveAuthFrontendUrl()}/login`);
+    }
+
     if (process.env.NODE_ENV === 'production' && emailLower !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && state !== 'connect') {
       return res.redirect(`${resolveAuthFrontendUrl()}/login?error=unauthorized_domain`);
     }
@@ -510,6 +549,7 @@ exports.googleAuthCallback = async (req, res) => {
 };
 
 exports.oauthEstablishSession = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { ticket } = req.body;
     if (typeof ticket !== 'string' || !ticket.trim()) {
@@ -552,6 +592,8 @@ exports.clerkEstablishSession = async (req, res) => {
       return res.status(401).json({ error: 'Invalid Clerk session' });
     }
 
+    assertEstablishAllowed(profile);
+
     const clerkOrganizationId = resolveClerkOrganizationId({
       bodyOrganizationId: req.body?.organizationId,
       tokenOrganizationId: profile.clerkOrganizationId,
@@ -593,8 +635,7 @@ exports.clerkEstablishSession = async (req, res) => {
 };
 
 const currentSessionDecoded = (req) => {
-  const { getTokenFromRequest } = require('../../../utils/authCookie');
-  const token = getTokenFromRequest(req);
+  const token = getSessionCookie(req);
   if (!token) return null;
   try {
     return verifySessionToken(token);
@@ -683,6 +724,7 @@ exports.revokeOtherSessions = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { email } = req.body;
 
@@ -736,6 +778,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
+  if (blockLegacyAuth(res)) return;
   try {
     const { token, newPassword, confirmPassword } = req.body;
 

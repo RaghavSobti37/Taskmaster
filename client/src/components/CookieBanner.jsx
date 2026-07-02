@@ -6,18 +6,23 @@ import {
   rejectOptionalCookies,
 } from '../lib/cookieConsent';
 import { readMotionMs } from '../hooks/transitions';
+import { isAuthSite } from '../config/siteMode';
 
 export default function CookieBanner() {
+  const hideOnAuth = isAuthSite();
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (hideOnAuth) return;
     const needsConsent = !readCookieConsent();
     setVisible(needsConsent);
     if (needsConsent) {
       requestAnimationFrame(() => setOpen(true));
     }
-  }, []);
+  }, [hideOnAuth]);
+
+  if (hideOnAuth) return null;
 
   const dismiss = () => {
     setOpen(false);
@@ -37,7 +42,7 @@ export default function CookieBanner() {
       <div className="rounded-2xl border border-border bg-card p-5 shadow-2xl">
         <p className="text-sm font-bold text-foreground mb-1">Cookies on CoreKnot</p>
         <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-4">
-          Session cookies keep you signed in. With your permission we load PostHog and Vercel Analytics to improve reliability.
+          Session cookies keep you signed in. With your permission we load PostHog, Microsoft Clarity, and Vercel Analytics to improve reliability.
           {' '}
           <Link to="/privacy" className="underline text-[var(--color-brand-teal)]">
             Privacy policy

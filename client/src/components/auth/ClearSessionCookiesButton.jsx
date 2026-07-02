@@ -10,11 +10,11 @@ const btnClass =
 /**
  * One-time troubleshooting control — clears stale CoreKnot + Clerk session cookies.
  */
-export default function ClearSessionCookiesButton({ bootError = false }) {
+export default function ClearSessionCookiesButton({ bootError = false, stuckLogin = false }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  if (done || !shouldOfferSessionReset({ bootError })) {
+  if (done || !shouldOfferSessionReset({ bootError, stuckLogin })) {
     return null;
   }
 

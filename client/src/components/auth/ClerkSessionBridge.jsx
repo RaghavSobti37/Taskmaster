@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth as useClerkAuth } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,14 +15,23 @@ const resetEstablishState = () => {
   establishForClerkSession = null;
 };
 
+const ESTABLISH_RETRY_MS = 1500;
+const ESTABLISH_MAX_ATTEMPTS = 5;
+
 /**
  * After Clerk sign-in, exchange Clerk JWT for CoreKnot HttpOnly session cookie.
  * Navigation to app routes is handled by LoginPage once `user` and `sessionReady`.
  */
 export default function ClerkSessionBridge() {
+  if (!isClerkConfigured()) return null;
+  return <ClerkSessionBridgeInner />;
+}
+
+function ClerkSessionBridgeInner() {
   const { isLoaded, isSignedIn, getToken, signOut, userId } = useClerkAuth();
   const { user, sessionReady, login } = useAuth();
   const signOutRef = useRef(signOut);
+  const [establishAttempt, setEstablishAttempt] = useState(0);
 
   useEffect(() => {
     signOutRef.current = signOut;
@@ -53,10 +62,12 @@ export default function ClerkSessionBridge() {
     }
 
     establishForClerkSession = clerkKey;
+    let cancelled = false;
+
     establishInflight = (async () => {
       try {
         const token = await getToken();
-        if (!token) return;
+        if (!token || cancelled) return;
 
         try {
           await axios.post(
@@ -73,6 +84,12 @@ export default function ClerkSessionBridge() {
             } catch {
               // ignore
             }
+            return;
+          }
+          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+            window.setTimeout(() => {
+              if (!cancelled) setEstablishAttempt((n) => n + 1);
+            }, ESTABLISH_RETRY_MS);
           }
           return;
         }
@@ -80,7 +97,11 @@ export default function ClerkSessionBridge() {
         try {
           await login();
         } catch {
-          // login() retries via effect when session cookie is readable
+          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+            window.setTimeout(() => {
+              if (!cancelled) setEstablishAttempt((n) => n + 1);
+            }, ESTABLISH_RETRY_MS);
+          }
           return;
         }
       } finally {
@@ -90,8 +111,19 @@ export default function ClerkSessionBridge() {
       }
     })();
 
-    return undefined;
-  }, [isLoaded, isSignedIn, userId, user, sessionReady, getToken, login]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isLoaded,
+    isSignedIn,
+    userId,
+    user,
+    sessionReady,
+    getToken,
+    login,
+    establishAttempt,
+  ]);
 
   return null;
 }

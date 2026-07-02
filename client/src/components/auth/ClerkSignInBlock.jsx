@@ -31,18 +31,24 @@ function ClerkSignInInner() {
     return null;
   }
 
+  if (!isLoaded) {
+    return (
+      <div className={clerkAuthShellClass}>
+        <ClerkSignInSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className={clerkAuthShellClass}>
-      {!isLoaded ? <ClerkSignInSkeleton /> : null}
-      <div className={isLoaded ? 'w-full' : 'sr-only'}>
-        <SignIn
-          routing="path"
-          path="/login"
-          signUpUrl="/register"
-          appearance={clerkAuthAppearance}
-          localization={clerkAuthLocalization}
-        />
-      </div>
+      <SignIn
+        key="coreknot-sign-in"
+        routing="path"
+        path="/login"
+        signUpUrl="/register"
+        appearance={clerkAuthAppearance}
+        localization={clerkAuthLocalization}
+      />
     </div>
   );
 }

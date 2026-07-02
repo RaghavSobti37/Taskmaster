@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ClerkProvider } from '@clerk/react';
 import {
   getClerkFrontendApiHost,
@@ -7,12 +7,24 @@ import {
   isClerkConfigured,
 } from '../../config/clerk';
 import { clerkAuthAppearance, clerkAuthLocalization } from '../../config/clerkAppearance';
+import { getAppOrigin, getAuthOrigin, getLandingOrigin } from '../../config/siteUrls';
 
 const publishableKey = getClerkPublishableKey();
 const frontendApi = getClerkFrontendApiHost();
 const proxyUrl = getClerkProxyUrl();
 
+const clerkRedirectOrigins = () => {
+  const origins = new Set([
+    getAppOrigin(),
+    getAuthOrigin(),
+    getLandingOrigin(),
+  ]);
+  return [...origins].filter(Boolean);
+};
+
 export default function ClerkAppProvider({ children }) {
+  const allowedRedirectOrigins = useMemo(() => clerkRedirectOrigins(), []);
+
   if (!isClerkConfigured()) {
     return children;
   }
@@ -26,6 +38,7 @@ export default function ClerkAppProvider({ children }) {
       signInUrl="/login"
       signUpUrl="/register"
       afterSignOutUrl="/login"
+      allowedRedirectOrigins={allowedRedirectOrigins}
     >
       {children}
     </ClerkProvider>

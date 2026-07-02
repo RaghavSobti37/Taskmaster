@@ -39,6 +39,8 @@ export default defineConfig(({ mode }) => {
   const posthogAssetsTarget = `https://${posthogRegion}-assets.i.posthog.com`
 
   return {
+  // ponytail: Vercel/Clerk docs often set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY — expose alongside VITE_
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   define: {
     __AGENTATION_ENABLED__: JSON.stringify(agentationEnabled),
   },

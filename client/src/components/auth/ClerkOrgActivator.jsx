@@ -6,6 +6,11 @@ import { getPinnedClerkOrganizationId, isClerkConfigured } from '../../config/cl
  * Pins active Clerk organization for single-org deployments (e.g. The Shakti Collective).
  */
 export default function ClerkOrgActivator() {
+  if (!isClerkConfigured()) return null;
+  return <ClerkOrgActivatorInner />;
+}
+
+function ClerkOrgActivatorInner() {
   const { isLoaded, isSignedIn, orgId } = useAuth();
   const { setActive } = useClerk();
   const pinnedOrgId = getPinnedClerkOrganizationId();

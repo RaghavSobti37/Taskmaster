@@ -48,7 +48,7 @@ function ClerkSignInInner() {
     <div className={clerkAuthShellClass} data-clerk-sign-in-shell>
       <SignIn
         key="coreknot-sign-in"
-        routing="hash"
+        routing="path"
         path="/login"
         signUpUrl="/register"
         fallbackRedirectUrl={dashboardRedirect}

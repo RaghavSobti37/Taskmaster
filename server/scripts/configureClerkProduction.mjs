@@ -5,6 +5,9 @@
  * Usage:
  *   node server/scripts/configureClerkProduction.mjs
  *   node server/scripts/configureClerkProduction.mjs --dry-run
+ *
+ * Google GIS origin errors on auth.tsccoreknot.com also need GCP Console JS origins
+ * (see docs/google-oauth-auth-subdomain.md + verifyGoogleOAuthOrigins.mjs).
  */
 import dotenv from 'dotenv';
 import path from 'path';

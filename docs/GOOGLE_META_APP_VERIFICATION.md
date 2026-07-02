@@ -145,8 +145,13 @@ http://localhost:5000/api/artists/auth/callback/youtube
 **Authorized JavaScript origins:**
 ```
 https://tsccoreknot.com
+https://www.tsccoreknot.com
+https://auth.tsccoreknot.com
+https://landing.tsccoreknot.com
 http://localhost:5173
 ```
+
+See also: `docs/google-oauth-auth-subdomain.md` (Clerk Google One Tap / GSI origin errors on auth subdomain).
 
 **Authorized domains** (OAuth consent screen):
 ```

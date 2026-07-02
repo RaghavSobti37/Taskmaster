@@ -50,6 +50,22 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
   });
 
+  it('keeps Clerk on /login during auth subdomain sign-in until session bridge runs', async () => {
+    import.meta.env.VITE_SITE_MODE = 'auth';
+
+    const { resolveClerkForceRedirectUrl } = await import('./siteUrls.js');
+
+    expect(resolveClerkForceRedirectUrl()).toBe('/login');
+  });
+
+  it('sends Clerk straight to dashboard on app site', async () => {
+    import.meta.env.VITE_SITE_MODE = 'app';
+
+    const { resolveClerkForceRedirectUrl } = await import('./siteUrls.js');
+
+    expect(resolveClerkForceRedirectUrl()).toBe('/dashboard');
+  });
+
   it('links landing subdomain auth CTAs to configured auth host', async () => {
     import.meta.env.VITE_SITE_MODE = 'landing';
     import.meta.env.VITE_APP_URL = 'https://tsccoreknot.com';

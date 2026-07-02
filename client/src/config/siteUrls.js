@@ -88,6 +88,15 @@ export const landingUrl = (path = '/') => joinOrigin(getLandingOrigin(), path);
 export const authUrl = (path = '/login') => joinOrigin(getAuthOrigin(), path);
 export const appUrl = (path = '/dashboard') => joinOrigin(getAppOrigin(), path);
 
+/**
+ * Clerk force-redirect after sign-in. Auth subdomain must stay on /login until
+ * clerk-establish sets the shared cookie — app dashboard URL too early = login loop.
+ */
+export const resolveClerkForceRedirectUrl = () => {
+  if (isAuthSite()) return '/login';
+  return '/dashboard';
+};
+
 /** Post-login / deep links: auth or landing subdomain → full app URL */
 export const resolveAppNavigationTarget = (pathOrUrl) => {
   if (!pathOrUrl) {

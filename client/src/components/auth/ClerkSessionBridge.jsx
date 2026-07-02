@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured } from '../../config/clerk';
 import { isAuthSite } from '../../config/siteMode';
-import { resolveAppNavigationTarget } from '../../config/siteUrls';
+import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
@@ -50,7 +50,7 @@ function ClerkSessionBridgeInner() {
     if (!isAuthSite() || !user?._id || !sessionReady || redirectedRef.current) {
       return undefined;
     }
-    const target = resolveAppNavigationTarget('/dashboard');
+    const target = resolveLoginReturnPath({ search: window.location.search });
     if (!/^https?:\/\//i.test(target)) return undefined;
     try {
       if (new URL(target).origin === window.location.origin) return undefined;

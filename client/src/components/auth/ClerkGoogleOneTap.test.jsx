@@ -47,6 +47,26 @@ describe('ClerkGoogleOneTap', () => {
     );
   });
 
+  it('keeps one-tap on /login for auth subdomain builds', async () => {
+    vi.resetModules();
+    import.meta.env.VITE_SITE_MODE = 'auth';
+    const mod = await import('./ClerkGoogleOneTap.jsx');
+    mockGoogleOneTap.mockClear();
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <mod.default />
+      </MemoryRouter>,
+    );
+    expect(mockGoogleOneTap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        signInForceRedirectUrl: '/login',
+        signUpForceRedirectUrl: '/login',
+      }),
+    );
+    import.meta.env.VITE_SITE_MODE = 'app';
+    vi.resetModules();
+  });
+
   it('does not render on protected app routes', () => {
     renderAt('/dashboard');
     expect(screen.queryByTestId('google-one-tap')).not.toBeInTheDocument();

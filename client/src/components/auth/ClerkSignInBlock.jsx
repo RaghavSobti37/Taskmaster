@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
-import { resolveAppNavigationTarget } from '../../config/siteUrls';
+import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
 import {
   clerkAuthAppearance,
   clerkAuthLocalization,
@@ -27,10 +27,7 @@ export default function ClerkSignInBlock() {
 
 function ClerkSignInInner() {
   const { isLoaded, isSignedIn } = useAuth();
-  const dashboardRedirect = useMemo(
-    () => resolveAppNavigationTarget('/dashboard'),
-    [],
-  );
+  const clerkRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
 
   if (isLoaded && isSignedIn) {
     return null;
@@ -51,8 +48,8 @@ function ClerkSignInInner() {
         routing="path"
         path="/login"
         signUpUrl="/register"
-        fallbackRedirectUrl={dashboardRedirect}
-        forceRedirectUrl={dashboardRedirect}
+        fallbackRedirectUrl={clerkRedirect}
+        forceRedirectUrl={clerkRedirect}
         appearance={clerkAuthAppearance}
         localization={clerkAuthLocalization}
       />

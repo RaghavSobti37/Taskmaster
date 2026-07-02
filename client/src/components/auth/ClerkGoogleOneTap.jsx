@@ -2,6 +2,7 @@ import React from 'react';
 import { GoogleOneTap } from '@clerk/react';
 import { useLocation } from 'react-router-dom';
 import { isClerkConfigured } from '../../config/clerk';
+import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
 import { isPublicThemeRoute } from '../../lib/publicRouteTheme';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -21,10 +22,12 @@ function ClerkGoogleOneTapInner() {
   if (authLoading || user) return null;
   if (!isPublicThemeRoute(pathname)) return null;
 
+  const clerkRedirect = resolveClerkForceRedirectUrl();
+
   return (
     <GoogleOneTap
-      signInForceRedirectUrl="/dashboard"
-      signUpForceRedirectUrl="/dashboard"
+      signInForceRedirectUrl={clerkRedirect}
+      signUpForceRedirectUrl={clerkRedirect}
     />
   );
 }

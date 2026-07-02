@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth as useClerkAuth } from '@clerk/react';
 import { useAuth } from '../../contexts/AuthContext';
 import AppBootError from '../../components/AppBootError';
@@ -11,6 +11,7 @@ import { detectInstallPlatform } from '../../utils/installPlatform';
 import { isClerkConfigured } from '../../config/clerk';
 import { loginCopy } from '../../constants/marketingContent';
 import { navigateAfterAuth } from '../../utils/authNavigation';
+import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -31,6 +32,7 @@ function LoginPageWithClerk() {
 function LoginPageView({ clerkLoaded, clerkSignedIn }) {
   const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const navigatedRef = useRef(false);
   const [installGuideOpen, setInstallGuideOpen] = React.useState(false);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
@@ -44,8 +46,12 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
     }
     if (authLoading || navigatedRef.current) return;
     navigatedRef.current = true;
-    navigateAfterAuth(navigate, '/dashboard');
-  }, [authLoading, user, sessionReady, navigate]);
+    const target = resolveLoginReturnPath({
+      stateFrom: location.state?.from,
+      search: location.search,
+    });
+    navigateAfterAuth(navigate, target);
+  }, [authLoading, user, sessionReady, navigate, location.state, location.search]);
 
   if (bootError) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;

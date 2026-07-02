@@ -31,10 +31,41 @@ const clientIp = (req) => {
   return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
 
+const buildProxyPublicUrl = (req) => {
+  const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  if (forwardedHost) {
+    const host = forwardedHost.replace(/:\d+$/, '');
+    if (host.includes('auth.') || host.includes('landing.')) {
+      return `https://${host}/__clerk`;
+    }
+  }
+  return String(process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL).trim();
+};
+
 const buildTargetUrl = (req) => {
   const suffix = String(req.originalUrl || req.url || '').replace(/^\/__clerk\/?/, '/');
   const base = CLERK_FAPI.startsWith('http') ? CLERK_FAPI : `https://${CLERK_FAPI}`;
   return `${base}${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+};
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_REDIRECTS = 4;
+
+/** Follow Clerk version-pin redirects server-side so browsers get JS body, not 307 to app host. */
+const fetchClerkUpstream = async (startUrl, init) => {
+  let url = startUrl;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    const upstream = await fetch(url, init);
+    if (!REDIRECT_STATUSES.has(upstream.status)) {
+      return upstream;
+    }
+    const location = upstream.headers.get('location');
+    if (!location || hop === MAX_REDIRECTS) {
+      return upstream;
+    }
+    url = new URL(location, url).href;
+  }
+  return fetch(startUrl, init);
 };
 
 const proxyHandler = async (req, res) => {
@@ -54,7 +85,7 @@ const proxyHandler = async (req, res) => {
       headers.set(key, value);
     }
   }
-  headers.set('Clerk-Proxy-Url', String(process.env.CLERK_PROXY_PUBLIC_URL || DEFAULT_PROXY_URL).trim());
+  headers.set('Clerk-Proxy-Url', buildProxyPublicUrl(req));
   headers.set('Clerk-Secret-Key', secret);
   headers.set('X-Forwarded-For', clientIp(req));
 
@@ -74,7 +105,7 @@ const proxyHandler = async (req, res) => {
 
   let upstream;
   try {
-    upstream = await fetch(targetUrl, init);
+    upstream = await fetchClerkUpstream(targetUrl, init);
   } catch (err) {
     const detail = err?.cause?.message || err.message;
     res.status(502).json({ error: 'Clerk upstream unreachable', detail });
@@ -83,9 +114,9 @@ const proxyHandler = async (req, res) => {
 
   res.status(upstream.status);
   upstream.headers.forEach((value, key) => {
-    if (!hopByHop.has(key.toLowerCase())) {
-      res.setHeader(key, value);
-    }
+    const lower = key.toLowerCase();
+    if (hopByHop.has(lower) || lower === 'location') return;
+    res.setHeader(key, value);
   });
 
   const body = await upstream.arrayBuffer();
@@ -97,4 +128,5 @@ router.all(/.*/, proxyHandler);
 
 module.exports = router;
 module.exports.buildTargetUrl = buildTargetUrl;
+module.exports.buildProxyPublicUrl = buildProxyPublicUrl;
 module.exports.DEFAULT_PROXY_URL = DEFAULT_PROXY_URL;

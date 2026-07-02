@@ -7,7 +7,12 @@ import {
   isClerkConfigured,
 } from '../../config/clerk';
 import { clerkAuthAppearance, clerkAuthLocalization } from '../../config/clerkAppearance';
-import { getAppOrigin, getAuthOrigin, getLandingOrigin } from '../../config/siteUrls';
+import {
+  getAppOrigin,
+  getAuthOrigin,
+  getLandingOrigin,
+  resolveAppNavigationTarget,
+} from '../../config/siteUrls';
 
 const publishableKey = getClerkPublishableKey();
 const frontendApi = getClerkFrontendApiHost();
@@ -24,6 +29,10 @@ const clerkRedirectOrigins = () => {
 
 export default function ClerkAppProvider({ children }) {
   const allowedRedirectOrigins = useMemo(() => clerkRedirectOrigins(), []);
+  const postAuthRedirect = useMemo(
+    () => resolveAppNavigationTarget('/dashboard'),
+    [],
+  );
 
   if (!isClerkConfigured()) {
     return children;
@@ -38,6 +47,8 @@ export default function ClerkAppProvider({ children }) {
       signInUrl="/login"
       signUpUrl="/register"
       afterSignOutUrl="/login"
+      signInForceRedirectUrl={postAuthRedirect}
+      signUpForceRedirectUrl={postAuthRedirect}
       allowedRedirectOrigins={allowedRedirectOrigins}
     >
       {children}

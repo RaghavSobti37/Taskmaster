@@ -47,11 +47,11 @@ export default function AuthMarketingShell({
             </aside>
 
             <section
-              className="order-1 relative flex items-center justify-center px-5 py-7 sm:px-7 sm:py-8 md:order-2 md:px-9 md:py-10"
+              className="order-1 relative isolate flex items-center justify-center overflow-hidden px-5 py-7 sm:px-7 sm:py-8 md:order-2 md:px-9 md:py-10"
               style={{ backgroundColor: AUTH_PANEL_TEAL }}
             >
               <AuthSparkleWatermark />
-              <div className="relative z-10 mx-auto w-full max-w-[22rem]">
+              <div className="relative z-10 mx-auto w-full max-w-[22rem] min-h-[12rem]">
                 {children}
               </div>
             </section>

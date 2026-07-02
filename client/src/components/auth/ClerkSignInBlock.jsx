@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
+import { resolveAppNavigationTarget } from '../../config/siteUrls';
 import {
   clerkAuthAppearance,
   clerkAuthLocalization,
@@ -26,6 +27,10 @@ export default function ClerkSignInBlock() {
 
 function ClerkSignInInner() {
   const { isLoaded, isSignedIn } = useAuth();
+  const dashboardRedirect = useMemo(
+    () => resolveAppNavigationTarget('/dashboard'),
+    [],
+  );
 
   if (isLoaded && isSignedIn) {
     return null;
@@ -33,19 +38,21 @@ function ClerkSignInInner() {
 
   if (!isLoaded) {
     return (
-      <div className={clerkAuthShellClass}>
+      <div className={clerkAuthShellClass} data-clerk-sign-in-shell>
         <ClerkSignInSkeleton />
       </div>
     );
   }
 
   return (
-    <div className={clerkAuthShellClass}>
+    <div className={clerkAuthShellClass} data-clerk-sign-in-shell>
       <SignIn
         key="coreknot-sign-in"
-        routing="path"
+        routing="hash"
         path="/login"
         signUpUrl="/register"
+        fallbackRedirectUrl={dashboardRedirect}
+        forceRedirectUrl={dashboardRedirect}
         appearance={clerkAuthAppearance}
         localization={clerkAuthLocalization}
       />

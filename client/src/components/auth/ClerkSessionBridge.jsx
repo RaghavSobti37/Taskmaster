@@ -3,6 +3,8 @@ import { useAuth as useClerkAuth } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured } from '../../config/clerk';
+import { isAuthSite } from '../../config/siteMode';
+import { resolveAppNavigationTarget } from '../../config/siteUrls';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
@@ -29,13 +31,36 @@ export default function ClerkSessionBridge() {
 
 function ClerkSessionBridgeInner() {
   const { isLoaded, isSignedIn, getToken, signOut, userId } = useClerkAuth();
-  const { user, sessionReady, login } = useAuth();
+  const { user, sessionReady, login, applySessionUser } = useAuth();
   const signOutRef = useRef(signOut);
+  const redirectedRef = useRef(false);
   const [establishAttempt, setEstablishAttempt] = useState(0);
 
   useEffect(() => {
     signOutRef.current = signOut;
   }, [signOut]);
+
+  useEffect(() => {
+    if (!sessionReady) {
+      redirectedRef.current = false;
+    }
+  }, [sessionReady]);
+
+  useEffect(() => {
+    if (!isAuthSite() || !user?._id || !sessionReady || redirectedRef.current) {
+      return undefined;
+    }
+    const target = resolveAppNavigationTarget('/dashboard');
+    if (!/^https?:\/\//i.test(target)) return undefined;
+    try {
+      if (new URL(target).origin === window.location.origin) return undefined;
+    } catch {
+      return undefined;
+    }
+    redirectedRef.current = true;
+    window.location.replace(target);
+    return undefined;
+  }, [user?._id, sessionReady]);
 
   useEffect(() => {
     if (!isClerkConfigured()) return undefined;
@@ -69,8 +94,9 @@ function ClerkSessionBridgeInner() {
         const token = await getToken();
         if (!token || cancelled) return;
 
+        let establishResponse;
         try {
-          await axios.post(
+          establishResponse = await axios.post(
             '/api/auth/clerk-establish',
             { token },
             { withCredentials: true, ...AXIOS_SKIP_TOAST },
@@ -87,6 +113,7 @@ function ClerkSessionBridgeInner() {
             return;
           }
           if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+            establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
@@ -94,10 +121,15 @@ function ClerkSessionBridgeInner() {
           return;
         }
 
+        if (establishResponse?.data?._id) {
+          applySessionUser(establishResponse.data);
+        }
+
         try {
           await login();
         } catch {
           if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+            establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
             }, ESTABLISH_RETRY_MS);
@@ -122,6 +154,7 @@ function ClerkSessionBridgeInner() {
     sessionReady,
     getToken,
     login,
+    applySessionUser,
     establishAttempt,
   ]);
 

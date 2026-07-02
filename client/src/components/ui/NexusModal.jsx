@@ -83,9 +83,17 @@ export const NexusModal = ({
     onClose();
   };
 
+  // ponytail: child modals (Daily Log, etc.) ship their own <form> — outer form steals submit
+  const usesShellForm = showFooter || isConfirm;
+  const ShellWrapper = usesShellForm ? 'form' : 'div';
+  const shellWrapperProps = {
+    className: 'flex flex-col flex-1 min-h-0 overflow-hidden',
+    ...(usesShellForm ? { onSubmit: handleFormSubmit } : {}),
+  };
+
   return (
     <ModalShell isOpen={isOpen} onClose={onClose} size={shellSize}>
-      <form className="flex flex-col flex-1 min-h-0 overflow-hidden" onSubmit={handleFormSubmit}>
+      <ShellWrapper {...shellWrapperProps}>
         <ModalHeader
           title={title}
           subtitle={subtitle}
@@ -124,7 +132,7 @@ export const NexusModal = ({
             )}
           </ModalFooter>
         ) : null}
-      </form>
+      </ShellWrapper>
     </ModalShell>
   );
 };

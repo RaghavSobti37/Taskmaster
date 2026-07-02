@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Staging smoke gate (migrated setup): Express + Nest health, sync proxy route.
+ * Staging smoke gate: Express + Nest health, sync proxy, dependency depth.
  * Usage: npm run staging:readiness
  */
 const fs = require('fs');
@@ -55,18 +55,58 @@ const readHosts = () => {
   }
 };
 
-const checkHealth = async (label, baseUrl) => {
-  if (!baseUrl || baseUrl.includes('YOUR-')) {
-    pushError(`${label}: URL not configured`);
-    return;
-  }
+const checkExpressHealth = async (baseUrl) => {
   const url = `${baseUrl.replace(/\/$/, '')}/api/health`;
   const result = await fetchJson(url);
-  if (result.status === 200 && result.json?.ok) {
-    ok(`${label} healthy (${url})`);
+  const json = result.json;
+  if (result.status !== 200 || !json?.ok) {
+    pushError(`Express staging unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
     return;
   }
-  pushError(`${label} unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
+  if (json.status !== 'HEALTHY') {
+    pushError(`Express status is ${json.status} (expected HEALTHY)`);
+    return;
+  }
+  const mongo = json.dependencies?.mongodb;
+  if (mongo?.state !== 'connected') {
+    pushError(`Express MongoDB ${mongo?.state || 'unknown'} (expected connected)`);
+    return;
+  }
+  const redis = json.dependencies?.redis;
+  if (redis?.ok !== true) {
+    pushError(`Express Redis ${redis?.state || 'unknown'} (expected connected)`);
+    return;
+  }
+  const sha = json.build?.commitSha;
+  if (sha) ok(`Express staging healthy (${url}) commit ${sha}`);
+  else ok(`Express staging healthy (${url})`);
+};
+
+const checkNestHealth = async (baseUrl) => {
+  const url = `${baseUrl.replace(/\/$/, '')}/api/health`;
+  const result = await fetchJson(url);
+  const json = result.json;
+  if (result.status !== 200 || !json?.ok) {
+    pushError(`Nest staging unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
+    return;
+  }
+  if (json.status !== 'HEALTHY') {
+    pushError(`Nest status is ${json.status} (expected HEALTHY, not STARTING)`);
+    return;
+  }
+  const pg = json.dependencies?.postgres;
+  if (pg?.state !== 'connected') {
+    pushError(`Nest Postgres ${pg?.state || 'unknown'} (expected connected)`);
+    return;
+  }
+  const redis = json.dependencies?.redis;
+  if (redis?.ok !== true) {
+    pushError(`Nest Redis ${redis?.state || 'unknown'} (expected connected)`);
+    return;
+  }
+  const sha = json.build?.commitSha;
+  if (sha) ok(`Nest staging healthy (${url}) commit ${sha}`);
+  else ok(`Nest staging healthy (${url})`);
 };
 
 const checkSyncProxy = async (baseUrl) => {
@@ -89,7 +129,7 @@ const checkSyncProxy = async (baseUrl) => {
 };
 
 const main = async () => {
-  console.log('\nCoreKnot staging readiness (migrated setup)\n');
+  console.log('\nCoreKnot staging readiness (strict)\n');
 
   const hosts = readHosts();
   if (!hosts) {
@@ -102,9 +142,9 @@ const main = async () => {
     pushError('stagingNestApiUrl not set in production-hosts.local.json');
   }
 
-  await checkHealth('Express staging API', stagingApi);
+  await checkExpressHealth(stagingApi);
   await checkSyncProxy(stagingApi);
-  await checkHealth('Nest staging API', stagingNest);
+  await checkNestHealth(stagingNest);
 
   const serverEnvPath = path.join(ROOT, 'server', '.env');
   if (fs.existsSync(serverEnvPath)) {
@@ -120,8 +160,8 @@ const main = async () => {
   if (errors.length) {
     console.log(`Blocking (${errors.length}):`);
     errors.forEach((e) => console.log(`  ✗ ${e}`));
-    console.log('\nFix: deploy coreknot-api-staging + coreknot-nest-staging from `staging` branch on Render.');
-    console.log('See docs/STAGING_SETUP.md and .cursor/rules/render-auto-deploy.mdc\n');
+    console.log('\nFix: restore env (node scripts/restore-staging-render-env.mjs), deploy staging branch, verify raw /api/health JSON.');
+    console.log('See docs/operations/STAGING_SETUP.md\n');
     process.exit(1);
   }
 

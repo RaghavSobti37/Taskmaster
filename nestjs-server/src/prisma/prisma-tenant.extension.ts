@@ -26,6 +26,12 @@ const READ_OPS = new Set([
 
 type QueryArgs = Record<string, unknown>;
 
+type TenantQueryParams = {
+  operation: string;
+  args: Record<string, unknown>;
+  query: (args: Record<string, unknown>) => Promise<unknown>;
+};
+
 function mergeTenantWhere(
   where: QueryArgs | undefined,
   tenantId: string,
@@ -68,7 +74,7 @@ export function createTenantExtension(tenantContext: TenantContextService) {
     name: 'tenantScope',
     query: {
       $allModels: {
-        async $allOperations({ operation, args, query }) {
+        async $allOperations({ operation, args, query }: TenantQueryParams) {
           if (tenantContext.isBypassTenant()) {
             return query(args);
           }

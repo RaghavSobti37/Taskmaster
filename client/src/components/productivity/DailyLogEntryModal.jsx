@@ -87,6 +87,14 @@ export default function DailyLogEntryModal({ isOpen, onClose, defaultWorkDate })
             module: MODULE.SYSTEM,
           });
         },
+        onError: (err) => {
+          addToast({
+            title: 'Could not save log',
+            message: err.response?.data?.error || err.message || 'Something went wrong. Try again.',
+            type: 'error',
+            module: MODULE.SYSTEM,
+          });
+        },
       }
     );
   };

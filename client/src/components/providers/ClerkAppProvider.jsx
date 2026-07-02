@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/react';
 import {
   getClerkFrontendApiHost,
@@ -10,8 +11,8 @@ import { clerkAuthAppearance, clerkAuthLocalization } from '../../config/clerkAp
 import {
   getAppOrigin,
   getAuthOrigin,
+  getClerkProviderRedirectProps,
   getLandingOrigin,
-  resolveClerkForceRedirectUrl,
 } from '../../config/siteUrls';
 
 const publishableKey = getClerkPublishableKey();
@@ -27,9 +28,19 @@ const clerkRedirectOrigins = () => {
   return [...origins].filter(Boolean);
 };
 
+/** Must render inside React Router — wires Clerk path subflows (client-trust, MFA). */
 export default function ClerkAppProvider({ children }) {
+  const navigate = useNavigate();
   const allowedRedirectOrigins = useMemo(() => clerkRedirectOrigins(), []);
-  const clerkForceRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
+  const providerRedirectProps = useMemo(() => getClerkProviderRedirectProps(), []);
+
+  const routerPush = useCallback((to) => {
+    navigate(to);
+  }, [navigate]);
+
+  const routerReplace = useCallback((to) => {
+    navigate(to, { replace: true });
+  }, [navigate]);
 
   if (!isClerkConfigured()) {
     return children;
@@ -41,11 +52,12 @@ export default function ClerkAppProvider({ children }) {
       {...(proxyUrl ? { proxyUrl } : frontendApi ? { frontendApi } : {})}
       appearance={clerkAuthAppearance}
       localization={clerkAuthLocalization}
+      routerPush={routerPush}
+      routerReplace={routerReplace}
       signInUrl="/login"
       signUpUrl="/register"
       afterSignOutUrl="/login"
-      signInForceRedirectUrl={clerkForceRedirect}
-      signUpForceRedirectUrl={clerkForceRedirect}
+      {...providerRedirectProps}
       allowedRedirectOrigins={allowedRedirectOrigins}
     >
       {children}

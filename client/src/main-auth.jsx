@@ -56,17 +56,17 @@ function AuthRoot() {
   }
 
   return (
-    <ClerkAppProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ClerkAppProvider>
           <AuthProvider>
             <ClerkAuthEffects />
             <AuthApp />
             <CookieBanner />
           </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ClerkAppProvider>
+        </ClerkAppProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

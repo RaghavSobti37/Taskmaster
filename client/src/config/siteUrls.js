@@ -97,6 +97,26 @@ export const resolveClerkForceRedirectUrl = () => {
   return '/dashboard';
 };
 
+/**
+ * Clerk `forceRedirectUrl` to `/login` on the auth host breaks Client Trust
+ * (`/login/client-trust`) — Clerk shows cl-spinner forever. LoginPage owns
+ * post-establish navigation on auth.tsccoreknot.com.
+ */
+export function getClerkSignInRedirectProps() {
+  if (isAuthSite()) return {};
+  const url = resolveClerkForceRedirectUrl();
+  return { fallbackRedirectUrl: url, forceRedirectUrl: url };
+}
+
+export function getClerkProviderRedirectProps() {
+  if (isAuthSite()) return {};
+  const url = resolveClerkForceRedirectUrl();
+  return {
+    signInForceRedirectUrl: url,
+    signUpForceRedirectUrl: url,
+  };
+}
+
 /** Post-login / deep links: auth or landing subdomain → full app URL */
 export const resolveAppNavigationTarget = (pathOrUrl) => {
   if (!pathOrUrl) {

@@ -50,12 +50,18 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
   });
 
-  it('keeps Clerk on /login during auth subdomain sign-in until session bridge runs', async () => {
+  it('omits Clerk force redirect on auth host so client-trust subflow can render', async () => {
     import.meta.env.VITE_SITE_MODE = 'auth';
 
-    const { resolveClerkForceRedirectUrl } = await import('./siteUrls.js');
+    const {
+      resolveClerkForceRedirectUrl,
+      getClerkSignInRedirectProps,
+      getClerkProviderRedirectProps,
+    } = await import('./siteUrls.js');
 
     expect(resolveClerkForceRedirectUrl()).toBe('/login');
+    expect(getClerkSignInRedirectProps()).toEqual({});
+    expect(getClerkProviderRedirectProps()).toEqual({});
   });
 
   it('sends Clerk straight to dashboard on app site', async () => {

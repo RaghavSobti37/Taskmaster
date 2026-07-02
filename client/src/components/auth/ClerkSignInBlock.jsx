@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
-import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
+import { getClerkSignInRedirectProps } from '../../config/siteUrls';
 import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import {
   clerkAuthAppearance,
@@ -30,7 +30,7 @@ export default function ClerkSignInBlock() {
 function ClerkSignInInner() {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
   const location = useLocation();
-  const clerkRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
+  const signInRedirectProps = useMemo(() => getClerkSignInRedirectProps(), []);
   const appearance = useMemo(() => clerkAuthAppearance, []);
   const localization = useMemo(() => clerkAuthLocalization, []);
   const signInPath = resolveClerkSignInPathname(location.pathname);
@@ -60,8 +60,7 @@ function ClerkSignInInner() {
         routing="path"
         path="/login"
         signUpUrl="/register"
-        fallbackRedirectUrl={clerkRedirect}
-        forceRedirectUrl={clerkRedirect}
+        {...signInRedirectProps}
         appearance={appearance}
         localization={localization}
       />

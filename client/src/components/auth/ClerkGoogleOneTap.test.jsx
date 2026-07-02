@@ -41,13 +41,13 @@ describe('ClerkGoogleOneTap', () => {
     expect(screen.getByTestId('google-one-tap')).toBeInTheDocument();
     expect(mockGoogleOneTap).toHaveBeenCalledWith(
       expect.objectContaining({
-        signInForceRedirectUrl: '/dashboard',
-        signUpForceRedirectUrl: '/dashboard',
+        forceRedirectUrl: '/dashboard',
+        fallbackRedirectUrl: '/dashboard',
       }),
     );
   });
 
-  it('keeps one-tap on /login for auth subdomain builds', async () => {
+  it('keeps one-tap on /login for auth subdomain builds without force redirect', async () => {
     vi.resetModules();
     import.meta.env.VITE_SITE_MODE = 'auth';
     const mod = await import('./ClerkGoogleOneTap.jsx');
@@ -57,14 +57,14 @@ describe('ClerkGoogleOneTap', () => {
         <mod.default />
       </MemoryRouter>,
     );
-    expect(mockGoogleOneTap).toHaveBeenCalledWith(
-      expect.objectContaining({
-        signInForceRedirectUrl: '/login',
-        signUpForceRedirectUrl: '/login',
-      }),
-    );
+    expect(mockGoogleOneTap).toHaveBeenCalledWith({});
     import.meta.env.VITE_SITE_MODE = 'app';
     vi.resetModules();
+  });
+
+  it('does not render during Clerk client-trust subflow', () => {
+    renderAt('/login/client-trust');
+    expect(screen.queryByTestId('google-one-tap')).not.toBeInTheDocument();
   });
 
   it('does not render on protected app routes', () => {

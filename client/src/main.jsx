@@ -132,9 +132,9 @@ const MotionConfigBridge = ({ children }) => {
 };
 
 const appTree = (
-  <ClerkAppProvider>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ClerkAppProvider>
         <AuthProvider>
           <ClerkAuthEffects />
           <ThemeProvider>
@@ -161,10 +161,10 @@ const appTree = (
             </SidebarProvider>
           </MotionConfigBridge>
         </ThemeProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ClerkAppProvider>
     </BrowserRouter>
   </QueryClientProvider>
-  </ClerkAppProvider>
 );
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -2,7 +2,8 @@ import React from 'react';
 import { GoogleOneTap } from '@clerk/react';
 import { useLocation } from 'react-router-dom';
 import { isClerkConfigured } from '../../config/clerk';
-import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
+import { getClerkSignInRedirectProps } from '../../config/siteUrls';
+import { isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { isPublicThemeRoute } from '../../lib/publicRouteTheme';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -33,12 +34,14 @@ function ClerkGoogleOneTapInner() {
   if (authLoading || user || suppressOneTap) return null;
   if (!isPublicThemeRoute(pathname)) return null;
 
-  const clerkRedirect = resolveClerkForceRedirectUrl();
+  const signInPath = resolveClerkSignInPathname(pathname);
+  if (isClerkSignInSubflowPath(signInPath)) return null;
+
+  const oneTapRedirectProps = getClerkSignInRedirectProps();
 
   return (
     <GoogleOneTap
-      signInForceRedirectUrl={clerkRedirect}
-      signUpForceRedirectUrl={clerkRedirect}
+      {...oneTapRedirectProps}
     />
   );
 }

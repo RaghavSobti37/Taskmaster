@@ -64,6 +64,7 @@
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@coreknot/contracts": "1.0.0",
     "@sendgrid/mail": "^8.1.6",
+    "@sentry/node": "^9.28.1",
     "@supabase/supabase-js": "^2.108.2",
     "@trigger.dev/sdk": "^4.4.0",
     "axios": "^1.18.1",

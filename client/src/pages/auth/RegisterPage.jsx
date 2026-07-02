@@ -6,6 +6,7 @@ import AppBootError from '../../components/AppBootError';
 import BootScreen from '../../components/BootScreen';
 import AuthMarketingShell from '../../components/auth/AuthMarketingShell';
 import ClerkSignUpBlock from '../../components/auth/ClerkSignUpBlock';
+import ClearSessionCookiesButton from '../../components/auth/ClearSessionCookiesButton';
 import { isClerkConfigured } from '../../config/clerk';
 import { registerCopy } from '../../constants/marketingContent';
 import { navigateAfterAuth } from '../../utils/authNavigation';
@@ -76,7 +77,10 @@ function RegisterPageView({ clerkLoaded, clerkSignedIn }) {
           Clerk is not configured. Set <code className="text-xs">VITE_CLERK_PUBLISHABLE_KEY</code> in client env.
         </p>
       ) : (
-        <ClerkSignUpBlock />
+        <>
+          <ClerkSignUpBlock />
+          <ClearSessionCookiesButton bootError={Boolean(bootError)} />
+        </>
       )}
     </AuthMarketingShell>
   );

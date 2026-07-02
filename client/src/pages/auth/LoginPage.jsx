@@ -6,6 +6,7 @@ import AppBootError from '../../components/AppBootError';
 import BootScreen from '../../components/BootScreen';
 import AuthMarketingShell from '../../components/auth/AuthMarketingShell';
 import ClerkSignInBlock from '../../components/auth/ClerkSignInBlock';
+import ClearSessionCookiesButton from '../../components/auth/ClearSessionCookiesButton';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 import { isClerkConfigured } from '../../config/clerk';
@@ -84,6 +85,7 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
         ) : (
           <ClerkSignInBlock />
         )}
+        <ClearSessionCookiesButton bootError={Boolean(bootError)} />
       </AuthMarketingShell>
       <InstallGuideModal isOpen={installGuideOpen} onClose={() => setInstallGuideOpen(false)} />
     </>

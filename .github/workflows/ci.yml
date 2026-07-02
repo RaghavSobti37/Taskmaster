@@ -205,8 +205,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Production auth smoke
-        run: node e2e/run-production-auth.mjs
-        working-directory: coreknot/Taskmaster
+        run: npm run test:e2e:production-auth
         env:
           E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}

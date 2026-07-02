@@ -23,8 +23,8 @@ jobs:
         run: node scripts/checkCommittedExposure.js
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
-      - name: Dependency audit (high+)
-        run: npm audit --workspace=coreknot-server --audit-level=high
+      - name: Dependency audit (critical)
+        run: npm audit --workspace=coreknot-server --audit-level=critical
       - name: OpenAPI version drift check
         run: node scripts/generate-openapi.mjs --check
       - name: Tenant bypass static suite
@@ -48,8 +48,8 @@ jobs:
         run: node scripts/checkCommittedExposure.js
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
-      - name: Dependency audit (high+)
-        run: npm audit --workspace=CoreKnot-client --audit-level=high
+      - name: Dependency audit (critical)
+        run: npm audit --workspace=CoreKnot-client --audit-level=critical
       - name: Lint
         run: npm run lint --workspace=CoreKnot-client -- --quiet
       - name: Unit tests

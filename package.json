@@ -115,25 +115,25 @@
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "^4.1.1"
     },
-    "@trigger.dev/core": {
-      "ws": "$ws",
-      "socket.io-client": "$socket.io-client",
-      "socket.io": "$socket.io",
-      "systeminformation": "$systeminformation",
-      "@opentelemetry/core": "$@opentelemetry/core",
-      "@opentelemetry/resources": "$@opentelemetry/resources",
-      "@opentelemetry/sdk-trace-base": "$@opentelemetry/sdk-trace-base",
-      "@opentelemetry/sdk-metrics": "$@opentelemetry/sdk-metrics",
-      "@opentelemetry/sdk-logs": "$@opentelemetry/sdk-logs",
-      "@opentelemetry/sdk-trace-node": "$@opentelemetry/sdk-trace-node",
-      "cookie": "$cookie",
-      "engine.io": "$engine.io",
-      "engine.io-client": "$engine.io-client"
+    "@trigger.dev/core@4.5.0": {
+      "ws": "8.21.0",
+      "socket.io-client": "4.8.3",
+      "socket.io": "4.8.3",
+      "systeminformation": "^5.31.7",
+      "@opentelemetry/core": "^2.8.0",
+      "@opentelemetry/resources": "^2.8.0",
+      "@opentelemetry/sdk-trace-base": "^2.8.0",
+      "@opentelemetry/sdk-metrics": "^2.8.0",
+      "@opentelemetry/sdk-logs": "^0.219.0",
+      "@opentelemetry/sdk-trace-node": "^2.8.0",
+      "cookie": "^0.7.2",
+      "engine.io": "^6.6.6",
+      "engine.io-client": "^6.6.6"
     },
     "@sentry/node": {
-      "@opentelemetry/core": "$@opentelemetry/core",
-      "@opentelemetry/resources": "$@opentelemetry/resources",
-      "@opentelemetry/sdk-trace-base": "$@opentelemetry/sdk-trace-base"
+      "@opentelemetry/core": "^2.8.0",
+      "@opentelemetry/resources": "^2.8.0",
+      "@opentelemetry/sdk-trace-base": "^2.8.0"
     },
     "lighthouse": {
       "ws": "^8.21.0"
@@ -143,6 +143,9 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "socket.io-client@4.7.5": "4.8.3",
+    "socket.io@4.7.4": "4.8.3",
+    "engine.io@6.5.5": "^6.6.6",
+    "engine.io-client@6.5.4": "^6.6.6",
     "ws@8.17.1": "8.21.0",
     "ws@7.5.11": "8.21.0",
     "ws@8.20.1": "8.21.0",
@@ -157,6 +160,7 @@
     "js-cookie": "^3.0.8",
     "ip-address": "^10.1.1",
     "systeminformation": "^5.31.7",
+    "ws": "8.21.0",
     "@opentelemetry/core": "^2.8.0",
     "@opentelemetry/resources": "^2.8.0",
     "@opentelemetry/sdk-trace-base": "^2.8.0",

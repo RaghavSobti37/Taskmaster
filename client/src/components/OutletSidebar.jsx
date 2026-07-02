@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
@@ -29,7 +29,7 @@ import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SI
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../utils/departmentPermissions';
 import { useTheme } from '../contexts/ThemeContext';
-import { useWindowSize, MOBILE_MAX } from '../hooks/useBreakpoint';
+import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
@@ -217,7 +217,6 @@ const OutletSidebar = () => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
   const asideRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [shellQueriesReady, setShellQueriesReady] = useState(false);
@@ -241,9 +240,8 @@ const OutletSidebar = () => {
     review: { pending: 0 },
     projects: { overdue: 0, review: 0 },
   } } = useStatusCounts(shellQueriesEnabled);
-  const { width: viewportWidth } = useWindowSize();
-  // ponytail: match CSS lg breakpoint — drawer shell when sidebar is off-screen
-  const isMobile = viewportWidth <= MOBILE_MAX;
+  // ponytail: useIsMobile respects PWA desktop — raw width broke sidebar/settings on installed app
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     closeMobileSidebar();
@@ -428,12 +426,12 @@ const OutletSidebar = () => {
           })}
         </nav>
 
-        <div className="p-2 space-y-1.5">
+        <div className="relative z-10 p-2 space-y-1.5 shrink-0">
           {!(!showLabels && !isMobile) && (
             <div className="flex gap-1.5 w-full">
-              <button
-                type="button"
-                onClick={() => navigate('/settings')}
+              <NavLink
+                to="/settings"
+                onClick={isMobile ? closeMobileSidebar : undefined}
                 aria-label="Settings"
                 data-tour="sidebar-settings"
                 className="tm-sidebar-control flex-1 flex items-center justify-center gap-2 px-3 py-2 transition-all group overflow-hidden"
@@ -443,7 +441,7 @@ const OutletSidebar = () => {
                 <span className="text-[10px] font-semibold tracking-wide text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
                   Settings
                 </span>
-              </button>
+              </NavLink>
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -458,16 +456,15 @@ const OutletSidebar = () => {
 
           {(!showLabels && !isMobile) && (
             <div className="flex flex-col gap-1.5 w-full">
-              <button
-                type="button"
-                onClick={() => navigate('/settings')}
+              <NavLink
+                to="/settings"
                 aria-label="Settings"
                 data-tour="sidebar-settings"
                 title="Settings"
                 className="w-full tm-sidebar-control flex items-center justify-center p-2 transition-colors"
               >
                 <Settings size={15} className="text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] transition-colors" />
-              </button>
+              </NavLink>
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -480,10 +477,11 @@ const OutletSidebar = () => {
             </div>
           )}
 
-          <div
-            onClick={() => navigate('/settings')}
+          <NavLink
+            to="/settings"
+            onClick={isMobile ? closeMobileSidebar : undefined}
             data-tour="sidebar-profile"
-            className="w-full text-left group cursor-pointer"
+            className="w-full text-left group cursor-pointer block"
             title={!showLabels ? user?.name : undefined}
           >
             <div className={`tm-sidebar-footer-card group-hover:border-[var(--color-action-primary)]/35 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
@@ -524,7 +522,7 @@ const OutletSidebar = () => {
                 )}
               </div>
             </div>
-          </div>
+          </NavLink>
         </div>
         </div>
       </aside>

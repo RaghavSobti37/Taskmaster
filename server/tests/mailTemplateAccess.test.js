@@ -3,6 +3,7 @@ const app = require('../server');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 
 async function loginAsRestrictedUser() {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -25,11 +26,7 @@ async function loginAsRestrictedUser() {
   await User.findByIdAndUpdate(reg.body._id, { departmentId: dept._id });
 
   const agent = request.agent(app);
-  const login = await agent.post('/api/auth/login').send({
-    email: `tpl-${stamp}@coreknot-test.local`,
-    password: DEV_DEFAULT_PASSWORD,
-  });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, reg.body._id);
   return agent;
 }
 

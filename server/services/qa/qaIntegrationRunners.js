@@ -121,12 +121,13 @@ async function runReviewRollback(def, ctx) {
     targetId: taskId,
     targetType: 'Task',
     'details.type': { $in: ['TASK_COMPLETION', 'TASK_REVIEW'] },
+    voidedAt: null,
   });
   const rollbackRes = await request(def, {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
     user: pair.assigner,
-    data: { reviewAction: 'rollback' },
+    data: { reviewAction: 'rollback', rollbackReason: 'QA rollback probe' },
   });
   const status = rollbackRes.data?.status || rollbackRes.data?.data?.status;
   if (status !== 'in-progress') {
@@ -136,9 +137,10 @@ async function runReviewRollback(def, ctx) {
     targetId: taskId,
     targetType: 'Task',
     'details.type': { $in: ['TASK_COMPLETION', 'TASK_REVIEW'] },
+    voidedAt: null,
   });
   if (reviewLogsBefore > 0 && reviewLogsAfter !== 0) {
-    return { ...probeFail(def, `Rollback should remove review logs (before=${reviewLogsBefore} after=${reviewLogsAfter})`), artifacts: ctx.artifacts };
+    return { ...probeFail(def, `Rollback should void review logs (active before=${reviewLogsBefore} after=${reviewLogsAfter})`), artifacts: ctx.artifacts };
   }
   return { ...probePass(def, 'Rollback cleared review daily logs'), artifacts: ctx.artifacts };
 }
@@ -166,7 +168,7 @@ async function runReviewResubmitAfterRollback(def, ctx) {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
     user: pair.assigner,
-    data: { reviewAction: 'rollback' },
+    data: { reviewAction: 'rollback', rollbackReason: 'QA rollback probe' },
   });
   const rolledStatus = rollbackRes.data?.status || rollbackRes.data?.data?.status;
   if (rolledStatus !== 'in-progress') {
@@ -201,13 +203,13 @@ async function runReviewCreatorCanComplete(def, ctx) {
     data: { status: 'done' },
   });
   const status = res.data?.status || res.data?.data?.status;
-  if (status === 'done') {
-    return { ...probePass(def, 'Creator completed delegated task without waiting for assignee'), artifacts: ctx.artifacts };
-  }
   if (res.status === 400 || res.status === 403) {
-    return { ...probeFail(def, `Creator blocked from completing delegated task (${res.status})`), artifacts: ctx.artifacts };
+    return { ...probePass(def, 'Creator blocked from completing delegated task without assignee'), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, `Expected done, got ${status || res.status}`), artifacts: ctx.artifacts };
+  if (status === 'done') {
+    return { ...probeFail(def, 'Creator completed delegated task without assignee (security regression)'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, `Expected block, got ${status || res.status}`), artifacts: ctx.artifacts };
 }
 
 async function resolvePlatformOwnerProbeUser() {
@@ -235,7 +237,7 @@ async function runReviewPlatformOwnerRollback(def, ctx) {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
     user: platformOwner,
-    data: { reviewAction: 'rollback' },
+    data: { reviewAction: 'rollback', rollbackReason: 'QA rollback probe' },
   });
   const status = rollbackRes.data?.status || rollbackRes.data?.data?.status;
   if (status === 'in-progress') {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Trash2, RotateCcw } from 'lucide-react';
 import { Button, Spinner } from './ui';
@@ -15,7 +15,6 @@ import {
   getTaskAssignments,
 } from '../utils/taskReview';
 import TaskCompletionFlash from './tasks/TaskCompletionFlash';
-import TaskReviewActions from './tasks/TaskReviewActions';
 import { resolveTaskId } from '../utils/taskCompletion';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
@@ -76,8 +75,41 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const [rollbackReason, setRollbackReason] = useState('');
   const [showCompletionFlash, setShowCompletionFlash] = useState(false);
   const [pendingFinishAfterSave, setPendingFinishAfterSave] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [historyWidth, setHistoryWidth] = useState(null);
   const pendingFinishRef = useRef(false);
   const isSaving = updateTaskMutation.isPending;
+
+  const HISTORY_MIN_W = 280;
+  const HISTORY_MAX_W = 560;
+
+  const handleHistoryResizeStart = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const panel = e.currentTarget.closest('[data-history-panel]');
+    const startW = historyWidth ?? panel?.getBoundingClientRect().width ?? 400;
+
+    const onMove = (moveEvent) => {
+      const delta = startX - moveEvent.clientX;
+      const next = Math.min(HISTORY_MAX_W, Math.max(HISTORY_MIN_W, startW + delta));
+      setHistoryWidth(next);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [historyWidth]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHistoryCollapsed(false);
+      setHistoryWidth(null);
+    }
+  }, [isOpen]);
 
   const setPendingFinish = (value) => {
     pendingFinishRef.current = value;
@@ -179,7 +211,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     const payload = reviewAction
       ? {
           reviewAction,
-          ...(reviewAction === 'rollback' ? { description: rollbackReason.trim() } : {}),
+          ...(reviewAction === 'rollback' ? { rollbackReason: rollbackReason.trim() } : {}),
         }
       : {
           title,
@@ -338,12 +370,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
             </div>
           )}
           <div className={`flex flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden tm-modal-scroll ${isHydrating ? 'opacity-60 pointer-events-none' : ''}`}>
-            <div className="flex-1 min-w-0 shrink-0 lg:shrink lg:min-h-0 lg:overflow-y-auto lg:tm-modal-scroll p-4 sm:p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
+            <div className="flex-[7] min-w-0 lg:min-h-0 lg:overflow-y-auto lg:tm-modal-scroll p-4 sm:p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
               <TaskFormFields
                 values={formValues}
                 onChange={setFormValues}
                 projects={projects}
-                showProject
+                showProject={false}
                 showAssignees={false}
                 showPriority={false}
                 showStatus={false}
@@ -356,8 +388,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 lockedAssigneeIds={creatorId ? [creatorId] : []}
                 mentionSessionKey={isOpen ? task._id : undefined}
                 inlineEdit={false}
-                collapseCategoryWhenSelected
                 showDueDateInForm={false}
+                compactMetadataLayout
                 afterTitle={
                   <>
                   <TaskCompletionFlash show={showCompletionFlash} />
@@ -375,31 +407,44 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                     status={formValues.status}
                     onStatusChange={handleStatusChange}
                     statusDisabled={formLocked || isInReview}
+                    reviewActionProps={{
+                      isInReview,
+                      isDone,
+                      canReview,
+                      canRollback,
+                      canApproveReview,
+                      assignerName: displayPersonName(assigner, 'assigner'),
+                      isSaving: isSaving || isHydrating,
+                      showRollbackForm,
+                      rollbackReason,
+                      onRollbackReasonChange: setRollbackReason,
+                      onShowRollbackForm: () => setShowRollbackForm(true),
+                      onHideRollbackForm: () => { setShowRollbackForm(false); setRollbackReason(''); },
+                      onApprove: (e) => handleSubmit(e, 'approve'),
+                      onConfirmRollback: (e) => handleSubmit(e, 'rollback'),
+                    }}
                   />
                   </>
                 }
               />
-
-              <TaskReviewActions
-                isInReview={isInReview}
-                isDone={isDone}
-                canReview={canReview}
-                canRollback={canRollback}
-                canApproveReview={canApproveReview}
-                assignerName={displayPersonName(assigner, 'assigner')}
-                isSaving={isSaving || isHydrating}
-                showRollbackForm={showRollbackForm}
-                rollbackReason={rollbackReason}
-                onRollbackReasonChange={setRollbackReason}
-                onShowRollbackForm={() => setShowRollbackForm(true)}
-                onHideRollbackForm={() => { setShowRollbackForm(false); setRollbackReason(''); }}
-                onApprove={(e) => handleSubmit(e, 'approve')}
-                onConfirmRollback={(e) => handleSubmit(e, 'rollback')}
-              />
             </div>
 
-            <div className="w-full lg:w-[min(400px,36vw)] shrink-0 flex flex-col min-h-[220px] max-h-[min(42vh,360px)] lg:max-h-none lg:min-h-0 border-t lg:border-t-0 border-[var(--color-bg-border)]">
-              <TaskHistoryPanel task={resolvedTask} enabled={isOpen} />
+            <div
+              data-history-panel
+              className={`w-full shrink-0 flex flex-col border-t lg:border-t-0 border-[var(--color-bg-border)] lg:shrink-0 ${
+                historyCollapsed
+                  ? 'min-h-0 max-h-none lg:!w-10 lg:!flex-none lg:min-h-0'
+                  : 'min-h-[220px] max-h-[min(42vh,360px)] lg:max-h-none lg:min-h-0 lg:flex-[3]'
+              }`}
+              style={historyWidth && !historyCollapsed ? { flex: `0 0 ${historyWidth}px` } : undefined}
+            >
+              <TaskHistoryPanel
+                task={resolvedTask}
+                enabled={isOpen}
+                collapsed={historyCollapsed}
+                onToggleCollapse={() => setHistoryCollapsed((v) => !v)}
+                onResizeStart={handleHistoryResizeStart}
+              />
             </div>
           </div>
 
@@ -412,7 +457,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 onClick={() => setShowDeleteConfirm(true)}
                 className="text-red-500 uppercase tracking-wide"
               >
-                <Trash2 size={14} /> Remove
+                <Trash2 size={14} /> Remove Task
               </Button>
             ) : (
               <span />
@@ -427,7 +472,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                   disabled={!title || isSaving || (!isDirty && !pendingFinishAfterSave)}
                 >
                   {isSaving ? <Spinner size="sm" className="text-white" /> : <CheckCircle2 size={18} />}
-                  {isSaving ? 'Saving...' : (pendingFinishAfterSave ? 'Save & Continue' : 'Save')}
+                  {isSaving ? 'Saving...' : (pendingFinishAfterSave ? 'Save & Continue' : 'Save Update')}
                 </Button>
               )}
               {isDone && canRollback && !showRollbackForm && (

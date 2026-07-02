@@ -2,6 +2,8 @@ import React from 'react';
 import { GoogleOneTap } from '@clerk/react';
 import { useLocation } from 'react-router-dom';
 import { isClerkConfigured } from '../../config/clerk';
+import { getClerkSignInRedirectProps } from '../../config/siteUrls';
+import { isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { isPublicThemeRoute } from '../../lib/publicRouteTheme';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,13 +20,28 @@ function ClerkGoogleOneTapInner() {
   const { pathname } = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  if (authLoading || user) return null;
+  const suppressOneTap = (() => {
+    try {
+      const raw = sessionStorage.getItem('coreknot_just_logged_out');
+      if (!raw) return false;
+      const ts = Number(raw);
+      return Number.isFinite(ts) && Date.now() - ts < 10_000;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (authLoading || user || suppressOneTap) return null;
   if (!isPublicThemeRoute(pathname)) return null;
+
+  const signInPath = resolveClerkSignInPathname(pathname);
+  if (isClerkSignInSubflowPath(signInPath)) return null;
+
+  const oneTapRedirectProps = getClerkSignInRedirectProps();
 
   return (
     <GoogleOneTap
-      signInForceRedirectUrl="/dashboard"
-      signUpForceRedirectUrl="/dashboard"
+      {...oneTapRedirectProps}
     />
   );
 }

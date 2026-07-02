@@ -7,11 +7,11 @@ import {
 
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 
-export default function TaskStatusButtons({ value, onChange, disabled = false }) {
+export default function TaskStatusButtons({ value, onChange, disabled = false, inline = false }) {
   return (
-    <div className="w-full min-w-0">
+    <div className={inline ? 'w-auto min-w-0' : 'w-full min-w-0'}>
       <label className={fieldLabelClass}>Status</label>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className={`flex flex-wrap items-center gap-1.5 ${inline ? '' : ''}`}>
         {TASK_STATUS_BUTTON_OPTIONS.map((option) => {
           const isActive = value === option.value;
           return (
@@ -21,7 +21,7 @@ export default function TaskStatusButtons({ value, onChange, disabled = false })
               title={option.label}
               disabled={disabled}
               onClick={() => onChange(option.value, progressForTaskStatus(option.value))}
-              className={`rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50 px-3 py-1 min-w-[5.5rem] ${taskStatusButtonClass(option.value, isActive)}`}
+              className={`rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50 px-2.5 sm:px-3 py-1 min-w-[4.75rem] sm:min-w-[5.5rem] ${taskStatusButtonClass(option.value, isActive)}`}
             >
               {option.label}
             </button>

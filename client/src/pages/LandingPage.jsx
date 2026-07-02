@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { useAuth as useClerkAuth } from '@clerk/react';
 import {
   Briefcase,
   Mail,
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import BootScreen from '../components/BootScreen';
+import WithClerkWhenConfigured from '../components/auth/WithClerkWhenConfigured';
 import BrandLogo from '../components/brand/BrandLogo';
 import LandingDashboardPreview from '../components/landing/LandingDashboardPreview';
 import { authUrl, appUrl, hasSameOriginAuthRoutes } from '../config/siteUrls';
@@ -52,8 +52,17 @@ function NavAnchor({ href, className, children }) {
 }
 
 export default function LandingPage() {
+  return (
+    <WithClerkWhenConfigured>
+      {({ isLoaded: clerkLoaded, isSignedIn: clerkSignedIn }) => (
+        <LandingPageView clerkLoaded={clerkLoaded} clerkSignedIn={clerkSignedIn} />
+      )}
+    </WithClerkWhenConfigured>
+  );
+}
+
+function LandingPageView({ clerkLoaded, clerkSignedIn }) {
   const { user, loading } = useAuth();
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
 
   const clerkSessionPending = isClerkConfigured()
     && clerkLoaded

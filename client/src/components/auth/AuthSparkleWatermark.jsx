@@ -5,7 +5,7 @@ import HarmonicLogo from '../brand/HarmonicLogo';
 export default function AuthSparkleWatermark() {
   return (
     <div
-      className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+      className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
       aria-hidden
     >
       <HarmonicLogo

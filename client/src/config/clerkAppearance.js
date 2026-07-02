@@ -20,6 +20,10 @@ export const clerkAuthLocalization = {
 };
 
 export const clerkAuthAppearance = {
+  layout: {
+    logoPlacement: 'none',
+    showOptionalFields: true,
+  },
   variables: {
     colorPrimary: AUTH_ACCENT_BRIGHT,
     colorPrimaryForeground: AUTH_PANEL_TEAL,
@@ -40,6 +44,11 @@ export const clerkAuthAppearance = {
   },
   elements: {
     rootBox: { width: '100%' },
+    logoBox: { display: 'none' },
+    logoImage: { display: 'none' },
+    headerImage: { display: 'none' },
+    organizationPreview: { display: 'none' },
+    organizationSwitcherTrigger: { display: 'none' },
     card: {
       backgroundColor: 'transparent',
       boxShadow: 'none',
@@ -74,8 +83,11 @@ export const clerkAuthAppearance = {
 };
 
 export const clerkAuthShellClass =
-  'relative z-10 flex w-full justify-center '
+  'relative z-[300] flex w-full justify-center '
   + '[&_.cl-rootBox]:mx-auto [&_.cl-rootBox]:w-full [&_.cl-card]:w-full '
   + '[&_.cl-card]:shadow-none [&_.cl-card]:border-0 [&_.cl-card]:bg-transparent '
   + '[&_.cl-cardBox]:shadow-none [&_.cl-footer]:!hidden [&_.cl-footerAction]:!hidden '
-  + '[&_.cl-internal-b3fm6y]:!hidden [&_.cl-badge]:!hidden';
+  + '[&_.cl-logoBox]:!hidden [&_.cl-logoImage]:!hidden [&_.cl-headerImage]:!hidden '
+  + '[&_.cl-organizationPreview]:!hidden [&_.cl-organizationSwitcher]:!hidden '
+  + '[&_.cl-internal-b3fm6y]:!hidden [&_.cl-badge]:!hidden '
+  + '[&_.cl-rootBox]:!contents [&_.cl-card]:!relative';

@@ -1,5 +1,8 @@
 # Frontend (React SPA)
 
+> **Page-level catalog (routes, hooks, APIs per file):** [`docs/reference/COREKNOT_MASTER.md`](../../../docs/reference/COREKNOT_MASTER.md)  
+> Regenerate: `node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs`
+
 ## Stack
 
 React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Framer Motion · Socket.IO client
@@ -137,7 +140,7 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 - **List pages:** `ListPageLayout`, `PageToolbar`, `DataTable`, `DataOverviewSection`
 - **Modals:** `confirmContext` + `NexusModal` — no `window.alert`
 - **Loading:** Spinner-only default; phrases only for boot + heavy pages — `client/src/lib/loadingDisplay.js`
-- **Standards:** `docs/COMPONENT_STANDARDS.md`
+- **Standards:** `docs/reference/COMPONENT_STANDARDS.md`, `docs/design/DESIGN-REFERENCE.md`
 
 ---
 

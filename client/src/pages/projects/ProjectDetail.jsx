@@ -177,7 +177,7 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleApproveReview = async (task, reviewHours) => {
+  const handleApproveReview = async (task, reviewHours, approvedActualHours) => {
     const taskId = resolveTaskId(task);
     if (!taskId) return;
     suppressAutoToasts(5000);
@@ -186,7 +186,11 @@ const ProjectDetail = () => {
     try {
       const taskRes = await axios.put(
         `/api/tasks/${taskId}`,
-        { reviewAction: 'approve', reviewHours },
+        {
+          reviewAction: 'approve',
+          reviewHours,
+          ...(approvedActualHours != null ? { approvedActualHours } : {}),
+        },
         AXIOS_SKIP_TOAST
       );
       addToast({

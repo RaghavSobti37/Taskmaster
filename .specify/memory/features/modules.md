@@ -1,6 +1,9 @@
 # Feature Modules
 
-Each module below maps to routes, pages, and services. Full API detail in [MASTER.md](../MASTER.md) §15.
+Each module below maps to routes, pages, and services.
+
+- **Per-page detail:** [COREKNOT_MASTER.md](../../../docs/reference/COREKNOT_MASTER.md)
+- **API depth:** [MASTER.md](../MASTER.md) §15
 
 ---
 
@@ -51,7 +54,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - Admin at `/admin` — unified person graph across inlets
 - Inlets: Exly, Leads, HolySheet, Booked Calls, Enquiries, Mail, Community, Artist Path, Newsletter, Outsourced
 - Person spine: `Person` + `PersonIdentifier` + `PersonHubView`
-- Spec: `docs/DATA_MASTER_ARCHITECTURE.md`
+- Spec: `docs/architecture/DATA_MASTER_ARCHITECTURE.md`
 
 ---
 
@@ -68,7 +71,7 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 - **Recipient CSV export** — `GET /api/campaigns/:id/recipients/export?status=&hideInvalid=` returns name/number/email from rowData or linked Lead
 - **Registered location breakdown** — CRM city (not IP geo)
 - **Resend webhooks** — `resendWebhookHandler.js` sets `MailEvent.tenantId` from campaign (Lead fallback); skips event row if unresolved (no 500)
-- **Email engine LOCKED** — `docs/EMAIL_ENGINE_LOCKED.md`
+- **Email engine LOCKED** — `docs/reference/EMAIL_ENGINE_LOCKED.md`
 
 ---
 
@@ -120,10 +123,11 @@ Each module below maps to routes, pages, and services. Full API detail in [MASTE
 
 ## Artist OS
 
-- Nested routes under artist detail — command center, calendar, content, contracts, documents, finance, gigs, inquiries, notes, analytics
-- ArtistOSLayout, ArtistOsQueryShell, hooks in client/src/hooks/queries/artistOs.js
-- Team access: client/src/utils/artistTeamAccess.js
-- **Connection hub:** ConnectionsCenter + server providers (Spotify, YouTube, Instagram); permission key `socials` via artist membership
+- **Spec:** [`docs/features/artist-os.md`](../../../docs/features/artist-os.md)
+- Nested routes under artist detail — command center, calendar, content, contracts, finance, gigs, inquiries, analytics
+- `ArtistOSLayout`, hooks in `client/src/hooks/queries/artistOs.js`
+- API: `/api/artists/:id/os/*` (Mongo models — see spec)
+- **Connection hub:** ConnectionsCenter + Spotify/YouTube/Instagram OAuth
 
 ## Artist Workspace (membership layer)
 

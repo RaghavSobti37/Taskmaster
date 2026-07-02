@@ -97,6 +97,21 @@ router.get('/task-types', async (req, res) => {
   }
 });
 
+router.post('/task-types', async (req, res) => {
+  try {
+    const name = slugify(req.body.name || req.body.label);
+    if (!name || name.length > 40) {
+      return res.status(400).json({ error: 'Valid category name required' });
+    }
+    const existing = await TaskType.findOne({ name, departmentId: null }).lean();
+    if (existing) return res.json(existing);
+    const type = await TaskType.create({ name, departmentId: null, isActive: true });
+    res.status(201).json(type);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id/monthly-report', deptAdminAccess, async (req, res) => {
   try {
     const report = await buildDepartmentMonthlyReport(req.params.id, req.query.month, req.query);

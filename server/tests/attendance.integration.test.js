@@ -3,6 +3,7 @@ const app = require('../server');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
 
 async function registerAndLogin(agent, email, name) {
@@ -15,12 +16,7 @@ async function registerAndLogin(agent, email, name) {
       gender: 'male',
     });
   expect(reg.statusCode).toBe(201);
-
-  const login = await agent.post('/api/auth/login').send({
-    email,
-    password: DEV_DEFAULT_PASSWORD,
-  });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, reg.body._id);
   return reg.body._id;
 }
 
@@ -87,6 +83,35 @@ describe('Attendance API integration', () => {
     const second = await userAgent.post('/api/attendance/check').send({ type: 'in' });
     expect(second.statusCode).toBe(400);
     expect(second.body.error).toMatch(/Already marked in/i);
+  });
+
+  it('returns fresh month list after check-in (cache bust)', async () => {
+    const { getDateKey, getCurrentMonthRange } = require('../utils/attendanceDate');
+    const { monthStartKey, monthEndKey } = getCurrentMonthRange();
+
+    const before = await userAgent.get('/api/attendance').query({
+      start: monthStartKey,
+      end: monthEndKey,
+      mine: 'true',
+    });
+    expect(before.statusCode).toBe(200);
+
+    const checkIn = await userAgent.post('/api/attendance/check').send({
+      type: 'in',
+      manualTime: '11:30',
+      workMode: 'office',
+    });
+    expect(checkIn.statusCode).toBe(200);
+
+    const after = await userAgent.get('/api/attendance').query({
+      start: monthStartKey,
+      end: monthEndKey,
+      mine: 'true',
+    });
+    expect(after.statusCode).toBe(200);
+    const todayKey = getDateKey();
+    const todayRow = after.body.find((row) => getDateKey(row.date) === todayKey);
+    expect(todayRow?.inTimeRecord?.manualTimestamp).toBe('11:30');
   });
 
   it('rejects unauthenticated attendance list', async () => {

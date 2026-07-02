@@ -18,6 +18,7 @@ const {
   computeManualDailyLogXp,
   resolveManualDailyLogOvertimeRate,
   clampXpHours,
+  SELF_ASSIGN_TASK_XP_MULTIPLIER,
   MAX_XP_HOURS_PER_EVENT,
 } = require('../../shared/gamificationRules');
 const { MIN_COMPLETION_MINUTES, parseTimeSpentToHours } = require('../../shared/timeSpent');
@@ -126,14 +127,20 @@ class GamificationService {
     if (isTimeBasedXpAction(normalized)) {
       const rawHours = Number(details.hours) || 0;
       const hours = clampXpHours(rawHours);
+      let timeRate = rate;
+      if (normalized === 'COMPLETE_TASK' && details.selfAssigned) {
+        const mult = Number(toPlainConfig(config).selfAssignTaskMultiplier)
+          || SELF_ASSIGN_TASK_XP_MULTIPLIER;
+        timeRate = Math.round(timeRate * mult);
+      }
       const xp =
         normalized === 'DAILY_LOG'
           ? computeManualDailyLogXp(
               hours,
-              rate,
+              timeRate,
               resolveManualDailyLogOvertimeRate(toPlainConfig(config))
             )
-          : computeTimeBasedXp(hours, rate);
+          : computeTimeBasedXp(hours, timeRate);
       return xp;
     }
 
@@ -367,6 +374,7 @@ class GamificationService {
   }
 
   static resolveLogAmount(config, log, backfillMaps = null) {
+    if (log.clawedBackAt || Number(log.amount) === 0) return 0;
     const plain = getEffectiveConfigPlain(config);
     return this.computeLogAmount(plain, log, undefined, backfillMaps);
   }
@@ -1099,6 +1107,61 @@ class GamificationService {
     return this.awardExp(userId, amount, action, awardDetails);
   }
 
+  /** Revoke COMPLETE_TASK / REVIEW_APPROVAL XP when a task is rolled back or reopened. */
+  static async clawbackTaskXp(taskId, options = {}) {
+    const { session = null, reason = 'task_rollback' } = options;
+    if (!taskId) return { revoked: 0, totalXp: 0 };
+
+    const idStr = String(taskId);
+    const oid = mongoose.Types.ObjectId.isValid(idStr) ? new mongoose.Types.ObjectId(idStr) : null;
+    const taskMatch = oid
+      ? { $or: [{ 'details.taskId': taskId }, { 'details.taskId': idStr }, { 'details.taskId': oid }] }
+      : { 'details.taskId': taskId };
+
+    let q = XPAuditLog.find({
+      action: { $in: ['COMPLETE_TASK', 'REVIEW_APPROVAL'] },
+      ...taskMatch,
+      clawedBackAt: { $exists: false },
+    });
+    if (session) q = q.session(session);
+    const logs = await q.lean();
+
+    let revoked = 0;
+    let totalXp = 0;
+
+    for (const log of logs) {
+      const amount = Number(log.amount) || 0;
+      if (amount <= 0) continue;
+      totalXp += amount;
+
+      let uq = User.findById(log.userId);
+      if (session) uq = uq.session(session);
+      const user = await uq;
+      if (user) {
+        user.exp = Math.max(0, (user.exp || 0) - amount);
+        user.level = await this.getLevelFromExp(user.exp);
+        await user.save(session ? { session } : undefined);
+      }
+
+      let xq = XPAuditLog.updateOne(
+        { _id: log._id },
+        {
+          $set: {
+            clawedBackAt: new Date(),
+            clawReason: reason,
+            previousAmount: log.amount,
+            amount: 0,
+          },
+        }
+      );
+      if (session) xq = xq.session(session);
+      await xq;
+      revoked += 1;
+    }
+
+    return { revoked, totalXp };
+  }
+
   static async handleGamificationEvent(eventType, payload = {}) {
     const { userId, task, project, asset, lead, invoice, reviewerId } = payload;
     const { isQaSyncGamification } = require('../utils/qaProbeContext');
@@ -1121,7 +1184,12 @@ class GamificationService {
       return this.awardActionXp(
         completerId,
         'COMPLETE_TASK',
-        { taskId: task._id, hours, actualHours: task.actualHours },
+        {
+          taskId: task._id,
+          hours,
+          actualHours: task.actualHours,
+          selfAssigned: Boolean(payload.selfAssigned),
+        },
         awardOpts('taskId', task._id)
       );
     }

@@ -169,7 +169,7 @@ const main = async () => {
   if (errors.length) {
     console.log(`Blocking (${errors.length}):`);
     errors.forEach((e) => console.log(`  ✗ ${e}`));
-    console.log('\nSee docs/DEPLOY_ENV.md and docs/ENVIRONMENT_MATRIX.md\n');
+    console.log('\nSee docs/operations/deployment.md and docs/operations/environments.md\n');
     process.exit(1);
   }
 

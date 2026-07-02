@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+process.env.ALLOW_LEGACY_LOGIN = 'true';
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = 'jest-test-jwt-secret';
 }

@@ -5,6 +5,7 @@ const FinanceDocument = require('../models/FinanceDocument');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
 
 jest.mock('../utils/financeOcr', () => ({
@@ -37,9 +38,7 @@ async function loginOpsUser(agent, stamp) {
     gender: 'male',
     departmentId: dept._id,
   });
-
-  const login = await agent.post('/api/auth/login').send({ email, password: DEV_DEFAULT_PASSWORD });
-  expect(login.statusCode).toBe(200);
+  await mintSessionAgent(agent, user._id);
   return user;
 }
 

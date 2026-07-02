@@ -77,6 +77,7 @@ export { default as ListPageSkeleton } from './ListPageSkeleton';
 export { default as HubPageSkeleton } from './HubPageSkeleton';
 export { default as TableSkeleton } from './TableSkeleton';
 export { default as DashboardPageSkeleton } from './DashboardPageSkeleton';
+export { default as BrandedLoadingPanel } from './BrandedLoadingPanel';
 export { default as RouteContentSkeleton } from './RouteContentSkeleton';
 export { default as NumberPopIn } from './NumberPopIn';
 export { default as QueryErrorBanner, getQueryErrorMessage } from './QueryErrorBanner';

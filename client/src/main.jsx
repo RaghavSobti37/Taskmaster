@@ -24,6 +24,7 @@ import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { ensurePostHogForConsent, getPostHogClient } from './lib/posthog';
+import { initSentry } from './lib/sentry';
 import { hasAnalyticsConsent } from './lib/cookieConsent';
 import CookieBanner from './components/CookieBanner';
 import PostHogConsentBridge from './components/PostHogConsentBridge';
@@ -45,6 +46,7 @@ const syncPostHogClient = () => {
 };
 
 syncPostHogClient();
+void initSentry();
 
 function Root() {
   const [posthogClient, setPosthogClient] = useState(() => syncPostHogClient());
@@ -132,9 +134,9 @@ const MotionConfigBridge = ({ children }) => {
 };
 
 const appTree = (
-  <ClerkAppProvider>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ClerkAppProvider>
         <AuthProvider>
           <ClerkAuthEffects />
           <ThemeProvider>
@@ -161,10 +163,10 @@ const appTree = (
             </SidebarProvider>
           </MotionConfigBridge>
         </ThemeProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ClerkAppProvider>
     </BrowserRouter>
   </QueryClientProvider>
-  </ClerkAppProvider>
 );
 
 ReactDOM.createRoot(document.getElementById('root')).render(

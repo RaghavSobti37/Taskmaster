@@ -32,6 +32,7 @@ export function RouteErrorFallback({ error, errorRef, onReload }) {
   const toast = useToast();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [detailCopied, setDetailCopied] = useState(false);
 
   const summary = useMemo(() => summarizeRouteError(error), [error]);
   const supportMailto = useMemo(
@@ -61,6 +62,17 @@ export function RouteErrorFallback({ error, errorRef, onReload }) {
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.warn('Could not copy — select the reference manually');
+    }
+  };
+
+  const handleCopyTechnical = async () => {
+    try {
+      await copyRouteErrorReference(technicalDetail);
+      setDetailCopied(true);
+      toast.success('Error message copied');
+      window.setTimeout(() => setDetailCopied(false), 2000);
+    } catch {
+      toast.warn('Could not copy — select the message manually');
     }
   };
 
@@ -144,12 +156,23 @@ export function RouteErrorFallback({ error, errorRef, onReload }) {
             </button>
 
             {detailsOpen ? (
-              <pre
-                className="mt-3 max-h-40 overflow-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2.5 text-left font-mono text-[11px] leading-relaxed text-[var(--color-text-muted)] whitespace-pre-wrap break-words"
-                data-testid="route-error-technical"
-              >
-                {technicalDetail}
-              </pre>
+              <div className="relative mt-3">
+                <pre
+                  className="max-h-40 overflow-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2.5 pr-10 text-left font-mono text-[11px] leading-relaxed text-[var(--color-text-muted)] whitespace-pre-wrap break-words"
+                  data-testid="route-error-technical"
+                >
+                  {technicalDetail}
+                </pre>
+                <button
+                  type="button"
+                  onClick={handleCopyTechnical}
+                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-atomic)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-border)] hover:text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action-primary)]"
+                  aria-label={detailCopied ? 'Copied error message' : 'Copy error message'}
+                  title={detailCopied ? 'Copied' : 'Copy error message'}
+                >
+                  <Copy size={14} aria-hidden />
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -177,6 +200,7 @@ export default class RouteErrorBoundary extends React.Component {
   }
 
   handleReload = () => {
+    this.setState({ error: null, errorRef: null });
     void hardReloadApp();
   };
 

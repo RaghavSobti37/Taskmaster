@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Resend } = require('resend');
 const { config } = require('../config');
 const { isRedisAvailable } = require('./backgroundQueue');
-const { getSharedRedis } = require('../utils/sharedRedis');
+const { pingSharedRedis } = require('../utils/sharedRedis');
 const { pingSupabase, closeSupabaseClients } = require('./supabase/client');
 const { isSupabaseConfigured, isSupabaseEnabled } = require('../config/supabase');
 const { getQueueAdminSnapshot } = require('./queueAdminService');
@@ -81,8 +81,7 @@ async function probeRedis() {
   }
 
   const { latencyMs, error } = await withLatency(async () => {
-    const redis = getSharedRedis();
-    const pong = await redis.ping();
+    const pong = await pingSharedRedis();
     if (pong !== 'PONG') throw new Error(`Unexpected PING response: ${pong}`);
   });
 

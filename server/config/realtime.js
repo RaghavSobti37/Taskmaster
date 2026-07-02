@@ -1,32 +1,41 @@
 const { Server } = require('socket.io');
 const cookie = require('cookie');
-const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { COOKIE_NAME } = require('../utils/authCookie');
 const { isVercelAppOrigin, allowVercelPreviewOrigins } = require('../utils/vercelOrigins');
+const { loadAuthUser } = require('../utils/authUserLookup');
 const { resolveRequestUser } = require('../middleware/authMiddleware');
 
 let io = null;
 const log = () => require('../utils/logger');
 
+const realtimeJwtSecret = () => process.env.SOCKET_JWT_SECRET || process.env.JWT_SECRET;
+
+const verifyRealtimeBearer = async (authToken) => {
+  const secret = realtimeJwtSecret();
+  if (!secret || typeof authToken !== 'string' || !authToken.trim()) return null;
+  try {
+    const decoded = jwt.verify(authToken.trim(), secret);
+    if (decoded.scope !== 'realtime' || !decoded.id) return null;
+    const user = await loadAuthUser(decoded.id);
+    if (!user || user.suspended) return null;
+    return user;
+  } catch {
+    return null;
+  }
+};
+
 const buildSocketAuthRequest = (socket) => {
   const cookieHeader = socket.handshake.headers.cookie || '';
   const cookies = cookie.parse(cookieHeader);
-  const authToken = socket.handshake.auth?.token;
-  const headers = { cookie: cookieHeader };
-
-  if (authToken && typeof authToken === 'string') {
-    headers.authorization = `Bearer ${authToken}`;
-  }
-
   return {
     cookies,
-    headers,
+    headers: { cookie: cookieHeader },
     ip: socket.handshake.address,
     get(name) {
       const key = String(name || '').toLowerCase();
       if (key === 'cookie') return cookieHeader;
-      if (key === 'authorization') return headers.authorization;
       return socket.handshake.headers[key];
     },
   };
@@ -52,15 +61,21 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
 
   io.use(async (socket, next) => {
     try {
-      const req = buildSocketAuthRequest(socket);
-      const hasToken = Boolean(
-        req.cookies?.[COOKIE_NAME]
-        || req.headers.authorization,
-      );
-      if (!hasToken) return next(new Error('Unauthorized'));
+      const authToken = socket.handshake.auth?.token;
+      let user = null;
 
-      const { user, suspended } = await resolveRequestUser(req);
-      if (suspended || !user) return next(new Error('Unauthorized'));
+      if (authToken) {
+        user = await verifyRealtimeBearer(authToken);
+      } else {
+        const req = buildSocketAuthRequest(socket);
+        const hasCookie = Boolean(req.cookies?.[COOKIE_NAME]);
+        if (!hasCookie) return next(new Error('Unauthorized'));
+        const resolved = await resolveRequestUser(req);
+        if (resolved.suspended || !resolved.user) return next(new Error('Unauthorized'));
+        user = resolved.user;
+      }
+
+      if (!user) return next(new Error('Unauthorized'));
 
       socket.userId = user._id.toString();
       socket.isAdmin = isAdminUser(user);
@@ -78,15 +93,11 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
 
     socket.on('join', async (channelName) => {
       if (typeof channelName !== 'string' || !channelName.trim()) return;
-
-      if (channelName.startsWith('user-')) {
-        const channelUserId = channelName.slice(5);
-        if (channelUserId !== socket.userId && !socket.isAdmin) {
-          return;
-        }
+      const room = channelName.trim();
+      if (room.startsWith(`user-`) && room !== `user-${socket.userId}` && !socket.isAdmin && !socket.isOps) {
+        return;
       }
-
-      socket.join(channelName);
+      socket.join(room);
     });
 
     socket.on('disconnect', () => {
@@ -94,31 +105,25 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
     });
   });
 
-  log().debug('Realtime', 'Socket.io initialized');
   return io;
 };
 
-const broadcastRealtimeEvent = (channelName, event, payload = {}) => {
+const getIo = () => io;
+
+const broadcastRealtimeEvent = (room, event, payload) => {
   if (!io) return;
-  try {
-    io.to(channelName).emit(event, payload);
-  } catch (err) {
-    log().warn('Realtime', 'Broadcast failed', { channelName, event, error: err.message });
-  }
+  io.to(room).emit(event, payload);
 };
 
-const closeRealtime = () =>
-  new Promise((resolve) => {
-    if (!io) return resolve();
-    io.close(() => {
-      io = null;
-      resolve();
-    });
-  });
+const closeRealtime = () => {
+  if (!io) return;
+  io.close();
+  io = null;
+};
 
 module.exports = {
   initRealtime,
+  getIo,
   broadcastRealtimeEvent,
   closeRealtime,
-  buildSocketAuthRequest,
 };

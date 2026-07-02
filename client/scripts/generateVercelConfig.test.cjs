@@ -4,6 +4,7 @@ const {
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
+  buildClerkProxyRewriteSatellite,
   existingRewritesLookValid,
 } = require('./generateVercelConfig.cjs');
 
@@ -60,6 +61,12 @@ test('PostHog proxy rewrites use hungry regex so trailing-slash endpoints (/deci
       `destination must end with :path — got "${rule.destination}"`,
     );
   }
+});
+
+test('buildClerkProxyRewriteSatellite proxies directly to Render (no primary-app double hop)', () => {
+  const rule = buildClerkProxyRewriteSatellite(apiDestination);
+  assert.equal(rule.source, '/__clerk/:path*');
+  assert.equal(rule.destination, 'https://api.example.onrender.com/__clerk/:path*');
 });
 
 test('existingRewritesLookValid accepts live Render host, rejects placeholder', () => {

@@ -17,6 +17,7 @@ const {
   getLogWorkDateKey,
 } = require('../../shared/dailyLogDetails');
 const { refreshAttendanceMetricsFromLog } = require('../utils/refreshAttendanceMetrics');
+const { ACTIVE_LOG_FILTER } = require('../utils/taskDailyLogs');
 
 const refreshAttendanceAfterLog = (log) => {
   refreshAttendanceMetricsFromLog(log).catch((err) => {
@@ -190,7 +191,7 @@ router.get('/', async (req, res) => {
       }
     }
     
-    const logs = await Log.find(filter)
+    const logs = await Log.find({ ...filter, ...ACTIVE_LOG_FILTER })
       .sort({ _id: -1 }) // Sort by ID for stable cursor pagination
       .limit(parseInt(limit))
       .populate({ path: 'userId', select: 'name avatar role' })

@@ -101,3 +101,12 @@ export function taskApprovalToast(taskTitle) {
     type: 'success',
   };
 }
+
+export function taskRollbackToast(taskTitle) {
+  const title = truncateForToast(taskTitle);
+  return {
+    title: 'Task Rolled Back',
+    message: `"${title}" returned to in progress.`,
+    type: 'success',
+  };
+}

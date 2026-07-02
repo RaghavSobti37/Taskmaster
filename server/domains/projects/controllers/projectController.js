@@ -19,6 +19,7 @@ const {
 const { normalizeStoredProjectRole } = require('../../../../shared/projectRoles');
 const { parseTimeSpentToHours } = require('../../../../shared/timeSpent');
 const taskProjectQueryService = require('../../tasks/services/taskProjectQueryService');
+const { ACTIVE_LOG_FILTER } = require('../../../utils/taskDailyLogs');
 const auditService = require('../../crm/services/auditService');
 const { getTenantId, runWithContext, resolveTenantIdForRequest } = require('../../../utils/tenantContext');
 
@@ -1116,6 +1117,7 @@ exports.getProjectHoursSummary = async (req, res) => {
     const plannedHours = tasks.reduce((sum, t) => sum + (t.plannedHours || 0), 0);
 
     const logs = await Log.find({
+      ...ACTIVE_LOG_FILTER,
       action: 'DAILY_LOG',
       'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] },
       $or: [

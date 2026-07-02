@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
   const posthogRegion = String(env.VITE_POSTHOG_HOST || '').toLowerCase().includes('eu') ? 'eu' : 'us'
   const posthogApiTarget = `https://${posthogRegion}.i.posthog.com`
   const posthogAssetsTarget = `https://${posthogRegion}-assets.i.posthog.com`
+  const isAuthBuild = mode === 'auth'
 
   return {
   // ponytail: Vercel/Clerk docs often set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY — expose alongside VITE_
@@ -51,31 +52,36 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     tailwindcss(),
-    VitePWA({
-      registerType: 'prompt',
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.js',
-      injectRegister: false,
-      includeAssets: [
-        'brand-mark.svg',
-        'favicon.svg',
-        'favicon.ico',
-        'safari-pinned-tab.svg',
-        'manifest.json',
-        ...brandIconAssets,
-      ],
-      manifest: false,
-      injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024
-      },
-      devOptions: {
-        enabled: false,
-        type: 'module'
-      }
-    }),
-    ...(mode === 'production'
+    // ponytail: auth host is sign-in only — no PWA/SW (precache pulled 300+ app chunks on /login)
+    ...(isAuthBuild
+      ? []
+      : [
+          VitePWA({
+            registerType: 'prompt',
+            strategies: 'injectManifest',
+            srcDir: 'src',
+            filename: 'sw.js',
+            injectRegister: false,
+            includeAssets: [
+              'brand-mark.svg',
+              'favicon.svg',
+              'favicon.ico',
+              'safari-pinned-tab.svg',
+              'manifest.json',
+              ...brandIconAssets,
+            ],
+            manifest: false,
+            injectManifest: {
+              globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+              maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+            },
+            devOptions: {
+              enabled: false,
+              type: 'module',
+            },
+          }),
+        ]),
+    ...(mode === 'production' && !isAuthBuild
       ? [
           visualizer({
             filename: 'dist/bundle-analysis.html',
@@ -83,6 +89,29 @@ export default defineConfig(({ mode }) => {
             gzipSize: true,
             brotliSize: true,
           }),
+        ]
+      : []),
+    ...(isAuthBuild
+      ? [
+          {
+            name: 'auth-dist-finalize',
+            closeBundle() {
+              const distDir = path.resolve(__dirname, 'dist')
+              const authHtml = path.join(distDir, 'index-auth.html')
+              const indexHtml = path.join(distDir, 'index.html')
+              if (fs.existsSync(authHtml)) {
+                fs.copyFileSync(authHtml, indexHtml)
+                fs.unlinkSync(authHtml)
+              }
+              const swPath = path.join(distDir, 'sw.js')
+              if (fs.existsSync(swPath)) fs.unlinkSync(swPath)
+              for (const name of fs.readdirSync(distDir)) {
+                if (name.startsWith('workbox-') && name.endsWith('.js')) {
+                  fs.unlinkSync(path.join(distDir, name))
+                }
+              }
+            },
+          },
         ]
       : []),
   ],
@@ -228,6 +257,9 @@ export default defineConfig(({ mode }) => {
         ),
     },
     rollupOptions: {
+      input: isAuthBuild
+        ? path.resolve(__dirname, 'index-auth.html')
+        : path.resolve(__dirname, 'index.html'),
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;

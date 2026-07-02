@@ -37,6 +37,7 @@
     "test:e2e": "playwright test --config e2e/playwright.config.cjs",
     "test:e2e:public": "playwright test --config e2e/playwright.config.cjs --grep public",
     "test:e2e:auth": "playwright test --config e2e/playwright.config.cjs --grep \"authenticated\"",
+    "test:e2e:production-auth": "node e2e/run-production-auth.mjs",
     "test:e2e:auth-setup": "playwright test --config e2e/playwright.config.cjs e2e/scripts/auth-setup.js",
     "test:e2e:explore": "playwright test --config e2e/playwright.config.cjs e2e/explore-page.smoke.js",
     "test:e2e:core-confidence": "playwright test --config e2e/playwright.config.cjs e2e/core-confidence.spec.js",

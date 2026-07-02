@@ -11,7 +11,7 @@
     "prevercel-build": "node scripts/generateVercelConfig.cjs",
     "vercel-build": "npm run build",
     "vercel-build:landing": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs && vite build --mode landing",
-    "vercel-build:auth": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs && vite build --mode auth",
+    "vercel-build:auth": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs && vite build --mode auth && node scripts/verify-auth-build.mjs",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "lint": "eslint .",
     "test": "vitest run && node --test scripts/generateVercelConfig.test.cjs",

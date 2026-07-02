@@ -18,7 +18,9 @@ function ClerkOrgActivatorInner() {
   useEffect(() => {
     if (!isClerkConfigured() || !pinnedOrgId || !isLoaded || !isSignedIn) return;
     if (orgId === pinnedOrgId) return;
-    setActive({ organization: pinnedOrgId }).catch(() => {});
+    setActive({ organization: pinnedOrgId }).catch(() => {
+      // ClerkSessionBridge surfaces org-pin failures during clerk-establish
+    });
   }, [isLoaded, isSignedIn, orgId, pinnedOrgId, setActive]);
 
   return null;

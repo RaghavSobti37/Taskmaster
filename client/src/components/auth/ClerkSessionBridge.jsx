@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAuth as useClerkAuth } from '@clerk/react';
+import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured, getPinnedClerkOrganizationId } from '../../config/clerk';
@@ -10,6 +10,7 @@ import {
   clearClerkEstablishError,
   setClerkEstablishError,
 } from '../../lib/clerkEstablishRegistry';
+import { fetchClerkEstablishToken } from '../../lib/clerkEstablishToken';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 /** Dedupe establish across React StrictMode remounts. */
@@ -46,6 +47,7 @@ export default function ClerkSessionBridge() {
 
 function ClerkSessionBridgeInner() {
   const { isLoaded, isSignedIn, getToken, signOut, userId, orgId } = useClerkAuth();
+  const { setActive } = useClerk();
   const pinnedOrgId = getPinnedClerkOrganizationId();
   const { user, sessionReady, login, applySessionUser } = useAuth();
   const signOutRef = useRef(signOut);
@@ -96,9 +98,6 @@ function ClerkSessionBridgeInner() {
       resetEstablishState();
       return undefined;
     }
-    if (pinnedOrgId && orgId !== pinnedOrgId) {
-      return undefined;
-    }
 
     const clerkKey = userId || 'active';
     if (establishForClerkSession === clerkKey && establishInflight) {
@@ -110,10 +109,35 @@ function ClerkSessionBridgeInner() {
 
     establishInflight = (async () => {
       try {
-        const token = await getToken(
-          pinnedOrgId ? { organizationId: pinnedOrgId } : undefined,
-        );
-        if (!token || cancelled) return;
+        const tokenResult = await fetchClerkEstablishToken({
+          getToken,
+          setActive,
+          pinnedOrgId,
+          activeOrgId: orgId,
+        });
+        if (cancelled) return;
+
+        if (!tokenResult.ok) {
+          if (tokenResult.retryable && establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+            establishForClerkSession = null;
+            window.setTimeout(() => {
+              if (!cancelled) setEstablishAttempt((n) => n + 1);
+            }, ESTABLISH_RETRY_MS);
+            return;
+          }
+          setClerkEstablishError(tokenResult.error);
+          if (!tokenResult.retryable) {
+            clearEstablishInflight();
+            try {
+              await signOutRef.current();
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
+
+        const { token } = tokenResult;
 
         let establishResponse;
         try {
@@ -193,6 +217,7 @@ function ClerkSessionBridgeInner() {
     user,
     sessionReady,
     getToken,
+    setActive,
     login,
     applySessionUser,
     establishAttempt,

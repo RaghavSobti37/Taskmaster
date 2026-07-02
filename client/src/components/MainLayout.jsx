@@ -5,7 +5,7 @@ import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
 import QuickAddMenu from './QuickAddMenu';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
-import { useWindowSize, DESKTOP_MIN } from '../hooks/useBreakpoint';
+import { useIsDesktop } from '../hooks/useBreakpoint';
 import MobileRouteGuard from './mobile/MobileRouteGuard';
 import MobilePullToRefresh from './mobile/MobilePullToRefresh';
 import NetworkStatusBanner from './NetworkStatusBanner';
@@ -33,9 +33,9 @@ const GChordHint = lazyWithRetry(() => import('./GChordHint'));
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
-  const { width } = useWindowSize();
-  // ponytail: viewport width beats PWA-desktop hook below lg — no margin when sidebar is off-screen
-  const applySidebarMargin = width >= DESKTOP_MIN;
+  const isDesktop = useIsDesktop();
+  // ponytail: useIsDesktop matches OutletSidebar — PWA installed app keeps sidebar margin + footer nav
+  const applySidebarMargin = isDesktop;
   const { user } = useAuth();
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
 
@@ -85,7 +85,7 @@ const MainLayout = () => {
       )}
 
       <div
-        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out max-lg:!ml-0"
+        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out"
         style={{
           marginLeft: applySidebarMargin
             ? (isOpen ? SIDEBAR_SHELL_WIDTH_OPEN : SIDEBAR_SHELL_WIDTH_COLLAPSED)

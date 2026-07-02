@@ -8,10 +8,14 @@ const NEST_SERVICE_ID = 'srv-d8vm9gbsq97s738h8plg';
 const apiKey = loadRenderApiKey();
 
 parseEnvFile(path.join(ROOT, 'server', '.env'));
-const dbUrl = (process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || '').trim();
+let dbUrl = (process.env.SUPABASE_DB_URL || process.env.DATABASE_URL || '').trim();
 if (!dbUrl || dbUrl.includes('localhost')) {
   console.error('Need SUPABASE_DB_URL in server/.env for Nest staging Postgres');
   process.exit(1);
+}
+
+if (!/[?&]sslmode=/.test(dbUrl)) {
+  dbUrl += dbUrl.includes('?') ? '&sslmode=require' : '?sslmode=require';
 }
 
 async function renderFetch(method, route, body) {

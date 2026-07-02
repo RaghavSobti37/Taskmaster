@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
 const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
+const { getBuildMeta } = require('../utils/buildMeta');
+const { pingSharedRedis } = require('../utils/sharedRedis');
 
 let systemStatus = 'STARTING';
 let failReason = null;
+let lastRedisState = 'unknown';
 
 class SystemHealthService {
   static async checkDependencies() {
@@ -12,9 +15,15 @@ class SystemHealthService {
         throw new Error('Database disconnected or connecting failed (readyState: ' + mongoose.connection.readyState + ')');
       }
 
-      const { redisAvailable } = require('./backgroundQueue');
-      if (redisAvailable === false) {
-        // Just a warning, not fatal for this system, but could be logged
+      if (process.env.REDIS_URL?.trim()) {
+        try {
+          const pong = await pingSharedRedis();
+          lastRedisState = pong === 'PONG' ? 'connected' : 'error';
+        } catch {
+          lastRedisState = 'unavailable';
+        }
+      } else {
+        lastRedisState = 'not_configured';
       }
 
       systemStatus = 'HEALTHY';
@@ -30,12 +39,14 @@ class SystemHealthService {
   static getDetailedStatus() {
     const mongoState = mongoose.connection.readyState;
     const mongoLabels = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-    let redisStatus = 'unknown';
-    try {
-      const { redisAvailable } = require('./backgroundQueue');
-      redisStatus = redisAvailable ? 'connected' : 'unavailable';
-    } catch {
-      redisStatus = 'unavailable';
+    let redisStatus = lastRedisState;
+    if (redisStatus === 'unknown') {
+      try {
+        const { redisAvailable } = require('./backgroundQueue');
+        redisStatus = redisAvailable ? 'connected' : 'unavailable';
+      } catch {
+        redisStatus = 'unavailable';
+      }
     }
 
     let supabaseStatus = 'disabled';
@@ -69,6 +80,7 @@ class SystemHealthService {
     return {
       status: systemStatus,
       reason: failReason,
+      build: getBuildMeta(),
       dependencies: {
         mongodb: {
           ok: mongoState === 1 || mongoState === 2,

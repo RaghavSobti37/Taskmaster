@@ -57,10 +57,12 @@ function registerRoutes(app) {
   app.use('/api', require('../routes/openApiRoutes'));
   app.get('/api/health', (_req, res) => {
     const detail = SystemHealthService.getDetailedStatus();
+    const { getBuildMeta } = require('../utils/buildMeta');
     const healthy = detail.status === 'HEALTHY' || detail.status === 'STARTING';
     const payload = {
       status: detail.status,
       reason: detail.reason || null,
+      build: detail.build || getBuildMeta(),
       dependencies: detail.dependencies,
       uptimeSeconds: detail.uptimeSeconds,
     };

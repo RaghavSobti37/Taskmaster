@@ -9,6 +9,11 @@ const repoRoot = path.resolve(__dirname, '..');
 process.env.E2E_PRODUCTION_AUTH = '1';
 process.env.E2E_SKIP_WEBSERVER = '1';
 
+// Avoid stale shell E2E_AUTH_ORIGIN from local preview runs unless explicitly testing preview.
+if (!process.argv.includes('--local-auth-preview')) {
+  delete process.env.E2E_AUTH_ORIGIN;
+}
+
 const result = spawnSync(
   'npx',
   [

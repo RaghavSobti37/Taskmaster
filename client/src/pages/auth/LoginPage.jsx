@@ -14,6 +14,8 @@ import { loginCopy } from '../../constants/marketingContent';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
+import { isClerkReadyForCoreKnotEstablish } from '../../lib/clerkSignInFlow';
+import { Spinner } from '../../components/ui/Spinner';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -27,11 +29,28 @@ export default function LoginPage() {
 }
 
 function LoginPageWithClerk() {
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useClerkAuth();
-  return <LoginPageView clerkLoaded={clerkLoaded} clerkSignedIn={clerkSignedIn} />;
+  const {
+    isLoaded: clerkLoaded,
+    isSignedIn: clerkSignedIn,
+    sessionId: clerkSessionId,
+  } = useClerkAuth();
+  const location = useLocation();
+  return (
+    <LoginPageView
+      clerkLoaded={clerkLoaded}
+      clerkSignedIn={clerkSignedIn}
+      clerkSessionId={clerkSessionId}
+      pathname={location.pathname}
+    />
+  );
 }
 
-function LoginPageView({ clerkLoaded, clerkSignedIn }) {
+function LoginPageView({
+  clerkLoaded,
+  clerkSignedIn,
+  clerkSessionId = null,
+  pathname = '/login',
+}) {
   const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +59,16 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
   const [establishError, setEstablishError] = useState(null);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
   const clerkReady = isClerkConfigured();
-  const clerkEstablishing = clerkReady && clerkLoaded && clerkSignedIn && (!user || !sessionReady) && !establishError;
+  const clerkReadyForEstablish = isClerkReadyForCoreKnotEstablish({
+    pathname: pathname || location.pathname,
+    isLoaded: clerkLoaded,
+    isSignedIn: clerkSignedIn,
+    sessionId: clerkSessionId,
+  });
+  const clerkEstablishing = clerkReady
+    && clerkReadyForEstablish
+    && (!user || !sessionReady)
+    && !establishError;
 
   useEffect(() => subscribeClerkEstablishError(setEstablishError), []);
 
@@ -62,7 +90,7 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
   }
 
-  if (authLoading || clerkEstablishing) {
+  if (authLoading) {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
@@ -97,7 +125,14 @@ function LoginPageView({ clerkLoaded, clerkSignedIn }) {
                 <p className="mt-1 text-red-100/90">{establishError.message}</p>
               </div>
             ) : null}
-            <ClerkSignInBlock />
+            {clerkEstablishing ? (
+              <div className="flex min-h-[12rem] flex-col items-center justify-center gap-3 py-8">
+                <Spinner size="lg" />
+                <p className="text-sm text-white/80 text-center">Opening your workspace…</p>
+              </div>
+            ) : (
+              <ClerkSignInBlock />
+            )}
           </>
         )}
         <ClearSessionCookiesButton bootError={Boolean(bootError) || Boolean(establishError)} />

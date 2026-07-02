@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SignIn, useAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
 import { resolveClerkForceRedirectUrl } from '../../config/siteUrls';
+import { isClerkSignInSubflowPath } from '../../lib/clerkSignInFlow';
 import {
   clerkAuthAppearance,
   clerkAuthLocalization,
@@ -27,9 +29,11 @@ export default function ClerkSignInBlock() {
 
 function ClerkSignInInner() {
   const { isLoaded, isSignedIn } = useAuth();
+  const location = useLocation();
   const clerkRedirect = useMemo(() => resolveClerkForceRedirectUrl(), []);
+  const inClerkSubflow = isClerkSignInSubflowPath(location.pathname);
 
-  if (isLoaded && isSignedIn) {
+  if (isLoaded && isSignedIn && !inClerkSubflow) {
     return null;
   }
 

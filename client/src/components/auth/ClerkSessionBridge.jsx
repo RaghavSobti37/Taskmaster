@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +12,7 @@ import {
   setClerkEstablishError,
 } from '../../lib/clerkEstablishRegistry';
 import { fetchClerkEstablishToken } from '../../lib/clerkEstablishToken';
+import { isClerkReadyForCoreKnotEstablish } from '../../lib/clerkSignInFlow';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 /** Dedupe establish across React StrictMode remounts. */
@@ -46,8 +48,9 @@ export default function ClerkSessionBridge() {
 }
 
 function ClerkSessionBridgeInner() {
-  const { isLoaded, isSignedIn, getToken, signOut, userId, orgId } = useClerkAuth();
+  const { isLoaded, isSignedIn, getToken, signOut, userId, orgId, sessionId } = useClerkAuth();
   const { setActive } = useClerk();
+  const location = useLocation();
   const pinnedOrgId = getPinnedClerkOrganizationId();
   const { user, sessionReady, login, applySessionUser } = useAuth();
   const signOutRef = useRef(signOut);
@@ -90,8 +93,19 @@ function ClerkSessionBridgeInner() {
   }, []);
 
   useEffect(() => {
-    if (!isClerkConfigured() || !isLoaded || !isSignedIn) {
-      if (!isSignedIn) resetEstablishState();
+    if (!isClerkConfigured() || !isLoaded) {
+      return undefined;
+    }
+    if (!isSignedIn) {
+      resetEstablishState();
+      return undefined;
+    }
+    if (!isClerkReadyForCoreKnotEstablish({
+      pathname: location.pathname,
+      isLoaded,
+      isSignedIn,
+      sessionId,
+    })) {
       return undefined;
     }
     if (user && sessionReady) {
@@ -211,6 +225,8 @@ function ClerkSessionBridgeInner() {
   }, [
     isLoaded,
     isSignedIn,
+    sessionId,
+    location.pathname,
     userId,
     orgId,
     pinnedOrgId,

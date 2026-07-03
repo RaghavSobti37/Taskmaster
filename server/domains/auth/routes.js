@@ -8,7 +8,7 @@ const router = express.Router();
 const {
   register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, clerkEstablishSession, forgotPassword, resetPassword,
-  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions,
+  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions, requestAccess,
 } = require('./controllers/authController');
 const {
   registerOptions, registerVerify, loginOptions,
@@ -23,6 +23,7 @@ const {
   changeRequiredPasswordBody,
   oauthEstablishBody,
   clerkEstablishBody,
+  accessRequestBody,
 } = require('../../validation/schemas/auth');
 
 const authLoginLimiter = rateLimit({
@@ -71,6 +72,16 @@ const clerkEstablishLimiter = rateLimit({
   },
 });
 
+const authAccessRequestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many access requests. Try again later.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
+router.post('/access-request', authAccessRequestLimiter, validateBody(accessRequestBody), requestAccess);
 router.post('/register', authSignupLimiter, validateBody(registerBody), register);
 router.post('/login', authLoginLimiter, validateBody(loginBody), login);
 router.post('/forgot-password', authForgotPasswordLimiter, validateBody(forgotPasswordBody), forgotPassword);

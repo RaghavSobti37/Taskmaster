@@ -1,4 +1,4 @@
-import { shouldUseSameOriginApi } from './displayMode';
+import { isVercelPreviewHost, shouldUseSameOriginApi } from './displayMode';
 import { isAuthSite } from '../config/siteMode';
 
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
@@ -18,10 +18,12 @@ export function getDirectApiBaseUrl() {
 }
 
 /** Dev + mobile/PWA: Vite/Vercel proxy. Desktop production: Render direct (skips Vercel edge).
- * Auth host always same-origin — clerk-establish/session cookies must not cross origins (CORS). */
+ * Auth host always same-origin — clerk-establish/session cookies must not cross origins (CORS).
+ * Vercel preview: direct staging API — Deployment Protection SSO blocks /api rewrites. */
 export function routeViaSameOriginApi() {
   if (import.meta.env.DEV) return true;
   if (isAuthSite()) return true;
+  if (typeof window !== 'undefined' && isVercelPreviewHost()) return false;
   if (typeof window !== 'undefined' && shouldUseSameOriginApi()) return true;
   return false;
 }

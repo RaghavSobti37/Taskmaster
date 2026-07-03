@@ -112,3 +112,33 @@ test('buildVercelSecurityHeaders adds preview CSP allowances', () => {
   const prod = buildContentSecurityPolicy({ isPreview: false });
   assert.ok(!prod.includes('https://vercel.live'));
 });
+
+test('writeViteProductionEnv forces staging on preview when VITE_API_URL is production', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const prev = { ...process.env };
+  const envFile = path.join(__dirname, '../.env.production.local');
+  let backup = null;
+  try {
+    backup = fs.readFileSync(envFile, 'utf8');
+  } catch {
+    /* no file */
+  }
+
+  process.env.VERCEL_ENV = 'preview';
+  process.env.VITE_API_URL = 'https://taskmaster-jfw0.onrender.com';
+
+  const { writeViteProductionEnv, CANONICAL_STAGING_API_URL } = require('./generateVercelConfig.cjs');
+  writeViteProductionEnv(CANONICAL_STAGING_API_URL);
+
+  const written = fs.readFileSync(envFile, 'utf8');
+  assert.ok(written.includes(CANONICAL_STAGING_API_URL));
+  assert.ok(!written.includes('taskmaster-jfw0.onrender.com'));
+
+  if (backup === null) {
+    fs.unlinkSync(envFile);
+  } else {
+    fs.writeFileSync(envFile, backup, 'utf8');
+  }
+  process.env = prev;
+});

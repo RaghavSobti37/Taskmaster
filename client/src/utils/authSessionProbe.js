@@ -33,6 +33,15 @@ export async function probeAuthSession() {
     return { status: 401, user: null };
   }
 
+  // ponytail: Vercel Deployment Protection redirects /api → vercel.com/sso-api (HTML, not JSON)
+  if (res.redirected && String(res.url || '').includes('vercel.com/sso')) {
+    const err = new Error(
+      'Preview API blocked by Vercel login. Open the deployment link after signing into Vercel, or use staging API directly.',
+    );
+    err.code = 'VERCEL_SSO';
+    throw err;
+  }
+
   if (!res.ok && res.status !== 403) {
     const err = new Error(`auth session probe failed: ${res.status}`);
     err.status = res.status;

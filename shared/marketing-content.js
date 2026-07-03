@@ -128,11 +128,13 @@ export const loginCopy = {
 };
 
 export const registerCopy = {
-  title: 'Create Account',
-  subtitle: 'Join your team on CoreKnot — projects, CRM, and ops in one workspace.',
-  submitLabel: 'Create Account',
-  signInPrompt: 'Already have an account?',
+  title: 'Request access',
+  subtitle: 'CoreKnot is invite-only. Ask your organisation admin to add you, or send a request below.',
+  submitLabel: 'Request access',
+  signInPrompt: 'Already have credentials?',
   signInLink: 'Sign in',
+  closedSystemNote: 'Your admin will create your account and share a temporary password. Self sign-up is disabled.',
+  successMessage: 'Request sent. Your organisation admin will add you and share login credentials.',
 };
 
 export const inAppFeatures = {

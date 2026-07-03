@@ -37,6 +37,12 @@ const clerkEstablishBody = z.object({
   organizationId: z.string().optional(),
 });
 
+const accessRequestBody = z.object({
+  email: z.string().min(1),
+  name: z.string().optional(),
+  message: z.string().optional(),
+});
+
 module.exports = {
   registerBody,
   loginBody,
@@ -45,4 +51,5 @@ module.exports = {
   changeRequiredPasswordBody,
   oauthEstablishBody,
   clerkEstablishBody,
+  accessRequestBody,
 };

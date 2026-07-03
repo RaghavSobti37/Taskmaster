@@ -1,5 +1,4 @@
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
-const crypto = require('crypto');
 const User = require('../models/User');
 
 const MOCK_SECRET = 'mock_clerk_secret';
@@ -59,9 +58,10 @@ const verifyClerkSessionToken = async (token) => {
 };
 
 /**
- * Find or create a CoreKnot user from a verified Clerk profile.
+ * Find an existing CoreKnot user from a verified Clerk profile.
+ * Closed system — does not auto-create accounts (admin provisions users).
  * @param {{ clerkUserId: string, email: string, name: string }} profile
- * @param {{ isRegistrationAllowed: (email: string) => { ok: boolean, error?: string } }} guards
+ * @param {{ tenantId?: string }} guards
  */
 const resolveUserFromClerkProfile = async (profile, guards = {}) => {
   const email = profile.email?.toLowerCase?.().trim();
@@ -72,40 +72,26 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
   }
 
   let dbUser = await populateDepartment(User.findOne({ email }).select('-password'));
+  if (!dbUser && profile.clerkUserId) {
+    dbUser = await populateDepartment(
+      User.findOne({ clerkId: profile.clerkUserId }).select('-password'),
+    );
+  }
   if (!dbUser) {
-    const allowed = guards.isRegistrationAllowed
-      ? guards.isRegistrationAllowed(email)
-      : { ok: true };
-    if (!allowed.ok) {
-      const err = new Error(allowed.error || 'Registration not allowed');
-      err.status = 403;
-      throw err;
-    }
-    const createPayload = {
-      name: profile.name || email.split('@')[0],
-      email,
-      password: crypto.randomBytes(32).toString('hex'),
-      mustChangePassword: true,
-      clerkId: profile.clerkUserId,
-    };
-    if (guards.tenantId) {
-      createPayload.tenantId = guards.tenantId;
-    }
-    dbUser = await User.create(createPayload);
-    dbUser = await populateDepartment(User.findById(dbUser._id).select('-password'));
-  } else {
-    const patch = {};
-    if (profile.clerkUserId && dbUser.clerkId !== profile.clerkUserId) {
-      patch.clerkId = profile.clerkUserId;
-      dbUser.clerkId = profile.clerkUserId;
-    }
-    if (guards.tenantId && !dbUser.tenantId) {
-      patch.tenantId = guards.tenantId;
-      dbUser.tenantId = guards.tenantId;
-    }
-    if (Object.keys(patch).length) {
-      await User.updateOne({ _id: dbUser._id }, { $set: patch }).setOptions({ bypassTenant: true });
-    }
+    return null;
+  }
+
+  const patch = {};
+  if (profile.clerkUserId && dbUser.clerkId !== profile.clerkUserId) {
+    patch.clerkId = profile.clerkUserId;
+    dbUser.clerkId = profile.clerkUserId;
+  }
+  if (guards.tenantId && !dbUser.tenantId) {
+    patch.tenantId = guards.tenantId;
+    dbUser.tenantId = guards.tenantId;
+  }
+  if (Object.keys(patch).length) {
+    await User.updateOne({ _id: dbUser._id }, { $set: patch }).setOptions({ bypassTenant: true });
   }
 
   return dbUser;

@@ -33,6 +33,7 @@ const {
   ensureClerkOrganizationAccess,
   shouldEnforceClerkOrganization,
 } = require('../../../utils/organizationAccess');
+const { syncClerkUserPassword } = require('../../../utils/clerkUserProvisioning');
 
 const { assertEstablishAllowed } = require('../utils/establishAccess');
 const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
@@ -432,6 +433,20 @@ exports.changeRequiredPassword = async (req, res) => {
       return res.status(500).json({ error: 'Password could not be saved. Please try again.' });
     }
 
+    if (user.clerkId) {
+      try {
+        await syncClerkUserPassword(user.clerkId, normalizedNewPassword);
+      } catch (clerkErr) {
+        logger.error('Auth', 'changeRequiredPassword Clerk password sync failed', {
+          userId: user._id,
+          error: clerkErr.message,
+        });
+        return res.status(clerkErr.status || 502).json({
+          error: clerkErr.message || 'Password saved locally but Clerk sync failed. Try again.',
+        });
+      }
+    }
+
     const populated = await User.findById(user._id)
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
@@ -600,7 +615,6 @@ const clerkEstablishSessionHandler = async (req, res) => {
       tokenOrganizationId: profile.clerkOrganizationId,
     });
     const tenant = await resolveTenantForOrganization(clerkOrganizationId);
-    let orgAccessGranted = false;
 
     if (shouldEnforceClerkOrganization() && clerkOrganizationId) {
       await ensureClerkOrganizationAccess({
@@ -610,18 +624,15 @@ const clerkEstablishSessionHandler = async (req, res) => {
         clerkOrganizationId,
         tenant,
       });
-      orgAccessGranted = true;
     }
 
     const populated = await resolveUserFromClerkProfile(profile, {
-      isRegistrationAllowed: (emailLower) => {
-        if (orgAccessGranted) return { ok: true };
-        return isRegistrationAllowed(emailLower);
-      },
       tenantId: tenant?._id,
     });
     if (!populated) {
-      return res.status(401).json({ error: 'User no longer exists' });
+      return res.status(403).json({
+        error: 'No CoreKnot account found for this email. Ask your organisation admin to add you first.',
+      });
     }
     if (populated.suspended) {
       clearAuthCookie(res, req);
@@ -763,6 +774,88 @@ exports.adminRevokeAllUserSessions = async (req, res) => {
   }
 };
 
+const buildAccessRequestEmailHtml = ({ requesterName, requesterEmail, note, adminUsersUrl }) => `
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
+    <h2 style="color: #0d9488; margin-bottom: 8px;">CoreKnot access request</h2>
+    <p>Someone asked to join your organisation workspace.</p>
+    <p><strong>Name:</strong> ${requesterName || 'Not provided'}</p>
+    <p><strong>Email:</strong> ${requesterEmail}</p>
+    ${note ? `<p><strong>Message:</strong> ${note}</p>` : ''}
+    <p style="text-align: center; margin: 28px 0;">
+      <a href="${adminUsersUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
+        Open Admin → Users
+      </a>
+    </p>
+    <p style="font-size: 13px; color: #666;">Add them in CoreKnot, then share the temporary password shown once after creation.</p>
+  </div>
+`;
+
+exports.requestAccess = async (req, res) => {
+  try {
+    const { email, name, message } = req.body;
+    if (typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailLower)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const existing = await User.findOne({ email: emailLower }).setOptions({ bypassTenant: true });
+    if (existing) {
+      return res.status(409).json({
+        error: 'An account with this email already exists. Sign in or ask your admin for credentials.',
+      });
+    }
+
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    if (!adminEmail) {
+      logger.warn('authController', 'requestAccess without ADMIN_EMAIL');
+      return res.status(503).json({ error: 'Access requests are not configured. Contact support.' });
+    }
+
+    const { resolveClientUrl } = require('../../../utils/oauthEnv');
+    const adminUsersUrl = `${resolveClientUrl()}/admin/users`;
+    const requesterName = typeof name === 'string' ? name.trim() : '';
+    const note = typeof message === 'string' ? message.trim() : '';
+
+    try {
+      await sendSystemEmail({
+        to: adminEmail,
+        subject: `CoreKnot access request — ${emailLower}`,
+        html: buildAccessRequestEmailHtml({
+          requesterName,
+          requesterEmail: emailLower,
+          note,
+          adminUsersUrl,
+        }),
+        text: [
+          'CoreKnot access request',
+          `Name: ${requesterName || 'Not provided'}`,
+          `Email: ${emailLower}`,
+          note ? `Message: ${note}` : '',
+          `Add user: ${adminUsersUrl}`,
+        ].filter(Boolean).join('\n'),
+      });
+    } catch (mailErr) {
+      logger.error('authController', 'requestAccess email failed', {
+        error: mailErr.message,
+        email: emailLower,
+      });
+      return res.status(500).json({ error: 'Could not send access request. Please try again later.' });
+    }
+
+    return res.json({
+      message: 'Request sent. Your organisation admin will add you and share login credentials.',
+    });
+  } catch (error) {
+    logger.error('authController', 'requestAccess failed', { error: error.message || error });
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.forgotPassword = async (req, res) => {
   if (blockLegacyAuth(res)) return;
   try {
@@ -857,6 +950,20 @@ exports.resetPassword = async (req, res) => {
     user.mustChangePassword = false;
     user.passwordChangedAt = new Date();
     await user.save();
+
+    if (user.clerkId) {
+      try {
+        await syncClerkUserPassword(user.clerkId, normalizedNewPassword);
+      } catch (clerkErr) {
+        logger.error('authController', 'resetPassword Clerk password sync failed', {
+          userId: user._id,
+          error: clerkErr.message,
+        });
+        return res.status(clerkErr.status || 502).json({
+          error: clerkErr.message || 'Password saved locally but Clerk sync failed. Try again.',
+        });
+      }
+    }
 
     return res.json({ message: 'Password updated successfully. You can now sign in with your new password.' });
   } catch (error) {

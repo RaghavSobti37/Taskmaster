@@ -13,6 +13,11 @@ const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
+const { isClerkConfigured } = require('../../../utils/clerkAuth');
+const {
+  provisionClerkUserForCoreKnotUser,
+  syncClerkUserPassword,
+} = require('../../../utils/clerkUserProvisioning');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
@@ -207,6 +212,20 @@ exports.updateProfile = async (req, res) => {
         logger.error('User', 'updateProfile password verification failed', { userId: user._id });
         return res.status(500).json({ error: 'Password could not be saved. Please try again.' });
       }
+
+      if (user.clerkId) {
+        try {
+          await syncClerkUserPassword(user.clerkId, savedPasswordForVerify);
+        } catch (clerkErr) {
+          logger.error('User', 'updateProfile Clerk password sync failed', {
+            userId: user._id,
+            error: clerkErr.message,
+          });
+          return res.status(clerkErr.status || 502).json({
+            error: clerkErr.message || 'Password saved locally but Clerk sync failed. Try again.',
+          });
+        }
+      }
     }
 
     const updatedUser = await User.findById(user._id)
@@ -326,6 +345,32 @@ exports.createUserAdmin = async (req, res) => {
       mustChangePassword: true,
     });
 
+    if (isClerkConfigured()) {
+      try {
+        const { clerkUserId } = await provisionClerkUserForCoreKnotUser({
+          email: emailLower,
+          name: name.trim(),
+          phone: phone || '',
+          plainPassword: temporaryPassword,
+          dbUserId: user._id,
+        });
+        user.clerkId = clerkUserId;
+        await user.save();
+      } catch (clerkErr) {
+        await User.findByIdAndDelete(user._id);
+        logger.error('User', 'createUserAdmin Clerk provisioning failed', {
+          email: emailLower,
+          error: clerkErr.message,
+        });
+        const status = clerkErr.status || 502;
+        return res.status(status).json({
+          error: clerkErr.errors?.[0]?.message
+            || clerkErr.message
+            || 'Failed to provision Clerk account for this user',
+        });
+      }
+    }
+
     const populated = await User.findById(user._id)
       .select('-password')
       .populate('departmentId', 'name slug permissionPreset pagePermissions signupAllowed');
@@ -404,6 +449,7 @@ exports.updateUserAdmin = async (req, res) => {
       }
     }
 
+    let adminPasswordPlain = null;
     if (newPassword) {
       const normalizedNewPassword = normalizePasswordInput(newPassword);
       const passwordError = validatePasswordStrength(normalizedNewPassword);
@@ -411,9 +457,24 @@ exports.updateUserAdmin = async (req, res) => {
       targetUser.password = normalizedNewPassword;
       targetUser.mustChangePassword = false;
       targetUser.passwordChangedAt = new Date();
+      adminPasswordPlain = normalizedNewPassword;
     }
 
     await targetUser.save();
+
+    if (adminPasswordPlain && targetUser.clerkId) {
+      try {
+        await syncClerkUserPassword(targetUser.clerkId, adminPasswordPlain);
+      } catch (clerkErr) {
+        logger.error('User', 'updateUserAdmin Clerk password sync failed', {
+          userId: targetUser._id,
+          error: clerkErr.message,
+        });
+        return res.status(clerkErr.status || 502).json({
+          error: clerkErr.message || 'Password saved locally but Clerk sync failed. Try again.',
+        });
+      }
+    }
     await invalidateAuthUserCache(targetUser._id);
 
     const updatedUser = await User.findById(req.params.id)

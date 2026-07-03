@@ -79,6 +79,55 @@ describe('financeProjectMatcher', () => {
     expect(match.confidence).toBe('general');
   });
 
+  test('matchFinanceDocToProject ignoreExisting forces rematch off weak assignment', () => {
+    const match = matchFinanceDocToProject({
+      project: '507f1f77bcf86cd799439013',
+      title: 'TSC Academy studio rent June',
+      fileName: 'academy-rent.pdf',
+      category: 'invoice',
+      metadata: { vendor: 'Unrelated Vendor LLC' },
+    }, projects, {
+      generalProjectId: '507f1f77bcf86cd799439013',
+      ignoreExisting: true,
+    });
+
+    expect(match.projectId).toBe('507f1f77bcf86cd799439011');
+    expect(match.confidence).toBe('matched');
+  });
+
+  test('matchFinanceDocToProject title token beats vendor boilerplate on rematch', () => {
+    const match = matchFinanceDocToProject({
+      project: '507f1f77bcf86cd799439012',
+      title: 'INV YUGM Shakti Collective',
+      fileName: 'yugm-inv.pdf',
+      category: 'invoice',
+      extractedText: 'Havells Myousic billing address repeated many times',
+    }, projects, {
+      generalProjectId: '507f1f77bcf86cd799439013',
+      ignoreExisting: true,
+    });
+
+    expect(match.projectId).toBe('507f1f77bcf86cd799439012');
+    expect(match.confidence).toBe('matched');
+  });
+
+  test('matchFinanceDocToProject requireTitleMatch keeps general overhead on bucket', () => {
+    const match = matchFinanceDocToProject({
+      project: '507f1f77bcf86cd799439013',
+      title: 'ACPL 12 SHAKTI COLLECTIVE LLP',
+      fileName: 'acpl.pdf',
+      category: 'invoice',
+      extractedText: 'Havells Myousic repeated vendor block',
+    }, projects, {
+      generalProjectId: '507f1f77bcf86cd799439013',
+      ignoreExisting: true,
+      requireTitleMatch: true,
+    });
+
+    expect(match.projectId).toBe('507f1f77bcf86cd799439013');
+    expect(match.confidence).toBe('general');
+  });
+
   test('resolveFinanceCategory upgrades other from detectedCategory', () => {
     expect(resolveFinanceCategory({
       category: 'other',

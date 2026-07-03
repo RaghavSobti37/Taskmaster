@@ -46,18 +46,20 @@ function parseDateValue(raw) {
  * Extracts raw text from a PDF file buffer.
  */
 // ponytail: lazy require — pdf-parse v2 pulls pdfjs + canvas and crashes Render boot
-let pdfParseFn;
-function getPdfParse() {
-  if (!pdfParseFn) {
-    pdfParseFn = require('pdf-parse');
+let pdfParseModule;
+function getPdfParseModule() {
+  if (!pdfParseModule) {
+    pdfParseModule = require('pdf-parse');
   }
-  return pdfParseFn;
+  return pdfParseModule;
 }
 
 async function extractTextFromPDF(buffer) {
   try {
-    const pdfParse = getPdfParse();
-    const result = await pdfParse(buffer);
+    const { PDFParse } = getPdfParseModule();
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
     return result?.text || '';
   } catch (error) {
     console.error('PDFParse error:', error);

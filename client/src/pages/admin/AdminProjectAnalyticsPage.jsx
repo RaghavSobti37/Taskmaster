@@ -70,40 +70,42 @@ const AdminProjectAnalyticsPage = () => {
     return map;
   }, [summary]);
 
+  const allProjectRows = useMemo(() => projects
+    .map((project) => {
+      const stats = summaryByProjectId.get(project._id) || {};
+      return {
+        projectId: project._id,
+        name: project.name,
+        workspace: project.workspace || 'General',
+        progress: project.progress || 0,
+        completedTasks: project.completedTasksCount ?? project.completedTasks ?? 0,
+        totalTasks: project.totalTasksCount ?? project.totalTasks ?? 0,
+        totalHours: stats.totalHours || 0,
+        manualLogHours: stats.manualLogHours || 0,
+        taskCompletionHours: stats.taskCompletionHours || 0,
+        logCount: stats.logCount || 0,
+        tasksCompleted: stats.tasksCompleted || 0,
+        budget: stats.budget || 0,
+        spentTotal: stats.spentTotal || 0,
+        spentInRange: stats.spentInRange || 0,
+        revenueInRange: stats.revenueInRange || 0,
+        remaining: stats.remaining || 0,
+        budgetUsedPct: stats.budgetUsedPct ?? null,
+        spendByCategory: stats.spendByCategory || {},
+      };
+    }), [projects, summaryByProjectId]);
+
   const rows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return projects
-      .map((project) => {
-        const stats = summaryByProjectId.get(project._id) || {};
-        return {
-          projectId: project._id,
-          name: project.name,
-          workspace: project.workspace || 'General',
-          progress: project.progress || 0,
-          completedTasks: project.completedTasksCount ?? project.completedTasks ?? 0,
-          totalTasks: project.totalTasksCount ?? project.totalTasks ?? 0,
-          totalHours: stats.totalHours || 0,
-          manualLogHours: stats.manualLogHours || 0,
-          taskCompletionHours: stats.taskCompletionHours || 0,
-          logCount: stats.logCount || 0,
-          tasksCompleted: stats.tasksCompleted || 0,
-          budget: stats.budget || 0,
-          spentTotal: stats.spentTotal || 0,
-          spentInRange: stats.spentInRange || 0,
-          revenueInRange: stats.revenueInRange || 0,
-          remaining: stats.remaining || 0,
-          budgetUsedPct: stats.budgetUsedPct ?? null,
-          spendByCategory: stats.spendByCategory || {},
-        };
-      })
+    return allProjectRows
       .filter((row) => {
         if (!q) return true;
         return `${row.name} ${row.workspace}`.toLowerCase().includes(q);
       })
       .sort((a, b) => b.totalHours - a.totalHours || a.name.localeCompare(b.name));
-  }, [projects, summaryByProjectId, searchTerm]);
+  }, [allProjectRows, searchTerm]);
 
-  const totals = useMemo(() => rows.reduce(
+  const totals = useMemo(() => allProjectRows.reduce(
     (acc, row) => ({
       totalHours: acc.totalHours + row.totalHours,
       manualLogHours: acc.manualLogHours + row.manualLogHours,
@@ -111,6 +113,7 @@ const AdminProjectAnalyticsPage = () => {
       logCount: acc.logCount + row.logCount,
       tasksCompleted: acc.tasksCompleted + row.tasksCompleted,
       budget: acc.budget + row.budget,
+      spentTotal: acc.spentTotal + row.spentTotal,
       spentInRange: acc.spentInRange + row.spentInRange,
       remaining: acc.remaining + row.remaining,
       revenueInRange: acc.revenueInRange + row.revenueInRange,
@@ -122,11 +125,12 @@ const AdminProjectAnalyticsPage = () => {
       logCount: 0,
       tasksCompleted: 0,
       budget: 0,
+      spentTotal: 0,
       spentInRange: 0,
       remaining: 0,
       revenueInRange: 0,
     }
-  ), [rows]);
+  ), [allProjectRows]);
 
   const burnRatePerDay = useMemo(() => {
     const days = summary?.window?.days || 1;
@@ -297,7 +301,7 @@ const AdminProjectAnalyticsPage = () => {
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
               Effort · selected range
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 ${summaryFetching ? 'opacity-60' : ''}`}>
               <StatCard
                 label="Total Hours"
                 value={totals.totalHours.toFixed(1)}
@@ -334,7 +338,7 @@ const AdminProjectAnalyticsPage = () => {
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
               Financial · from project Finance docs
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 ${summaryFetching ? 'opacity-60' : ''}`}>
               <StatCard
                 label="Total Budget"
                 value={formatProjectInr(totals.budget)}
@@ -347,7 +351,9 @@ const AdminProjectAnalyticsPage = () => {
                 value={formatProjectInr(totals.spentInRange)}
                 icon={IndianRupee}
                 variant="apricot"
-                subValue="in range"
+                subValue={totals.spentInRange !== totals.spentTotal
+                  ? `${formatProjectInr(totals.spentTotal)} all-time`
+                  : 'in range'}
                 info="Invoices, receipts, and tax docs dated inside the selected range."
               />
               <StatCard

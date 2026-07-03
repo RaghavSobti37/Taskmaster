@@ -26,6 +26,8 @@ const RUN_PROD = args.includes('--prod') || args.includes('--all');
 const limitArg = args.find((arg) => arg.startsWith('--limit='));
 const LIMIT = limitArg ? Number(limitArg.split('=')[1]) : null;
 
+const BYPASS = { bypassTenant: true };
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const formatDateKey = (value) => {
@@ -50,7 +52,7 @@ async function reparseDatabase(label, uri) {
     fileUrl: { $exists: true, $nin: ['', 'folder://placeholder'] },
   };
 
-  let cursor = FinanceDocument.find(query).sort({ createdAt: 1 }).cursor();
+  let cursor = FinanceDocument.find(query).setOptions(BYPASS).sort({ createdAt: 1 }).cursor();
   let processed = 0;
   let updated = 0;
   let skipped = 0;
@@ -61,6 +63,7 @@ async function reparseDatabase(label, uri) {
     processed += 1;
 
     const oldDate = doc.metadata?.date;
+    const oldAmount = Number(doc.metadata?.amount) || 0;
     const title = doc.title || doc.fileName || doc._id.toString();
 
     try {
@@ -71,24 +74,31 @@ async function reparseDatabase(label, uri) {
       const buffer = Buffer.from(response.data);
       const mimeType = resolveMimeType(doc);
       const parsed = await parseDocument(buffer, mimeType);
+      const parsedAmount = Number(parsed.metadata?.amount) || 0;
+      const parsedMeta = parsed.metadata || {};
       const nextMetadata = {
         ...(doc.metadata?.toObject?.() || doc.metadata || {}),
-        amount: parsed.metadata?.amount ?? doc.metadata?.amount ?? 0,
-        currency: parsed.metadata?.currency || doc.metadata?.currency || 'INR',
-        vendor: parsed.metadata?.vendor || doc.metadata?.vendor || '',
-        date: parsed.metadata?.date ?? doc.metadata?.date ?? null,
-        tax: parsed.metadata?.tax ?? doc.metadata?.tax ?? 0,
-        detectedCategory: parsed.metadata?.detectedCategory || doc.metadata?.detectedCategory || doc.category || 'other',
+        amount: parsedAmount > 0 ? parsedAmount : (Number(doc.metadata?.amount) || 0),
+        currency: parsedMeta.currency || doc.metadata?.currency || 'INR',
+        vendor: parsedMeta.vendor || doc.metadata?.vendor || '',
+        date: parsedMeta.date ?? doc.metadata?.date ?? null,
+        tax: parsedMeta.tax > 0 ? parsedMeta.tax : (Number(doc.metadata?.tax) || 0),
+        detectedCategory: parsedMeta.detectedCategory || doc.metadata?.detectedCategory || doc.category || 'other',
       };
 
       const dateChanged = formatDateKey(oldDate) !== formatDateKey(nextMetadata.date);
       const vendorChanged = (doc.metadata?.vendor || '') !== (nextMetadata.vendor || '');
+      const amountChanged = oldAmount !== (Number(nextMetadata.amount) || 0);
+      const categoryChanged = parsed.metadata?.detectedCategory
+        && parsed.metadata.detectedCategory !== 'other'
+        && parsed.metadata.detectedCategory !== (doc.category || 'other');
 
       if (DRY_RUN) {
         console.log(`~ ${title}`);
+        console.log(`  amount: ${oldAmount} -> ${nextMetadata.amount || 0}${amountChanged ? ' *' : ''}`);
         console.log(`  date: ${formatDateKey(oldDate)} -> ${formatDateKey(nextMetadata.date)}${dateChanged ? ' *' : ''}`);
         if (vendorChanged) console.log(`  vendor: "${doc.metadata?.vendor || ''}" -> "${nextMetadata.vendor || ''}"`);
-        if (dateChanged || vendorChanged) updated += 1;
+        if (amountChanged || dateChanged || vendorChanged || categoryChanged) updated += 1;
         else skipped += 1;
         continue;
       }
@@ -100,9 +110,12 @@ async function reparseDatabase(label, uri) {
       }
       await doc.save();
 
-      if (dateChanged || vendorChanged) {
+      if (amountChanged || dateChanged || vendorChanged || categoryChanged) {
         updated += 1;
         console.log(`✓ ${title}`);
+        if (amountChanged) {
+          console.log(`  amount: ${oldAmount} -> ${nextMetadata.amount || 0}`);
+        }
         if (dateChanged) {
           console.log(`  date: ${formatDateKey(oldDate)} -> ${formatDateKey(nextMetadata.date)}`);
         }

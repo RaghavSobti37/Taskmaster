@@ -120,6 +120,8 @@ const matchFinanceDocToProject = (doc, projects, options = {}) => {
     generalProjectId = null,
     folderName = '',
     keepExistingMinScore = 25,
+    ignoreExisting = false,
+    requireTitleMatch = false,
   } = options;
 
   const matchers = buildProjectMatchers(projects);
@@ -128,7 +130,7 @@ const matchFinanceDocToProject = (doc, projects, options = {}) => {
   const text = buildDocSearchText(doc, folderName);
 
   const existingId = doc.project?.toString?.() || doc.project;
-  if (existingId) {
+  if (existingId && !ignoreExisting) {
     const existingMatcher = matchers.find((m) => m.id === existingId);
     const existingScore = existingMatcher ? scoreProjectMatch(text, existingMatcher) : 0;
 
@@ -165,16 +167,33 @@ const matchFinanceDocToProject = (doc, projects, options = {}) => {
 
   let best = null;
   let bestScore = 0;
+  let bestIsTitleMatch = false;
+  const titleText = [doc.title, doc.fileName, folderName].filter(Boolean).join(' ');
   matchers.forEach((matcher) => {
     if (fallbackId && matcher.id === fallbackId) return;
-    const score = scoreProjectMatch(text, matcher);
-    if (score > bestScore) {
+    const fullScore = scoreProjectMatch(text, matcher);
+    const titleScore = scoreProjectMatch(titleText, matcher);
+    const isTitleMatch = titleScore >= MATCH_THRESHOLD;
+    const score = isTitleMatch
+      ? titleScore
+      : (titleScore > 0 ? titleScore + fullScore * 0.2 : fullScore);
+
+    const beats = !best
+      || (isTitleMatch && !bestIsTitleMatch)
+      || (isTitleMatch === bestIsTitleMatch && score > bestScore);
+
+    if (beats) {
       bestScore = score;
+      bestIsTitleMatch = isTitleMatch;
       best = matcher;
     }
   });
 
-  if (best && bestScore >= MATCH_THRESHOLD) {
+  const matched = best && (
+    bestIsTitleMatch
+    || (!requireTitleMatch && bestScore >= MATCH_THRESHOLD)
+  );
+  if (matched) {
     return {
       projectId: best.id,
       projectName: best.name,

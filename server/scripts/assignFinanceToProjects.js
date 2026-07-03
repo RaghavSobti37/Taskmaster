@@ -9,6 +9,8 @@
  *   node server/scripts/assignFinanceToProjects.js --prod
  *   node server/scripts/assignFinanceToProjects.js --local --dry-run
  *   node server/scripts/assignFinanceToProjects.js --local --only-unassigned
+ *   node server/scripts/assignFinanceToProjects.js --prod --rematch-general
+ *   node server/scripts/assignFinanceToProjects.js --prod --rematch-all
  */
 
 const path = require('path');
@@ -23,6 +25,9 @@ const {
   matchFinanceDocToProject,
   resolveFinanceCategory,
   isGeneralProjectName,
+  buildProjectMatchers,
+  scoreProjectMatch,
+  MATCH_THRESHOLD,
 } = require('../../shared/financeProjectMatcher');
 
 const args = process.argv.slice(2);
@@ -30,6 +35,8 @@ const DRY_RUN = args.includes('--dry-run');
 const RUN_LOCAL = args.includes('--local') || (!args.includes('--prod') && !args.includes('--all'));
 const RUN_PROD = args.includes('--prod') || args.includes('--all');
 const ONLY_UNASSIGNED = args.includes('--only-unassigned');
+const REMATCH_ALL = args.includes('--rematch-all');
+const REMATCH_GENERAL = args.includes('--rematch-general') || REMATCH_ALL;
 
 const BYPASS = { bypassTenant: true };
 
@@ -88,12 +95,15 @@ async function assignOnDatabase(label, uri) {
 
   const projects = await Project.find({}).setOptions(BYPASS).select('name').lean();
   const nonGeneralProjects = projects.filter((p) => !isGeneralProjectName(p.name));
+  const validProjectIds = new Set(projects.map((p) => p._id.toString()));
+  const matchers = buildProjectMatchers(nonGeneralProjects);
 
   const filter = { isFolder: { $ne: true } };
   if (ONLY_UNASSIGNED) filter.project = { $in: [null, undefined] };
 
   const docs = await FinanceDocument.find(filter)
     .select('title fileName description category metadata extractedText project folderId')
+    .setOptions(BYPASS)
     .lean();
 
   const folderNames = await loadFolderNames(docs);
@@ -111,14 +121,30 @@ async function assignOnDatabase(label, uri) {
 
   for (const doc of docs) {
     const folderName = folderNames.get(doc.folderId?.toString?.() || '') || '';
+    const currentProjectId = doc.project?.toString?.() || doc.project || null;
+    const onGeneral = currentProjectId === generalProjectId;
+    const orphanProject = Boolean(currentProjectId && !validProjectIds.has(currentProjectId));
+    const titleText = [doc.title, doc.fileName, folderName].filter(Boolean).join(' ');
+    const currentMatcher = matchers.find((m) => m.id === currentProjectId);
+    const titleScoreCurrent = currentMatcher ? scoreProjectMatch(titleText, currentMatcher) : 0;
+    const weakAssignment = Boolean(
+      currentProjectId
+      && !onGeneral
+      && !orphanProject
+      && titleScoreCurrent < MATCH_THRESHOLD
+    );
+    const needsGeneralRematch = onGeneral || orphanProject || weakAssignment;
+    const forceRematch = REMATCH_ALL || (REMATCH_GENERAL && needsGeneralRematch);
+
     const match = matchFinanceDocToProject(doc, nonGeneralProjects, {
       generalProjectId,
       folderName,
+      ignoreExisting: forceRematch,
+      requireTitleMatch: REMATCH_ALL || needsGeneralRematch,
     });
 
     const nextCategory = resolveFinanceCategory(doc);
     const updates = {};
-    const currentProjectId = doc.project?.toString?.() || doc.project || null;
 
     if (match.projectId && match.projectId !== currentProjectId) {
       updates.project = match.projectId;
@@ -160,6 +186,8 @@ async function assignOnDatabase(label, uri) {
   console.log(JSON.stringify({
     dryRun: DRY_RUN,
     onlyUnassigned: ONLY_UNASSIGNED,
+    rematchAll: REMATCH_ALL,
+    rematchGeneral: REMATCH_GENERAL,
     generalProject: { id: generalProjectId, name: generalProject.name },
     ...stats,
   }, null, 2));

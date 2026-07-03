@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { subscribeToChannel } from '../../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../../utils/projectUtils';
@@ -87,7 +87,6 @@ export const useProjectAnalytics = (projectId, queryParams, queryEnabled = true)
       (await axios.get(`/api/projects/${projectId}/analytics`, { params: queryParams })).data,
     enabled: !!projectId && queryEnabled,
     staleTime: 1000 * 60,
-    placeholderData: keepPreviousData,
   });
 };
 
@@ -99,7 +98,6 @@ export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) =>
       (await axios.get('/api/projects/analytics-summary', { params: queryParams })).data,
     enabled: queryEnabled,
     staleTime: 1000 * 60,
-    placeholderData: keepPreviousData,
   });
 };
 

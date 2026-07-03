@@ -19,7 +19,7 @@ async function main() {
   if (!tenant) {
     tenant = await Tenant.create({
       name: 'Default Tenant',
-      contactEmail: 'admin@theshakticollective.in',
+      contactEmail: 'helloworld@theshakticollective',
     });
   }
 

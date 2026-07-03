@@ -105,10 +105,22 @@ test('pickProxyUrl rejects production API host on preview when only prod env set
 });
 
 test('buildVercelSecurityHeaders adds preview CSP allowances', () => {
-  const { buildContentSecurityPolicy } = require('./vercelSecurityHeaders.cjs');
+  const { buildContentSecurityPolicy, buildVercelHeaders } = require('./vercelSecurityHeaders.cjs');
   const preview = buildContentSecurityPolicy({ isPreview: true });
   assert.ok(preview.includes('https://vercel.live'));
   assert.ok(preview.includes('manifest-src'));
   const prod = buildContentSecurityPolicy({ isPreview: false });
   assert.ok(!prod.includes('https://vercel.live'));
+
+  const templateHeaders = [
+    {
+      source: '/(.*)',
+      headers: [{ key: 'Content-Security-Policy', value: prod }],
+    },
+    { source: '/', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
+  ];
+  const merged = buildVercelHeaders(templateHeaders, { isPreview: true });
+  const csp = merged.find((block) => block.source === '/(.*)')?.headers
+    .find((h) => h.key === 'Content-Security-Policy')?.value;
+  assert.ok(csp?.includes('https://vercel.live'));
 });

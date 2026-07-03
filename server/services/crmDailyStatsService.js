@@ -369,10 +369,10 @@ function buildDailyActivityTrend(auditLogs, days, endDateKey) {
     if (byDay[k]) byDay[k].push(log);
   }
   return keys.map((k) => {
-    const d = new Date(`${k}T12:00:00+05:30`);
     const stats = summarizeDailyCallStats(byDay[k]);
     return {
-      date: formatShortDate(d),
+      // ponytail: ISO date for chart x-axis — dd/MM display strings parse as US mm/dd in browsers
+      date: k,
       calls: stats.callsMade,
       connected: stats.connected,
       meaningful: stats.meaningful,

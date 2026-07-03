@@ -365,11 +365,13 @@ select option {
   }
 
   h1 {
-    @apply text-[var(--size-text-header)] font-bold tracking-tight;
+    font-size: var(--size-text-header);
+    @apply font-bold tracking-tight;
   }
 
   h2 {
-    @apply text-[var(--size-text-subheader)] font-semibold tracking-tight;
+    font-size: var(--size-text-subheader);
+    @apply font-semibold tracking-tight;
   }
 }
 
@@ -579,7 +581,22 @@ select option {
   font-weight: 800;
   line-height: var(--line-height-tight);
   letter-spacing: var(--letter-spacing-tight);
-  color: var(--color-text-primary);
+  color: var(--foreground);
+}
+
+.tm-page-header .tm-page-title {
+  color: var(--foreground);
+}
+
+.tm-page-header .tm-page-header-desc {
+  color: var(--color-text-muted);
+}
+
+/* Standalone skeleton bars (ListPageSkeleton, etc.) — not SkeletonReveal layers */
+.tm-skeleton {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
 }
 
 .tm-section-label {

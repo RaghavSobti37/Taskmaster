@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
 const { getBuildMeta } = require('../utils/buildMeta');
 const { pingSharedRedis } = require('../utils/sharedRedis');
+const { pushEvent, seedBootEvent } = require('../utils/healthEventLog');
 
 let systemStatus = 'STARTING';
 let failReason = null;
@@ -26,10 +27,16 @@ class SystemHealthService {
         lastRedisState = 'not_configured';
       }
 
+      if (systemStatus !== 'HEALTHY') {
+        pushEvent('ok', 'All dependencies healthy');
+      }
       systemStatus = 'HEALTHY';
       failReason = null;
       return true;
     } catch (err) {
+      if (systemStatus !== 'FAIL') {
+        pushEvent('bad', err.message);
+      }
       systemStatus = 'FAIL';
       failReason = err.message;
       return false;
@@ -118,6 +125,7 @@ class SystemHealthService {
 
 // Periodic checks — skip in Jest (setup.js syncs health after in-memory Mongo connects).
 if (process.env.NODE_ENV !== 'test') {
+  seedBootEvent();
   setInterval(SystemHealthService.checkDependencies, 15000);
 }
 

@@ -36,7 +36,7 @@ async function getVisibleRosterUsers({
   const lookbackStart = addDays(todayDate, -(ROSTER_LOOKBACK_DAYS - 1));
 
   const users = await User.find()
-    .select('name email username departmentId lastOnline')
+    .select('name email username departmentId')
     .populate('departmentId', 'name slug permissionPreset')
     .lean();
 

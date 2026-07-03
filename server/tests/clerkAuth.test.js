@@ -70,3 +70,62 @@ describe('clerkAuth', () => {
     expect(email).toBe('primary@example.com');
   });
 });
+
+describe('resolveUserFromClerkProfile', () => {
+  const originalSecret = process.env.CLERK_SECRET_KEY;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const { resolveUserFromClerkProfile } = require('../utils/clerkAuth');
+  const Tenant = require('../models/Tenant');
+  const User = require('../models/User');
+
+  afterEach(async () => {
+    process.env.CLERK_SECRET_KEY = originalSecret;
+    process.env.NODE_ENV = originalNodeEnv;
+    await User.deleteMany({ email: 'clerk-new@example.com' });
+    await Tenant.deleteMany({ name: 'Default Tenant' });
+    jest.clearAllMocks();
+  });
+
+  it('creates a user with default tenant in production when tenant context is missing', async () => {
+    process.env.NODE_ENV = 'production';
+    const tenant = await Tenant.create({
+      name: 'Clerk Auth Tenant',
+      contactEmail: 'clerk-auth@test.com',
+      status: 'active',
+    });
+
+    const profile = {
+      clerkUserId: 'user_clerk_new',
+      email: 'clerk-new@example.com',
+      name: 'Clerk New',
+    };
+
+    const dbUser = await resolveUserFromClerkProfile(profile);
+    expect(dbUser).toBeTruthy();
+    expect(String(dbUser.tenantId)).toBe(String(tenant._id));
+    expect(dbUser.clerkId).toBe('user_clerk_new');
+  });
+
+  it('creates a user via ensurePlatformTenant when no env tenant is configured', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.WEBHOOK_TENANT_ID;
+    delete process.env.DEFAULT_TENANT_ID;
+    const { resetDefaultTenantCache } = require('../utils/defaultTenant');
+    resetDefaultTenantCache();
+    await Tenant.deleteMany({ name: 'Default Tenant' });
+
+    const profile = {
+      clerkUserId: 'user_clerk_fallback',
+      email: 'clerk-new@example.com',
+      name: 'Clerk Fallback',
+    };
+
+    const dbUser = await resolveUserFromClerkProfile(profile);
+    expect(dbUser).toBeTruthy();
+    expect(dbUser.tenantId).toBeTruthy();
+    expect(dbUser.clerkId).toBe('user_clerk_fallback');
+    const defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
+    expect(defaultTenant).toBeTruthy();
+    expect(String(dbUser.tenantId)).toBe(String(defaultTenant._id));
+  });
+});

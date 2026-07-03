@@ -9,10 +9,10 @@ import ClerkSignUpBlock from '../../components/auth/ClerkSignUpBlock';
 import ClearSessionCookiesButton from '../../components/auth/ClearSessionCookiesButton';
 import { isClerkConfigured } from '../../config/clerk';
 import { registerCopy } from '../../constants/marketingContent';
-import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
 import { computeLoginUiState } from '../../lib/clerkSignInFlow';
+import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -64,6 +64,10 @@ function RegisterPageView({
   });
 
   useEffect(() => {
+    resetNavigateGuard();
+  }, []);
+
+  useEffect(() => {
     return subscribeClerkEstablishError(setEstablishError);
   }, []);
 
@@ -78,13 +82,13 @@ function RegisterPageView({
       stateFrom: location.state?.from,
       search: location.search,
     });
-    navigateAfterAuth(navigate, target);
+    navigateOnce(navigate, target);
   }, [uiState, navigate, location.state, location.search]);
 
   if (uiState === 'BOOT_ERROR') {
     return (
       <>
-        <AppBootError message={bootError} onRefresh={() => retryBoot()} />
+        <AppBootError bootError={bootError} onRefresh={() => retryBoot()} />
         <ClearSessionCookiesButton bootError stuckLogin className="mt-4" />
       </>
     );

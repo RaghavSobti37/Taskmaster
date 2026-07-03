@@ -1,5 +1,7 @@
 import posthog from 'posthog-js';
+import { postHogPersonPropertiesForUser } from '@shared/posthogInternalUsers';
 import { hasAnalyticsConsent } from './cookieConsent';
+import { shouldCapturePostHog } from '../config/posthog';
 
 /** Same-origin proxy path — must match vercel.json + vite dev proxy. */
 export const POSTHOG_PROXY_PATH = '/ph';
@@ -15,7 +17,7 @@ const posthogUiHost = (region) => (
 );
 
 const tracingHosts = () => {
-  const hosts = new Set(['localhost']);
+  const hosts = new Set();
   if (typeof window !== 'undefined') {
     hosts.add(window.location.host);
   }
@@ -39,6 +41,7 @@ const tracingHosts = () => {
 };
 
 export const initPostHog = () => {
+  if (!shouldCapturePostHog()) return false;
   if (!hasAnalyticsConsent()) return false;
 
   const token = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN?.trim()
@@ -80,11 +83,7 @@ export const setPostHogUser = (user) => {
   if (!initialized || !user) return;
   const id = String(user._id || user.id || '');
   if (!id) return;
-  posthog.identify(id, {
-    email: user.email || undefined,
-    name: user.name || undefined,
-    role: user.role || undefined,
-  });
+  posthog.identify(id, postHogPersonPropertiesForUser(user));
 };
 
 export const clearPostHogUser = () => {

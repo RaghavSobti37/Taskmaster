@@ -28,7 +28,12 @@ const LogTrendChart = ({ title, data, dataKey, stroke, badge, emptyLabel }) => (
   </section>
 );
 
-const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
+const DailyLogHoursChart = ({
+  byDay = [],
+  totalEntries = 0,
+  onDaySelect,
+  selectedDay,
+}) => {
   const chartData = useMemo(
     () => byDay.map((d) => ({
       ...d,
@@ -44,6 +49,7 @@ const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
   const totalHours = chartData.reduce((s, d) => s + (d.hours || 0), 0);
 
   return (
+    <div className="space-y-3">
     <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
       <LogTrendChart
         badge={`${totalHours.toFixed(1)}h total`}
@@ -61,6 +67,26 @@ const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
         stroke="#f59e0b"
         title="Logs per Day"
       />
+    </div>
+    {onDaySelect && chartData.length > 0 && (
+      <div className="flex flex-wrap gap-1.5">
+        {chartData.map((d) => (
+          <button
+            key={d.date}
+            type="button"
+            onClick={() => onDaySelect(selectedDay === d.date ? null : d.date)}
+            className={`px-2 py-0.5 rounded text-[10px] font-bold tabular-nums border transition-colors ${
+              selectedDay === d.date
+                ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-blue-500/50'
+            }`}
+            title={`${d.dateLabel}: ${d.hours.toFixed(1)}h · ${d.count} logs`}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+    )}
     </div>
   );
 };

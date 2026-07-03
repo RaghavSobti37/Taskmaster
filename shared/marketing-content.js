@@ -19,7 +19,7 @@ export const brand = {
   pwaDescription: 'Project management, CRM, and team workspace for modern operations.',
   parentOrg: 'The Shakti Collective',
   copyrightYear: 2026,
-  supportEmail: 'privacy@theshakticollective.in',
+  supportEmail: 'helloworld@theshakticollective',
   siteUrl: 'https://tsccoreknot.com/',
 };
 

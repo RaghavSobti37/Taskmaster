@@ -1,5 +1,88 @@
 import { brand } from '../constants/marketingContent';
 
+/** Localized short timestamp for error metadata row. */
+export function formatErrorTimestamp(capturedAt = Date.now()) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(new Date(capturedAt));
+}
+
+export function getSystemStatusUrl() {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/api/health`;
+  }
+  return '/api/health';
+}
+
+export function inferStatusCode({ statusCode, summary, error }) {
+  if (statusCode) return statusCode;
+  const fromError = error?.status || error?.response?.status;
+  if (fromError) return fromError;
+  const text = `${summary || ''} ${error?.message || ''}`;
+  const match = text.match(/\b(401|403|404|408|429|500|502|503|504)\b/);
+  return match ? Number(match[1]) : null;
+}
+
+export function resolveAppErrorTitle({ statusCode, summary }) {
+  if ([502, 503, 504].includes(statusCode)) return 'Server temporarily unavailable';
+  if (statusCode === 404) return 'Page not found';
+  if (statusCode === 401 || statusCode === 403) return 'Access denied';
+  if (/timed out/i.test(String(summary || ''))) return 'Connection timed out';
+  return 'Something went wrong';
+}
+
+export function shouldShowHealthyServicesBadge({ statusCode, summary }) {
+  if ([502, 503, 504].includes(statusCode)) return true;
+  return /temporarily unavailable|server did not respond/i.test(String(summary || ''));
+}
+
+/** Normalize string or structured boot errors into AppErrorPage props. */
+export function resolveAppErrorPresentation({
+  summary,
+  error = null,
+  errorRef = null,
+  statusCode = null,
+  capturedAt = Date.now(),
+  showHealthyBadge,
+} = {}) {
+  const normalizedError =
+    error instanceof Error
+      ? error
+      : error?.message
+        ? new Error(String(error.message))
+        : summary
+          ? new Error(String(summary))
+          : null;
+
+  const resolvedSummary =
+    String(summary || '').trim()
+    || (normalizedError ? summarizeRouteError(normalizedError) : '')
+    || 'An unexpected problem stopped this page from loading.';
+
+  const resolvedStatus = inferStatusCode({
+    statusCode,
+    summary: resolvedSummary,
+    error: normalizedError,
+  });
+  const resolvedRef =
+    errorRef || buildRouteErrorReference(normalizedError || new Error(resolvedSummary), capturedAt);
+
+  return {
+    title: resolveAppErrorTitle({ statusCode: resolvedStatus, summary: resolvedSummary }),
+    summary: resolvedSummary,
+    error: normalizedError,
+    errorRef: resolvedRef,
+    statusCode: resolvedStatus,
+    capturedAt,
+    showHealthyBadge:
+      typeof showHealthyBadge === 'boolean'
+        ? showHealthyBadge
+        : shouldShowHealthyServicesBadge({ statusCode: resolvedStatus, summary: resolvedSummary }),
+  };
+}
+
 /** Stable reference for support / log lookup — deterministic from error + capture time. */
 export function buildRouteErrorReference(error, capturedAt = Date.now()) {
   const seed = String(error?.message || error?.name || 'unknown');

@@ -52,6 +52,7 @@ const {
 const { canMentionOnlyUserUpdateTask } = require('../../../utils/taskAdminBypass');
 const {
   findActiveTaskDailyLog,
+  findActiveTaskDailyLogOnDay,
   voidTaskDailyLogsForTask,
 } = require('../../../utils/taskDailyLogs');
 const GamificationService = require('../../../services/gamificationService');
@@ -333,6 +334,10 @@ const removeReviewLogsForTask = async (taskId, assigneeIds, reviewerId, session)
 const createTaskDailyLog = async ({
   userId, task, type, hours, message, title, session,
 }) => {
+  if (type === 'TASK_COMPLETION' || type === 'TASK_REVIEW') {
+    const existingSameDay = await findActiveTaskDailyLogOnDay(userId, task._id, type, undefined, session);
+    if (existingSameDay) return existingSameDay;
+  }
   const projectName = await getProjectNameForTask(task, session);
   const projectId = task.projectId?._id || task.projectId || null;
   await Log.create([{

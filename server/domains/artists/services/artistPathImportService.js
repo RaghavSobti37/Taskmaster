@@ -22,7 +22,7 @@ async function resolveTenantId() {
   if (!defaultTenant) {
     defaultTenant = await Tenant.create({
       name: 'Default Tenant',
-      contactEmail: 'admin@theshakticollective.in',
+      contactEmail: 'helloworld@theshakticollective',
     });
   }
   cachedDefaultTenantId = defaultTenant._id;

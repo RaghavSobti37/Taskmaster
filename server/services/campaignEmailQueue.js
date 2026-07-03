@@ -1,5 +1,5 @@
 const { Queue } = require('bullmq');
-const IORedis = require('ioredis');
+const { createRedisClient } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 
 const QUEUE_NAME = 'CampaignEmailQueue';
@@ -10,15 +10,7 @@ let queue = null;
 
 if (!isTestEnv) {
   try {
-    connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-      maxRetriesPerRequest: null,
-      retryStrategy: (times) => {
-        if (times > 3) return null;
-        return Math.min(times * 50, 2000);
-      },
-    });
-
-    connection.on('error', () => {});
+    connection = createRedisClient();
     queue = new Queue(QUEUE_NAME, { connection });
   } catch (err) {
     logger.warn('campaignEmailQueue', 'Failed to init BullMQ queue', { error: err.message });

@@ -86,7 +86,8 @@ export const useProjectAnalytics = (projectId, queryParams, queryEnabled = true)
     queryFn: async () =>
       (await axios.get(`/api/projects/${projectId}/analytics`, { params: queryParams })).data,
     enabled: !!projectId && queryEnabled,
-    staleTime: 1000 * 60,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -97,7 +98,8 @@ export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) =>
     queryFn: async () =>
       (await axios.get('/api/projects/analytics-summary', { params: queryParams })).data,
     enabled: queryEnabled,
-    staleTime: 1000 * 60,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 

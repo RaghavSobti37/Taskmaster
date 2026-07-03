@@ -22,13 +22,13 @@ export default function BootScreen({
   }, [bootError, timeoutMs]);
 
   if (bootError) {
-    return <AppBootError message={bootError} onRefresh={onRefresh} />;
+    return <AppBootError bootError={bootError} onRefresh={onRefresh} />;
   }
 
   if (timedOut) {
     return (
       <AppBootError
-        message="Loading is taking too long. Check your connection and refresh."
+        summary="Loading is taking too long. Check your connection and try again."
         onRefresh={onRefresh}
       />
     );

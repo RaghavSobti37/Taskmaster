@@ -6,6 +6,36 @@ const trim = (value) => String(value || '').trim();
 
 export const POSTHOG_PROJECT_ID_DEFAULT = '468825';
 
+/** Production browser hosts only — no localhost, preview, or staging. */
+export const POSTHOG_PRODUCTION_HOSTS = [
+  'tsccoreknot.com',
+  'www.tsccoreknot.com',
+  'auth.tsccoreknot.com',
+  'landing.tsccoreknot.com',
+];
+
+const isLocalHost = (hostname) => {
+  const host = trim(hostname).toLowerCase();
+  return !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+};
+
+const isProductionCaptureHost = (hostname) => {
+  const host = trim(hostname).toLowerCase();
+  if (!host || isLocalHost(host)) return false;
+  if (host.endsWith('.vercel.app') || host.includes('onrender.com')) return false;
+  return POSTHOG_PRODUCTION_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+};
+
+/** True when browser/server should send events (prod domains only by default). */
+export function shouldCapturePostHog(hostname = '') {
+  const override = trim(import.meta.env.VITE_POSTHOG_CAPTURE).toLowerCase();
+  if (override === 'false' || override === '0') return false;
+  if (override === 'true' || override === '1') return true;
+  if (!import.meta.env.PROD) return false;
+  const resolvedHost = hostname || (typeof window !== 'undefined' ? window.location.hostname : '');
+  return isProductionCaptureHost(resolvedHost);
+}
+
 export function getPostHogHost() {
   return trim(import.meta.env.VITE_POSTHOG_HOST) || 'https://us.i.posthog.com';
 }

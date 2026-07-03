@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { chartTicksForTimeframe, mapDashboardSeriesToChart } from './chartTimeSeries';
+import {
+  chartTicksForTimeframe,
+  mapDashboardSeriesToChart,
+  mapDashboardSeriesWithDate,
+} from './chartTimeSeries';
 
 describe('chartTimeSeries', () => {
   it('maps ISO dashboard series to Date x values', () => {
@@ -12,6 +16,17 @@ describe('chartTimeSeries', () => {
     expect(rows[0].date).toBeInstanceOf(Date);
     expect(rows[0].value).toBe(3);
     expect(rows[1].value).toBe(0);
+  });
+
+  it('preserves multi-metric rows for attendance-style charts', () => {
+    const rows = mapDashboardSeriesWithDate([
+      { date: '2026-06-27', label: '27/06', marked: 2, present: 1 },
+      { date: '2026-07-03', label: '03/07', marked: 4, present: 4 },
+    ]);
+
+    expect(rows[0].marked).toBe(2);
+    expect(rows[1].present).toBe(4);
+    expect(rows[1].date.getTime()).toBeGreaterThan(rows[0].date.getTime());
   });
 
   it('returns fewer x ticks for shorter windows', () => {

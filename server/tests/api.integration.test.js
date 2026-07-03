@@ -23,6 +23,45 @@ describe('Health API', () => {
     expect(res.body).toHaveProperty('status');
     expect(res.body).toHaveProperty('dependencies');
   });
+
+  it('GET /api/health returns HTML dashboard for browser Accept', async () => {
+    const res = await request(app)
+      .get('/api/health')
+      .set('Accept', 'text/html,application/xhtml+xml');
+    expect([200, 503]).toContain(res.statusCode);
+    expect(res.headers['content-type']).toMatch(/html/);
+    expect(res.text).toContain('CoreKnot');
+    expect(res.text).toContain('SYSTEM HEALTH');
+    expect(res.text).toContain('Raw JSON');
+    expect(res.text).toContain('Heap Memory Breakdown');
+    expect(res.text).toContain('heapUsed');
+    expect(res.text).toContain('/api/health/dashboard.js');
+    expect(res.text).toContain('/api/health/brand-mark.svg');
+  });
+
+  it('GET /api/health/dashboard.js is served for CSP-safe client', async () => {
+    const res = await request(app).get('/api/health/dashboard.js');
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/javascript/);
+    expect(res.text).toContain('switchTab');
+  });
+
+  it('GET /api/health?format=json forces JSON', async () => {
+    const res = await request(app)
+      .get('/api/health?format=json')
+      .set('Accept', 'text/html');
+    expect(res.body).toHaveProperty('status');
+    expect(res.body).toHaveProperty('dependencies');
+  });
+
+  it('GET /api/health?dashboard=1 returns live dashboard payload', async () => {
+    const res = await request(app).get('/api/health?dashboard=1');
+    expect([200, 503]).toContain(res.statusCode);
+    expect(res.body.dashboard).toBeDefined();
+    expect(res.body.dashboard).toHaveProperty('score');
+    expect(res.body.dashboard.runtime.heap.segments.length).toBeGreaterThan(0);
+    expect(res.body.dashboard.metrics).toHaveProperty('requestsPerMin');
+  });
 });
 
 describe('Tasks API integration', () => {

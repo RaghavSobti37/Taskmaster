@@ -1,7 +1,6 @@
 const crypto = require('crypto');
-const Redis = require('ioredis');
+const { createRedisClient } = require('../utils/wslRedis');
 const { config } = require('../config');
-const { getRedisUrl } = require('../utils/wslRedis');
 
 const TTL_SECONDS = 24 * 60 * 60;
 const KEY_PREFIX = 'wh:idemp:';
@@ -16,11 +15,7 @@ function initRedis() {
   if (config.isTest) return;
 
   try {
-    redis = new Redis(getRedisUrl(), {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-      retryStrategy: () => null,
-    });
+    redis = createRedisClient({ maxRetriesPerRequest: 1 });
 
     redis.connect()
       .then(() => { redisReady = true; })

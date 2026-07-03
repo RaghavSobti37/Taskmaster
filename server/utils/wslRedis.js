@@ -27,4 +27,22 @@ const getRedisUrl = () => {
   return redisUrl;
 };
 
-module.exports = { getRedisUrl };
+/**
+ * Shared ioredis factory — lazy connect, no reconnect spam, swallowed errors.
+ * @param {import('ioredis').RedisOptions} [overrides]
+ */
+const createRedisClient = (overrides = {}) => {
+  const Redis = require('ioredis');
+  const client = new Redis(getRedisUrl(), {
+    maxRetriesPerRequest: overrides.maxRetriesPerRequest ?? null,
+    lazyConnect: true,
+    connectTimeout: 2000,
+    enableOfflineQueue: false,
+    retryStrategy: () => null,
+    ...overrides,
+  });
+  client.on('error', () => {});
+  return client;
+};
+
+module.exports = { getRedisUrl, createRedisClient };

@@ -3,7 +3,6 @@ const Artist = require('../models/Artist');
 const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
 const { loadAuthUser } = require('../utils/authUserLookup');
-const { idFilter } = require('../utils/mongoId');
 
 const authContext = (req, user) => ({
   tenantId: user.tenantId,
@@ -23,20 +22,6 @@ const { clearAuthCookie } = require('../utils/authCookie');
 
 const populateDepartment = (query) =>
   query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-
-const lastOnlineWrites = new Map();
-const LAST_ONLINE_INTERVAL_MS = 5 * 60 * 1000;
-
-const touchLastOnline = (userId) => {
-  const key = userId.toString();
-  const now = Date.now();
-  const lastWrite = lastOnlineWrites.get(key) || 0;
-  if (now - lastWrite < LAST_ONLINE_INTERVAL_MS) return;
-  lastOnlineWrites.set(key, now);
-  User.updateOne(idFilter(userId), {
-    $set: { lastOnline: new Date(), online: true },
-  }).setOptions({ bypassTenant: true }).catch(() => {});
-};
 
 const { COOKIE_NAME } = require('../utils/authCookie');
 
@@ -93,7 +78,6 @@ const resolveRequestUser = async (req) => {
     if (!user) return { user: null };
     if (user.suspended) return { user: null, suspended: true };
 
-    touchLastOnline(user._id);
     return { user };
   } catch {
     return { user: null };

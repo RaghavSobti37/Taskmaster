@@ -55,6 +55,9 @@ describe('crmDailyStatsService', () => {
     ];
     const trend = buildDailyActivityTrend(audits, 7, '2026-06-29');
     expect(trend).toHaveLength(7);
+    expect(trend.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date))).toBe(true);
+    const dates = trend.map((d) => d.date);
+    expect(dates).toEqual([...dates].sort());
     const withActivity = trend.filter((d) => d.calls > 0 || d.converted > 0);
     expect(withActivity.length).toBeGreaterThanOrEqual(1);
   });

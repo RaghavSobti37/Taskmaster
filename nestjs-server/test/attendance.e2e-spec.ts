@@ -60,7 +60,6 @@ describe('Attendance (e2e)', () => {
           provide: AuthService,
           useValue: {
             loadAuthUser: jest.fn(),
-            touchLastOnline: jest.fn(),
             loadBypassAdminUser: jest.fn(),
           },
         },

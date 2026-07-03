@@ -20,12 +20,38 @@ async function resolveDefaultTenantId() {
   }
 
   const Tenant = require('../models/Tenant');
-  let tenant = await Tenant.findOne({ status: 'active' }).sort({ createdAt: 1 }).lean();
-  if (!tenant) tenant = await Tenant.findOne().sort({ createdAt: 1 }).lean();
+  const tenantLookup = { bypassTenant: true };
+  let tenant = await Tenant.findOne({ status: 'active' }).sort({ createdAt: 1 }).setOptions(tenantLookup).lean();
+  if (!tenant) tenant = await Tenant.findOne().sort({ createdAt: 1 }).setOptions(tenantLookup).lean();
   if (!tenant) {
     throw new Error('No tenant configured for webhook processing');
   }
 
+  cachedDefaultTenantId = tenant._id;
+  return cachedDefaultTenantId;
+}
+
+/**
+ * Find or create the platform default tenant (Clerk first-user bootstrap).
+ * Works in production when WEBHOOK_TENANT_ID is unset and no tenant row exists yet.
+ */
+async function ensurePlatformTenant() {
+  try {
+    return await resolveDefaultTenantId();
+  } catch {
+    /* fall through to find/create Default Tenant */
+  }
+
+  const Tenant = require('../models/Tenant');
+  const tenantLookup = { bypassTenant: true };
+  let tenant = await Tenant.findOne({ name: 'Default Tenant' }).setOptions(tenantLookup);
+  if (!tenant) {
+    tenant = await Tenant.create({
+      name: 'Default Tenant',
+      contactEmail: (process.env.ADMIN_EMAIL || 'helloworld@theshakticollective').trim(),
+      status: 'active',
+    });
+  }
   cachedDefaultTenantId = tenant._id;
   return cachedDefaultTenantId;
 }
@@ -37,5 +63,6 @@ function resetDefaultTenantCache() {
 
 module.exports = {
   resolveDefaultTenantId,
+  ensurePlatformTenant,
   resetDefaultTenantCache,
 };

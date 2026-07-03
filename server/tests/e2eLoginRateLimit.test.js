@@ -10,7 +10,7 @@ describe('E2E login rate-limit skip (dev-only)', () => {
     expect(isE2eTestUser('e2e-dept-admin@test.coreknot.local')).toBe(true);
     expect(isE2eTestUser('e2e-pw-gate@test.coreknot.local')).toBe(true);
     expect(isE2eTestUser('admin@test.coreknot.local')).toBe(false);
-    expect(isE2eTestUser('e2e-dept-admin@theshakticollective.in')).toBe(false);
+    expect(isE2eTestUser('e2e-dept-helloworld@theshakticollective')).toBe(false);
     expect(isE2eTestUser('')).toBe(false);
   });
 

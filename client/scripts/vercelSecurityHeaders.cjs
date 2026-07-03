@@ -95,8 +95,12 @@ function buildVercelHeaders(templateHeaders = [], options = {}) {
   };
 
   const existing = Array.isArray(templateHeaders) ? [...templateHeaders] : [];
-  const hasCatchAll = existing.some((block) => block.source === '/(.*)');
-  if (hasCatchAll) return existing;
+  const catchAllIdx = existing.findIndex((block) => block.source === '/(.*)');
+  if (catchAllIdx >= 0) {
+    const merged = [...existing];
+    merged[catchAllIdx] = securityBlock;
+    return merged;
+  }
 
   return [securityBlock, ...existing];
 }

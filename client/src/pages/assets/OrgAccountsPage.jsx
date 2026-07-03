@@ -546,15 +546,6 @@ const OrgAccountsPage = () => {
         )}
         toolbarActions={
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleImportFromSheet}
-              disabled={importMutation.isPending}
-            >
-              <RefreshCw size={14} className={importMutation.isPending ? 'animate-spin' : ''} />
-              Import Sheet
-            </Button>
             <Button size="sm" onClick={openCreate}>
               <Plus size={14} /> Add Account
             </Button>

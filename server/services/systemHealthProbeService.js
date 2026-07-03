@@ -257,13 +257,14 @@ const skipExternalProbes = () => (
   || String(process.env.SYSTEM_HEALTH_SKIP_EXTERNAL || '').toLowerCase() === 'true'
 );
 
-async function getAdminSystemHealth() {
+async function getAdminSystemHealth(options = {}) {
+  const { forceFullProbes = false, bypassCache = false } = options;
   const now = Date.now();
-  if (healthCache && now - healthCacheAt < HEALTH_CACHE_TTL_MS) {
+  if (!bypassCache && healthCache && now - healthCacheAt < HEALTH_CACHE_TTL_MS) {
     return healthCache;
   }
 
-  const light = skipExternalProbes();
+  const light = !forceFullProbes && skipExternalProbes();
   const services = await Promise.all([
     probeMongo(),
     probeRedis(),

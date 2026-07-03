@@ -15,63 +15,18 @@ import TableSkeleton from './TableSkeleton';
 /** Default rows per page for DataTable and TablePagination */
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
 
-let skeletonDebugCount = 0;
-
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
-  const skelRef = useRef(null);
   const variants = {
     rect: 'rounded-[var(--radius-atomic)]',
     circle: 'rounded-full',
     text: 'rounded-md h-3 w-full'
   };
 
-  useLayoutEffect(() => {
-    if (skeletonDebugCount >= 8 || !skelRef.current) return;
-    const el = skelRef.current;
-    const cs = getComputedStyle(el);
-    const rect = el.getBoundingClientRect();
-    const headerEl =
-      el.closest('.tm-hub-header, .tm-page-title, header, .tm-hub-panel')?.className?.slice(0, 80) || null;
-    const headerText = document.querySelector('.tm-page-title, .tm-hub-header span.text-sm');
-    let overlapsHeader = false;
-    if (headerText) {
-      const hr = headerText.getBoundingClientRect();
-      overlapsHeader =
-        rect.left < hr.right && rect.right > hr.left && rect.top < hr.bottom && rect.bottom > hr.top;
-    }
-    skeletonDebugCount += 1;
-    // #region agent log
-    fetch('http://127.0.0.1:7593/ingest/75bc4ee5-8ab2-4010-83b9-7267b331142a', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c0551d' },
-      body: JSON.stringify({
-        sessionId: 'c0551d',
-        runId: 'pre-fix',
-        hypothesisId: overlapsHeader ? 'A' : 'A-C',
-        location: 'primitives.jsx:Skeleton',
-        message: 'skeleton layout probe',
-        data: {
-          position: cs.position,
-          inset: `${cs.top}/${cs.right}/${cs.bottom}/${cs.left}`,
-          zIndex: cs.zIndex,
-          rect: { w: Math.round(rect.width), h: Math.round(rect.height), top: Math.round(rect.top) },
-          ancestor: headerEl,
-          overlapsHeader,
-          variant,
-          width,
-          height,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [variant, width, height, className]);
-
   return (
     <div
-      ref={skelRef}
-      className={`t-skel-skeleton is-pulsing animate-pulse bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${variants[variant]} ${className}`}
+      className={`tm-skeleton animate-pulse bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${variants[variant]} ${className}`}
       style={{ width, height }}
+      aria-hidden
     />
   );
 };

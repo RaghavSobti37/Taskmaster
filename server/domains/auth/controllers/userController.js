@@ -3,7 +3,6 @@ const Department = require('../../../models/Department');
 const Task = require('../../tasks/models/Task');
 const TaskAssignment = require('../../tasks/models/TaskAssignment');
 const Project = require('../../../models/Project');
-const { isAfter, subMinutes } = require('date-fns');
 const logger = require('../../../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG, ARTIST_SLUG } = require('../../../utils/departmentPermissions');
 const { validatePagePermissions } = require('../../../utils/pagePermissions');
@@ -13,12 +12,6 @@ const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
-
-const isUserOnline = (u) => {
-  if (!u.lastOnline) return false;
-  const fiveMinAgo = subMinutes(new Date(), 5);
-  return isAfter(u.lastOnline, fiveMinAgo);
-};
 
 async function validateDepartmentAssignment(departmentId, requester) {
   if (departmentId === null || departmentId === '' || departmentId === undefined) {
@@ -109,8 +102,6 @@ exports.getTeam = async (req, res) => {
       email: u.email,
       avatar: u.avatar,
       departmentId: u.departmentId,
-      online: isUserOnline(u),
-      lastOnline: u.lastOnline,
       tasksDone: tasksDoneByUser[u._id.toString()] || 0,
       projectsInvolved: projectsByUser[u._id.toString()] || [],
       teams: u.teams || [],
@@ -195,7 +186,6 @@ exports.updateProfile = async (req, res) => {
       passwordChanged = true;
     }
 
-    user.lastOnline = new Date();
     await user.save();
     await invalidateAuthUserCache(user._id);
 
@@ -238,7 +228,6 @@ exports.getDirectory = async (req, res) => {
       delete doc.password;
       return {
         ...doc,
-        online: isUserOnline(u),
         ...(adminView ? { hasPassword: !!u.password } : {}),
       };
     });
@@ -430,7 +419,7 @@ exports.getSalesReps = async (req, res) => {
     const salesDept = await Department.findOne({ slug: SALES_SLUG });
     const filter = salesDept ? { departmentId: salesDept._id } : { _id: null };
     const reps = await User.find(filter)
-      .select('_id name email avatar online lastOnline phone departmentId')
+      .select('_id name email avatar phone departmentId')
       .populate('departmentId', 'name slug permissionPreset pagePermissions');
     res.json(reps);
   } catch (err) {

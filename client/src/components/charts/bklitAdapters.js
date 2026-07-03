@@ -1,3 +1,6 @@
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DD_MM_YYYY_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+
 /** Normalize chart rows so Bklit time-series charts get real Date x values. */
 export function normalizeTimeSeriesRows(rows, xKey = 'date') {
   if (!Array.isArray(rows)) return [];
@@ -6,7 +9,21 @@ export function normalizeTimeSeriesRows(rows, xKey = 'date') {
     let date;
     if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
       date = raw;
-    } else if (typeof raw === 'string' || typeof raw === 'number') {
+    } else if (typeof raw === 'string' && ISO_DATE_RE.test(raw.trim())) {
+      // ponytail: noon IST matches dashboard API date keys (see chartTimeSeries.js)
+      date = new Date(`${raw.trim()}T12:00:00+05:30`);
+    } else if (typeof raw === 'string') {
+      const ddMmYyyy = raw.trim().match(DD_MM_YYYY_RE);
+      if (ddMmYyyy) {
+        const [, day, month, year] = ddMmYyyy;
+        date = new Date(`${year}-${month}-${day}T12:00:00+05:30`);
+      } else {
+        const parsed = new Date(raw);
+        date = Number.isNaN(parsed.getTime())
+          ? new Date(Date.now() - (rows.length - 1 - index) * 86_400_000)
+          : parsed;
+      }
+    } else if (typeof raw === 'number') {
       const parsed = new Date(raw);
       date = Number.isNaN(parsed.getTime())
         ? new Date(Date.now() - (rows.length - 1 - index) * 86_400_000)

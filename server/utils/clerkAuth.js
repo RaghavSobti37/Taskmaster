@@ -1,6 +1,7 @@
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const crypto = require('crypto');
 const User = require('../models/User');
+const { ensurePlatformTenant } = require('./defaultTenant');
 
 const MOCK_SECRET = 'mock_clerk_secret';
 
@@ -71,7 +72,9 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
     throw err;
   }
 
-  let dbUser = await populateDepartment(User.findOne({ email }).select('-password'));
+  let dbUser = await populateDepartment(
+    User.findOne({ email }).select('-password').setOptions({ bypassTenant: true }),
+  );
   if (!dbUser) {
     const allowed = guards.isRegistrationAllowed
       ? guards.isRegistrationAllowed(email)
@@ -81,18 +84,29 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
       err.status = 403;
       throw err;
     }
+    let tenantId = guards.tenantId || null;
+    if (!tenantId) {
+      try {
+        tenantId = await ensurePlatformTenant();
+      } catch (err) {
+        console.error('[clerkAuth] platform tenant bootstrap failed during user creation:', err?.message || err);
+        const fail = new Error('Workspace tenant is not configured. Contact an administrator.');
+        fail.status = 503;
+        throw fail;
+      }
+    }
     const createPayload = {
       name: profile.name || email.split('@')[0],
       email,
       password: crypto.randomBytes(32).toString('hex'),
       mustChangePassword: true,
       clerkId: profile.clerkUserId,
+      ...(tenantId ? { tenantId } : {}),
     };
-    if (guards.tenantId) {
-      createPayload.tenantId = guards.tenantId;
-    }
     dbUser = await User.create(createPayload);
-    dbUser = await populateDepartment(User.findById(dbUser._id).select('-password'));
+    dbUser = await populateDepartment(
+      User.findById(dbUser._id).select('-password').setOptions({ bypassTenant: true }),
+    );
   } else {
     const patch = {};
     if (profile.clerkUserId && dbUser.clerkId !== profile.clerkUserId) {

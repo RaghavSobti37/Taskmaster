@@ -1,5 +1,5 @@
 const { Queue, Worker } = require('bullmq');
-const IORedis = require('ioredis');
+const { createRedisClient } = require('../utils/wslRedis');
 const csv = require('csv-parser');
 const fs = require('fs');
 const mongoose = require('mongoose');
@@ -11,15 +11,7 @@ const { SALES_SLUG } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 
-const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 50, 2000);
-  }
-});
-
-connection.on('error', () => {});
+const connection = createRedisClient();
 
 const importQueue = new Queue('CsvImportQueue', { connection });
 importQueue.on('error', () => {});

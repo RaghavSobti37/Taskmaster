@@ -1,10 +1,24 @@
+const { postHogPersonPropertiesForUser } = require('../../shared/posthogInternalUsers.cjs');
+
 let client = null;
 let initialized = false;
+
+const PRODUCTION_RENDER_SERVICES = new Set(['CoreKnot-api', 'Taskmaster']);
+
+const shouldCapturePostHog = () => {
+  if (process.env.NODE_ENV === 'test') return false;
+  const override = String(process.env.POSTHOG_CAPTURE || '').trim().toLowerCase();
+  if (override === 'false' || override === '0') return false;
+  if (override === 'true' || override === '1') return true;
+  if (process.env.NODE_ENV !== 'production') return false;
+  const service = String(process.env.RENDER_SERVICE_NAME || '').trim();
+  return PRODUCTION_RENDER_SERVICES.has(service);
+};
 
 const initPostHog = () => {
   const apiKey = process.env.POSTHOG_PROJECT_API_KEY?.trim();
   const host = process.env.POSTHOG_HOST?.trim() || 'https://us.i.posthog.com';
-  if (!apiKey || initialized || process.env.NODE_ENV === 'test') return false;
+  if (!apiKey || initialized || !shouldCapturePostHog()) return false;
 
   try {
     const { PostHog } = require('posthog-node');
@@ -63,10 +77,7 @@ function identifyServerUser(user) {
   if (!id) return;
   ph.identify({
     distinctId: id,
-    properties: {
-      email: user.email || undefined,
-      name: user.name || undefined,
-    },
+    properties: postHogPersonPropertiesForUser(user),
   });
 }
 

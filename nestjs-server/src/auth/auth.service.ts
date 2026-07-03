@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -15,15 +15,6 @@ export type { AuthUser };
 @Injectable()
 
 export class AuthService {
-
-  private readonly logger = new Logger(AuthService.name);
-
-  private readonly lastOnlineWrites = new Map<string, number>();
-
-  private static readonly LAST_ONLINE_INTERVAL_MS = 5 * 60 * 1000;
-
-
-
   constructor(private readonly prisma: PrismaService) {}
 
 
@@ -167,46 +158,6 @@ export class AuthService {
         : null,
 
     };
-
-  }
-
-
-
-  touchLastOnline(userId: string): void {
-
-    const now = Date.now();
-
-    const lastWrite = this.lastOnlineWrites.get(userId) ?? 0;
-
-    if (now - lastWrite < AuthService.LAST_ONLINE_INTERVAL_MS) return;
-
-    this.lastOnlineWrites.set(userId, now);
-
-
-
-    void this.prisma
-
-      .withBypass(() =>
-
-        this.prisma.user.update({
-
-          where: { id: userId },
-
-          data: { lastOnline: new Date(), online: true },
-
-        }),
-
-      )
-
-      .catch((err: unknown) => {
-
-        this.logger.debug(
-
-          `touchLastOnline failed: ${err instanceof Error ? err.message : String(err)}`,
-
-        );
-
-      });
 
   }
 

@@ -681,18 +681,16 @@
 
 
 /* 14-skeleton-reveal.md */
-/* The wrap stacks two layers on the same coordinates. The
-   skeleton owns the cold pulse + the fade-out side of the
-   reveal; the content owns the fade-in side. They share the
-   same duration / ease so the swap reads as one motion. */
+/* Layers stack only inside .t-skel — never global absolute on bare .t-skel-skeleton. */
 .t-skel { position: relative; }
-.t-skel-skeleton,
-.t-skel-content {
+
+.t-skel .t-skel-skeleton,
+.t-skel .t-skel-content {
   position: absolute;
   inset: 0;
 }
 
-.t-skel-skeleton {
+.t-skel .t-skel-skeleton {
   z-index: 1;
   opacity: 1;
   filter: blur(0);
@@ -700,7 +698,7 @@
     opacity var(--reveal-dur) var(--reveal-ease),
     filter  var(--reveal-dur) var(--reveal-ease);
 }
-.t-skel-content {
+.t-skel .t-skel-content {
   z-index: 2;
   opacity: 0;
   filter: blur(var(--reveal-blur));
@@ -727,7 +725,7 @@
 /* Pulse: place the animation on the bar/avatar children, not
    on the skeleton itself, so the skeleton's opacity / filter
    stay free for the cross-fade transition above. */
-.t-skel-skeleton.is-pulsing > * {
+.t-skel .t-skel-skeleton.is-pulsing > * {
   animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
 }
 @keyframes t-skel-pulse {
@@ -736,10 +734,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-skel-skeleton, .t-skel-content {
+  .t-skel .t-skel-skeleton,
+  .t-skel .t-skel-content {
     transition: none !important;
   }
-  .t-skel-skeleton.is-pulsing > * { animation: none !important; }
+  .t-skel .t-skel-skeleton.is-pulsing > * { animation: none !important; }
 }
 
 
@@ -891,12 +890,12 @@
 
 
 /* 18-texts-reveal.md */
-/* Lines start translated down + blurred + invisible; .is-shown
-   on the parent flips them to their resting state. The second
-   line's transition-delay holds it back by --stagger-stagger
-   so the eye lands on the headline first. */
+/* Hidden only inside an unrevealed .t-stagger parent — never globally on .t-stagger-line. */
 .t-stagger-line {
   display: block;
+}
+
+.t-stagger:not(.is-shown):not(.is-hiding) .t-stagger-line {
   opacity: 0;
   transform: translateY(var(--stagger-distance));
   filter: blur(var(--stagger-blur));
@@ -906,12 +905,16 @@
     filter    var(--stagger-dur) var(--stagger-ease);
   will-change: transform, opacity, filter;
 }
-.t-stagger-line--2 { transition-delay: var(--stagger-stagger); }
+.t-stagger:not(.is-shown) .t-stagger-line--2 { transition-delay: var(--stagger-stagger); }
 
 .t-stagger.is-shown .t-stagger-line {
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
+  transition:
+    opacity   var(--stagger-dur) var(--stagger-ease),
+    transform var(--stagger-dur) var(--stagger-ease),
+    filter    var(--stagger-dur) var(--stagger-ease);
 }
 /* Exit decouples from the stagger: same fade for every line,
    no Y return, no blur — so the disappearance reads as a
@@ -928,7 +931,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-stagger-line { transition: none !important; }
+  .t-stagger:not(.is-shown) .t-stagger-line {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+}
+
+html[data-reduced-motion="true"] .t-stagger:not(.is-shown) .t-stagger-line {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  transition: none !important;
 }
 
 

@@ -1,8 +1,7 @@
 const { Queue, Worker } = require('bullmq');
-const Redis = require('ioredis');
 const mongoose = require('mongoose');
 const path = require('path');
-const { getRedisUrl } = require('../utils/wslRedis');
+const { getRedisUrl, createRedisClient } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 
 const MONGO_READY_TIMEOUT_MS = 30000;
@@ -50,12 +49,7 @@ let gamificationWorker = null;
 if (isTestEnv) {
   initializeMemoryQueues();
 } else try {
-  redisConnection = new Redis(redisUrl, {
-    maxRetriesPerRequest: null,
-    connectTimeout: 2000,
-    lazyConnect: true,
-    retryStrategy: () => null
-  });
+  redisConnection = createRedisClient();
 
   redisConnection.connect()
     .then(() => {

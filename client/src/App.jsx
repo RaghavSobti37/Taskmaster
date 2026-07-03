@@ -133,7 +133,7 @@ function AppRootRedirectInner({ clerkLoaded, clerkSignedIn }) {
   const clerkBoot = isClerkConfigured() && !clerkLoaded;
 
   if (bootError) {
-    return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
+    return <AppBootError bootError={bootError} onRefresh={() => retryBoot()} />;
   }
 
   if (loading || clerkBoot || clerkSessionPending) {

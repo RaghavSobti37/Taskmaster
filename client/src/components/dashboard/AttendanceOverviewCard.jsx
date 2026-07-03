@@ -5,6 +5,7 @@ import { ChartSurface } from '../ui/charts';
 import { BklitMultiLineChart } from '../charts/bklitInsightsCharts';
 import { useAttendanceOverview } from '../../hooks/queries/dashboard';
 import { formatTimeframeLabel } from '../../utils/displayLabels';
+import { chartTicksForTimeframe, mapDashboardSeriesWithDate } from '../../utils/chartTimeSeries';
 
 const SERIES = [
   { key: 'marked', name: 'Marked attendance', stroke: '#3b82f6' },
@@ -43,7 +44,10 @@ const AttendanceOverviewCard = React.memo(function AttendanceOverviewCard() {
   const [timeframe, setTimeframe] = useState('7d');
   const { data, isLoading } = useAttendanceOverview(timeframe);
 
-  const chartData = useMemo(() => data?.series || [], [data?.series]);
+  const chartData = useMemo(
+    () => mapDashboardSeriesWithDate(data?.series),
+    [data?.series],
+  );
 
   const markedMetric = useMemo(() => {
     if (!chartData.length) return null;
@@ -90,8 +94,8 @@ const AttendanceOverviewCard = React.memo(function AttendanceOverviewCard() {
           height={200}
           lines={SERIES}
           loading={isLoading}
+          numTicks={chartTicksForTimeframe(timeframe)}
           series={chartData}
-          xKey="label"
         />
       </ChartSurface>
     </DashboardWidgetShell>

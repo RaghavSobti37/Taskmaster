@@ -36,6 +36,7 @@ const {
 
 const { assertEstablishAllowed } = require('../utils/establishAccess');
 const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
+const asyncHandler = require('../../../middleware/asyncHandler');
 
 const blockLegacyAuth = (res) => {
   if (isClerkProductionAuth()) {
@@ -577,7 +578,7 @@ exports.oauthEstablishSession = async (req, res) => {
   }
 };
 
-exports.clerkEstablishSession = async (req, res) => {
+const clerkEstablishSessionHandler = async (req, res) => {
   if (!isClerkConfigured()) {
     return res.status(503).json({ error: 'Clerk authentication is not configured' });
   }
@@ -627,12 +628,23 @@ exports.clerkEstablishSession = async (req, res) => {
       return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
-    return sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
+    return await sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
   } catch (error) {
-    const status = error.status || 401;
+    if (error?.name === 'JsonWebTokenError' || error?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid Clerk session' });
+    }
+    let status = error.status;
+    if (!status) {
+      status = error.name === 'ValidationError' ? 400 : 500;
+    }
+    if (status >= 500) {
+      logger.error('authController', 'clerkEstablishSession', { error: error.message || error });
+    }
     return res.status(status).json({ error: error.message || 'Clerk sign-in failed' });
   }
 };
+
+exports.clerkEstablishSession = asyncHandler(clerkEstablishSessionHandler);
 
 const currentSessionDecoded = (req) => {
   const token = getSessionCookie(req);

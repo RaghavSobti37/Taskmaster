@@ -68,6 +68,12 @@ function createApp() {
       req.rawBody = buf;
     },
   }));
+  app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+    return next(err);
+  });
   app.use(express.urlencoded({ limit: jsonBodyLimit, extended: true }));
   // ponytail: express-mongo-sanitize mutates req.query — broken on Express 5 (read-only getter)
   app.use((req, _res, next) => {

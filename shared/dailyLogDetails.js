@@ -139,7 +139,7 @@ function buildDailyLogDateRangeFilter(startDate, endDate) {
 
 const TIMELINE_FALLBACK_DURATION_MIN = 30;
 const TIMELINE_MIN_BLOCK_MIN = 15;
-const TIMELINE_RANGE_PAD_MIN = 30;
+export const TIMELINE_RANGE_PAD_MIN = 30;
 
 function parseCreatedAtToMinutes(createdAt) {
   if (!createdAt) return null;

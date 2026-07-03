@@ -1,10 +1,9 @@
 # CoreKnot (Taskmaster) — Master Project Context
 
-> **Purpose:** Complete reference — everything in one file. For navigable component docs, start at [`INDEX.md`](INDEX.md).  
-> **Product:** CoreKnot — enterprise CRM & operations hub for The Shakti Collective (TSC)  
-> **Repo folder:** `Taskmaster` · **npm name:** `coreknot` · **Version:** `1.0.7` (root, client, server)  
-> **Last compiled:** 2026-06-10  
-> **Secrets:** Never store live URLs, Mongo URIs, or API keys here. Production host truth lives in gitignored `.cursor/production-hosts.local.json`.
+> **Purpose:** Complete reference — API surface, env vars, business rules.  
+> **Page-level catalog (every route + hooks + APIs):** [`docs/reference/COREKNOT_MASTER.md`](../../docs/reference/COREKNOT_MASTER.md)  
+> **Navigable memory:** [`INDEX.md`](INDEX.md)  
+> **Product:** CoreKnot · **Version:** `1.0.7` · **Last compiled:** 2026-07-02
 
 ---
 

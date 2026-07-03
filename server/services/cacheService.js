@@ -79,4 +79,21 @@ async function deleteCache(key) {
   }
 }
 
-module.exports = { getCache, setCache, deleteCache, redis };
+function bustMemoryByPrefix(prefix) {
+  for (const key of [...memoryCache.keys()]) {
+    if (key.startsWith(prefix)) memoryCache.delete(key);
+  }
+}
+
+async function bustCacheByPrefix(prefix) {
+  bustMemoryByPrefix(prefix);
+  if (redis.status !== 'ready') return;
+  try {
+    const keys = await redis.keys(`${prefix}*`);
+    if (keys.length) await redis.del(...keys);
+  } catch {
+    /* memory cache already cleared */
+  }
+}
+
+module.exports = { getCache, setCache, deleteCache, bustCacheByPrefix, redis };

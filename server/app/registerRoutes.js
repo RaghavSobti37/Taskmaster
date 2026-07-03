@@ -54,13 +54,16 @@ function getApiDomainManifest() {
  */
 function registerRoutes(app) {
   // --- Public / health ---
+  app.use('/api/v1', require('../routes/v1'));
   app.use('/api', require('../routes/openApiRoutes'));
   app.get('/api/health', (_req, res) => {
     const detail = SystemHealthService.getDetailedStatus();
+    const { getBuildMeta } = require('../utils/buildMeta');
     const healthy = detail.status === 'HEALTHY' || detail.status === 'STARTING';
     const payload = {
       status: detail.status,
       reason: detail.reason || null,
+      build: detail.build || getBuildMeta(),
       dependencies: detail.dependencies,
       uptimeSeconds: detail.uptimeSeconds,
     };
@@ -159,6 +162,7 @@ function registerRoutes(app) {
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));
   app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
+  app.use('/api/knowledge-engine', require('../routes/knowledgeEngineRoutes'));
 
   // --- Admin ---
   app.use('/api/admin/media-contacts', require('../routes/mediaContactRoutes'));
@@ -169,6 +173,8 @@ function registerRoutes(app) {
   app.use('/api/admin/supabase', require('../routes/supabaseAdminRoutes'));
   app.use('/api/admin/queues', require('../routes/queueAdminRoutes'));
   app.use('/api/admin/system-health', require('../routes/systemHealthAdminRoutes'));
+  app.use('/api/admin/tenants', require('../routes/tenantAdminRoutes'));
+  app.use('/api/admin/security-audit', require('../routes/securityAuditRoutes'));
   app.use('/api/admin', require('../routes/masterclassReviewAdminRoutes'));
 
   // UploadThing v7 requires Content-Type exactly 'application/json' when Express has already parsed req.body.

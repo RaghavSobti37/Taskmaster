@@ -102,7 +102,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, project
   };
 
   return (
-    <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100} ariaLabel="Create new task">
+    <ModalShell isOpen={isOpen} onClose={onClose} size="fullscreen" zIndex={100} ariaLabel="Create new task">
       <ModalHeader
         title="Create New Task"
         onClose={onClose}

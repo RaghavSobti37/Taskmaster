@@ -384,9 +384,14 @@ exports.updateUserAdmin = async (req, res) => {
     }
     if (suspended !== undefined) {
       const suspendedBool = Boolean(suspended);
+      const wasSuspended = Boolean(targetUser.suspended);
       targetUser.suspended = suspendedBool;
       targetUser.suspendedAt = suspendedBool ? (targetUser.suspendedAt || new Date()) : null;
       targetUser.suspensionReason = suspendedBool ? (String(suspensionReason || '').trim()) : '';
+      if (suspendedBool && !wasSuspended) {
+        const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
+        await revokeAllUserSessions(targetUser._id.toString());
+      }
     }
 
     if (pagePermissions !== undefined) {

@@ -31,7 +31,7 @@ npm run audit:history     # After history rewrite or fork import
 | Zone | Rule file | Doc |
 | --- | --- | --- |
 | **Production hosts** | `.cursor/rules/production-hosts-locked.mdc` | `.cursor/production-hosts.local.json` |
-| **Email engine** | `.cursor/rules/email-engine-locked.mdc` | `docs/EMAIL_ENGINE_LOCKED.md` |
+| **Email engine** | `.cursor/rules/email-engine-locked.mdc` | `docs/reference/EMAIL_ENGINE_LOCKED.md` |
 | **Logo & spinner** | `.cursor/rules/logo-mark-locked.mdc` | `docs/LOGO_LOCKED.md` |
 | **Legacy APIs** | — | `docs/LEGACY_FREEZE.md` |
 
@@ -118,4 +118,5 @@ Full catalog: `docs/SCRIPTS_RUNBOOK.md`
 - 4px grid, high density, no mock states
 - Use `confirmContext` — no `window.alert`
 - Spinner-only loading default — `client/src/lib/loadingDisplay.js`
-- Standards: `docs/COMPONENT_STANDARDS.md`
+- Standards: `docs/reference/COMPONENT_STANDARDS.md`, `docs/design/DESIGN-REFERENCE.md`
+- Page catalog: `docs/reference/COREKNOT_MASTER.md`

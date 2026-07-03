@@ -8,7 +8,7 @@ const router = express.Router();
 const {
   register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, clerkEstablishSession, forgotPassword, resetPassword,
-  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken,
+  listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions,
 } = require('./controllers/authController');
 const {
   registerOptions, registerVerify, loginOptions,

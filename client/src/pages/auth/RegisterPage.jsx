@@ -13,7 +13,6 @@ import { navigateAfterAuth } from '../../utils/authNavigation';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
 import { computeLoginUiState } from '../../lib/clerkSignInFlow';
-import { Spinner } from '../../components/ui/Spinner';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -91,7 +90,7 @@ function RegisterPageView({
     );
   }
 
-  if (uiState === 'BOOT_LOADING') {
+  if (uiState === 'BOOT_LOADING' || uiState === 'ESTABLISHING' || uiState === 'REDIRECTING') {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
@@ -104,8 +103,6 @@ function RegisterPageView({
     </>
   );
 
-  const showSignUp = uiState === 'SHOW_SIGN_IN' || uiState === 'ESTABLISHING';
-  const showEstablishOverlay = uiState === 'ESTABLISHING';
   const showEstablishError = uiState === 'ESTABLISH_ERROR';
 
   return (
@@ -126,18 +123,10 @@ function RegisterPageView({
               {establishError?.stage ? ` (${establishError.stage})` : ''}
             </p>
           )}
-          <div className="relative">
-            {showSignUp && <ClerkSignUpBlock />}
-            {showEstablishOverlay && (
-              <div className="absolute inset-0 z-[310] flex items-center justify-center bg-black/40 rounded-xl">
-                <Spinner className="h-8 w-8" />
-              </div>
-            )}
-          </div>
-          {(showEstablishError || showEstablishOverlay) && (
+          <ClerkSignUpBlock />
+          {showEstablishError ? (
             <ClearSessionCookiesButton stuckLogin className="mt-4" />
-          )}
-          {!showEstablishOverlay && !showEstablishError && (
+          ) : (
             <ClearSessionCookiesButton bootError={Boolean(bootError)} />
           )}
         </>

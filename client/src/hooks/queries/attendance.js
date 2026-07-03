@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { patchAttendanceQueries } from './attendanceCache';
 
 export const useAttendanceRosterUsers = (params = {}, enabled = true) => useQuery({
   queryKey: ['attendanceRosterUsers', params],
@@ -18,8 +19,9 @@ export const useAttendance = (params = {}, enabled = true) => useQuery({
 export const useAttendanceCheck = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => axios.post('/api/attendance/check', payload),
-    onSuccess: () => {
+    mutationFn: async (payload) => (await axios.post('/api/attendance/check', payload)).data,
+    onSuccess: (updatedRow) => {
+      patchAttendanceQueries(queryClient, updatedRow);
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['attendanceRosterUsers'] });
       queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
@@ -30,8 +32,12 @@ export const useAttendanceCheck = () => {
 export const useUndoAttendanceCheck = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => axios.post('/api/attendance/check/undo', payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attendance'] }),
+    mutationFn: async (payload) => (await axios.post('/api/attendance/check/undo', payload)).data,
+    onSuccess: (updatedRow) => {
+      patchAttendanceQueries(queryClient, updatedRow);
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendanceRosterUsers'] });
+    },
   });
 };
 

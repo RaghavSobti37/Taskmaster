@@ -21,6 +21,50 @@ function renderModal(ui) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
+describe('ModalShell sizing', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('renders lg as centered compact panel', () => {
+    renderModal(
+      <ModalShell isOpen onClose={() => {}} size="lg" ariaLabel="Large modal">
+        <p>Content</p>
+      </ModalShell>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/tm-modal-compact/);
+    expect(dialog.className).toMatch(/tm-modal-lg/);
+    expect(dialog.className).not.toMatch(/tm-modal-fullscreen/);
+    expect(dialog.className).not.toMatch(/h-\[100dvh\]/);
+  });
+
+  it('renders fullscreen as edge-to-edge panel', () => {
+    renderModal(
+      <ModalShell isOpen onClose={() => {}} size="fullscreen" ariaLabel="Fullscreen modal">
+        <p>Content</p>
+      </ModalShell>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/tm-modal-fullscreen/);
+    expect(dialog.className).not.toMatch(/tm-modal-compact/);
+    expect(dialog.className).toMatch(/h-\[100dvh\]/);
+  });
+
+  it('renders task size as fullscreen', () => {
+    renderModal(
+      <ModalShell isOpen onClose={() => {}} size="task" ariaLabel="Task modal">
+        <p>Content</p>
+      </ModalShell>,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/tm-modal-fullscreen/);
+  });
+});
+
 describe('ModalShell keyboard', () => {
   beforeEach(() => {
     document.body.innerHTML = '';

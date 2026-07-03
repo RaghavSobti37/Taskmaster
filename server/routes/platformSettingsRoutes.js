@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 const platformSettingsService = require('../services/platformSettingsService');
 const logger = require('../utils/logger');
+const { auditSensitiveMutation } = require('../services/securityAuditService');
 
 const adminAccess = requirePageAccess('admin_users');
 
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', auditSensitiveMutation({ resourceType: 'PlatformSettings', action: 'UPDATE' }), async (req, res) => {
   try {
     const payload = await platformSettingsService.updateAdminSettings(req.body, req.user._id);
     res.json(payload);

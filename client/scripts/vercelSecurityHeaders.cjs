@@ -12,8 +12,47 @@ const GOOGLE_AUTH_ORIGINS = [
   'https://*.google.com',
 ].join(' ');
 
+/** Vercel Preview toolbar + SSO manifest (harmless on prod if present). */
+const VERCEL_PREVIEW_ORIGINS = [
+  'https://vercel.live',
+  'https://vercel.com',
+  'https://*.vercel.app',
+].join(' ');
+
+const buildContentSecurityPolicy = ({ isPreview = false } = {}) => {
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    'https://*.clerk.accounts.dev',
+    'https://*.clerk.com',
+    'https://challenges.cloudflare.com',
+    'https://us-assets.i.posthog.com',
+    'https://eu-assets.i.posthog.com',
+    CLERK_SCRIPT_ORIGINS,
+    GOOGLE_AUTH_ORIGINS,
+    ...(isPreview ? ['https://vercel.live'] : []),
+  ].join(' ');
+
+  const directives = [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    `style-src 'self' 'unsafe-inline' ${GOOGLE_AUTH_ORIGINS}`,
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https: wss:",
+    `frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
+    "worker-src 'self' blob:",
+  ];
+
+  if (isPreview) {
+    directives.push(`manifest-src 'self' ${VERCEL_PREVIEW_ORIGINS}`);
+  }
+
+  return directives.join('; ');
+};
+
 /** Shared security headers for Vercel static SPA deployments. */
-const VERCEL_SECURITY_HEADERS = [
+const buildVercelSecurityHeaders = ({ isPreview = false } = {}) => [
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
@@ -36,19 +75,12 @@ const VERCEL_SECURITY_HEADERS = [
   },
   {
     key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com "
-        + `${CLERK_SCRIPT_ORIGINS} ${GOOGLE_AUTH_ORIGINS}`,
-      `style-src 'self' 'unsafe-inline' ${GOOGLE_AUTH_ORIGINS}`,
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https: wss:",
-      `frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
-      "worker-src 'self' blob:",
-    ].join('; '),
+    value: buildContentSecurityPolicy({ isPreview }),
   },
 ];
+
+/** @deprecated use buildVercelSecurityHeaders — kept for tests importing VERCEL_SECURITY_HEADERS */
+const VERCEL_SECURITY_HEADERS = buildVercelSecurityHeaders();
 
 const CACHE_NO_STORE = {
   key: 'Cache-Control',
@@ -56,10 +88,10 @@ const CACHE_NO_STORE = {
 };
 
 /** Merge security headers with optional per-route headers (e.g. Cache-Control). */
-function buildVercelHeaders(templateHeaders = []) {
+function buildVercelHeaders(templateHeaders = [], options = {}) {
   const securityBlock = {
     source: '/(.*)',
-    headers: VERCEL_SECURITY_HEADERS,
+    headers: buildVercelSecurityHeaders(options),
   };
 
   const existing = Array.isArray(templateHeaders) ? [...templateHeaders] : [];
@@ -73,4 +105,6 @@ module.exports = {
   VERCEL_SECURITY_HEADERS,
   CACHE_NO_STORE,
   buildVercelHeaders,
+  buildVercelSecurityHeaders,
+  buildContentSecurityPolicy,
 };

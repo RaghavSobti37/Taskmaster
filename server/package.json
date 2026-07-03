@@ -35,7 +35,9 @@
     "normalize:person-data:execute": "node scripts/normalizePersonData.js --execute",
     "repair:lead-phones": "node scripts/repairCorruptPhones.js",
     "qa:audit": "node scripts/qaAuditReport.js",
-    "qa:audit:prod": "node scripts/qaAuditReport.js --prod",
+    "qa:suite3-static": "node scripts/runQaSuite3Static.js",
+    "migrate:status": "migrate-mongo status -f migrate-mongo-config.js",
+    "migrate:up": "migrate-mongo up -f migrate-mongo-config.js",
     "qa:cleanup": "node scripts/qaFullCleanup.js",
     "qa:cleanup:prod": "node scripts/qaFullCleanup.js --prod",
     "storage:audit": "node scripts/atlasStorageCleanup.js --dry-run",
@@ -62,6 +64,7 @@
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@coreknot/contracts": "1.0.0",
     "@sendgrid/mail": "^8.1.6",
+    "@sentry/node": "^9.28.1",
     "@supabase/supabase-js": "^2.108.2",
     "@trigger.dev/sdk": "^4.4.0",
     "axios": "^1.18.1",
@@ -110,6 +113,7 @@
   },
   "devDependencies": {
     "jest": "^30.4.2",
+    "migrate-mongo": "^12.1.3",
     "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2"

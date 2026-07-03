@@ -36,6 +36,7 @@ const {
 
 const { assertEstablishAllowed } = require('../utils/establishAccess');
 const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
+const asyncHandler = require('../../../middleware/asyncHandler');
 
 const blockLegacyAuth = (res) => {
   if (isClerkProductionAuth()) {
@@ -577,7 +578,7 @@ exports.oauthEstablishSession = async (req, res) => {
   }
 };
 
-exports.clerkEstablishSession = async (req, res) => {
+const clerkEstablishSessionHandler = async (req, res) => {
   if (!isClerkConfigured()) {
     return res.status(503).json({ error: 'Clerk authentication is not configured' });
   }
@@ -627,12 +628,23 @@ exports.clerkEstablishSession = async (req, res) => {
       return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
-    return sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
+    return await sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
   } catch (error) {
-    const status = error.status || 401;
+    if (error?.name === 'JsonWebTokenError' || error?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid Clerk session' });
+    }
+    let status = error.status;
+    if (!status) {
+      status = error.name === 'ValidationError' ? 400 : 500;
+    }
+    if (status >= 500) {
+      logger.error('authController', 'clerkEstablishSession', { error: error.message || error });
+    }
     return res.status(status).json({ error: error.message || 'Clerk sign-in failed' });
   }
 };
+
+exports.clerkEstablishSession = asyncHandler(clerkEstablishSessionHandler);
 
 const currentSessionDecoded = (req) => {
   const token = getSessionCookie(req);
@@ -720,6 +732,34 @@ exports.revokeOtherSessions = async (req, res) => {
   } catch (error) {
     logger.error('authController', 'revokeOtherSessions failed', { error: error.message || error });
     return res.status(500).json({ error: 'Failed to revoke sessions' });
+  }
+};
+
+/** Admin: revoke all sessions for any user (compromised org / offboarding). */
+exports.adminRevokeAllUserSessions = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    if (!targetId) return res.status(400).json({ error: 'Missing user id' });
+
+    const targetUser = await User.findById(targetId).select('_id suspended');
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
+    const { revoked } = await revokeAllUserSessions(targetId.toString());
+
+    const isSelf = req.user._id.toString() === targetId.toString();
+    if (isSelf) clearAuthCookie(res, req);
+
+    logger.info('authController', 'adminRevokeAllUserSessions', {
+      actorId: req.user._id.toString(),
+      targetId: targetId.toString(),
+      revoked,
+    });
+
+    return res.json({ success: true, revoked });
+  } catch (error) {
+    logger.error('authController', 'adminRevokeAllUserSessions failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to revoke user sessions' });
   }
 };
 

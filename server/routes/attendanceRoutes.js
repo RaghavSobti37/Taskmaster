@@ -190,6 +190,7 @@ router.post('/check/undo', async (req, res) => {
       updateBlock,
       { new: true }
     );
+    await bustAttendanceCacheForUser(String(req.user._id));
     res.json(attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -239,6 +240,7 @@ router.patch('/:id/approve', async (req, res) => {
 
     const payload = { ...updatedRow.toObject(), xpAward };
     emitAttendanceEvent('attendance.updated', updatedRow);
+    await bustAttendanceCacheForUser(String(updatedRow.userId));
     res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -280,6 +282,7 @@ router.put('/upsert/by-user-date', async (req, res) => {
 
     const upsertPayload = { ...(row.toObject ? row.toObject() : row), xpAward };
     emitAttendanceEvent('attendance.updated', row);
+    await bustAttendanceCacheForUser(String(row.userId));
     res.json(upsertPayload);
   } catch (error) {
     res.status(500).json({ error: error.message });

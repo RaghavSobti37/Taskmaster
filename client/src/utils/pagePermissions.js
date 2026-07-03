@@ -109,6 +109,11 @@ export function hasPageAccess(user, pageKey) {
     const perms = getUserPagePermissions(user);
     return perms.includes('admin_artist_path') || perms.includes('admin_data');
   }
+  if (pageKey === 'admin_knowledge_engine') {
+    if (isDepartmentAdmin(user?.departmentId)) return true;
+    const perms = getUserPagePermissions(user);
+    return perms.includes('admin_knowledge_engine') || perms.includes('admin_data');
+  }
   if (pageKey === 'admin_ops_hub') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);

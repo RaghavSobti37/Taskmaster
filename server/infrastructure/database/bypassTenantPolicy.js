@@ -8,6 +8,7 @@ const ROUTE_ALLOWLIST = new Set([
   'campaignRoutes.js',
   'campaignApiRouter.js',
   'calendarRoutes.js',
+  'attendanceRoutes.js',
 ]);
 
 const SERVICE_ALLOWLIST = new Set([

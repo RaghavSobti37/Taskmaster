@@ -37,9 +37,9 @@ Autonomous browser tests: `node .cursor/healing-loop/run-loop.mjs --root ./corek
 
 `docs/design/DESIGN-REFERENCE.md`
 
-Run the quick checklist at the top on every page you touch. Cursor auto-attaches `.cursor/rules/coreknot-design-reference.mdc` when editing `client/**`.
+Complementary: `docs/reference/COMPONENT_STANDARDS.md`, `client/design_guidelines.md`.
 
-Complementary: `docs/COMPONENT_STANDARDS.md`, `client/design_guidelines.md`.
+**Page-level catalog:** `docs/reference/COREKNOT_MASTER.md`
 
 ## Date display
 

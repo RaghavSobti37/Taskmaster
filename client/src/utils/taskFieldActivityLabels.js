@@ -1,6 +1,6 @@
 import { parseISO, isValid } from 'date-fns';
 import { formatDateKeyForDisplay } from './dateDisplay';
-import { TASK_CATEGORY_OPTIONS, SLOT_OPTIONS } from '../constants/taskOptions';
+import { SLOT_OPTIONS, taskCategoryLabel } from '../constants/taskOptions';
 import { formatTaskStatus } from './displayLabels';
 import { TASK_STATUS_BUTTON_OPTIONS } from './taskStatusButtons';
 
@@ -23,10 +23,8 @@ export function formatFieldActivityValue(fieldKey, value) {
   if (!raw) return '—';
 
   switch (fieldKey) {
-    case 'category': {
-      const opt = TASK_CATEGORY_OPTIONS.find((c) => c.value === raw.toLowerCase());
-      return opt?.label || raw;
-    }
+    case 'category':
+      return taskCategoryLabel(raw);
     case 'slot': {
       const opt = SLOT_OPTIONS.find((s) => s.value === raw.toUpperCase());
       return opt?.label || raw;

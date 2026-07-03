@@ -25,6 +25,25 @@ const readLocalProductionApiUrl = () => {
   }
 };
 
+/** Canonical staging API — Vercel preview must never proxy to production. */
+const CANONICAL_STAGING_API_URL = 'https://coreknot-api-staging.onrender.com';
+
+const readLocalStagingApiUrl = () => {
+  const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
+  if (!fs.existsSync(localHosts)) return '';
+  try {
+    const json = JSON.parse(fs.readFileSync(localHosts, 'utf8'));
+    return String(json.stagingApiUrl || json.derived?.stagingApiUrl || '').trim().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+};
+
+const isProductionRenderApiHost = (hostname) => {
+  const host = String(hostname || '').toLowerCase();
+  return host === 'taskmaster-jfw0.onrender.com' || host === 'coreknot-api.onrender.com';
+};
+
 const readLocalNestApiUrl = () => {
   const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
   if (!fs.existsSync(localHosts)) return '';
@@ -124,17 +143,33 @@ const buildPostHogRewrites = () => {
 const normalizeProxyUrl = (raw) => String(raw || '').trim().replace(/\/$/, '');
 
 const pickProxyUrl = () => {
-  const candidates = [
+  const isPreview = process.env.VERCEL_ENV === 'preview';
+  const isProductionDeploy = process.env.VERCEL_ENV === 'production';
+
+  const fromEnv = [
     process.env.RENDER_API_PROXY_URL,
     process.env.VITE_API_URL,
-    readLocalProductionApiUrl(),
   ].map(normalizeProxyUrl).filter(Boolean);
+
+  const candidates = [...fromEnv];
+  if (isPreview) {
+    candidates.push(readLocalStagingApiUrl(), CANONICAL_STAGING_API_URL);
+  } else if (isProductionDeploy || !process.env.VERCEL) {
+    candidates.push(readLocalProductionApiUrl());
+  }
 
   for (const url of candidates) {
     try {
       const host = new URL(url).hostname.toLowerCase();
-      if (!BANNED_PROXY_HOSTS.has(host)) return url;
-      console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
+      if (BANNED_PROXY_HOSTS.has(host)) {
+        console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
+        continue;
+      }
+      if (isPreview && isProductionRenderApiHost(host)) {
+        console.warn(`[generateVercelConfig] skipping production API host on preview: ${host}`);
+        continue;
+      }
+      return url;
     } catch {
       /* ignore */
     }
@@ -287,6 +322,20 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
   process.exit(1);
 }
 
+if (onVercel && process.env.VERCEL_ENV === 'preview') {
+  try {
+    const previewHost = new URL(apiDestination.replace('/api/$1', '/')).hostname.toLowerCase();
+    if (isProductionRenderApiHost(previewHost)) {
+      console.error(
+        '[generateVercelConfig] Preview build must proxy to staging API — set RENDER_API_PROXY_URL=https://coreknot-api-staging.onrender.com on Vercel Preview env',
+      );
+      process.exit(1);
+    }
+  } catch {
+    /* validated above */
+  }
+}
+
 if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.VITE_POSTHOG_PROJECT_TOKEN || '').trim()) {
   console.warn(
     '[generateVercelConfig] VITE_POSTHOG_PROJECT_TOKEN missing on Vercel production — PostHog will not capture until set and redeployed',
@@ -313,7 +362,9 @@ const payload = {
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
   ...(template.env ? { env: template.env } : {}),
-  headers: buildVercelHeaders(template.headers),
+  headers: buildVercelHeaders(template.headers, {
+    isPreview: process.env.VERCEL_ENV === 'preview',
+  }),
 };
 
 const buildSitePayload = (buildCommand) => {
@@ -339,7 +390,9 @@ const buildSitePayload = (buildCommand) => {
         : []),
       ...siteRewrites,
     ],
-    headers: buildVercelHeaders(template.headers),
+    headers: buildVercelHeaders(template.headers, {
+      isPreview: process.env.VERCEL_ENV === 'preview',
+    }),
     env: template.env || { VERCEL_FORCE_NO_BUILD_CACHE: '1' },
   };
 };
@@ -394,6 +447,9 @@ module.exports = {
   mapTemplateRewrites,
   existingRewritesLookValid,
   buildVercelHeaders,
+  pickProxyUrl,
+  CANONICAL_STAGING_API_URL,
+  isProductionRenderApiHost,
 };
 
 if (require.main === module) {

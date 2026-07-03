@@ -1,0 +1,2568 @@
+[
+  {
+    "file": "client/src/pages/CampaignDetails.jsx",
+    "routes": [
+      "/campaign/:campaignId"
+    ],
+    "lines": 853,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useCampaignAnalytics",
+      "useCampaignDetails",
+      "useCampaignRecipients",
+      "useEffect",
+      "useLocation",
+      "useMailProfiles",
+      "useMemo",
+      "useNavigate",
+      "useParams",
+      "useResendCampaign",
+      "useResendFilteredCampaign",
+      "useState",
+      "useStopCampaign",
+      "useToast"
+    ],
+    "apis": [
+      "/api/campaigns/${campaignApiId}/recipients/export?${params}"
+    ],
+    "components": [
+      "RegisteredLocationBarChart",
+      "ResendFromEmailPicker"
+    ]
+  },
+  {
+    "file": "client/src/pages/Dashboard.jsx",
+    "routes": [
+      "/dashboard"
+    ],
+    "lines": 352,
+    "defaultExport": "Dashboard",
+    "namedExports": [],
+    "hooks": [
+      "useAttendance",
+      "useAttendanceCheck",
+      "useAuth",
+      "useDashboardPreset",
+      "useDashboardSummary",
+      "useDashboardTaskActions",
+      "useDashboardTasks",
+      "useEffect",
+      "useMemo",
+      "useNavigate",
+      "useProjects",
+      "useReviewTasks",
+      "useState",
+      "useUndoAttendanceCheck",
+      "useUserDirectory",
+      "useWorkspaces"
+    ],
+    "apis": [],
+    "components": [
+      "BrandedLoadingPanel",
+      "DashboardTierLayout"
+    ]
+  },
+  {
+    "file": "client/src/pages/LandingPage.jsx",
+    "routes": [
+      "/",
+      "/landing"
+    ],
+    "lines": 377,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth"
+    ],
+    "apis": [],
+    "components": [
+      "BootScreen",
+      "BrandLogo",
+      "LandingDashboardPreview",
+      "WithClerkWhenConfigured"
+    ]
+  },
+  {
+    "file": "client/src/pages/NotFoundPage.jsx",
+    "routes": [
+      "* (in MainLayout)"
+    ],
+    "lines": 22,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "EmptyState"
+    ]
+  },
+  {
+    "file": "client/src/pages/Unsubscribe.jsx",
+    "routes": [
+      "/unsubscribe"
+    ],
+    "lines": 132,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [
+      "/api/track/unsubscribe"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/admin/AdminCRM.jsx",
+    "routes": [
+      "/admin"
+    ],
+    "lines": 7,
+    "defaultExport": "AdminCRM",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/admin/AdminExly.jsx",
+    "routes": [],
+    "lines": 15,
+    "defaultExport": "AdminExly",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": [
+      "ExlyDataContent"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminGamification.jsx",
+    "routes": [
+      "/admin/gamification"
+    ],
+    "lines": 369,
+    "defaultExport": "AdminGamification",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useConfirm",
+      "useEffect",
+      "useMemo",
+      "useQueryClient",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/gamification-admin/config",
+      "/api/gamification-admin/recalculate-all-levels",
+      "/api/gamification-admin/rules"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/admin/AdminPanel.jsx",
+    "routes": [
+      "/admin/control"
+    ],
+    "lines": 491,
+    "defaultExport": "AdminPanel",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCRMStats",
+      "useCallback",
+      "useConfirm",
+      "useCreateTeam",
+      "useDataHubFolders",
+      "useDeferredQueryEnabled",
+      "useDeleteTeam",
+      "useDeleteUser",
+      "useEffect",
+      "useMailStats",
+      "useMemo",
+      "usePlatformExclusions",
+      "useSearchParams",
+      "useState",
+      "useTeams",
+      "useToast",
+      "useUpdateUser",
+      "useUserDirectory"
+    ],
+    "apis": [],
+    "components": [
+      "UserDeleteAction"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminPlatformSettings.jsx",
+    "routes": [
+      "/admin/platform-settings"
+    ],
+    "lines": 161,
+    "defaultExport": "AdminPlatformSettings",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useQueryClient",
+      "useState",
+      "useToast",
+      "useUserDirectory"
+    ],
+    "apis": [
+      "/api/admin/platform-settings"
+    ],
+    "components": [
+      "PlatformSettingsUserField",
+      "QueryErrorSlot"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminProjectAnalyticsPage.jsx",
+    "routes": [
+      "/admin/project-analytics"
+    ],
+    "lines": 465,
+    "defaultExport": "AdminProjectAnalyticsPage",
+    "namedExports": [],
+    "hooks": [
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useProjectReportRangeState",
+      "useProjects",
+      "useProjectsAnalyticsSummary",
+      "useRef",
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "ProjectAnalyticsContent",
+      "ProjectReportRangeControls"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminRolesPage.jsx",
+    "routes": [
+      "/admin/roles"
+    ],
+    "lines": 120,
+    "defaultExport": "AdminRolesPage",
+    "namedExports": [],
+    "hooks": [
+      "useAdminRoles",
+      "useMemo"
+    ],
+    "apis": [],
+    "components": [
+      "OrgRolesPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminScriptsPage.jsx",
+    "routes": [
+      "/admin/scripts"
+    ],
+    "lines": 273,
+    "defaultExport": "AdminScriptsPage",
+    "namedExports": [],
+    "hooks": [
+      "useDeferredQueryEnabled",
+      "useMemo",
+      "useQuery",
+      "useState"
+    ],
+    "apis": [
+      "/api/admin/queues/status",
+      "/api/admin/scripts",
+      "/api/admin/scripts/${scriptId}/run"
+    ],
+    "components": [
+      "RelativeTimestamp"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminTeamsPage.jsx",
+    "routes": [
+      "/admin/teams"
+    ],
+    "lines": 90,
+    "defaultExport": "AdminTeamsPage",
+    "namedExports": [],
+    "hooks": [
+      "useDepartments",
+      "useMemo",
+      "useUserDirectory"
+    ],
+    "apis": [],
+    "components": [
+      "DepartmentsPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/AdminUsers.jsx",
+    "routes": [
+      "/admin/users"
+    ],
+    "lines": 470,
+    "defaultExport": "AdminUsers",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCRMStats",
+      "useCallback",
+      "useConfirm",
+      "useCreateUser",
+      "useDataHubFolders",
+      "useDeferredQueryEnabled",
+      "useDeleteUser",
+      "useDepartments",
+      "useEffect",
+      "useMailStats",
+      "useMemo",
+      "usePlatformExclusions",
+      "useState",
+      "useUpdateUser",
+      "useUserDirectory"
+    ],
+    "apis": [],
+    "components": [
+      "CreateUserModal",
+      "MonthlyReportPanel",
+      "PagePermissionsEditor",
+      "UserDeleteAction"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/ArtistPathPage.jsx",
+    "routes": [
+      "/admin/artist-path"
+    ],
+    "lines": 110,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistPathPeople",
+      "useArtistPathSync",
+      "useDebounce",
+      "useState",
+      "useToast"
+    ],
+    "apis": [],
+    "components": [
+      "ArtistPathCardGrid",
+      "ArtistProductHint",
+      "SearchInput"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/CrmStatsPage.jsx",
+    "routes": [
+      "/admin/crm-stats"
+    ],
+    "lines": 438,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCrmStats",
+      "useCrmStatsTrends",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/admin/DataHubPage.jsx",
+    "routes": [
+      "(AdminCRM tab)"
+    ],
+    "lines": 530,
+    "defaultExport": "function",
+    "namedExports": [
+      "DataHubContent"
+    ],
+    "hooks": [
+      "useCallback",
+      "useConfirm",
+      "useDataHubAnalytics",
+      "useDataHubBackups",
+      "useDataHubFolders",
+      "useDataHubPeople",
+      "useDataHubProductionBackup",
+      "useDataHubReconcile",
+      "useDataHubSyncStatus",
+      "useDebounce",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useQueryClient",
+      "useRef",
+      "useState",
+      "useToast"
+    ],
+    "apis": [],
+    "components": [
+      "DataHubInletCluster",
+      "DataHubOpsMenu",
+      "DataHubTemporalColumn",
+      "ListPageLayout",
+      "SearchInput",
+      "StatusBadge"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/ExlyCampaignsPage.jsx",
+    "routes": [
+      "/admin/exly-campaigns"
+    ],
+    "lines": 75,
+    "defaultExport": "ExlyCampaignsPage",
+    "namedExports": [],
+    "hooks": [
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "ExlyDataContent",
+      "MasterclassFunnelPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/LeadAuditsPage.jsx",
+    "routes": [
+      "/admin/lead-audits"
+    ],
+    "lines": 69,
+    "defaultExport": "LeadAuditsPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useConfirm",
+      "useLeadAudits",
+      "useState"
+    ],
+    "apis": [
+      "/api/crm/leads/audit-logs/purge"
+    ],
+    "components": [
+      "LeadAuditsContent"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/MediaListPage.jsx",
+    "routes": [
+      "/admin/media-list"
+    ],
+    "lines": 283,
+    "defaultExport": "MediaListPage",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useDeferredQueryEnabled",
+      "useMemo",
+      "useQuery",
+      "useState"
+    ],
+    "apis": [
+      "/api/admin/media-contacts",
+      "/api/admin/media-contacts/filters"
+    ],
+    "components": [
+      "ListPageLayout",
+      "PageSkeleton",
+      "SearchInput"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/OpsHubPage.jsx",
+    "routes": [
+      "/admin/ops-hub"
+    ],
+    "lines": 305,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCreateOpsEntity",
+      "useDebounce",
+      "useEffect",
+      "useMemo",
+      "useOpsHubAnalytics",
+      "useOpsHubEntities",
+      "useOpsHubEntity",
+      "useOpsHubTaxonomy",
+      "useOpsHubWeekly",
+      "useSearchParams",
+      "useState",
+      "useToast"
+    ],
+    "apis": [],
+    "components": [
+      "OpsEntityDetail",
+      "OpsHubAnalyticsPanel",
+      "OpsMondayBoard",
+      "PageToolbar",
+      "SearchInput",
+      "StatusBadge"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/QATestingPage.jsx",
+    "routes": [
+      "/admin/qa"
+    ],
+    "lines": 1323,
+    "defaultExport": "QATestingPage",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useProjects",
+      "useQAProgress",
+      "useQuery",
+      "useQueryClient",
+      "useState",
+      "useSystemToast"
+    ],
+    "apis": [
+      "/api/crm/leads/cleanup-test-data",
+      "/api/qa/cancel/${testRunId}",
+      "/api/qa/history",
+      "/api/qa/lighthouse-routes",
+      "/api/qa/progress",
+      "/api/qa/progress?testRunId=${testRunId}",
+      "/api/qa/purge-test-data",
+      "/api/qa/resolve/${testRunId}/${testCaseId}",
+      "/api/qa/results/${latestRunId}",
+      "/api/qa/start"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/ArtistDetail.jsx",
+    "routes": [
+      "/artists/:id/*",
+      "/preview/artist/:id/*"
+    ],
+    "lines": 326,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistDashboard",
+      "useConfirm",
+      "useNavigate",
+      "useParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "ArtistEditDrawer",
+      "ArtistShareModal",
+      "ClaimWorkspaceBanner"
+    ]
+  },
+  {
+    "file": "client/src/pages/artists/ArtistOSLayout.jsx",
+    "routes": [],
+    "lines": 112,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useMemo",
+      "useSearchParams"
+    ],
+    "apis": [],
+    "components": [
+      "ArtistProductHint",
+      "PageSkeleton"
+    ]
+  },
+  {
+    "file": "client/src/pages/artists/ArtistPublicProfile.jsx",
+    "routes": [
+      "/artist/:slug"
+    ],
+    "lines": 311,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useParams",
+      "usePublicArtist",
+      "useQuery",
+      "useState"
+    ],
+    "apis": [
+      "/api/artists/public/${slug}",
+      "/api/artists/public/${slug}/inquiry"
+    ],
+    "components": [
+      "BrandLogo"
+    ]
+  },
+  {
+    "file": "client/src/pages/artists/ArtistsCollection.jsx",
+    "routes": [
+      "(tab: artists)"
+    ],
+    "lines": 333,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtists",
+      "useCallback",
+      "useCreateArtist",
+      "useMemo",
+      "useNavigate",
+      "useState",
+      "useSyncArtistStats"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/PortfolioDashboard.jsx",
+    "routes": [
+      "/artists/portfolio"
+    ],
+    "lines": 206,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate",
+      "usePortfolioSummary"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/artistTabLoaders.js",
+    "routes": [],
+    "lines": 58,
+    "defaultExport": null,
+    "namedExports": [
+      "getLazyArtistOsTab",
+      "getLazyArtistWorkspaceTab",
+      "ARTIST_OS_TAB_LOADERS",
+      "ARTIST_WORKSPACE_TAB_LOADERS"
+    ],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistAnalyticsTab.jsx",
+    "routes": [],
+    "lines": 328,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistAnalytics",
+      "useArtistOsScores",
+      "useCallback",
+      "useEffect",
+      "useMemo",
+      "useSearchParams",
+      "useState",
+      "useTimeRange"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistCalendarTab.jsx",
+    "routes": [],
+    "lines": 113,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsCalendar",
+      "useCreateArtistCalendarEvent",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistCommandCenter.jsx",
+    "routes": [],
+    "lines": 27,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistConnectOnboarding.jsx",
+    "routes": [],
+    "lines": 96,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistContentTab.jsx",
+    "routes": [],
+    "lines": 188,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsAssets",
+      "useCreateArtistAsset",
+      "useDeleteArtistAsset",
+      "useMemo",
+      "useState",
+      "useUpdateArtistAsset"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistContractsTab.jsx",
+    "routes": [],
+    "lines": 57,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsContracts",
+      "useCreateArtistContract",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistDocumentsTab.jsx",
+    "routes": [],
+    "lines": 69,
+    "defaultExport": "function",
+    "namedExports": [
+      "getArtistDocumentsDescription"
+    ],
+    "hooks": [
+      "useArtistOsDocuments",
+      "useSearchParams"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistDocumentsTab.test.js",
+    "routes": [],
+    "lines": 19,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistDocumentsTab.test.jsx",
+    "routes": [],
+    "lines": 44,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistFinanceTab.jsx",
+    "routes": [],
+    "lines": 136,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsFinance",
+      "useCreateArtistFinanceEntry",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistGigsTab.jsx",
+    "routes": [],
+    "lines": 100,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsGigs",
+      "useCreateArtistGig",
+      "useState",
+      "useUpdateArtistGig"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistInquiriesTab.jsx",
+    "routes": [],
+    "lines": 131,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsInquiries",
+      "useCreateArtistInquiry",
+      "useState",
+      "useUpdateArtistInquiry"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistNotesTab.jsx",
+    "routes": [],
+    "lines": 42,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsNotes",
+      "useCreateArtistNote",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistOsQueryShell.jsx",
+    "routes": [],
+    "lines": 27,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistOsQueryShell.test.jsx",
+    "routes": [],
+    "lines": 41,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/ArtistOverviewPanel.jsx",
+    "routes": [],
+    "lines": 471,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsCalendar",
+      "useArtistOsContent",
+      "useArtistOsGigs",
+      "useArtistOsInquiries",
+      "useArtistOsOverview",
+      "useArtistOsScores",
+      "useArtistOsTimeline",
+      "useConnectionHealth",
+      "useConnectionHub",
+      "useMemo",
+      "useSyncPlatformConnection"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/os/artistOsConstants.js",
+    "routes": [],
+    "lines": 68,
+    "defaultExport": null,
+    "namedExports": [
+      "ARTIST_OS_TABS",
+      "CALENDAR_EVENT_COLORS",
+      "BOOKING_PIPELINE_STAGES",
+      "INQUIRY_STATUSES",
+      "ASSET_TYPES",
+      "EXPENSE_CATEGORIES",
+      "REVENUE_CATEGORIES",
+      "formatInr"
+    ],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistBookingsTab.jsx",
+    "routes": [],
+    "lines": 64,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsInquiries",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistMembershipAccept.jsx",
+    "routes": [
+      "/artist-workspace/:id/accept"
+    ],
+    "lines": 139,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAcceptArtistMembership",
+      "useEffect",
+      "useNavigate",
+      "useParams",
+      "useRef",
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistReleasesTab.jsx",
+    "routes": [],
+    "lines": 225,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistOsReleases",
+      "useCreateArtistRelease",
+      "useDeleteArtistRelease",
+      "useState",
+      "useUpdateArtistRelease"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistTeamTab.jsx",
+    "routes": [],
+    "lines": 150,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistMemberships",
+      "useInviteArtistMembership",
+      "useRemoveArtistMembership",
+      "useState",
+      "useUpdateArtistMembership"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistWorkspaceDetail.jsx",
+    "routes": [
+      "(workspace routes)"
+    ],
+    "lines": 109,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistDashboard",
+      "useArtistMembership",
+      "useAuth",
+      "useMemo",
+      "useParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistWorkspaceLayout.jsx",
+    "routes": [],
+    "lines": 155,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useMemo",
+      "useSearchParams"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistWorkspaceNoAccess.jsx",
+    "routes": [],
+    "lines": 37,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/ArtistWorkspaceShell.jsx",
+    "routes": [
+      "/artist-workspace/:id/* (shell)"
+    ],
+    "lines": 151,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtist",
+      "useArtistMembership",
+      "useAuth",
+      "useMemo",
+      "useParams",
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/artistWorkspaceConstants.js",
+    "routes": [],
+    "lines": 21,
+    "defaultExport": null,
+    "namedExports": [
+      "ARTIST_WORKSPACE_TABS",
+      "ARTIST_WORKSPACE_NAV",
+      "DEFAULT_WORKSPACE_TAB"
+    ],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/tabs/ArtistWorkspaceHome.jsx",
+    "routes": [],
+    "lines": 26,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/artists/workspace/tabs/ArtistWorkspaceSettings.jsx",
+    "routes": [],
+    "lines": 95,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useState",
+      "useUpdateArtist"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/assets/AssetsHubLayout.jsx",
+    "routes": [],
+    "lines": 35,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/assets/AssetsPage.jsx",
+    "routes": [
+      "/assets"
+    ],
+    "lines": 871,
+    "defaultExport": "AssetsPage",
+    "namedExports": [],
+    "hooks": [
+      "useAssets",
+      "useAuth",
+      "useCallback",
+      "useCreateAsset",
+      "useDeferredQueryEnabled",
+      "useDeleteAsset",
+      "useEffect",
+      "useGoogleAccounts",
+      "useMemo",
+      "useProjects",
+      "useQueryClient",
+      "useSearchParams",
+      "useState",
+      "useUnlinkGoogleAccount",
+      "useUnsavedChanges",
+      "useUpdateAsset",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/auth/google?state=link_${user?._id}",
+      "/api/google/accounts/manual",
+      "/api/google/accounts/simulate"
+    ],
+    "components": [
+      "MentionTextarea",
+      "ProjectMultiSelect"
+    ]
+  },
+  {
+    "file": "client/src/pages/assets/OrgAccountsPage.jsx",
+    "routes": [
+      "/assets/accounts"
+    ],
+    "lines": 777,
+    "defaultExport": "OrgAccountsPage",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useState",
+      "useToast",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/org-accounts",
+      "/api/org-accounts/${account._id}",
+      "/api/org-accounts/${editing._id}",
+      "/api/org-accounts/${id}",
+      "/api/org-accounts/import-sheet",
+      "/api/projects"
+    ],
+    "components": [
+      "MemberSelect",
+      "ProjectMultiSelect"
+    ]
+  },
+  {
+    "file": "client/src/pages/auth/ForgotPasswordPage.jsx",
+    "routes": [
+      "/forgot-password"
+    ],
+    "lines": 11,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/auth/GoogleSuccessPage.jsx",
+    "routes": [
+      "/auth/google/success"
+    ],
+    "lines": 24,
+    "defaultExport": "GoogleSuccessPage",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useLocation",
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "BootScreen"
+    ]
+  },
+  {
+    "file": "client/src/pages/auth/LoginPage.jsx",
+    "routes": [
+      "/login/*"
+    ],
+    "lines": 165,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useClerkAuth",
+      "useEffect",
+      "useLocation",
+      "useMemo",
+      "useNavigate",
+      "useRef",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "AppBootError",
+      "AuthMarketingShell",
+      "BootScreen",
+      "ClearSessionCookiesButton",
+      "ClerkSignInBlock",
+      "InstallGuideModal"
+    ]
+  },
+  {
+    "file": "client/src/pages/auth/MetaOAuthCallback.jsx",
+    "routes": [
+      "/oauth/meta/callback"
+    ],
+    "lines": 129,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useLocation",
+      "useNavigate",
+      "useRef",
+      "useState"
+    ],
+    "apis": [
+      "/api/artists/${state}/auth/meta/callback"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/auth/OTPVerificationPage.jsx",
+    "routes": [
+      "/relegends"
+    ],
+    "lines": 315,
+    "defaultExport": "OTPVerificationPage",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useState",
+      "useSystemToast"
+    ],
+    "apis": [
+      "/api/otp/send-email",
+      "/api/otp/send-phone",
+      "/api/otp/verify-email",
+      "/api/otp/verify-phone"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/auth/RegisterPage.jsx",
+    "routes": [
+      "/register/*"
+    ],
+    "lines": 137,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useClerkAuth",
+      "useEffect",
+      "useLocation",
+      "useNavigate",
+      "useRef",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "AppBootError",
+      "AuthMarketingShell",
+      "BootScreen",
+      "ClearSessionCookiesButton",
+      "ClerkSignUpBlock"
+    ]
+  },
+  {
+    "file": "client/src/pages/auth/ResetPasswordPage.jsx",
+    "routes": [
+      "/reset-password"
+    ],
+    "lines": 11,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/calendar/CalendarView.jsx",
+    "routes": [
+      "/calendar"
+    ],
+    "lines": 505,
+    "defaultExport": "CalendarView",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCalendarEvents",
+      "useCallback",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useState",
+      "useStatusCounts",
+      "useToast"
+    ],
+    "apis": [
+      "/api/calendar/seed-music-content"
+    ],
+    "components": [
+      "CalendarEntryModal"
+    ]
+  },
+  {
+    "file": "client/src/pages/crm/ArtistBookingEnquiriesPage.jsx",
+    "routes": [
+      "(CRM sub)"
+    ],
+    "lines": 135,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useDebounce",
+      "useLiveLeads",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "ArtistBookingEnquiryPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/crm/ExlyBookingsPage.jsx",
+    "routes": [
+      "(tab: bookings)"
+    ],
+    "lines": 18,
+    "defaultExport": "ExlyBookingsPage",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": [
+      "ExlyDataContent"
+    ]
+  },
+  {
+    "file": "client/src/pages/crm/FollowupsPage.jsx",
+    "routes": [
+      "(tab: followups)"
+    ],
+    "lines": 816,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCRMConfig",
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useLiveLeads",
+      "useMemo",
+      "useQueryClient",
+      "useSalesReps",
+      "useSearchParams",
+      "useState",
+      "useToast",
+      "useUpdateLead"
+    ],
+    "apis": [
+      "/api/crm/leads/${selectedLead._id}/audit",
+      "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
+      "/api/crm/leads/${selectedLead._id}/notes"
+    ],
+    "components": [
+      "ArtistBookingEnquiryPanel",
+      "LeadLockIndicator",
+      "PhoneNumberFields"
+    ]
+  },
+  {
+    "file": "client/src/pages/crm/LeadsPage.jsx",
+    "routes": [
+      "(tab: leads)"
+    ],
+    "lines": 1311,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useArtistImportSheets",
+      "useArtistReps",
+      "useAuth",
+      "useCRMConfig",
+      "useCRMStats",
+      "useCallback",
+      "useConfirm",
+      "useCreateLead",
+      "useDebounce",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useLeadDetail",
+      "useLiveLeads",
+      "useMemo",
+      "useQueryClient",
+      "useRef",
+      "useSalesReps",
+      "useSearchParams",
+      "useState",
+      "useToast",
+      "useUnsavedChanges",
+      "useUpdateLead"
+    ],
+    "apis": [
+      "/api/crm/leads/${highlightId}",
+      "/api/crm/leads/${selectedLead._id}",
+      "/api/crm/leads/${selectedLead._id}/audit",
+      "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
+      "/api/crm/leads/${selectedLead._id}/notes"
+    ],
+    "components": [
+      "ArtistBookingEnquiryPanel",
+      "ArtistCrmImportPanel",
+      "LeadArtistJourneySection",
+      "LeadLockIndicator",
+      "LeadRowActions",
+      "PhoneNumberFields"
+    ]
+  },
+  {
+    "file": "client/src/pages/dev/ComponentsShowcase.jsx",
+    "routes": [
+      "/components"
+    ],
+    "lines": 723,
+    "defaultExport": "ComponentsShowcase",
+    "namedExports": [],
+    "hooks": [
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "FluidRibbonLoaderGallery",
+      "ModuleSubnavShowcase"
+    ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailHubLayout.jsx",
+    "routes": [],
+    "lines": 29,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/emails/EmailsAnalyticsPage.jsx",
+    "routes": [
+      "/emails/analytics"
+    ],
+    "lines": 59,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCumulativeAnalytics",
+      "useDeferredQueryEnabled",
+      "useMailStats",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "MailCumulativeAnalyticsPanel",
+      "MailLocationLeadsModal",
+      "MailStatsSummary"
+    ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailsCampaignsPage.jsx",
+    "routes": [
+      "/emails/campaigns"
+    ],
+    "lines": 50,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useDeferredQueryEnabled",
+      "useMailProfiles",
+      "useNavigate",
+      "useScanBounces",
+      "useToast"
+    ],
+    "apis": [],
+    "components": [
+      "MailCampaignList"
+    ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailsOverviewPage.jsx",
+    "routes": [
+      "/emails"
+    ],
+    "lines": 115,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useDeferredQueryEnabled",
+      "useMailCampaigns",
+      "useMailStats",
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "MailCampaignList",
+      "MailStatsSummary"
+    ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailsProfilesPage.jsx",
+    "routes": [
+      "/emails/profiles"
+    ],
+    "lines": 32,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useMailProfiles"
+    ],
+    "apis": [],
+    "components": [
+      "MailProfilesPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailsTemplatesPage.jsx",
+    "routes": [
+      "/emails/templates"
+    ],
+    "lines": 37,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "MailTemplateStudio"
+    ]
+  },
+  {
+    "file": "client/src/pages/finance/FinancePage.jsx",
+    "routes": [
+      "(tab: finance)"
+    ],
+    "lines": 1308,
+    "defaultExport": "FinancePage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useSearchParams",
+      "useState",
+      "useUsdInrRate",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/finance/${id}",
+      "/api/finance/${id}/approve",
+      "/api/finance/${id}/reject",
+      "/api/finance/bulk",
+      "/api/finance/folders",
+      "/api/finance/folders/${currentFolderId}/breadcrumb",
+      "/api/finance/folders/${folderId}",
+      "/api/finance/folders?project=${selectedProject}",
+      "/api/finance/pending",
+      "/api/finance?${params}",
+      "/api/projects"
+    ],
+    "components": [
+      "FinanceDocumentPreview",
+      "NeedsAttentionAccordion",
+      "UploadDocumentModal",
+      "UsdInrAmountFields"
+    ]
+  },
+  {
+    "file": "client/src/pages/hubs/AdminConsole.jsx",
+    "routes": [
+      "/admin/console"
+    ],
+    "lines": 182,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useMemo",
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "PageHeader"
+    ]
+  },
+  {
+    "file": "client/src/pages/hubs/CrmHub.jsx",
+    "routes": [
+      "/crm?tab=leads|followups|bookings"
+    ],
+    "lines": 31,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/hubs/ManagementHub.jsx",
+    "routes": [
+      "/management?tab=finance|announcements|artists"
+    ],
+    "lines": 19,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/hubs/OfficeHub.jsx",
+    "routes": [
+      "/office?tab=equipment|contacts|subscriptions"
+    ],
+    "lines": 19,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/hubs/TabHubLayout.jsx",
+    "routes": [],
+    "lines": 75,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useEffect",
+      "useMemo",
+      "useSearchParams"
+    ],
+    "apis": [],
+    "components": [
+      "HubPageLayout",
+      "ModuleSubnav"
+    ]
+  },
+  {
+    "file": "client/src/pages/inbox/InboxPage.jsx",
+    "routes": [
+      "/inbox"
+    ],
+    "lines": 316,
+    "defaultExport": "InboxPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useClearAllNotifications",
+      "useConfirm",
+      "useDebounce",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMarkAllNotificationsRead",
+      "useMarkNotificationRead",
+      "useMemo",
+      "useNavigate",
+      "useNotifications",
+      "useState",
+      "useStatusCounts"
+    ],
+    "apis": [],
+    "components": [
+      "CountBadge",
+      "DataListRow",
+      "EmptyState",
+      "ListPageLayout",
+      "PageLoadGuard",
+      "PageSkeleton",
+      "RelativeTimestamp"
+    ]
+  },
+  {
+    "file": "client/src/pages/legal/PrivacyPolicy.jsx",
+    "routes": [
+      "/privacy"
+    ],
+    "lines": 158,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": [
+      "BrandLogo",
+      "MarketingPageBackground",
+      "MarketingThemeToggle"
+    ]
+  },
+  {
+    "file": "client/src/pages/legal/UserDataDeletion.jsx",
+    "routes": [
+      "/userdata"
+    ],
+    "lines": 231,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useLocation",
+      "useState"
+    ],
+    "apis": [
+      "/api/crm/unsubscribe",
+      "/api/webhooks/meta-data-deletion/${encodeURIComponent(code)}"
+    ],
+    "components": [
+      "BrandLogo",
+      "MarketingPageBackground",
+      "MarketingThemeToggle"
+    ]
+  },
+  {
+    "file": "client/src/pages/management/AnnouncementsPage.jsx",
+    "routes": [
+      "(tab: announcements)"
+    ],
+    "lines": 251,
+    "defaultExport": "AnnouncementsPage",
+    "namedExports": [],
+    "hooks": [
+      "useAnnouncementTargets",
+      "useAnnouncements",
+      "useCallback",
+      "useConfirm",
+      "useCreateAnnouncement",
+      "useDeferredQueryEnabled",
+      "useDeleteAnnouncement",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "WorkspaceProjectFields"
+    ]
+  },
+  {
+    "file": "client/src/pages/management/AttendancePage.jsx",
+    "routes": [
+      "/attendance",
+      "/attendance/all"
+    ],
+    "lines": 744,
+    "defaultExport": "AttendancePage",
+    "namedExports": [],
+    "hooks": [
+      "useApproveAttendance",
+      "useApproveLeaveRequest",
+      "useAttendance",
+      "useAttendanceCheck",
+      "useAttendanceRosterUsers",
+      "useAuth",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useLeaveRequests",
+      "useLocation",
+      "useMemo",
+      "useNavigate",
+      "useRejectLeaveRequest",
+      "useResetAttendance",
+      "useState",
+      "useSystemToast",
+      "useUndoAttendanceCheck",
+      "useUnsavedChanges",
+      "useUpsertAttendance"
+    ],
+    "apis": [],
+    "components": [
+      "AttendanceStatusLegend",
+      "MonthlyAttendanceGrid",
+      "SelfMonthlyAttendanceCalendar",
+      "TeamAttendanceMobileList",
+      "UnifiedTimeCard"
+    ]
+  },
+  {
+    "file": "client/src/pages/management/ContactsPage.jsx",
+    "routes": [
+      "(tab: contacts)"
+    ],
+    "lines": 287,
+    "defaultExport": "ContactsPage",
+    "namedExports": [],
+    "hooks": [
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/contacts",
+      "/api/contacts/${editingContact._id}"
+    ],
+    "components": [
+      "ContactMobileRow",
+      "ListPageLayout",
+      "ListPageSkeleton",
+      "SearchInput"
+    ]
+  },
+  {
+    "file": "client/src/pages/management/EquipmentPage.jsx",
+    "routes": [
+      "(tab: equipment)"
+    ],
+    "lines": 358,
+    "defaultExport": "EquipmentPage",
+    "namedExports": [],
+    "hooks": [
+      "useDeferredQueryEnabled",
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useState",
+      "useUnsavedChanges",
+      "useUserDirectory"
+    ],
+    "apis": [
+      "/api/office-assets",
+      "/api/office-assets/${editingAsset._id}"
+    ],
+    "components": [
+      "EquipmentMobileRow",
+      "ListPageLayout",
+      "ListPageSkeleton",
+      "SearchInput",
+      "StatusBadge"
+    ]
+  },
+  {
+    "file": "client/src/pages/marketing/FeaturesPage.jsx",
+    "routes": [
+      "/features"
+    ],
+    "lines": 120,
+    "defaultExport": "FeaturesPage",
+    "namedExports": [],
+    "hooks": [
+      "useMemo"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/notes/NoteEditorPage.jsx",
+    "routes": [
+      "/notes/:id"
+    ],
+    "lines": 300,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useDeleteNote",
+      "useEffect",
+      "useIsMobile",
+      "useMemo",
+      "useNavigate",
+      "useNote",
+      "useParams",
+      "useRef",
+      "useState",
+      "useToast",
+      "useUnsavedChanges",
+      "useUpdateNote"
+    ],
+    "apis": [],
+    "components": [
+      "NoteRichEditor",
+      "SaveNoteDialog"
+    ]
+  },
+  {
+    "file": "client/src/pages/notes/NotesPage.jsx",
+    "routes": [
+      "/notes",
+      "/notes/new"
+    ],
+    "lines": 236,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useDebounce",
+      "useMemo",
+      "useNavigate",
+      "useState",
+      "useUserNotes"
+    ],
+    "apis": [],
+    "components": [
+      "NoteComposer",
+      "RelativeTimestamp"
+    ]
+  },
+  {
+    "file": "client/src/pages/office/OfficeAssetsPage.jsx",
+    "routes": [
+      "/office-assets"
+    ],
+    "lines": 665,
+    "defaultExport": "OfficeAssetsPage",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useState",
+      "useUnsavedChanges",
+      "useUserDirectory"
+    ],
+    "apis": [
+      "/api/contacts",
+      "/api/contacts/${editingContact._id}",
+      "/api/contacts/${id}",
+      "/api/office-assets",
+      "/api/office-assets/${editingAsset._id}",
+      "/api/office-assets/${id}"
+    ],
+    "components": [
+      "ContactMobileRow",
+      "EquipmentMobileRow"
+    ]
+  },
+  {
+    "file": "client/src/pages/office/SubscriptionsPage.jsx",
+    "routes": [
+      "(tab: subscriptions)"
+    ],
+    "lines": 536,
+    "defaultExport": "SubscriptionsPage",
+    "namedExports": [],
+    "hooks": [
+      "useConfirm",
+      "useEffect",
+      "useMemo",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useRef",
+      "useState",
+      "useUnsavedChanges",
+      "useUsdInrRate"
+    ],
+    "apis": [
+      "/api/subscriptions",
+      "/api/subscriptions/${editing._id}",
+      "/api/subscriptions/${id}"
+    ],
+    "components": [
+      "MemberSelect",
+      "SubscriptionMobileRow",
+      "UsdInrAmountFields"
+    ]
+  },
+  {
+    "file": "client/src/pages/productivity/DailyLogPage.jsx",
+    "routes": [
+      "/logs"
+    ],
+    "lines": 688,
+    "defaultExport": "DailyLogPage",
+    "namedExports": [],
+    "hooks": [
+      "useActivityGrid",
+      "useAttendance",
+      "useAuth",
+      "useCallback",
+      "useConfirm",
+      "useDeferredQueryEnabled",
+      "useDeleteLog",
+      "useEffect",
+      "useLogs",
+      "useMemo",
+      "useNavigate",
+      "useProjects",
+      "useSearchParams",
+      "useState",
+      "useSystemToast",
+      "useTasks",
+      "useUpdateLog",
+      "useUserDirectory",
+      "useWorkspaces"
+    ],
+    "apis": [],
+    "components": [
+      "DailyLogActivityCalendar",
+      "DailyLogEntryModal",
+      "DailyLogTimeline",
+      "DataOverviewSection"
+    ]
+  },
+  {
+    "file": "client/src/pages/productivity/WorkflowCanvas.jsx",
+    "routes": [
+      "/workflows"
+    ],
+    "lines": 146,
+    "defaultExport": "WorkflowCanvas",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useEdgesState",
+      "useNodesState",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [],
+    "components": [
+      "QueryErrorBanner"
+    ]
+  },
+  {
+    "file": "client/src/pages/projects/ProjectAnalyticsPage.jsx",
+    "routes": [
+      "/projects/:id/analytics"
+    ],
+    "lines": 40,
+    "defaultExport": "ProjectAnalyticsPage",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate",
+      "useParams",
+      "useProject"
+    ],
+    "apis": [],
+    "components": [
+      "ProjectAnalyticsContent"
+    ]
+  },
+  {
+    "file": "client/src/pages/projects/ProjectCreate.jsx",
+    "routes": [
+      "/projects/new"
+    ],
+    "lines": 281,
+    "defaultExport": "ProjectCreate",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useEffect",
+      "useNavigate",
+      "useQueryClient",
+      "useRef",
+      "useSearchParams",
+      "useState",
+      "useToast"
+    ],
+    "apis": [
+      "/api/projects",
+      "/api/projects/workspaces/${encodeURIComponent(workspace)}",
+      "/api/users/team"
+    ],
+    "components": [
+      "NexusDropdown",
+      "RoleOptionBoxes",
+      "WorkspaceSelect"
+    ]
+  },
+  {
+    "file": "client/src/pages/projects/ProjectDetail.jsx",
+    "routes": [
+      "/projects/:id"
+    ],
+    "lines": 576,
+    "defaultExport": "ProjectDetail",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useDeferredQueryEnabled",
+      "useDeleteTask",
+      "useEffect",
+      "useLocation",
+      "useMemo",
+      "useNavigate",
+      "useParams",
+      "useProject",
+      "useProjectHoursSummary",
+      "useProjectTasks",
+      "useQueryClient",
+      "useReviewTasks",
+      "useSchedule",
+      "useState",
+      "useSystemToast",
+      "useUpdateTask",
+      "useUserDirectory",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/projects/${id}",
+      "/api/projects/${id}/remove-member",
+      "/api/tasks/${taskId}"
+    ],
+    "components": [
+      "ProjectAssets",
+      "ProjectFinance",
+      "ProjectGoalsPanel",
+      "ProjectGoalsStrip",
+      "ProjectKanban",
+      "ProjectList",
+      "ProjectSettingsModal",
+      "ProjectTeam",
+      "ScheduleGrid",
+      "ScheduleSkeleton",
+      "TaskCompletionModal",
+      "TaskCreateModal",
+      "TaskDetailModal"
+    ]
+  },
+  {
+    "file": "client/src/pages/projects/ProjectsView.jsx",
+    "routes": [
+      "/projects"
+    ],
+    "lines": 1406,
+    "defaultExport": "ProjectsView",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useConfirm",
+      "useDashboardTasks",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useLocation",
+      "useMemo",
+      "useNavigate",
+      "useProjects",
+      "useQueryClient",
+      "useRef",
+      "useReviewTasks",
+      "useState",
+      "useToast",
+      "useUpdateProject",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/projects",
+      "/api/projects/${id}",
+      "/api/projects/workspaces",
+      "/api/projects/workspaces/${group.name}"
+    ],
+    "components": [
+      "WorkspaceColorPicker",
+      "WorkspaceSelect"
+    ]
+  },
+  {
+    "file": "client/src/pages/projects/WorkspaceSettings.jsx",
+    "routes": [
+      "/workspaces/:name"
+    ],
+    "lines": 469,
+    "defaultExport": "WorkspaceSettings",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useEffect",
+      "useMemo",
+      "useNavigate",
+      "useParams",
+      "useQueryClient",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}",
+      "/api/users/team"
+    ],
+    "components": [
+      "NexusDropdown",
+      "QueryErrorSlot",
+      "RoleOptionBoxes",
+      "WorkspaceColorPicker",
+      "WorkspaceGoalsPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/schedule/SchedulePage.jsx",
+    "routes": [
+      "/schedule"
+    ],
+    "lines": 199,
+    "defaultExport": "SchedulePage",
+    "namedExports": [
+      "MAX_SCHEDULE_DAYS"
+    ],
+    "hooks": [
+      "useAuth",
+      "useDashboardTaskActions",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useProjects",
+      "useQueryClient",
+      "useSchedule",
+      "useState",
+      "useStatusCounts",
+      "useUserDirectory",
+      "useWorkspaces"
+    ],
+    "apis": [],
+    "components": [
+      "EmptyState",
+      "ListPageLayout",
+      "ScheduleDayViewControl",
+      "ScheduleGrid",
+      "ScheduleMobileList",
+      "ScheduleSkeleton"
+    ]
+  },
+  {
+    "file": "client/src/pages/settings/SettingsPage.jsx",
+    "routes": [
+      "/settings"
+    ],
+    "lines": 181,
+    "defaultExport": "SettingsPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useEffect",
+      "useNavigate",
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "PageSkeleton"
+    ]
+  },
+  {
+    "file": "client/src/pages/settings/tabs/AttendanceTab.jsx",
+    "routes": [],
+    "lines": 81,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAttendance",
+      "useAuth"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
+    "routes": [],
+    "lines": 965,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useDashboardPreset",
+      "useEffect",
+      "useIsMobile",
+      "useMemo",
+      "useNavigate",
+      "useQueryClient",
+      "useRef",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/customization/dashboard/preset"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/InvoiceTab.jsx",
+    "routes": [],
+    "lines": 410,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useMemo",
+      "useMyReimbursements",
+      "useProjects",
+      "useQueryClient",
+      "useRef",
+      "useState",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/finance/submit-invoice"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
+    "routes": [],
+    "lines": 401,
+    "defaultExport": "KeyboardShortcutsTab",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useEffect",
+      "useMemo",
+      "useQueryClient",
+      "useRef",
+      "useShortcutPreferences",
+      "useState"
+    ],
+    "apis": [
+      "/api/customization/shortcuts",
+      "/api/customization/shortcuts/reset"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/LeaveTab.jsx",
+    "routes": [],
+    "lines": 114,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useApplyLeave",
+      "useAuth",
+      "useCallback",
+      "useLeaveRequests",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/NotificationsTab.jsx",
+    "routes": [],
+    "lines": 184,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useEffect",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
+    "routes": [],
+    "lines": 486,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useEffect",
+      "useMemo",
+      "useNavigate",
+      "useState",
+      "useUnsavedChanges"
+    ],
+    "apis": [
+      "/api/auth/change-required-password",
+      "/api/teams",
+      "/api/users/profile"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/ProgressTab.jsx",
+    "routes": [],
+    "lines": 230,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useGamificationHistory",
+      "useGamificationMissions",
+      "useGamificationProgress",
+      "useMemo",
+      "useState"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/SessionsTab.jsx",
+    "routes": [],
+    "lines": 169,
+    "defaultExport": "SessionsTab",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useMutation",
+      "useQuery",
+      "useQueryClient",
+      "useState"
+    ],
+    "apis": [
+      "/api/auth/sessions",
+      "/api/auth/sessions/${jti}",
+      "/api/auth/sessions/revoke-others"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/todo/TodoPage.jsx",
+    "routes": [
+      "/todo"
+    ],
+    "lines": 768,
+    "defaultExport": "TodoPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCallback",
+      "useDebounce",
+      "useDeferredQueryEnabled",
+      "useEffect",
+      "useMemo",
+      "useProjects",
+      "useQueryClient",
+      "useState",
+      "useSystemToast",
+      "useTaskCategoryOptions",
+      "useTodoTasks",
+      "useUserDirectory",
+      "useWorkspaces"
+    ],
+    "apis": [
+      "/api/tasks/${task?._id}"
+    ],
+    "components": [
+      "CompletedTaskRollbackButton",
+      "FlashHighlightListener",
+      "ListCard",
+      "ListPageLayout",
+      "MentionTitle",
+      "PageLoadGuard",
+      "PageSkeleton",
+      "SearchInput",
+      "TaskMentionBadge",
+      "VirtualTaskList"
+    ]
+  },
+  {
+    "file": "client/src/pages/workspace/CreateCampaignPage.jsx",
+    "routes": [
+      "/emails/create"
+    ],
+    "lines": 28,
+    "defaultExport": "CreateCampaignPage",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate"
+    ],
+    "apis": [],
+    "components": [
+      "CampaignWizardShell"
+    ]
+  },
+  {
+    "file": "client/src/pages/workspace/NewsletterCuratePage.jsx",
+    "routes": [
+      "/emails/newsletter/curate"
+    ],
+    "lines": 62,
+    "defaultExport": "NewsletterCuratePage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCurrentNewsletterIssue",
+      "useNavigate",
+      "useNewsletterCategories",
+      "useNewsletterIssue",
+      "useSearchParams"
+    ],
+    "apis": [],
+    "components": [
+      "NewsletterCuratorPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/workspace/NewsletterPage.jsx",
+    "routes": [
+      "/emails/newsletter"
+    ],
+    "lines": 123,
+    "defaultExport": "NewsletterPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useCurrentNewsletterIssue",
+      "useNavigate",
+      "useNewsletterCategories"
+    ],
+    "apis": [],
+    "components": [
+      "NewsletterLinkForm",
+      "NewsletterWeekBoard"
+    ]
+  },
+  {
+    "file": "client/src/pages/workspace/NewsletterSendPage.jsx",
+    "routes": [
+      "/emails/newsletter/send/:issueId"
+    ],
+    "lines": 63,
+    "defaultExport": "NewsletterSendPage",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useNavigate",
+      "useNewsletterIssue",
+      "useParams"
+    ],
+    "apis": [],
+    "components": [
+      "NewsletterSendWizard"
+    ]
+  }
+]

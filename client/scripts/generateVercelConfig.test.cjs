@@ -83,3 +83,32 @@ test('existingRewritesLookValid accepts live Render host, rejects placeholder', 
     false,
   );
 });
+
+test('pickProxyUrl uses staging API on Vercel preview when env unset', () => {
+  const prev = { ...process.env };
+  process.env.VERCEL_ENV = 'preview';
+  delete process.env.RENDER_API_PROXY_URL;
+  delete process.env.VITE_API_URL;
+  const { pickProxyUrl, CANONICAL_STAGING_API_URL } = require('./generateVercelConfig.cjs');
+  assert.equal(pickProxyUrl(), CANONICAL_STAGING_API_URL);
+  process.env = prev;
+});
+
+test('pickProxyUrl rejects production API host on preview when only prod env set', () => {
+  const prev = { ...process.env };
+  process.env.VERCEL_ENV = 'preview';
+  process.env.RENDER_API_PROXY_URL = 'https://taskmaster-jfw0.onrender.com';
+  delete process.env.VITE_API_URL;
+  const { pickProxyUrl, CANONICAL_STAGING_API_URL } = require('./generateVercelConfig.cjs');
+  assert.equal(pickProxyUrl(), CANONICAL_STAGING_API_URL);
+  process.env = prev;
+});
+
+test('buildVercelSecurityHeaders adds preview CSP allowances', () => {
+  const { buildContentSecurityPolicy } = require('./vercelSecurityHeaders.cjs');
+  const preview = buildContentSecurityPolicy({ isPreview: true });
+  assert.ok(preview.includes('https://vercel.live'));
+  assert.ok(preview.includes('manifest-src'));
+  const prod = buildContentSecurityPolicy({ isPreview: false });
+  assert.ok(!prod.includes('https://vercel.live'));
+});

@@ -121,5 +121,12 @@ describe('security hardening', () => {
       expect(styleSrc).toContain('https://accounts.google.com');
       expect(styleSrc).toContain('https://*.google.com');
     });
+
+    it('allows Vercel preview toolbar and manifest on preview builds', () => {
+      const headers = buildVercelHeaders([], { isPreview: true });
+      const csp = headers[0].headers.find((h) => h.key === 'Content-Security-Policy')?.value || '';
+      expect(csp).toContain('https://vercel.live');
+      expect(csp).toContain('manifest-src');
+    });
   });
 });

@@ -20,6 +20,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
   const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
+  const vercelPreview = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'preview'
+  const apiUrl = (env.VITE_API_URL || '').trim()
+  const prodApiPattern = /taskmaster-jfw0\.onrender\.com|coreknot-api\.onrender\.com/i
+  if (vercelPreview && prodApiPattern.test(apiUrl)) {
+    throw new Error(
+      'Vercel Preview must not use production VITE_API_URL. Set Preview env RENDER_API_PROXY_URL=https://coreknot-api-staging.onrender.com',
+    )
+  }
   if (vercelProduction && clerkPk.startsWith('pk_test_')) {
     throw new Error(
       'Clerk production build uses pk_test_ (development). Create a Clerk production instance, '
@@ -48,6 +56,8 @@ export default defineConfig(({ mode }) => {
   assetsInclude: ['**/*.wasm'],
   optimizeDeps: {
     exclude: ['@sqlite.org/sqlite-wasm'],
+    // ponytail: react-icons/fa is huge — on-demand optimize can 504 and break lazy chunks (e.g. ArtistPathProfileSlider)
+    include: ['react-icons/fa', 'react-icons/si'],
   },
   plugins: [
     react(),

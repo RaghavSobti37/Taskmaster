@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import OutletSidebar from './OutletSidebar';
 import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
@@ -11,6 +11,7 @@ import MobilePullToRefresh from './mobile/MobilePullToRefresh';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import RouteContentSkeleton from './ui/RouteContentSkeleton';
+import BrandedLoadingPanel from './ui/BrandedLoadingPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
@@ -20,6 +21,31 @@ import { createLazyWithRetry } from '../utils/lazyWithRetry';
 const lazyWithRetry = createLazyWithRetry;
 
 const AttendancePromptModal = lazyWithRetry(() => import('./attendance/AttendancePromptModal'));
+
+function MainRouteSuspenseFallback() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7593/ingest/75bc4ee5-8ab2-4010-83b9-7267b331142a', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c0551d' },
+      body: JSON.stringify({
+        sessionId: 'c0551d',
+        runId: 'pre-fix',
+        hypothesisId: 'C',
+        location: 'MainLayout.jsx:MainRouteSuspenseFallback',
+        message: 'route suspense skeleton shown',
+        data: { pathname },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [pathname]);
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    return <BrandedLoadingPanel />;
+  }
+  return <RouteContentSkeleton />;
+}
 
 const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
 const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
@@ -105,7 +131,7 @@ const MainLayout = () => {
             </Suspense>
             <MobileRouteGuard>
               <RouteErrorBoundary>
-                <Suspense fallback={<RouteContentSkeleton />}>
+                <Suspense fallback={<MainRouteSuspenseFallback />}>
                   <Outlet />
                 </Suspense>
               </RouteErrorBoundary>

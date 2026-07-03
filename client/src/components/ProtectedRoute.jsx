@@ -23,7 +23,9 @@ function ProtectedRouteInner({ clerkLoaded, clerkSignedIn }) {
     return <AppBootError message={bootError} onRefresh={() => retryBoot()} />;
   }
 
-  if (clerkBoot || loading || clerkSessionPending || (user && !sessionReady)) {
+  const sessionEstablished = Boolean(user && sessionReady);
+
+  if (!sessionEstablished && (clerkBoot || loading || clerkSessionPending)) {
     return <BootScreen bootError={bootError} onRefresh={() => retryBoot()} />;
   }
 

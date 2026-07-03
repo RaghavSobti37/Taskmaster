@@ -138,7 +138,8 @@ const ALLOWED_CREATE = [
 const ALLOWED_UPDATE = [
   'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
   'projectId', 'workspace', 'phaseId', 'assignees', 'startDate', 'dueDate', 'duration',
-  'plannedHours', 'actualHours', 'progress', 'dependencies', 'reviewAction'
+  'plannedHours', 'actualHours', 'progress', 'dependencies', 'reviewAction',
+  'rollbackReason', 'approvedActualHours', 'reviewHours', 'reviewMinutes',
 ];
 
 const pick = (src, keys) => {

@@ -1,10 +1,17 @@
 import fs from 'fs'
 import path from 'path'
+import { createRequire } from 'module'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
+
+const require = createRequire(import.meta.url)
+const {
+  CANONICAL_STAGING_API_URL,
+  isProductionRenderApiHost,
+} = require('./scripts/generateVercelConfig.cjs')
 
 const publicDir = path.resolve(__dirname, 'public')
 const iconsDir = path.join(publicDir, 'icons')
@@ -15,19 +22,28 @@ const agentationStub = path.resolve(__dirname, 'src/components/dev/agentationStu
 // Repo lives under OneDrive on this machine — sync retouches mtimes on src/ and public/ after every save.
 const isOneDriveWorkspace = /OneDrive/i.test(__dirname)
 
+const sanitizePreviewViteApiUrl = () => {
+  if (process.env.VERCEL !== '1' || process.env.VERCEL_ENV !== 'preview') return
+  const current = String(process.env.VITE_API_URL || '').trim()
+  if (!current) return
+  try {
+    const host = new URL(current).hostname.toLowerCase()
+    if (!isProductionRenderApiHost(host)) return
+    console.warn(
+      `[vite] Preview build overriding production VITE_API_URL (${current}) → ${CANONICAL_STAGING_API_URL}`,
+    )
+    process.env.VITE_API_URL = CANONICAL_STAGING_API_URL
+  } catch {
+    /* ignore invalid VITE_API_URL */
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  sanitizePreviewViteApiUrl()
   const env = loadEnv(mode, __dirname, '')
   const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
   const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
-  const vercelPreview = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'preview'
-  const apiUrl = (env.VITE_API_URL || '').trim()
-  const prodApiPattern = /taskmaster-jfw0\.onrender\.com|coreknot-api\.onrender\.com/i
-  if (vercelPreview && prodApiPattern.test(apiUrl)) {
-    throw new Error(
-      'Vercel Preview must not use production VITE_API_URL. Set Preview env RENDER_API_PROXY_URL=https://coreknot-api-staging.onrender.com',
-    )
-  }
   if (vercelProduction && clerkPk.startsWith('pk_test_')) {
     throw new Error(
       'Clerk production build uses pk_test_ (development). Create a Clerk production instance, '

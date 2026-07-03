@@ -38,12 +38,13 @@ describe('displayMode', () => {
     expect(shouldUseSameOriginApi()).toBe(false);
   });
 
-  it('routes Vercel preview hosts through same-origin /api', () => {
+  it('routes Vercel preview hosts to direct API (Deployment Protection blocks /api proxy)', () => {
     window.location.hostname = 'obti37s-projects.vercel.app';
     window.navigator.userAgent =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0';
-    window.matchMedia = vi.fn(() => ({ matches: false }));
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
+    window.matchMedia = vi.fn((query) => ({ matches: query === '(pointer: coarse)' }));
     expect(isVercelPreviewHost()).toBe(true);
-    expect(shouldUseSameOriginApi()).toBe(true);
+    expect(isMobileBrowser()).toBe(true);
+    expect(shouldUseSameOriginApi()).toBe(false);
   });
 });

@@ -2,14 +2,16 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 vi.mock('./displayMode', () => ({
   shouldUseSameOriginApi: vi.fn(() => false),
+  isVercelPreviewHost: vi.fn(() => false),
 }));
 
-import { shouldUseSameOriginApi } from './displayMode';
+import { isVercelPreviewHost, shouldUseSameOriginApi } from './displayMode';
 import { apiPath, getAxiosBaseURL, getRealtimeOrigin, isCrossOriginRealtime } from './apiBase';
 
 describe('apiBase hybrid routing', () => {
   beforeEach(() => {
     vi.mocked(shouldUseSameOriginApi).mockReturnValue(false);
+    vi.mocked(isVercelPreviewHost).mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -51,14 +53,21 @@ describe('apiBase hybrid routing', () => {
     expect(isCrossOriginRealtime()).toBe(false);
   });
 
-  it('uses same-origin /api on Vercel preview production', () => {
+  it('uses direct API on Vercel preview (Deployment Protection blocks /api proxy)', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('PROD', true);
-    vi.stubEnv('VITE_API_URL', 'https://api.example.com');
-    vi.stubGlobal('window', { location: { origin: 'https://team-projects.vercel.app', hostname: 'team-projects.vercel.app' } });
-    vi.mocked(shouldUseSameOriginApi).mockReturnValue(true);
-    expect(getAxiosBaseURL()).toBeUndefined();
-    expect(apiPath('/api/auth/login')).toBe('/api/auth/login');
+    vi.stubEnv('VITE_API_URL', 'https://coreknot-api-staging.onrender.com');
+    vi.stubGlobal('window', {
+      location: {
+        origin: 'https://team-projects.vercel.app',
+        hostname: 'team-projects.vercel.app',
+      },
+    });
+    vi.mocked(isVercelPreviewHost).mockReturnValue(true);
+    expect(getAxiosBaseURL()).toBe('https://coreknot-api-staging.onrender.com');
+    expect(apiPath('/api/auth/login')).toBe(
+      'https://coreknot-api-staging.onrender.com/api/auth/login',
+    );
   });
 
   it('uses VITE_API_URL for realtime in production when set', () => {

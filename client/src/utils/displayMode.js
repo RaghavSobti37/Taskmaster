@@ -23,9 +23,11 @@ export function isVercelPreviewHost() {
   return window.location.hostname.endsWith('.vercel.app');
 }
 
-/** PWA + mobile browsers + Vercel previews — used for UI/layout hints only. */
+/** PWA + mobile browsers — same-origin /api via Vite/Vercel proxy. */
 export function shouldUseSameOriginApi() {
-  return isStandaloneDisplay() || isMobileBrowser() || isVercelPreviewHost();
+  // ponytail: Vercel Deployment Protection blocks /api on preview — use direct VITE_API_URL
+  if (isVercelPreviewHost()) return false;
+  return isStandaloneDisplay() || isMobileBrowser();
 }
 
 /** Mouse/trackpad primary — not phone/tablet touch UI */

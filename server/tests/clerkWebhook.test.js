@@ -9,7 +9,14 @@ describe('clerkWebhookHandler', () => {
     await User.deleteMany();
   });
 
-  it('handleUserCreated links new Clerk user', async () => {
+  it('handleUserCreated links Clerk user to pre-provisioned CoreKnot account', async () => {
+    await User.create({
+      name: 'Provisioned User',
+      email: 'new@example.com',
+      password: 'TempPass9!',
+      mustChangePassword: true,
+    });
+
     const result = await handleUserCreated({
       data: {
         id: 'user_clerk_1',
@@ -19,9 +26,22 @@ describe('clerkWebhookHandler', () => {
         last_name: 'User',
       },
     });
-    expect(result.action).toBe('created');
+    expect(result.action).toBe('linked');
     const user = await User.findOne({ email: 'new@example.com' });
     expect(user.clerkId).toBe('user_clerk_1');
+  });
+
+  it('handleUserCreated skips when CoreKnot user was not provisioned', async () => {
+    const result = await handleUserCreated({
+      data: {
+        id: 'user_clerk_2',
+        email_addresses: [{ id: 'em_2', email_address: 'stranger@example.com' }],
+        primary_email_address_id: 'em_2',
+      },
+    });
+    expect(result.action).toBe('skipped');
+    expect(result.reason).toBe('coreknot_user_not_provisioned');
+    expect(await User.findOne({ email: 'stranger@example.com' })).toBeNull();
   });
 
   it('handleUserDeleted suspends and revokes sessions', async () => {

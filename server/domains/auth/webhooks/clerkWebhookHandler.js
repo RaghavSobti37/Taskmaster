@@ -42,16 +42,9 @@ async function handleUserCreated(event) {
   const email = primaryEmail(event);
   if (!email || !clerkUserId) return { action: 'skipped', reason: 'missing_email_or_id' };
 
-  let user = await User.findOne({ email }).setOptions({ bypassTenant: true });
+  const user = await User.findOne({ email }).setOptions({ bypassTenant: true });
   if (!user) {
-    user = await User.create({
-      name: displayName(event),
-      email,
-      password: require('crypto').randomBytes(32).toString('hex'),
-      clerkId: clerkUserId,
-      mustChangePassword: true,
-    });
-    return { action: 'created', userId: user._id.toString() };
+    return { action: 'skipped', reason: 'coreknot_user_not_provisioned' };
   }
 
   if (user.clerkId !== clerkUserId) {

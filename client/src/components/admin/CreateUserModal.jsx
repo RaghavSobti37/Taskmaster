@@ -161,7 +161,7 @@ const CreateUserModal = ({ isOpen, onClose, departments = [], onCreate, isPendin
               </select>
             </div>
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              A strong random temporary password is generated automatically. Copy it after creation to share with the user.
+              A strong random temporary password is generated automatically. The same password is set in Clerk for sign-in. Copy it after creation to share with the user.
             </p>
           </ModalBody>
           <ModalFooter className="gap-2">

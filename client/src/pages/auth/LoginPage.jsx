@@ -100,9 +100,9 @@ function LoginPageView({
         {installPlatform.installed ? loginCopy.installCtaInstalled : 'Install app'}
       </button>
       <span className="text-[var(--brand-teal-mid)]/40" aria-hidden>·</span>
-      <span className="text-[var(--brand-teal-mid)]">New user?</span>
+      <span className="text-[var(--brand-teal-mid)]">Need access?</span>
       <Link to="/register" className={linkClass}>
-        Create account
+        Request invitation
       </Link>
     </>
   );

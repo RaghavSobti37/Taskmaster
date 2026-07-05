@@ -68,6 +68,13 @@ export default function PrivacyPolicy() {
           </div>
         </div>
 
+        <section className="space-y-4 bg-card p-8 rounded-3xl border border-border">
+          <h2 className="text-lg font-bold text-foreground">Organizations & invitations</h2>
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            CoreKnot is multi-tenant. Your account may belong to one or more organizations. Organization owners and admins control membership invites, integration credentials, and workspace data within their tenant. Invitations are sent to your email address; accepting links your existing user account to the inviting organization without creating duplicate accounts.
+          </p>
+        </section>
+
         <section className="space-y-6 bg-card p-8 rounded-3xl border border-border">
           <h2 className="text-xl font-bold text-foreground flex items-center gap-3 border-b border-border pb-4">
             <span className="w-2 h-2 rounded-full bg-[var(--color-brand-teal)]" /> 1. Information We Collect

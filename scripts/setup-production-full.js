@@ -267,10 +267,10 @@ async function stepRender(hosts, posthogEnv) {
 }
 
 function vercelEnvForProject(siteMode, hosts, posthogEnv) {
-  const proxy = apiUrl(hosts);
+  const prodProxy = apiUrl(hosts);
   const base = [
-    { key: 'RENDER_API_PROXY_URL', value: proxy, target: ['production', 'preview'] },
-    { key: 'VITE_API_URL', value: proxy, target: ['production', 'preview'] },
+    { key: 'RENDER_API_PROXY_URL', value: prodProxy, target: ['production', 'preview'] },
+    { key: 'VITE_API_URL', value: prodProxy, target: ['production', 'preview'] },
   ];
   if (siteMode === 'app') {
     base.push(

@@ -72,7 +72,19 @@ npm test                              # server Jest
 npm test --prefix client              # client Vitest
 npm run build --prefix client         # production bundle
 npm run audit:exposure                # secret scan (required)
+node server/scripts/migrateTenantMemberships.js   # one-time multi-org backfill
+node server/scripts/enterpriseSmoke.cjs           # enterprise API smoke (needs Mongo)
 ```
+
+**Enterprise / multi-org:** See [`docs/operations/ENTERPRISE_READINESS.md`](docs/operations/ENTERPRISE_READINESS.md) and [`docs/operations/PUBLIC_LAUNCH_BETA.md`](docs/operations/PUBLIC_LAUNCH_BETA.md).
+
+**Render env (staging + production API):** after setting `RENDER_API_KEY` in `server/.env`:
+
+```bash
+node scripts/push-enterprise-render-env.mjs
+```
+
+Sets `CREDENTIAL_ENCRYPTION_KEY` (generates locally if missing) and `ENTERPRISE_FEATURES_ENABLED=true` on Express + Nest staging services.
 
 E2E (optional): `npm run test:e2e:public` · auth flows need `E2E_EMAIL` + `E2E_PASSWORD`.
 

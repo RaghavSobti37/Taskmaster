@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
+import { DateFormatProvider } from './contexts/DateFormatContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { bootstrapDocumentTheme } from './lib/publicRouteTheme'
@@ -139,6 +140,7 @@ const appTree = (
       <ClerkAppProvider>
         <AuthProvider>
           <ClerkAuthEffects />
+          <DateFormatProvider>
           <ThemeProvider>
           <MotionConfigBridge>
             <SidebarProvider>
@@ -163,6 +165,7 @@ const appTree = (
             </SidebarProvider>
           </MotionConfigBridge>
         </ThemeProvider>
+          </DateFormatProvider>
         </AuthProvider>
       </ClerkAppProvider>
     </BrowserRouter>

@@ -1,5 +1,5 @@
 import { CalendarDays } from 'lucide-react';
-import { formatDateKeyForDisplay, formatWeekdayDate } from '../../utils/dateDisplay';
+import { formatDateKeyForDisplay, formatDisplayDate } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
 import { isBefore, startOfDay } from 'date-fns';
 import { Badge } from '../ui';
@@ -37,7 +37,7 @@ export default function TaskHeaderDueDate({
 
   const displayLabel = useMemo(() => {
     if (!dueDate) return 'Set date';
-    return formatWeekdayDate(`${dueDate}T12:00:00`);
+    return formatDisplayDate(`${dueDate}T12:00:00`);
   }, [dueDate]);
 
   const compactLabel = useMemo(() => {

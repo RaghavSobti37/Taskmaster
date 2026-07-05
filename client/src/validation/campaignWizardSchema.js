@@ -8,12 +8,13 @@ export const step1Schema = z.object({
   senderProfileId: z.string().optional(),
   senderProfileIds: z.array(z.string()).optional(),
   resendFromEmail: z.string().default(''),
+  emailStreamSlug: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.senderMode === 'single' && !data.senderProfileId) {
     ctx.addIssue({ code: 'custom', message: 'Select a Gmail profile', path: ['senderProfileId'] });
   }
   if (data.senderMode === 'system_resend' && !isVerifiedResendEmail(data.resendFromEmail)) {
-    ctx.addIssue({ code: 'custom', message: 'Select a from address on theshakticollective.in', path: ['resendFromEmail'] });
+    ctx.addIssue({ code: 'custom', message: 'Select a from address on theshakticollective.in or a subdomain', path: ['resendFromEmail'] });
   }
 });
 
@@ -45,6 +46,7 @@ export const WIZARD_DEFAULTS = {
   senderProfileId: '',
   senderProfileIds: [],
   resendFromEmail: 'artist@theshakticollective.in',
+  emailStreamSlug: 'main',
   mailTemplateId: '',
   variableMapping: {},
   includeSignature: false,

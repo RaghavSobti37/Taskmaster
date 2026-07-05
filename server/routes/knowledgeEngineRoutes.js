@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const ctrl = require('../controllers/knowledgeEngineController');
+const { requireFeatureUnlock } = require('../middleware/requireFeatureUnlock');
 
 router.use(protect);
+router.use(requireFeatureUnlock('knowledgeEngine'));
 router.use(ctrl.requireKnowledgeAccess);
 
 router.get('/dashboard', ctrl.getDashboard);

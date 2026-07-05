@@ -26,25 +26,3 @@ jobs:
           fi
           curl -fsSL -X POST "$DEPLOY_HOOK"
           echo "Production deploy triggered"
-
-      - name: Deploy staging API (coreknot-api-staging)
-        env:
-          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
-        run: |
-          if [ -z "$DEPLOY_HOOK" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK_STAGING secret not set — skipping staging deploy"
-            exit 0
-          fi
-          curl -fsSL -X POST "$DEPLOY_HOOK"
-          echo "Staging deploy triggered"
-
-      - name: Deploy staging Nest (coreknot-nest-staging)
-        env:
-          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_NEST_STAGING }}
-        run: |
-          if [ -z "$DEPLOY_HOOK" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK_NEST_STAGING not set — skipping nest staging deploy"
-            exit 0
-          fi
-          curl -fsSL -X POST "$DEPLOY_HOOK"
-          echo "Nest staging deploy triggered"

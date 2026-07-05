@@ -9,6 +9,7 @@ const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
 const { getTenantId } = require('../utils/tenantContext');
 const { resolveDefaultTenantId } = require('../utils/defaultTenant');
 const { runWithWorkerTenant } = require('../utils/workerTenantContext');
+const { formatDisplayDateTimeIST } = require('../../shared/dateDisplay');
 
 const escapeHtml = (str) => String(str || '')
   .replace(/&/g, '&amp;')
@@ -35,7 +36,7 @@ const buildNotificationHtml = ({ title, message, category, actionUrl, recipientN
     .replace(/\{\{category\}\}/g, escapeHtml(category || 'system'))
     .replace(/\{\{recipientName\}\}/g, escapeHtml(recipientName || 'Team Member'))
     .replace(/\{\{ctaLink\}\}/g, ctaLink)
-    .replace(/\{\{timestamp\}\}/g, new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+    .replace(/\{\{timestamp\}\}/g, formatDisplayDateTimeIST(new Date()));
   return html;
 };
 

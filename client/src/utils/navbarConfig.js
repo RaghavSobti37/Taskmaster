@@ -51,6 +51,8 @@ export const HUB_CONFIG = {
       'admin_scripts',
       'admin_gamification',
       'admin_project_analytics',
+      'admin_audit_log',
+      'admin_developers',
     ],
     tiles: [
       {
@@ -123,6 +125,26 @@ export const HUB_CONFIG = {
         accent: 'blue',
         description: 'Link Clerk organizations for enterprise SAML/OIDC',
         riskLevel: 'caution',
+      },
+      {
+        id: 'audit-log',
+        label: 'Audit Log',
+        path: '/admin/audit-log',
+        key: 'admin_audit_log',
+        icon: 'ScrollText',
+        section: 'access-control',
+        accent: 'blue',
+        description: 'Organization security and admin mutation audit trail',
+      },
+      {
+        id: 'developers',
+        label: 'Developers',
+        path: '/developers',
+        key: 'admin_developers',
+        icon: 'Brackets',
+        section: 'operations',
+        accent: 'orange',
+        description: 'API keys, webhooks, and integration settings',
       },
       {
         id: 'lead-audits',

@@ -1,14 +1,56 @@
 const User = require('../models/User');
 const Artist = require('../models/Artist');
 const Department = require('../models/Department');
+const CustomRole = require('../models/CustomRole');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
 const { loadAuthUser } = require('../utils/authUserLookup');
 
-const authContext = (req, user) => ({
-  tenantId: user.tenantId,
+const {
+  resolveSessionTenantId,
+  listActiveMemberships,
+  getMembership,
+  backfillMembershipFromUser,
+} = require('../services/tenantMembershipService');
+const { rejectClientTenantSpoof } = require('./rejectClientTenantSpoof');
+
+const applySessionTenant = async (req, user, decoded = null) => {
+  await backfillMembershipFromUser(user);
+  let tenantId = resolveSessionTenantId(decoded, user);
+  const memberships = await listActiveMemberships(user._id);
+
+  if (!tenantId) {
+    if (memberships.length === 1) {
+      tenantId = memberships[0].tenantId?._id || memberships[0].tenantId;
+      return { tenantId, needsTenantSelection: false };
+    }
+    if (memberships.length > 1) {
+      return { tenantId: null, needsTenantSelection: true };
+    }
+    return { tenantId: user.tenantId || null, needsTenantSelection: false };
+  }
+
+  const membership = await getMembership(user._id, tenantId);
+  if (!membership) {
+    if (memberships.length === 1) {
+      return {
+        tenantId: memberships[0].tenantId?._id || memberships[0].tenantId,
+        needsTenantSelection: false,
+      };
+    }
+    if (memberships.length > 1) {
+      return { tenantId: null, needsTenantSelection: true };
+    }
+  }
+  return { tenantId, needsTenantSelection: false };
+};
+
+const authContext = (req, user, tenantId) => ({
+  tenantId: tenantId || user.tenantId,
   userId: user._id?.toString?.() || user._id,
   traceId: req.traceId || getTraceId(),
 });
+
+const { isRootAdminUser } = require('../../shared/platformUserIds');
 const {
   isAdminUser,
   isOpsUser,
@@ -78,7 +120,7 @@ const resolveRequestUser = async (req) => {
     if (!user) return { user: null };
     if (user.suspended) return { user: null, suspended: true };
 
-    return { user };
+    return { user, decoded };
   } catch {
     return { user: null };
   }
@@ -86,15 +128,17 @@ const resolveRequestUser = async (req) => {
 
 /** Sets req.user when a valid session exists; never 401 for missing/invalid session. */
 const optionalAuthenticate = async (req, res, next) => {
-  const { user, suspended } = await resolveRequestUser(req);
+  const { user, suspended, decoded } = await resolveRequestUser(req);
   if (suspended) {
     req.sessionSuspended = true;
     return next();
   }
   if (!user) return next();
+  const session = await applySessionTenant(req, user, decoded);
   req.user = user;
-  req.tenantId = user.tenantId;
-  return runWithContext(authContext(req, user), next);
+  req.tenantId = session.tenantId || user.tenantId;
+  req.needsTenantSelection = session.needsTenantSelection;
+  return runWithContext(authContext(req, user, req.tenantId), next);
 };
 
 const protect = async (req, res, next) => {
@@ -103,7 +147,7 @@ const protect = async (req, res, next) => {
     return res.status(401).json({ error: 'Not authorized, no token' });
   }
 
-  const { user, suspended, bypassUnavailable } = await resolveRequestUser(req);
+  const { user, suspended, bypassUnavailable, decoded } = await resolveRequestUser(req);
   if (bypassUnavailable) {
     return res.status(503).json({ error: 'No admin user available for bypass' });
   }
@@ -115,9 +159,35 @@ const protect = async (req, res, next) => {
     return res.status(401).json({ error: 'Not authorized, token failed' });
   }
 
-  req.user = user;
-  req.tenantId = user.tenantId;
-  return runWithContext(authContext(req, user), next);
+  const session = await applySessionTenant(req, user, decoded);
+  const path = req.originalUrl || req.url || '';
+  const allowTenantSelection = /\/api\/auth\/me\b/.test(path)
+    || /\/api\/tenants\/memberships\b/.test(path)
+    || /\/api\/tenants\/select\b/.test(path)
+    || /\/api\/tenants\/create\b/.test(path)
+    || /\/api\/invites\//.test(path);
+  if (session.needsTenantSelection && !allowTenantSelection) {
+    return res.status(409).json({
+      error: 'Tenant selection required',
+      code: 'NEEDS_TENANT_SELECTION',
+    });
+  }
+
+  let effectiveUser = user;
+  if (session.tenantId) {
+    const membership = await getMembership(user._id, session.tenantId);
+    if (membership?.customRoleId) {
+      const customRole = await CustomRole.findById(membership.customRoleId).select('pageKeys').lean();
+      if (customRole?.pageKeys?.length) {
+        const base = user.toObject ? user.toObject() : { ...user };
+        effectiveUser = { ...base, pagePermissions: customRole.pageKeys };
+      }
+    }
+  }
+
+  req.user = effectiveUser;
+  req.tenantId = session.tenantId || user.tenantId;
+  return rejectClientTenantSpoof(req, res, () => runWithContext(authContext(req, effectiveUser, req.tenantId), next));
 };
 
 const admin = (req, res, next) => {
@@ -243,6 +313,13 @@ const orgAccountsAccess = (req, res, next) => {
   }
 };
 
+const requirePlatformAdmin = (req, res, next) => {
+  if (req.user && isRootAdminUser(req.user)) {
+    return next();
+  }
+  return res.status(403).json({ error: 'Platform administrator access required' });
+};
+
 module.exports = {
   protect,
   optionalAuthenticate,
@@ -264,6 +341,7 @@ module.exports = {
   hasArtistMembership,
   isUserOnArtistTeam,
   orgAccountsAccess,
+  requirePlatformAdmin,
   isOps: isOpsUser,
   isArtistManager: isArtistManagerUser,
   isAdminUser,

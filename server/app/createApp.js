@@ -48,7 +48,8 @@ function createApp() {
   }
 
   app.set('trust proxy', 1);
-  app.use('/__clerk', require('../middleware/clerkFapiProxy'));
+  const { clerkProxyRateLimit } = require('../middleware/rateLimits');
+  app.use('/__clerk', clerkProxyRateLimit, require('../middleware/clerkFapiProxy'));
   app.use(perfMiddleware);
   app.use(helmet({
     contentSecurityPolicy: {

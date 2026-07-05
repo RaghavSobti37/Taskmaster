@@ -3,13 +3,13 @@ import {
   buildProjectRangeParams,
   formatProjectRangeSubtitle,
   getRollingRangeBounds,
-  projectRangeQueryKey,
+  isAllTimeRange,
 } from '../utils/projectReportRange';
 
 
 export function useProjectReportRangeState() {
   const [rangeMode, setRangeMode] = useState('preset');
-  const [timeframe, setTimeframe] = useState('30d');
+  const [timeframe, setTimeframe] = useState('all');
   const bounds = useMemo(() => getRollingRangeBounds(), []);
   const [customStart, setCustomStart] = useState(bounds.defaultStart);
   const [customEnd, setCustomEnd] = useState(bounds.defaultEnd);
@@ -47,5 +47,6 @@ export function useProjectReportRangeState() {
     bounds,
     rangeSubtitle,
     exportRangeSuffix,
+    isAllTime: isAllTimeRange(rangeMode, timeframe),
   };
 }

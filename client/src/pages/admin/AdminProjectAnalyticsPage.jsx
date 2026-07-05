@@ -38,7 +38,7 @@ const AdminProjectAnalyticsPage = () => {
   const detailSectionRef = useRef(null);
 
   const rangeState = useProjectReportRangeState();
-  const { queryParams, queryEnabled, rangeSubtitle } = rangeState;
+  const { queryParams, queryEnabled, rangeSubtitle, isAllTime } = rangeState;
 
   const {
     data: projects = [],
@@ -91,6 +91,7 @@ const AdminProjectAnalyticsPage = () => {
         spentTotal: stats.spentTotal || 0,
         spentInRange: stats.spentInRange || 0,
         revenueInRange: stats.revenueInRange || 0,
+        revenueTotal: stats.revenueTotal || 0,
         remaining: stats.remaining || 0,
         budgetUsedPct: stats.budgetUsedPct ?? null,
         spendByCategory: stats.spendByCategory || {},
@@ -119,6 +120,7 @@ const AdminProjectAnalyticsPage = () => {
       spentInRange: acc.spentInRange + (row.spentInRange || 0),
       remaining: acc.remaining + (row.hasBudget && row.remaining != null ? row.remaining : 0),
       revenueInRange: acc.revenueInRange + (row.revenueInRange || 0),
+      revenueTotal: acc.revenueTotal + (row.revenueTotal || 0),
     }),
     {
       totalHours: 0,
@@ -131,6 +133,7 @@ const AdminProjectAnalyticsPage = () => {
       spentInRange: 0,
       remaining: 0,
       revenueInRange: 0,
+      revenueTotal: 0,
     }
   ), [summary?.projects]);
 
@@ -138,8 +141,9 @@ const AdminProjectAnalyticsPage = () => {
 
   const burnRatePerDay = useMemo(() => {
     const days = summary?.window?.days || 1;
-    return totals.spentInRange / days;
-  }, [summary?.window?.days, totals.spentInRange]);
+    const spendBase = isAllTime ? totals.spentTotal : totals.spentInRange;
+    return spendBase / days;
+  }, [summary?.window?.days, totals.spentInRange, totals.spentTotal, isAllTime]);
 
   const selectedProject = projects.find((p) => p._id === selectedProjectId);
   const subtitle = rangeSubtitle(summary);
@@ -254,13 +258,7 @@ const AdminProjectAnalyticsPage = () => {
         icon={BarChart3}
         title="Project Analytics"
         backTo={ADMIN_CONSOLE_PATH}
-      />
-
-      {!selectedProjectId && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {subtitle && (
-            <p className="text-[10px] text-[var(--color-text-muted)]">{subtitle}</p>
-          )}
+        actions={(
           <ProjectReportRangeControls
             rangeMode={rangeState.rangeMode}
             onRangeModeChange={rangeState.setRangeMode}
@@ -271,7 +269,11 @@ const AdminProjectAnalyticsPage = () => {
             onCustomStartChange={rangeState.setCustomStart}
             onCustomEndChange={rangeState.setCustomEnd}
           />
-        </div>
+        )}
+      />
+
+      {subtitle && !selectedProjectId && (
+        <p className="text-[10px] text-[var(--color-text-muted)] -mt-2">{subtitle}</p>
       )}
 
       {!queryEnabled && (
@@ -284,7 +286,7 @@ const AdminProjectAnalyticsPage = () => {
         <>
           <section className={`space-y-3 ${summaryFetching ? 'opacity-60' : ''}`}>
             <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-              Effort · all projects
+              Effort · {isAllTime ? 'all time' : 'all projects'}
             </h3>
             <ProjectAnalyticsKpiGrid
               columns={5}
@@ -332,9 +334,13 @@ const AdminProjectAnalyticsPage = () => {
                 },
                 {
                   id: 'spent',
-                  label: 'Spent in range',
-                  value: totals.spentInRange > 0 ? formatProjectInr(totals.spentInRange) : '—',
-                  hint: subtitle || undefined,
+                  label: 'Spent',
+                  value: (isAllTime ? totals.spentTotal : totals.spentInRange) > 0
+                    ? formatProjectInr(isAllTime ? totals.spentTotal : totals.spentInRange)
+                    : '—',
+                  badge: !isAllTime && totals.spentTotal > 0
+                    ? `${formatProjectInr(totals.spentTotal)} all-time`
+                    : undefined,
                   icon: IndianRupee,
                 },
                 {
@@ -345,8 +351,11 @@ const AdminProjectAnalyticsPage = () => {
                 },
                 {
                   id: 'revenue',
-                  label: 'Revenue in range',
-                  value: totals.revenueInRange > 0 ? formatProjectInr(totals.revenueInRange) : '—',
+                  label: 'Revenue',
+                  value: (isAllTime ? totals.revenueTotal : totals.revenueInRange) > 0
+                    ? formatProjectInr(isAllTime ? totals.revenueTotal : totals.revenueInRange)
+                    : '—',
+                  badge: !isAllTime ? 'in range' : undefined,
                   icon: TrendingUp,
                 },
                 {
@@ -424,18 +433,6 @@ const AdminProjectAnalyticsPage = () => {
                   {subtitle && (
                     <p className="text-[10px] text-[var(--color-text-muted)]">{subtitle}</p>
                   )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <ProjectReportRangeControls
-                    rangeMode={rangeState.rangeMode}
-                    onRangeModeChange={rangeState.setRangeMode}
-                    timeframe={rangeState.timeframe}
-                    onTimeframeChange={rangeState.setTimeframe}
-                    customStart={rangeState.customStart}
-                    customEnd={rangeState.customEnd}
-                    onCustomStartChange={rangeState.setCustomStart}
-                    onCustomEndChange={rangeState.setCustomEnd}
-                  />
                 </div>
               </div>
               <ProjectAnalyticsContent projectId={selectedProjectId} rangeState={rangeState} viewMode="admin" />

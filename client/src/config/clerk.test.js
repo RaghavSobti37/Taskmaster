@@ -6,6 +6,7 @@ import {
   isClerkConfigured,
   isClerkDashboardReady,
   isClerkLiveKey,
+  isLocalClerkRuntime,
 } from './clerk';
 
 describe('clerk config', () => {
@@ -68,29 +69,48 @@ describe('clerk config', () => {
   });
 
   it('uses auth origin proxy on auth site (CSP same-origin)', () => {
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
     env.VITE_SITE_MODE = 'auth';
     env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
     env.VITE_CLERK_PROXY_URL = 'https://tsccoreknot.com/__clerk';
     expect(getClerkProxyUrl()).toBe('https://auth.tsccoreknot.com/__clerk');
     env.VITE_SITE_MODE = 'app';
+    import.meta.env.DEV = wasDev;
   });
 
   it('uses primary app proxy for live keys on app site', () => {
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
     env.VITE_APP_URL = 'https://tsccoreknot.com';
     expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
+    import.meta.env.DEV = wasDev;
   });
 
   it('respects explicit proxy URL override', () => {
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
     env.VITE_CLERK_PROXY_URL = 'https://auth.example.com/__clerk';
     expect(getClerkProxyUrl()).toBe('https://auth.example.com/__clerk');
+    import.meta.env.DEV = wasDev;
   });
 
   it('skips proxy for test keys', () => {
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_test_abc';
     expect(getClerkProxyUrl()).toBe('');
     expect(isClerkLiveKey()).toBe(false);
+  });
+
+  it('skips proxy on local runtime even for live keys', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_APP_URL = 'https://tsccoreknot.com';
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = true;
+    expect(isLocalClerkRuntime()).toBe(true);
+    expect(getClerkProxyUrl()).toBe('');
+    import.meta.env.DEV = wasDev;
   });
 });

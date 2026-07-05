@@ -323,6 +323,22 @@ const { handleTrackResendWebhook } = require('../domains/mail/webhooks/resendWeb
 router.post('/webhooks/resend', handleTrackResendWebhook);
 
 
+// Public list for unsubscribe page (slug, name, domain only)
+router.get('/email-streams', async (req, res) => {
+  try {
+    const { listActiveEmailStreams } = require('../services/emailStreamService');
+    const streams = await listActiveEmailStreams();
+    res.json(streams.map((s) => ({
+      slug: s.slug,
+      name: s.name,
+      domain: s.domain,
+      defaultFromEmail: s.defaultFromEmail,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Legacy GET /unsubscribe on API host → frontend page (old emails pointed at API /unsubscribe)
 router.get('/unsubscribe', (req, res) => {
   if (req.headers['user-agent'] && req.headers['user-agent'].toLowerCase().includes('axios')) {
@@ -335,7 +351,9 @@ router.get('/unsubscribe', (req, res) => {
 
 // Unsubscribe Handler
 router.post('/unsubscribe', async (req, res) => {
-  const { email, reason, campaignId, recipientId, token } = req.body;
+  const {
+    email, reason, campaignId, recipientId, token, stream, streamSlug, unsubscribeAll,
+  } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   // Token verification for legacy pre-signed links; email-only self-service allowed
@@ -353,54 +371,44 @@ router.post('/unsubscribe', async (req, res) => {
 
   try {
     const cleanEmail = email.toLowerCase().trim();
-    
-    // Find lead details to get name
-    const leadDoc = await Lead.findOne({ email: cleanEmail });
-    const leadName = leadDoc ? leadDoc.name : '';
+    const resolvedStreamSlug = (streamSlug || stream || '').trim().toLowerCase() || null;
+    const globalUnsub = unsubscribeAll === true || unsubscribeAll === 'true' || !resolvedStreamSlug;
 
-    // 1. Update Lead Status
-    await Lead.updateMany(
-      { email: cleanEmail }, 
-      { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } }
-    );
+    const { listActiveEmailStreams } = require('../services/emailStreamService');
+    const streams = await listActiveEmailStreams();
+    const streamDoc = resolvedStreamSlug
+      ? streams.find((s) => s.slug === resolvedStreamSlug)
+      : null;
 
-    const Contact = require('../models/Contact');
-    await Contact.updateMany(
-      { email: cleanEmail },
-      {
-        $set: {
-          unsubscribed: true,
-          unsubscribeReason: reason || 'Opt-out',
-          emailStatus: 'Unsubscribed',
-        },
-      }
-    ).setOptions({ bypassTenant: true });
-
-    // Sync to HolySheet
-    const { syncUnsubscribeToSheet } = require('../services/holySheetService');
-    await syncUnsubscribeToSheet({
+    const { applyEmailUnsubscribe } = require('../services/unsubscribeService');
+    await applyEmailUnsubscribe({
       email: cleanEmail,
-      name: leadName,
-      campaignId: campaignId || 'N/A',
       reason: reason || 'Opt-out',
-      unsubscribedAt: new Date()
+      streamSlug: globalUnsub ? null : resolvedStreamSlug,
+      domain: streamDoc?.domain || '',
+      unsubscribeAll: globalUnsub,
+      campaignId,
     });
 
     const Campaign = require('../models/Campaign');
     const MailCampaign = require('../models/MailCampaign');
     const MailEvent = require('../models/MailEvent');
 
-    // 2. Track MailEvent for Campaign if campaignId exists
+    // Track MailEvent for Campaign if campaignId exists
     if (campaignId && campaignId !== 'undefined' && campaignId !== 'null') {
       await MailEvent.create({
         eventType: 'Unsubscribe',
         email: cleanEmail,
         timestamp: new Date(),
         campaignId: campaignId,
-        metadata: { recipientId, reason }
+        metadata: {
+          recipientId,
+          reason,
+          streamSlug: globalUnsub ? 'all' : resolvedStreamSlug,
+          unsubscribeAll: globalUnsub,
+        },
       });
 
-      // Update specific campaign recipient status
       let campaign = await MailCampaign.findById(campaignId);
       let isCore = false;
       if (!campaign) {
@@ -420,40 +428,45 @@ router.post('/unsubscribe', async (req, res) => {
       }
     }
 
-    // 3. Mark this email as Unsubscribed in all other Campaign/MailCampaign recipients
-    const camps = await Campaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
-    for (const camp of camps) {
-      let changed = false;
-      camp.recipients.forEach(r => {
-        if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
-          r.status = 'Unsubscribed';
-          changed = true;
-        }
-      });
-      if (changed) await camp.save();
-    }
-
-    const mailCamps = await MailCampaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
-    for (const camp of mailCamps) {
-      let changed = false;
-      camp.recipients.forEach(r => {
-        if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
-          r.status = 'Unsubscribed';
-          changed = true;
-        }
-      });
-      if (changed) {
-        // Recalculate stats
-        let uns = 0;
+    // Global unsub: mark all campaign recipients; stream-only skips other campaigns
+    if (globalUnsub) {
+      const camps = await Campaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
+      for (const camp of camps) {
+        let changed = false;
         camp.recipients.forEach(r => {
-          if (r.status === 'Unsubscribed') uns++;
+          if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
+            r.status = 'Unsubscribed';
+            changed = true;
+          }
         });
-        camp.stats.unsubscribed = uns;
-        await camp.save();
+        if (changed) await camp.save();
+      }
+
+      const mailCamps = await MailCampaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
+      for (const camp of mailCamps) {
+        let changed = false;
+        camp.recipients.forEach(r => {
+          if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
+            r.status = 'Unsubscribed';
+            changed = true;
+          }
+        });
+        if (changed) {
+          let uns = 0;
+          camp.recipients.forEach(r => {
+            if (r.status === 'Unsubscribed') uns++;
+          });
+          camp.stats.unsubscribed = uns;
+          await camp.save();
+        }
       }
     }
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      streamSlug: globalUnsub ? null : resolvedStreamSlug,
+      unsubscribeAll: globalUnsub,
+    });
   } catch (err) {
     console.error('Unsubscribe error:', err);
     res.status(500).json({ error: err.message });

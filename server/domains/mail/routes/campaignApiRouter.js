@@ -3,6 +3,7 @@ const multer = require('multer');
 const router = express.Router();
 const { protect, requirePageAccess } = require('../../../middleware/authMiddleware');
 const { validateBody } = require('../../../validation/validateBody');
+const { requireFeatureUnlock } = require('../../../middleware/requireFeatureUnlock');
 const {
   createCampaignBody,
   resendCampaignBody,
@@ -12,7 +13,7 @@ const campaignApiController = require('../controllers/campaignApiController');
 
 const emailsAccess = requirePageAccess('emails');
 
-router.use(protect, emailsAccess);
+router.use(protect, emailsAccess, requireFeatureUnlock('resend'));
 
 const upload = multer({
   storage: multer.memoryStorage(),

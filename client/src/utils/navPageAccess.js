@@ -164,3 +164,22 @@ export function filterNavGroupsForUser(groups, user, hasPageAccessFn = hasPageAc
     }))
     .filter((group) => group.pages.length > 0);
 }
+
+/** Nav paths gated by tenant featureUnlocks (visible but locked until unlocked). */
+export const FEATURE_UNLOCK_BY_PATH = {
+  '/emails': 'resend',
+  '/finance': 'finance',
+  '/admin/knowledge-engine': 'knowledgeEngine',
+  '/artists': 'artistOs',
+};
+
+export function getNavFeatureLock(path, unlocks = {}) {
+  const key = FEATURE_UNLOCK_BY_PATH[path];
+  if (!key) return null;
+  if (unlocks[key]) return null;
+  return {
+    lockedReason: 'Complete onboarding to unlock this area',
+    unlockCta: 'View checklist',
+    unlockPath: '/dashboard',
+  };
+}

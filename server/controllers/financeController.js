@@ -1,5 +1,6 @@
-const FinanceDocument = require('../models/FinanceDocument');
+const { snapshotFxMetadata } = require('../../shared/projectFinanceRollup');
 const Project = require('../models/Project');
+const FinanceDocument = require('../models/FinanceDocument');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { scheduleFinanceDocumentOcr } = require('../utils/financeOcr');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
@@ -123,14 +124,14 @@ const uploadDocument = async (req, res) => {
       fileType,
       uploadedBy: req.user._id,
       extractedText: '',
-      metadata: {
+      metadata: snapshotFxMetadata({
         amount: 0,
         currency: 'INR',
         vendor: '',
         date: null,
         tax: 0,
         detectedCategory: category || 'other',
-      },
+      }),
     });
 
     await doc.save();
@@ -202,7 +203,7 @@ const uploadDocumentsBulk = async (req, res) => {
         fileType,
         uploadedBy: req.user._id,
         extractedText: '',
-        metadata: mergedMetadata,
+        metadata: snapshotFxMetadata(mergedMetadata),
       });
 
       await doc.save();

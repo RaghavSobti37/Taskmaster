@@ -109,11 +109,14 @@ const buildFinalEmailHtml = async ({
   campaignId,
   leadEmail,
   trackingBaseUrl,
+  streamSlug,
 }) => {
   let out = html || '';
 
   if (isFullHtmlDocument(out)) {
-    out = applyFullDocumentEmailExtras(out, { includeSignature, signature, removeUnsubscribe });
+    out = applyFullDocumentEmailExtras(out, {
+      includeSignature, signature, removeUnsubscribe, streamSlug, leadEmail, campaignId,
+    });
     if (mode === 'live' && campaignId && leadEmail) {
       const baseUrl = trackingBaseUrl || resolveTrackingApiBaseUrl();
       const { processedHtml } = await prepareCampaignHTML(out, campaignId, leadEmail, baseUrl, {
@@ -145,7 +148,7 @@ const buildFinalEmailHtml = async ({
   }
 
   if (!removeUnsubscribe && !out.includes('/unsubscribe')) {
-    out = `${out}${buildUnsubscribeFooter()}`;
+    out = `${out}${buildUnsubscribeFooter({ streamSlug, email: leadEmail, campaignId })}`;
   }
 
   if (mode === 'live' && campaignId && leadEmail) {
@@ -161,8 +164,12 @@ const buildFinalEmailHtml = async ({
   return ensureAbsoluteImageUrls(wrapEmailShell(out));
 };
 
-const buildUnsubscribeFooter = () => {
-  const unsubscribeUrl = buildStaticUnsubscribePageUrl();
+const buildUnsubscribeFooter = ({ streamSlug, email, campaignId } = {}) => {
+  const unsubscribeUrl = buildStaticUnsubscribePageUrl({
+    stream: streamSlug,
+    email,
+    campaignId,
+  });
   return `<div style="margin:16px 0 0 0;padding:0;border-top:1px solid #eee;font-size:12px;color:#777;text-align:center;font-family:sans-serif;">
 <p style="margin:4px 0;padding:0;">You are receiving this email because you opted in at our website or events.</p>
 <p style="margin:4px 0;padding:0;">If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color:#ef4444;text-decoration:underline;">unsubscribe here</a>.</p>
@@ -182,6 +189,9 @@ const applyFullDocumentEmailExtras = (html, {
   includeSignature = false,
   signature = '',
   removeUnsubscribe = false,
+  streamSlug,
+  leadEmail,
+  campaignId,
 } = {}) => {
   let out = html || '';
   if (removeUnsubscribe) {
@@ -192,7 +202,7 @@ const applyFullDocumentEmailExtras = (html, {
     extras.push(normalizeOutboundEmailHtml(signature));
   }
   if (!removeUnsubscribe && !out.includes('/unsubscribe')) {
-    extras.push(buildUnsubscribeFooter());
+    extras.push(buildUnsubscribeFooter({ streamSlug, email: leadEmail, campaignId }));
   }
   if (extras.length) {
     out = injectBeforeBodyClose(out, extras.join(''));

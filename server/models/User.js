@@ -39,8 +39,20 @@ const userSchema = new mongoose.Schema({
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)
   mustChangePassword: { type: Boolean, default: false },
   passwordChangedAt: { type: Date },
+  /** Display preference: auto | dmY | mdY | Ymd | dmYDash | mdYDash | dmYShort | mdYShort */
+  dateFormatPreference: {
+    type: String,
+    enum: ['auto', 'dmY', 'mdY', 'Ymd', 'dmYDash', 'mdYDash', 'dmYShort', 'mdYShort'],
+    default: 'auto',
+  },
   passwordResetToken: { type: String, select: false },
   passwordResetExpires: { type: Date, select: false },
+  mfa: {
+    enabled: { type: Boolean, default: false },
+    secretEncrypted: { type: String, select: false },
+    pendingSecretEncrypted: { type: String, select: false },
+    backupCodesHash: [{ type: String, select: false }],
+  },
   pushSubscriptions: [{
     endpoint: { type: String, required: true },
     keys: {

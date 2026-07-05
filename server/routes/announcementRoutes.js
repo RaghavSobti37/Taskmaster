@@ -7,6 +7,7 @@ const Project = require('../models/Project');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const { createNotification } = require('../services/notificationDispatcher');
+const { formatDisplayDateTime } = require('../../shared/dateDisplay');
 
 const { isOpsUser } = require('../utils/departmentPermissions');
 const canManage = (user) => isOpsUser(user);
@@ -47,7 +48,7 @@ const buildAnnouncementEmailHtml = ({ title, message, createdByName, ctaText, ct
   const safeCtaText = escapeHtml(ctaText || '');
   const safeCtaLink = ctaLink ? escapeHtml(ctaLink) : '';
   const hasExpiry = !!expiresAt;
-  const expiryLabel = hasExpiry ? new Date(expiresAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+  const expiryLabel = hasExpiry ? formatDisplayDateTime(expiresAt) : '';
 
   return `
     <div style="background:#0f172a;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f8fafc;">

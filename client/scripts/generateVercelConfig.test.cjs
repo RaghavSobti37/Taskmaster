@@ -16,6 +16,7 @@ const templateRewrites = [
 
 const apiDestination = 'https://api.example.onrender.com/api/$1';
 const socketDestination = 'https://api.example.onrender.com/socket.io/$1';
+const PROD_API = 'https://coreknot-api.onrender.com';
 
 test('composeRewrites places PostHog proxy before SPA catch-all', () => {
   const rewrites = composeRewrites(templateRewrites, apiDestination, socketDestination);
@@ -42,9 +43,6 @@ test('composeRewrites drops duplicate PostHog rules from template', () => {
 });
 
 test('PostHog proxy rewrites use hungry regex so trailing-slash endpoints (/decide/, /e/) are not dropped', () => {
-  // Vercel's :path* wildcard fails to match segments ending in "/" (e.g. "/ph/decide/?v=3"),
-  // producing a Vercel-native 404 instead of proxying to PostHog. PostHog's own docs and
-  // https://github.com/PostHog/posthog/issues/17596 recommend :path(.*) instead.
   const rules = buildPostHogRewrites();
   assert.equal(rules.length, 3);
   for (const rule of rules) {
@@ -72,7 +70,7 @@ test('buildClerkProxyRewriteSatellite proxies directly to Render (no primary-app
 test('existingRewritesLookValid accepts live Render host, rejects placeholder', () => {
   assert.equal(
     existingRewritesLookValid({
-      rewrites: [{ source: '/api/(.*)', destination: 'https://taskmaster-jfw0.onrender.com/api/$1' }],
+      rewrites: [{ source: '/api/(.*)', destination: 'https://coreknot-api.onrender.com/api/$1' }],
     }),
     true,
   );
@@ -84,23 +82,34 @@ test('existingRewritesLookValid accepts live Render host, rejects placeholder', 
   );
 });
 
-test('pickProxyUrl uses staging API on Vercel preview when env unset', () => {
+test('pickProxyUrl uses production API on Vercel preview', () => {
   const prev = { ...process.env };
   process.env.VERCEL_ENV = 'preview';
+  process.env.VITE_API_URL = PROD_API;
   delete process.env.RENDER_API_PROXY_URL;
-  delete process.env.VITE_API_URL;
-  const { pickProxyUrl, CANONICAL_STAGING_API_URL } = require('./generateVercelConfig.cjs');
-  assert.equal(pickProxyUrl(), CANONICAL_STAGING_API_URL);
+  const { pickProxyUrl } = require('./generateVercelConfig.cjs');
+  assert.equal(pickProxyUrl(), PROD_API);
   process.env = prev;
 });
 
-test('pickProxyUrl rejects production API host on preview when only prod env set', () => {
+test('pickProxyUrl skips retired staging host and falls back to production env', () => {
   const prev = { ...process.env };
   process.env.VERCEL_ENV = 'preview';
-  process.env.RENDER_API_PROXY_URL = 'https://taskmaster-jfw0.onrender.com';
-  delete process.env.VITE_API_URL;
-  const { pickProxyUrl, CANONICAL_STAGING_API_URL } = require('./generateVercelConfig.cjs');
-  assert.equal(pickProxyUrl(), CANONICAL_STAGING_API_URL);
+  process.env.RENDER_API_PROXY_URL = 'https://coreknot-api-staging.onrender.com';
+  process.env.VITE_API_URL = PROD_API;
+  const { pickProxyUrl } = require('./generateVercelConfig.cjs');
+  assert.equal(pickProxyUrl(), PROD_API);
+  process.env = prev;
+});
+
+test('pickProxyUrl uses production when VERCEL=1 but VERCEL_ENV unset', () => {
+  const prev = { ...process.env };
+  process.env.VERCEL = '1';
+  delete process.env.VERCEL_ENV;
+  process.env.VITE_API_URL = PROD_API;
+  delete process.env.RENDER_API_PROXY_URL;
+  const { pickProxyUrl } = require('./generateVercelConfig.cjs');
+  assert.equal(pickProxyUrl(), PROD_API);
   process.env = prev;
 });
 

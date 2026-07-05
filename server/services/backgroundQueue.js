@@ -441,4 +441,16 @@ function startAnalyticsCron() {
 // Kickoff cron (skip in Jest)
 if (!isTestEnv) {
   setTimeout(startAnalyticsCron, 5000);
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const { processDueOffboardings } = require('./tenantOffboardingService');
+      const count = await processDueOffboardings();
+      if (count > 0) {
+        logger.info('Cron Worker', `Processed ${count} tenant offboarding job(s)`);
+      }
+    } catch (err) {
+      logger.error('Cron Worker', 'Offboarding cron error', { error: err.message });
+    }
+  }, TWENTY_FOUR_HOURS);
 }

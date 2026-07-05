@@ -83,9 +83,16 @@ const getTrackingDbMismatchWarning = () => {
 };
 
 /** Static frontend unsubscribe page — user enters email on the page. */
-const buildStaticUnsubscribePageUrl = () => {
+const buildStaticUnsubscribePageUrl = ({ stream, email, campaignId, recipientId, token } = {}) => {
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
-  return `${frontend}/unsubscribe`;
+  const params = new URLSearchParams();
+  if (stream) params.set('stream', stream);
+  if (email) params.set('email', email);
+  if (campaignId) params.set('campaignId', String(campaignId));
+  if (recipientId) params.set('recipientId', String(recipientId));
+  if (token) params.set('token', token);
+  const qs = params.toString();
+  return qs ? `${frontend}/unsubscribe?${qs}` : `${frontend}/unsubscribe`;
 };
 
 /** @deprecated Legacy per-recipient links — prefer buildStaticUnsubscribePageUrl */

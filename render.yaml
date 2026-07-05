@@ -7,14 +7,6 @@ services:
     maxmemoryPolicy: noeviction
     ipAllowList: []
 
-  # Staging-only Redis — isolates BullMQ/cache from production (T0-4)
-  - type: keyvalue
-    name: taskmaster-redis-staging
-    plan: starter
-    region: oregon
-    maxmemoryPolicy: noeviction
-    ipAllowList: []
-
   # Production API — sync env vars from Dashboard if service already exists manually
   - type: web
     name: CoreKnot-api
@@ -36,8 +28,9 @@ services:
         value: production
       - key: JSON_BODY_LIMIT
         value: 50mb
+      # Vercel staging branch / PR previews hit this API (same DB as production)
       - key: CORS_ALLOW_VERCEL_PREVIEWS
-        value: "false"
+        value: "true"
       - key: LOG_LEVEL
         value: warn
       - key: MONGODB_URI_PROD
@@ -86,104 +79,6 @@ services:
         sync: false
       - key: VAPID_SUBJECT
         sync: false
-
-  # Staging API — PR/preview testing; never points at production DB
-  - type: web
-    name: coreknot-api-staging
-    runtime: node
-    region: oregon
-    plan: starter
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
-    startCommand: npm start
-    healthCheckPath: /api/health
-    autoDeploy: true
-    branch: staging
-    envVars:
-      - key: HUSKY
-        value: "0"
-      - key: NODE_ENV
-        value: production
-      - key: COREKNOT_DEPLOY_TIER
-        value: staging
-      - key: JSON_BODY_LIMIT
-        value: 50mb
-      - key: CORS_ALLOW_VERCEL_PREVIEWS
-        value: "true"
-      - key: QA_INTEGRATION_PROBE_ENABLED
-        value: "true"
-      - key: LOG_LEVEL
-        value: info
-      - key: MONGODB_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: ENCRYPTION_KEY
-        sync: false
-      - key: REDIS_URL
-        fromService:
-          name: taskmaster-redis-staging
-          type: keyvalue
-          property: connectionString
-      - key: SUPABASE_SECONDARY_ENABLED
-        value: "true"
-      - key: SUPABASE_PG_MODE
-        value: rest
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: SUPABASE_SECRET_KEY
-        sync: false
-      - key: SUPABASE_DB_URL
-        sync: false
-      - key: SUPABASE_BACKUP_BUCKET
-        value: taskmaster-backups
-      - key: NEST_SYNC_URL
-        value: https://coreknot-nest-staging.onrender.com
-      - key: UPLOADTHING_TOKEN
-        sync: false
-      - key: UPLOADTHING_SECRET
-        sync: false
-      - key: VAPID_PUBLIC_KEY
-        sync: false
-      - key: VAPID_PRIVATE_KEY
-        sync: false
-      - key: VAPID_SUBJECT
-        sync: false
-
-  # NestJS staging
-  - type: web
-    name: coreknot-nest-staging
-    runtime: node
-    region: oregon
-    plan: starter
-    rootDir: nestjs-server
-    buildCommand: cd .. && bash scripts/render-build.sh nest
-    startCommand: npm run start:prod
-    healthCheckPath: /api/health
-    autoDeploy: true
-    branch: staging
-    envVars:
-      - key: HUSKY
-        value: "0"
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: "5001"
-      - key: LOG_LEVEL
-        value: info
-      - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-      - key: REDIS_URL
-        fromService:
-          name: taskmaster-redis-staging
-          type: keyvalue
-          property: connectionString
 
   - type: cron
     name: CoreKnot-daily-backup

@@ -1,3 +1,4 @@
+import { formatDisplayDateTime } from '../utils/dateDisplay';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QuickAddContext } from './quickAddContextCore';
 import { useNavigate } from 'react-router-dom';
@@ -106,7 +107,7 @@ export function QuickAddProvider({ children }) {
       });
 
       const dueDate = response.data?.dueDate
-        ? new Date(response.data.dueDate).toLocaleString()
+        ? formatDisplayDateTime(response.data.dueDate)
         : 'No specific date';
 
       addToast({

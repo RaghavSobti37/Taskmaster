@@ -1,10 +1,10 @@
-const VERIFIED_RESEND_DOMAIN = 'theshakticollective.in';
+const { ROOT_DOMAIN } = require('../../shared/emailStreams.cjs');
+const {
+  isVerifiedResendEmail,
+  domainFromEmail,
+} = require('./emailStreamUnsubscribe');
 
-const isVerifiedResendEmail = (email) => {
-  const addr = (email || '').trim().toLowerCase();
-  if (!addr.includes('@')) return false;
-  return new RegExp(`^[a-z0-9._%+-]+@${VERIFIED_RESEND_DOMAIN.replace('.', '\\.')}$`, 'i').test(addr);
-};
+const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;
 
 const displayNameForResendEmail = (email) => {
   const key = (email || '').trim().toLowerCase();
@@ -12,6 +12,9 @@ const displayNameForResendEmail = (email) => {
     'artist@theshakticollective.in': 'The Shakti Collective',
     'helloworld@theshakticollective.in': 'The Shakti Collective',
     'team@theshakticollective.in': 'The Shakti Collective',
+    'artist@artist.theshakticollective.in': 'The Shakti Collective — Artist',
+    'team@team.theshakticollective.in': 'The Shakti Collective — Team',
+    'hello@events.theshakticollective.in': 'The Shakti Collective — Events',
   };
   if (labels[key]) return labels[key];
   const local = key.split('@')[0] || '';
@@ -33,7 +36,9 @@ const resolveResendFromEmail = (campaign) => {
 
 module.exports = {
   VERIFIED_RESEND_DOMAIN,
+  ROOT_DOMAIN,
   isVerifiedResendEmail,
+  domainFromEmail,
   displayNameForResendEmail,
   resolveResendFromEmail,
 };

@@ -43,7 +43,7 @@ const awardManualDailyLogXp = async (userId, log, details) => {
   }
 };
 
-const createLogRecord = async ({ userId, actorId, action, targetType, targetId, details }) => {
+const createLogRecord = async ({ userId, actorId, action, targetType, targetId, details, clientRequestId }) => {
   const log = await Log.create({
     userId,
     actorId: String(actorId),
@@ -52,6 +52,7 @@ const createLogRecord = async ({ userId, actorId, action, targetType, targetId, 
     targetType,
     targetId,
     details,
+    ...(clientRequestId ? { clientRequestId: String(clientRequestId).trim() } : {}),
   });
   const populated = await Log.findById(log._id).populate('userId', 'name avatar role');
   broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
@@ -205,7 +206,18 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { action, targetType, targetId, details: rawDetails } = req.body;
+    const { action, targetType, targetId, details: rawDetails, clientRequestId } = req.body;
+
+    if (clientRequestId) {
+      const existing = await Log.findOne({
+        clientRequestId: String(clientRequestId).trim(),
+        tenantId: req.tenantId,
+      }).populate('userId', 'name avatar role');
+      if (existing) {
+        return res.status(200).json(existing);
+      }
+    }
+
     const normalized = normalizeDailyLogDetails(rawDetails || {});
     const memberIds = (normalized.memberIds || [])
       .map(String)
@@ -234,6 +246,7 @@ router.post('/', async (req, res) => {
       targetType,
       targetId,
       details: normalized,
+      clientRequestId,
     });
 
     await awardManualDailyLogXp(req.user._id, primary, normalized);

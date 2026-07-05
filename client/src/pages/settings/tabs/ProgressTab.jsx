@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Target, Activity, RefreshCw } from 'lucide-react';
 import { Badge, Button, Spinner } from '../../../components/ui';
+import { formatDisplayDateTime } from '../../../utils/dateDisplay';
 import {
   useGamificationProgress,
   useGamificationHistory,
@@ -8,16 +9,7 @@ import {
 } from '../../../hooks/useTaskmasterQueries';
 import { motion } from 'framer-motion';
 
-const formatTimestamp = (value) => {
-  const date = new Date(value);
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+const formatTimestamp = (value) => formatDisplayDateTime(value);
 
 export default function ProgressTab() {
   const [page, setPage] = useState(1);

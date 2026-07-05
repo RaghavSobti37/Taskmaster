@@ -142,6 +142,8 @@ function registerRoutes(app) {
   app.use('/api/gamification-admin', require('../routes/gamificationAdminRoutes'));
   app.use('/api/qa', require('../routes/qaRoutes'));
   app.use('/api/customization', require('../routes/customizationRoutes'));
+  app.use('/api/tenants', require('../routes/tenantRoutes'));
+  app.use('/api/invites', require('../routes/inviteRoutes'));
 
   // --- Webhooks & tracking (public, rate-limited) ---
   app.use(require('../routes/track'));
@@ -207,6 +209,10 @@ function registerRoutes(app) {
   app.use('/api/announcements', require('../routes/announcementRoutes'));
   app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
   app.use('/api/knowledge-engine', require('../routes/knowledgeEngineRoutes'));
+  app.use('/api/enterprise', require('../routes/enterpriseRoutes'));
+  app.use('/api/scim/v2', require('../routes/scimRoutes'));
+  app.use('/api/v1', require('../routes/publicApiRoutes'));
+  app.use('/api/admin/support', require('../routes/platformSupportRoutes'));
 
   // --- Admin ---
   app.use('/api/admin/media-contacts', require('../routes/mediaContactRoutes'));

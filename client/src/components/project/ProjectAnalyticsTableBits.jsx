@@ -88,9 +88,11 @@ export const formatProjectInr = (value, { emptyLabel = '—' } = {}) => {
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
-export const formatBudgetDisplay = (hasBudget, budget) => {
+export const formatBudgetDisplay = (hasBudget, budget, budgetSource = 'tracked') => {
   if (!hasBudget || budget == null) return 'No budget set';
-  return formatProjectInr(budget, { emptyLabel: 'No budget set' });
+  const base = formatProjectInr(budget, { emptyLabel: 'No budget set' });
+  if (budgetSource === 'calculated') return `${base} (calculated)`;
+  return base;
 };
 
 export const formatVarianceHours = (varianceHours) => {

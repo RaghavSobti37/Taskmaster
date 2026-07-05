@@ -1,9 +1,9 @@
 const express = require('express');
 const qaTestingController = require('../controllers/qaTestingController');
-const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+const { protect, requirePlatformAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-const dataHubAccess = requirePageAccess('admin_data');
+const dataHubAccess = requirePlatformAdmin;
 
 router.use(protect, dataHubAccess);
 

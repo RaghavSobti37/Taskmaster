@@ -15,6 +15,7 @@ const { normalizePersonRecord } = require('../../../utils/personNormalization');
 const { buildLeadActionUrl } = require('../../../utils/notificationActionUrl');
 const logger = require('../../../utils/logger');
 const { createInquiryFromWebhook } = require('./artistOsService');
+const { formatDisplayDateTimeIST } = require('../../../../shared/dateDisplay');
 
 const BYPASS = { bypassTenant: true };
 
@@ -56,7 +57,7 @@ function validatePayload(normalized) {
 }
 
 function buildDescription(normalized) {
-  const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  const timestamp = formatDisplayDateTimeIST(new Date());
   const lines = [
     `Submitted: ${timestamp} (IST)`,
     '',

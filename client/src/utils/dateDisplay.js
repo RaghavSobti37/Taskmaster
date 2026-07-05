@@ -1,7 +1,9 @@
 import { format, parse, parseISO, isValid } from 'date-fns';
 import { DEFAULT_TZ } from './dateValidation';
+import { getActiveDateFormatPatterns } from './dateFormatRegistry';
+import { getDobPlaceholder } from '@shared/dateFormatPreference';
 
-/** User-facing date convention: DD/MM/YYYY (date-fns tokens). */
+/** Legacy constants — default DD/MM/YYYY; runtime uses active user preference. */
 export const DATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
 export const DATE_DISPLAY_SHORT_FORMAT = 'dd/MM';
 export const DATETIME_DISPLAY_FORMAT = 'dd/MM/yyyy HH:mm';
@@ -10,6 +12,10 @@ export const WEEKDAY_DATE_DISPLAY_FORMAT = 'EEE, dd/MM/yyyy';
 export const WEEKDAY_DATE_LONG_DISPLAY_FORMAT = 'EEEE, dd/MM/yyyy';
 
 const EMPTY = '—';
+
+function patterns() {
+  return getActiveDateFormatPatterns();
+}
 
 function coerceDate(value) {
   if (value == null || value === '') return null;
@@ -23,37 +29,42 @@ function coerceDate(value) {
 export function formatDisplayDate(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, DATE_DISPLAY_FORMAT);
+  return format(d, patterns().date);
 }
 
 export function formatDisplayDateShort(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, DATE_DISPLAY_SHORT_FORMAT);
+  return format(d, patterns().dateShort);
 }
 
 export function formatDisplayDateTime(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, DATETIME_DISPLAY_FORMAT);
+  return format(d, patterns().datetime);
 }
 
 export function formatDisplayDateTimeSeconds(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, DATETIME_DISPLAY_SECONDS_FORMAT);
+  return format(d, patterns().datetimeSeconds);
 }
 
-/** IST-aware calendar date (en-GB → dd/MM/yyyy in app timezone). */
+/** IST-aware calendar date in active user format. */
 export function formatDisplayDateIST(value, { emptyLabel = EMPTY, timeZone = DEFAULT_TZ } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return new Intl.DateTimeFormat('en-GB', {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(d);
+  }).formatToParts(d);
+  const day = Number(parts.find((p) => p.type === 'day')?.value || 0);
+  const month = Number(parts.find((p) => p.type === 'month')?.value || 0);
+  const year = Number(parts.find((p) => p.type === 'year')?.value || 0);
+  if (!day || !month || !year) return emptyLabel;
+  return format(new Date(year, month - 1, day), patterns().date);
 }
 
 export function formatDisplayDateTimeIST(value, { emptyLabel = EMPTY, timeZone = DEFAULT_TZ } = {}) {
@@ -69,50 +80,45 @@ export function formatDisplayDateTimeIST(value, { emptyLabel = EMPTY, timeZone =
   return `${datePart} ${timePart}`;
 }
 
-export function formatWeekdayDate(value, { emptyLabel = EMPTY } = {}) {
-  const d = coerceDate(value);
-  if (!d) return emptyLabel;
-  return format(d, WEEKDAY_DATE_DISPLAY_FORMAT);
+export function formatWeekdayDate(value, options) {
+  return formatDisplayDate(value, options);
 }
 
-export function formatWeekdayDateLong(value, { emptyLabel = EMPTY } = {}) {
-  const d = coerceDate(value);
-  if (!d) return emptyLabel;
-  return format(d, WEEKDAY_DATE_LONG_DISPLAY_FORMAT);
+export function formatWeekdayDateLong(value, options) {
+  return formatDisplayDate(value, options);
 }
 
 /** Parse yyyy-MM-dd or ISO timestamp to display date. */
 export function formatDateKeyForDisplay(dateKey, { emptyLabel = EMPTY, withWeekday = false } = {}) {
   if (!dateKey) return emptyLabel;
-  const pattern = withWeekday ? WEEKDAY_DATE_DISPLAY_FORMAT : DATE_DISPLAY_FORMAT;
   if (typeof dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey.trim())) {
     const d = parseISO(dateKey.trim());
     if (!isValid(d)) return emptyLabel;
-    return format(d, pattern);
+    return format(d, patterns().date);
   }
-  return withWeekday ? formatWeekdayDate(dateKey, { emptyLabel }) : formatDisplayDate(dateKey, { emptyLabel });
+  return formatDisplayDate(dateKey, { emptyLabel });
 }
 
 export function formatDisplayDateTime12h(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, 'dd/MM/yyyy h:mm a');
+  return format(d, patterns().datetime12h);
 }
 
 export function formatDisplayDateTime12hComma(value, { emptyLabel = EMPTY } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return format(d, 'dd/MM/yyyy, hh:mm a');
+  return format(d, patterns().datetime12hComma);
 }
 
-/** Profile DOB text field — display as DD/MM/YYYY. */
+/** Profile DOB text field — uses active display format. */
 export function formatDobInput(value) {
   const d = coerceDate(value);
   if (!d) return '';
-  return format(d, DATE_DISPLAY_FORMAT);
+  return format(d, patterns().dobParse);
 }
 
-/** Parse DD/MM/YYYY (or yyyy-MM-dd) for API payloads. */
+/** Parse profile DOB using active display format (or yyyy-MM-dd). */
 export function parseDobInput(text) {
   const raw = String(text || '').trim();
   if (!raw) return { ok: true, value: null };
@@ -122,9 +128,14 @@ export function parseDobInput(text) {
     return isValid(iso) ? { ok: true, value: raw } : { ok: false, error: 'Invalid date' };
   }
 
-  const parsed = parse(raw, DATE_DISPLAY_FORMAT, new Date());
+  const parsePattern = patterns().dobParse;
+  const parsed = parse(raw, parsePattern, new Date());
   if (!isValid(parsed)) {
-    return { ok: false, error: 'Use DD/MM/YYYY' };
+    return { ok: false, error: `Use ${getDobPlaceholder(patterns())}` };
   }
   return { ok: true, value: format(parsed, 'yyyy-MM-dd') };
+}
+
+export function getActiveDobPlaceholder() {
+  return getDobPlaceholder(patterns());
 }

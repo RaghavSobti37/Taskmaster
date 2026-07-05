@@ -72,13 +72,23 @@ const canUserApproveOrRollback = (user, assignments, { platformOwnerId, taskCrea
   return canUserApproveReview(user, assignments);
 };
 
+/** Completed tasks may only roll back within this window unless admin/platform owner. */
+const ROLLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /** Creator, delegated assigner-reviewer, or platform owner may rollback in-review or reopen done tasks. */
-const canUserRollbackTask = (user, task, assignments, { platformOwnerId, taskCreatedBy } = {}) => {
+const canUserRollbackTask = (user, task, assignments, { platformOwnerId, taskCreatedBy, isOrgAdmin = false } = {}) => {
   const uid = normalizeId(user?._id || user);
   if (!uid) return false;
   const status = String(task?.status || '').toLowerCase();
   if (status !== 'in-review' && status !== 'done') return false;
   if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  if (isOrgAdmin) return true;
+  if (status === 'done' && task?.completedAt) {
+    const completedMs = new Date(task.completedAt).getTime();
+    if (Number.isFinite(completedMs) && Date.now() - completedMs > ROLLBACK_WINDOW_MS) {
+      return false;
+    }
+  }
   if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
   return canUserApproveReview(user, assignments);
 };
@@ -166,4 +176,5 @@ module.exports = {
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
   isAssignerOnlyReviewer,
+  ROLLBACK_WINDOW_MS,
 };

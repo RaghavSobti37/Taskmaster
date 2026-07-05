@@ -62,7 +62,11 @@ const WorkflowCanvas = lazyWithRetry(() => import('./pages/productivity/Workflow
 const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssetsPage'));
 const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
+const TermsOfService = lazyWithRetry(() => import('./pages/legal/TermsOfService'));
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
+const OrgPickerPage = lazyWithRetry(() => import('./pages/org/OrgPickerPage'));
+const CreateOrganizationPage = lazyWithRetry(() => import('./pages/org/CreateOrganizationPage'));
+const TenantInviteAcceptPage = lazyWithRetry(() => import('./pages/org/TenantInviteAcceptPage'));
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
@@ -72,6 +76,7 @@ const EmailsOverviewPage = lazyWithRetry(() => import('./pages/emails/EmailsOver
 const EmailsCampaignsPage = lazyWithRetry(() => import('./pages/emails/EmailsCampaignsPage'));
 const EmailsTemplatesPage = lazyWithRetry(() => import('./pages/emails/EmailsTemplatesPage'));
 const EmailsProfilesPage = lazyWithRetry(() => import('./pages/emails/EmailsProfilesPage'));
+const EmailsStreamsPage = lazyWithRetry(() => import('./pages/emails/EmailsStreamsPage'));
 const EmailsAnalyticsPage = lazyWithRetry(() => import('./pages/emails/EmailsAnalyticsPage'));
 const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterPage'));
 const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
@@ -95,6 +100,8 @@ const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'))
 const LeadAuditsPage = lazyWithRetry(() => import('./pages/admin/LeadAuditsPage'));
 const SecurityAuditPage = lazyWithRetry(() => import('./pages/admin/SecurityAuditPage'));
 const AdminTenantSsoPage = lazyWithRetry(() => import('./pages/admin/AdminTenantSsoPage'));
+const AuditLogPage = lazyWithRetry(() => import('./pages/admin/AuditLogPage'));
+const DevelopersPage = lazyWithRetry(() => import('./pages/settings/DevelopersPage'));
 const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
 const KnowledgeEnginePage = lazyWithRetry(() => import('./pages/admin/KnowledgeEnginePage'));
@@ -182,6 +189,7 @@ const marketingAuthRoutes = (
     <Route path="/relegends" element={<OTPVerificationPage />} />
     <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
     <Route path="/privacy" element={<PrivacyPolicy />} />
+    <Route path="/terms" element={<TermsOfService />} />
     <Route path="/userdata" element={<UserDataDeletion />} />
   </>
 );
@@ -241,6 +249,9 @@ function App() {
           <Route path="/artist/:slug" element={<ArtistPublicProfile />} />
 
           <Route element={<ProtectedRoute />}>
+            <Route path="/org/pick" element={<OrgPickerPage />} />
+            <Route path="/org/create" element={<CreateOrganizationPage />} />
+            <Route path="/invites/:token/accept" element={<TenantInviteAcceptPage />} />
             <Route path="/artist-workspace/:id/accept" element={<ArtistMembershipAccept />} />
             <Route
               path="/artist-workspace/:id/*"
@@ -269,6 +280,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="settings" />}>
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/developers" element={<DevelopersPage />} />
               </Route>
 
               <Route element={<PageRoute page="logs" />}>
@@ -359,6 +371,7 @@ function App() {
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
                 <Route path="/admin/tenant-sso" element={<AdminTenantSsoPage />} />
+                <Route path="/admin/audit-log" element={<AuditLogPage />} />
               </Route>
               <Route element={<PageRoute page="admin_teams" />}>
                 <Route path="/admin/teams" element={<AdminTeamsPage />} />
@@ -391,6 +404,7 @@ function App() {
                   <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
                   <Route path="/emails/templates" element={<EmailsTemplatesPage />} />
                   <Route path="/emails/profiles" element={<EmailsProfilesPage />} />
+                  <Route path="/emails/streams" element={<EmailsStreamsPage />} />
                   <Route path="/emails/analytics" element={<EmailsAnalyticsPage />} />
                   <Route path="/emails/newsletter" element={<NewsletterPage />} />
                   <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />

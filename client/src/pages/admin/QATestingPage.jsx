@@ -1,3 +1,4 @@
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -542,8 +543,8 @@ const QATestingPage = () => {
     let text = 'QA Testing — Full Report\n';
     text += `${'='.repeat(48)}\n`;
     text += `Run: ${latestResults.testRunId || 'latest'}\n`;
-    if (latestResults.startedAt) text += `Started: ${new Date(latestResults.startedAt).toLocaleString()}\n`;
-    if (latestResults.completedAt) text += `Completed: ${new Date(latestResults.completedAt).toLocaleString()}\n`;
+    if (latestResults.startedAt) text += `Started: ${formatDisplayDateTime(latestResults.startedAt)}\n`;
+    if (latestResults.completedAt) text += `Completed: ${formatDisplayDateTime(latestResults.completedAt)}\n`;
     if (latestResults.duration != null) text += `Duration: ${Math.round(latestResults.duration / 1000)}s\n`;
     if (latestResults.testIdentity?.name) {
       text += `Agent: ${latestResults.testIdentity.name} (${latestResults.testIdentity.role})\n`;
@@ -811,7 +812,7 @@ const QATestingPage = () => {
         {report.baseUrl && (
           <p className="text-xs text-[var(--color-text-muted)]">
             Base URL: <code className="font-mono">{report.baseUrl}</code>
-            {report.generatedAt ? ` · ${new Date(report.generatedAt).toLocaleString()}` : ''}
+            {report.generatedAt ? ` · ${formatDisplayDateTime(report.generatedAt)}` : ''}
           </p>
         )}
 

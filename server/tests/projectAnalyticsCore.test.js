@@ -83,4 +83,35 @@ describe('projectAnalyticsCore', () => {
     expect(summaryRow.taskCompletionHours).toBe(0.5);
     expect(summaryRow.logCount).toBe(2);
   });
+
+  test('one assignment and one completion yields tasksCompleted 1', () => {
+    const logs = [
+      {
+        _id: 'b',
+        createdAt: '2026-06-11T10:00:00Z',
+        userId: 'u1',
+        targetType: 'Task',
+        targetId: 't1',
+        details: { type: 'TASK_COMPLETION', timeSpent: '1h', projectId: project._id },
+      },
+    ];
+    const filtered = logs.filter((l) => logMatchesProject(l, project, buildAnalyticsContext([project], [{ _id: 't1', projectId: project._id }])));
+    const { logs: deduped } = dedupeDailyLogs(filtered, getDateKey);
+
+    const effort = aggregateProjectEffort({
+      logs: deduped,
+      window,
+      getDateKey,
+      inRollingWindow,
+      tasks: [{ _id: 't1', status: 'done', completedAt: '2026-06-11', priority: 'high', plannedHours: 1 }],
+      assigneesByTask: new Map([['t1', ['u1']]]),
+      projectMemberIds: new Set(['u1']),
+      memberProfileById: new Map([['u1', { name: 'Test', avatar: '' }]]),
+      rangeStart,
+      rangeEnd,
+    });
+
+    expect(effort.summary.tasksCompleted).toBe(1);
+    expect(effort.byMember.find((m) => m.userId === 'u1')?.tasksCompleted).toBe(1);
+  });
 });

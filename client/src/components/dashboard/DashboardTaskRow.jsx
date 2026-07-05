@@ -1,7 +1,6 @@
 import React from 'react';
 import { Circle } from 'lucide-react';
 import { Badge, Skeleton } from '../ui';
-import { formatDueDate } from '../../utils/formatDueDate';
 import { formatDisplayDateShort } from '../../utils/dateDisplay';
 import { getTaskRowStyle } from '../../utils/workspaceColors';
 import { isTaskOverdue } from '../../utils/dashboardTasks';
@@ -30,9 +29,7 @@ const DashboardTaskRow = ({
 }) => {
   const overdue = isTaskOverdue(task);
   const dueDate = task.dueDate || task.scheduleDate;
-  const dueLabel = overdue
-    ? formatDisplayDateShort(dueDate, { emptyLabel: '—' })
-    : formatDueDate(dueDate, { emptyLabel: 'No date' });
+  const dueLabel = formatDisplayDateShort(dueDate, { emptyLabel: 'No date' });
   const priorityKey = String(task.priority || 'medium').toLowerCase();
   const priorityLabel = PRIORITY_SHORT[priorityKey] || priorityKey.slice(0, 3);
 

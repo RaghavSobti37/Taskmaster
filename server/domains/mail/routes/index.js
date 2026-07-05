@@ -6,5 +6,6 @@ router.use(require('./profilesRouter'));
 router.use(require('./campaignsRouter'));
 router.use(require('./analyticsRouter'));
 router.use(require('./holysheetRouter'));
+router.use(require('./streamsRouter'));
 
 module.exports = router;

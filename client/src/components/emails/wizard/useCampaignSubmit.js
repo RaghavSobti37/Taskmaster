@@ -22,6 +22,7 @@ export function buildCampaignPayloadFromForm(formValues, approvedTemplates, cust
     ...(senderMode === 'system_resend' ? {
       systemProvider: 'resend',
       resendFromEmail: formValues.resendFromEmail?.trim().toLowerCase(),
+      emailStreamSlug: formValues.emailStreamSlug?.trim().toLowerCase(),
     } : {}),
     includeSignature: formValues.includeSignature,
     signature: formValues.includeSignature ? (formValues.signature || '').trim() : '',

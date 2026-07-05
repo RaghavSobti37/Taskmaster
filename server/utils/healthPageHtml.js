@@ -4,6 +4,7 @@ const { config } = require('../config');
 const { getSnapshot: getRequestMetrics } = require('./healthRequestMetrics');
 const { getRecent, syncProbeEvents } = require('./healthEventLog');
 const { getRuntimeSnapshot } = require('./healthRuntimeMetrics');
+const { formatDisplayDateTime } = require('../../shared/dateDisplay');
 
 const PKG_VERSION = (() => {
   try {
@@ -48,14 +49,7 @@ function formatUptime(seconds) {
 
 function formatStartedAt(uptimeSeconds) {
   const started = new Date(Date.now() - uptimeSeconds * 1000);
-  return started.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  return formatDisplayDateTime(started);
 }
 
 function depStatus(ok, state) {

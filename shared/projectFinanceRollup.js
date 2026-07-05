@@ -79,11 +79,29 @@ const financeDocAnalyticsStatus = (doc) => {
   return 'unverified';
 };
 
-const convertToBaseInr = (amount, currency) => {
+const convertToBaseInr = (amount, currency, storedRate = null) => {
   const code = (currency || 'INR').toUpperCase();
-  const rate = FX_TO_INR[code];
+  const rate = storedRate != null && Number.isFinite(Number(storedRate))
+    ? Number(storedRate)
+    : FX_TO_INR[code];
   if (!rate) return { baseAmount: null, currency: code };
   return { baseAmount: amount * rate, currency: code };
+};
+
+/** Snapshot FX at write time so historical rollups do not shift when rates change. */
+const snapshotFxMetadata = (metadata = {}) => {
+  const currency = docCurrency({ metadata });
+  const baseCurrency = 'INR';
+  const conversionRate = currency === baseCurrency
+    ? 1
+    : (FX_TO_INR[currency] ?? null);
+  return {
+    ...metadata,
+    currency,
+    baseCurrency,
+    conversionRate,
+    conversionRateCapturedAt: new Date().toISOString(),
+  };
 };
 
 const ensureCategorySpend = (row, category) => {
@@ -125,7 +143,8 @@ const applyFinanceDoc = (row, doc, rangeStart, rangeEnd) => {
   const category = doc.category || 'other';
   const inRange = inDateRange(doc, rangeStart, rangeEnd);
   const currency = docCurrency(doc);
-  const { baseAmount } = convertToBaseInr(amount, currency);
+  const storedRate = doc?.metadata?.conversionRate;
+  const { baseAmount } = convertToBaseInr(amount, currency, storedRate);
 
   if (BUDGET_CATEGORIES.has(category)) {
     row.hasBudget = true;
@@ -199,7 +218,7 @@ const mapFinanceDocForAnalytics = (doc, rangeStart, rangeEnd) => {
   const status = financeDocAnalyticsStatus(doc);
   const currency = docCurrency(doc);
   const amount = docAmount(doc);
-  const { baseAmount } = convertToBaseInr(amount, currency);
+  const { baseAmount } = convertToBaseInr(amount, currency, doc?.metadata?.conversionRate);
   return {
     _id: doc._id,
     title: doc.title || 'Untitled',
@@ -240,4 +259,5 @@ module.exports = {
   docEffectiveDate,
   inDateRange,
   convertToBaseInr,
+  snapshotFxMetadata,
 };

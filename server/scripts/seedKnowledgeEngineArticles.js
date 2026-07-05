@@ -9,23 +9,28 @@ const { buildCanonicalUrl } = require('../domains/knowledge-engine/utils/content
 
 const LEGACY_POSTS = [
   {
+    title: 'How Do I Start Making Music if I Have No Experience?',
+    slug: 'how-to-start-making-music-no-experience',
+    excerpt:
+      'A lot of people feel drawn to music but do not know where to begin. Start with why you want to connect with music — then listen deeply before you try to create.',
+    heroImageUrl: '/assets/blog/how-to-start-making-music-no-experience.png',
+    mediumUrl: 'https://rohitsobti1.medium.com/how-do-i-start-making-music-if-i-have-no-experience-9c42a7409cd5',
+    bodyMarkdown:
+      'Before asking how to make music, ask why you want to connect with music. Your first teacher is deep listening — notice what moves you before you try to create.',
+  },
+  {
     title: 'Is an Online Music Course Worth It for Beginners?',
     slug: 'online-music-course-beginners',
     excerpt: 'Yes — but not for every beginner. When online music courses work, what makes them worth it, and who should join one.',
     heroImageUrl: '/assets/blog/online-music-course-beginners.png',
-    readTimeMinutes: 7,
-    authorName: 'Rohit Sobti',
-    publishedAt: new Date('2026-06-27'),
+    mediumUrl: 'https://rohitsobti1.medium.com/is-an-online-music-course-worth-it-for-beginners-1d343de7f532',
     bodyMarkdown: 'Short answer: Yes — but not for every beginner.\n\nAn online music course can be deeply worth it for someone who truly loves music and is willing to practise seriously.',
   },
   {
     title: 'The Artist Release Playbook',
     slug: 'artist-release-playbook',
     excerpt: 'How to release your music without it getting lost. Pre-release, release day, and post-release strategies.',
-    heroImageUrl: '/assets/Patterns/LogoArtboard 17@300x-8.png',
-    readTimeMinutes: 6,
-    publishedAt: new Date('2026-05-02'),
-    bodyMarkdown: 'Releasing music is a system, not a single day. This playbook covers what to do before, during, and after your release.',
+    heroImageUrl: '/assets/blog/artist-release-playbook.png',
   },
   {
     title: 'Breathing Techniques & Vocal Texture',

@@ -10,8 +10,8 @@
     "preview": {
       "MONGODB_URI": "@local-mongodb-uri",
       "DATABASE_ENVIRONMENT": "preview",
-      "VITE_API_URL": "https://coreknot-api-staging.onrender.com",
-      "RENDER_API_PROXY_URL": "https://coreknot-api-staging.onrender.com"
+      "VITE_API_URL": "https://YOUR-PRODUCTION-API.onrender.com",
+      "RENDER_API_PROXY_URL": "https://YOUR-PRODUCTION-API.onrender.com"
     },
     "production": {
       "MONGODB_URI": "@prod-mongodb-uri",

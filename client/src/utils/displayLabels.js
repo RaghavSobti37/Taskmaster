@@ -3,6 +3,7 @@ import { DATETIME_DISPLAY_SECONDS_FORMAT } from './dateDisplay';
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../constants/taskOptions';
 
 const TIMEFRAME_LABELS = {
+  all: 'all time',
   '1d': '1 day',
   '7d': '7 days',
   '30d': '30 days',

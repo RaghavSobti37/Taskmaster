@@ -254,7 +254,7 @@ exports.create = async (req, res) => {
   try {
     const {
       title, subject, content, senderProfileId, senderMode, senderProfileIds,
-      systemProvider, resendFromEmail, includeSignature, signature, attachments, eventTag, leadIds, customRecipients,
+      systemProvider, resendFromEmail, emailStreamSlug, includeSignature, signature, attachments, eventTag, leadIds, customRecipients,
       removeUnsubscribe, variableFallbacks, mailTemplateId, variableMapping,
       action,
     } = req.body;
@@ -335,6 +335,7 @@ exports.create = async (req, res) => {
     const skippedInvalidCount = allRecipients.filter((r) => r.status === 'Invalid').length;
 
     const { isVerifiedResendEmail } = require('../../../utils/resendFromEmails');
+    const { validateFromEmailForStream } = require('../../../services/emailStreamService');
     const mode = senderMode || 'single';
     if (mode === 'single' && !senderProfileId) {
       return res.status(400).json({ error: 'senderProfileId required for single sender mode' });
@@ -342,11 +343,14 @@ exports.create = async (req, res) => {
     if (mode === 'pool' && (!senderProfileIds || senderProfileIds.length === 0)) {
       return res.status(400).json({ error: 'At least one profile required for pool mode' });
     }
+    let resolvedStreamSlug = (emailStreamSlug || '').trim().toLowerCase() || null;
     if (mode === 'system_resend') {
       const from = (resendFromEmail || '').trim().toLowerCase();
-      if (!from || !isVerifiedResendEmail(from)) {
-        return res.status(400).json({ error: 'resendFromEmail required — pick a @theshakticollective.in address' });
+      const streamCheck = await validateFromEmailForStream(from, resolvedStreamSlug);
+      if (!streamCheck.ok) {
+        return res.status(400).json({ error: streamCheck.error || 'Invalid from address for stream' });
       }
+      resolvedStreamSlug = streamCheck.streamSlug || streamCheck.stream?.slug || resolvedStreamSlug;
     }
 
     const campaignPayload = {
@@ -382,6 +386,9 @@ exports.create = async (req, res) => {
     }
     if (mode === 'system_resend' && resendFromEmail) {
       campaignPayload.resendFromEmail = resendFromEmail.trim().toLowerCase();
+    }
+    if (mode === 'system_resend' && resolvedStreamSlug) {
+      campaignPayload.emailStreamSlug = resolvedStreamSlug;
     }
     if (variableFallbacks && typeof variableFallbacks === 'object') {
       campaignPayload.variableFallbacks = variableFallbacks;

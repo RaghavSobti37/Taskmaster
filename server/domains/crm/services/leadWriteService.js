@@ -235,6 +235,22 @@ async function runPostCreateLeadSideEffects(lead, user) {
   }
 
   try {
+    const { emitTenantEvent } = require('../../../services/enterpriseWebhook');
+    emitTenantEvent(lead.tenantId, 'lead.created', {
+      id: String(lead._id),
+      name: lead.name,
+      email: lead.email,
+      source: lead.source,
+      leadStatus: lead.leadStatus,
+    });
+  } catch (err) {
+    logger.error('leadWriteService', 'webhook after lead create', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+
+  try {
     const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
       userId: user._id,
       lead: { _id: lead._id },

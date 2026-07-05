@@ -40,7 +40,8 @@ describe('CI production readiness smoke', () => {
   it('render.yaml defines health check', () => {
     const yaml = fs.readFileSync(path.join(repoRoot, 'render.yaml'), 'utf8');
     expect(yaml).toContain('healthCheckPath: /api/health');
-    expect(yaml).toContain('coreknot-api-staging');
+    expect(yaml).toContain('CoreKnot-api');
+    expect(yaml).not.toContain('coreknot-api-staging');
   });
 
   it('rollback runbook exists', () => {

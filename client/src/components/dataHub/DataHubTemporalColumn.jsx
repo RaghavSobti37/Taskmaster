@@ -1,19 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
+import { formatDisplayDateTimeSeconds } from '../../utils/dateDisplay';
 
 function formatTimestamp(value) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return formatDisplayDateTimeSeconds(value);
 }
 
 export default function DataHubTemporalColumn({ value, label = 'Updated' }) {

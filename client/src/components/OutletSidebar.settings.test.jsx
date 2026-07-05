@@ -38,6 +38,10 @@ vi.mock('../hooks/useBreakpoint', () => ({
   useIsMobile: () => mockUseIsMobile(),
 }));
 
+vi.mock('./org/OrgSwitcher', () => ({
+  default: () => null,
+}));
+
 function SettingsStub() {
   return <h1>Settings page</h1>;
 }

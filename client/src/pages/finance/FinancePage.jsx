@@ -28,6 +28,7 @@ import { FINANCE_TABLE_PROPS } from '../../components/finance/financeHubTableCla
 import { FINANCE_CATEGORIES, buildFinanceTableRows, formatFinanceBytes } from '../../utils/financeDisplay';
 import { NexusModal } from '../../components/ui/modals';;
 import { useConfirm } from '../../contexts/confirmContext';
+import { ESCAPE_OVERLAY_PROPS } from '../../lib/escapeBack';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
@@ -458,10 +459,14 @@ const FinancePage = () => {
     const handleKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       if (selectedDoc) {
+        e.preventDefault();
         handleCloseDocPanel();
         return;
       }
-      if (currentFolderId) goToProjectRoot();
+      if (currentFolderId) {
+        e.preventDefault();
+        goToProjectRoot();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -948,6 +953,7 @@ const FinancePage = () => {
       <AnimatePresence>
         {selectedDoc && (
           <motion.div
+            {...ESCAPE_OVERLAY_PROPS}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

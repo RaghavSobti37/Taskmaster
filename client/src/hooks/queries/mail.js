@@ -334,3 +334,50 @@ export const useCampaignDataHubAudience = (params = {}, options = {}) => useQuer
   staleTime: 1000 * 60 * 2,
   placeholderData: keepPreviousData,
 });
+
+export const useEmailStreams = (enabled = true) => useQuery({
+  queryKey: ['mail', 'streams'],
+  queryFn: async () => (await axios.get('/api/mail/streams')).data,
+  enabled,
+  staleTime: 1000 * 60 * 10,
+});
+
+export const usePublicEmailStreams = (enabled = true) => useQuery({
+  queryKey: ['mail', 'streams', 'public'],
+  queryFn: async () => (await axios.get('/api/track/email-streams')).data,
+  enabled,
+  staleTime: 1000 * 60 * 30,
+});
+
+export const useCreateEmailStream = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/mail/streams', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams', 'public'] });
+    },
+  });
+};
+
+export const useUpdateEmailStream = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) => axios.put(`/api/mail/streams/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams', 'public'] });
+    },
+  });
+};
+
+export const useDeleteEmailStream = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/mail/streams/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'streams', 'public'] });
+    },
+  });
+};

@@ -16,8 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 const RENDER_SERVICES = [
-  { id: 'srv-d37a5m1r0fns739brt40', name: 'CoreKnot-api' },
-  { id: 'srv-d8vm9flaeets73d7l6r0', name: 'coreknot-api-staging' },
+  { id: 'srv-d37a5m1r0fns739brt40', name: 'Taskmaster' },
 ];
 
 const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID || 'prj_eASJORRbLiL9HPDNvkaA7ZNhwhgu';

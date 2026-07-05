@@ -9,6 +9,7 @@ const {
   register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, clerkEstablishSession, forgotPassword, resetPassword,
   listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions,
+  mfaSetup, mfaConfirm, mfaDisable,
 } = require('./controllers/authController');
 const {
   registerOptions, registerVerify, loginOptions,
@@ -76,7 +77,7 @@ router.post('/login', authLoginLimiter, validateBody(loginBody), login);
 router.post('/forgot-password', authForgotPasswordLimiter, validateBody(forgotPasswordBody), forgotPassword);
 router.post('/reset-password', authForgotPasswordLimiter, validateBody(resetPasswordBody), resetPassword);
 router.post('/logout', logout);
-router.post('/google-login', googleLogin);
+router.post('/google-login', authLoginLimiter, googleLogin);
 router.post('/oauth-establish', authLoginLimiter, validateBody(oauthEstablishBody), oauthEstablishSession);
 router.post('/clerk-establish', clerkEstablishLimiter, validateBody(clerkEstablishBody), clerkEstablishSession);
 router.get('/google/redirect-uri', (req, res) => {
@@ -93,6 +94,9 @@ router.get('/sessions', protect, listSessions);
 router.delete('/sessions/:jti', protect, revokeSession);
 router.post('/sessions/revoke-others', protect, revokeOtherSessions);
 router.post('/change-required-password', protect, validateBody(changeRequiredPasswordBody), changeRequiredPassword);
+router.post('/mfa/setup', protect, mfaSetup);
+router.post('/mfa/confirm', protect, mfaConfirm);
+router.post('/mfa/disable', protect, mfaDisable);
 
 router.post('/webauthn/register/options', protect, registerOptions);
 router.post('/webauthn/register/verify', protect, registerVerify);

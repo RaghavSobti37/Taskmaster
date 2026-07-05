@@ -7,6 +7,9 @@ export const getRollingRangeBounds = () => {
   return { min, max, defaultStart: format(subDays(new Date(), 29), 'yyyy-MM-dd'), defaultEnd: max };
 };
 
+export const isAllTimeRange = (rangeMode, timeframe) =>
+  rangeMode === 'preset' && timeframe === 'all';
+
 export const buildProjectRangeParams = (rangeMode, timeframe, customStart, customEnd) => {
   if (rangeMode === 'custom' && customStart && customEnd) {
     return { startDate: customStart, endDate: customEnd };
@@ -25,5 +28,6 @@ export const formatProjectRangeSubtitle = (rangeMode, timeframe, window) => {
   if (!window?.start || !window?.end) return null;
   const dates = `${window.start} → ${window.end}`;
   if (rangeMode === 'custom') return `Custom range · ${dates}`;
+  if (timeframe === 'all') return `All time · ${dates}`;
   return `Last ${formatTimeframeLabel(timeframe)} · ${dates}`;
 };

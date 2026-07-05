@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
 import { DataTable, Button, Badge } from '../../components/ui/primitives';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -72,7 +73,7 @@ function formatLastSynced(date) {
   if (diff < 60 * 1000) return 'Just now';
   if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 3600000)}h ago`;
-  return new Date(date).toLocaleString();
+  return formatDisplayDateTime(date);
 }
 
 function formatBytes(bytes) {

@@ -6,6 +6,7 @@ const {
   rollupFinanceByProject,
   SPEND_TRACK_CATEGORIES,
   mapFinanceDocForAnalytics,
+  snapshotFxMetadata,
 } = require('../../../../shared/projectFinanceRollup');
 const {
   buildAnalyticsContext,
@@ -510,10 +511,26 @@ const buildProjectsAnalyticsSummary = async (user, rangeQuery = {}) => {
   };
 };
 
+const buildProjectHoursSummary = async (project) => {
+  const window = resolveRollingRange({ timeframe: '3650d' });
+  const report = await buildAnalyticsForProject(project, window, new Map(), 'summary');
+  const s = report.summary || {};
+  return {
+    projectId: project._id,
+    projectName: project.name,
+    taskHours: s.taskCompletionHours ?? 0,
+    plannedHours: s.plannedHours ?? 0,
+    manualLogHours: s.manualLogHours ?? 0,
+    totalHours: s.totalHours ?? 0,
+    budgetSource: project.budgetSource || 'tracked',
+  };
+};
+
 module.exports = {
   buildProjectAnalytics,
   buildProjectsAnalyticsSummary,
   buildAnalyticsForProject,
+  buildProjectHoursSummary,
   processProjectAnalytics,
   logMatchesProject,
   canAccessProject,

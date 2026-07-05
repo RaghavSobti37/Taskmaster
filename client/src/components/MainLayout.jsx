@@ -49,6 +49,7 @@ function MainRouteSuspenseFallback() {
 
 const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
 const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
+const CookieConsentBanner = lazyWithRetry(() => import('./legal/CookieConsentBanner'));
 const NotificationBridge = lazyWithRetry(() => import('./NotificationBridge'));
 const MobileAppShell = lazyWithRetry(() => import('./mobile/MobileAppShell'));
 const ProfileCompletionAlerts = lazyWithRetry(() => import('./ProfileCompletionAlerts'));
@@ -97,6 +98,7 @@ const MainLayout = () => {
         <CommandPalette />
         <NotificationBridge />
         <PwaInstallBanner />
+        <CookieConsentBanner />
         <QuickAddMenu />
         <BottomNavigation />
         <FlashHighlightListener />

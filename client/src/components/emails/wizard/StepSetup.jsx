@@ -4,12 +4,14 @@ import { Mail, Zap } from 'lucide-react';
 import { Input } from '../../ui';
 import { formatProfileResetTime } from '../../admin/MailProfilesPanel';
 import ResendFromEmailPicker from '../ResendFromEmailPicker';
+import { ROOT_DOMAIN } from '../../../constants/resendFromEmails';
 
 export default function StepSetup({ profiles = [] }) {
   const { register, watch, setValue } = useFormContext();
   const senderMode = watch('senderMode');
   const senderProfileId = watch('senderProfileId');
   const resendFromEmail = watch('resendFromEmail');
+  const emailStreamSlug = watch('emailStreamSlug');
 
   return (
     <div className="space-y-6 animate-in fade-in">
@@ -38,7 +40,7 @@ export default function StepSetup({ profiles = [] }) {
               <p className="font-semibold text-sm">Resend</p>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              API key on server. Pick a verified <strong>theshakticollective.in</strong> from address below.
+              API key on server. Pick a sending stream (subdomain) and from address on <strong>{ROOT_DOMAIN}</strong>.
             </p>
           </button>
           <button
@@ -65,6 +67,8 @@ export default function StepSetup({ profiles = [] }) {
         <ResendFromEmailPicker
           value={resendFromEmail}
           onChange={(email) => setValue('resendFromEmail', email, { shouldValidate: true })}
+          streamSlug={emailStreamSlug}
+          onStreamChange={(slug) => setValue('emailStreamSlug', slug, { shouldValidate: true })}
         />
       )}
 

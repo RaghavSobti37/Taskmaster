@@ -40,7 +40,8 @@ const buildContentSecurityPolicy = ({ isPreview = false } = {}) => {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' https: wss:",
-    `frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
+    // ponytail: blob: for FinanceDocumentPreview PDF iframe (object URL from axios fetch)
+    `frame-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
     "worker-src 'self' blob:",
   ];
 

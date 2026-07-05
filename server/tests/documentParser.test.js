@@ -90,6 +90,84 @@ describe('documentParser metadata extraction', () => {
     expect(meta.amount).toBe(12000);
     expect(meta.vendor.toLowerCase()).toContain('mukund');
     expect(meta.detectedCategory).toBe('invoice');
+    expect(meta.date?.toISOString().slice(0, 10)).toBe('2024-03-15');
+  });
+
+  it('prefers payment date over due date', () => {
+    const { extractPaymentDateFromText } = require('../utils/documentParser');
+    const text = `
+      TAX INVOICE
+      Due Date: 30/04/2024
+      Payment Date: 15/03/2024
+    `;
+    expect(extractPaymentDateFromText(text)?.toISOString().slice(0, 10)).toBe('2024-03-15');
+  });
+
+  it('parses dotted and month-name dates', () => {
+    const { parseDateValue, extractPaymentDateFromText } = require('../utils/documentParser');
+    expect(parseDateValue('15.03.2024')?.toISOString().slice(0, 10)).toBe('2024-03-15');
+    expect(extractPaymentDateFromText('Invoice Date  March 15, 2024')?.toISOString().slice(0, 10)).toBe('2024-03-15');
+  });
+
+  it('parses YYMMDD chunks embedded in invoice filenames', () => {
+    const { extractPaymentDateFromFilename } = require('../utils/documentParser');
+    expect(
+      extractPaymentDateFromFilename('Bill No507 Shakti Collective LLP_260302_093200 (1)')?.toISOString().slice(0, 10),
+    ).toBe('2026-03-02');
+    expect(
+      extractPaymentDateFromFilename('P3P-2025-26-0111, Shakti Collective LLP')?.toISOString().slice(0, 10),
+    ).toBe('2026-01-11');
+  });
+
+  it('extracts payment date from WhatsApp image filename', () => {
+    const { extractPaymentDateFromFilename } = require('../utils/documentParser');
+    expect(
+      extractPaymentDateFromFilename('WhatsApp Image 2026 04 07 at 2.05.18 PM')?.toISOString().slice(0, 10),
+    ).toBe('2026-04-07');
+  });
+
+  it('extracts month-day from filename with upload year fallback', () => {
+    const { extractPaymentDateFromFilename } = require('../utils/documentParser');
+    expect(
+      extractPaymentDateFromFilename('779989458 13 may mum to nasik', 2025)?.toISOString().slice(0, 10),
+    ).toBe('2025-05-13');
+  });
+
+  it('parses DD-Mon-YY and DD-MM-YY Indian invoice formats', () => {
+    const { parseDateValue, extractPaymentDateFromText } = require('../utils/documentParser');
+    expect(parseDateValue('19-Feb-26')?.toISOString().slice(0, 10)).toBe('2026-02-19');
+    expect(parseDateValue('26-Dec-25')?.toISOString().slice(0, 10)).toBe('2025-12-26');
+    expect(parseDateValue('19-03-26')?.toISOString().slice(0, 10)).toBe('2026-03-19');
+    expect(parseDateValue('01-Apr-2025')?.toISOString().slice(0, 10)).toBe('2025-04-01');
+
+    const tallyInvoice = `
+      Reference No. & Date.
+      Dated
+      19-Feb-26
+      Delivery Note Date
+    `;
+    expect(extractPaymentDateFromText(tallyInvoice)?.toISOString().slice(0, 10)).toBe('2026-02-19');
+
+    expect(extractPaymentDateFromText('Date 19-03-26')?.toISOString().slice(0, 10)).toBe('2026-03-19');
+  });
+
+  it('parses IRCTC booking date and Uber M/D/YY receipts', () => {
+    const { extractPaymentDateFromText } = require('../utils/documentParser');
+    const irctc = `
+      Quota Distance Booking Date
+      GENERAL (GN) 1537 KM 29-Mar-2025 22:06:24 HRS
+    `;
+    expect(extractPaymentDateFromText(irctc)?.toISOString().slice(0, 10)).toBe('2025-03-29');
+    expect(extractPaymentDateFromText('(2 4/5/26 2:17 am')?.toISOString().slice(0, 10)).toBe('2026-05-04');
+  });
+
+  it('ignores phone-like numeric lines when picking inline dates', () => {
+    const { extractPaymentDateFromText } = require('../utils/documentParser');
+    const text = `
+      Mobile: 9876543210
+      Invoice Date: 02/01/2024
+    `;
+    expect(extractPaymentDateFromText(text)?.toISOString().slice(0, 10)).toBe('2024-01-02');
   });
 
   it('does not treat entrepreneur substring as EUR', () => {

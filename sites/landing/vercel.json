@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "dev": false
+    }
+  },
   "buildCommand": "cd ../../client && npm run vercel-build:landing",
   "outputDirectory": "../../client/dist",
   "installCommand": "cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js",
@@ -96,7 +101,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com https://tsccoreknot.com https://www.tsccoreknot.com https://auth.tsccoreknot.com https://landing.tsccoreknot.com https://accounts.google.com https://*.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://accounts.google.com https://*.google.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://accounts.google.com https://*.google.com; worker-src 'self' blob:; manifest-src 'self' https://vercel.live https://vercel.com https://*.vercel.app"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com https://tsccoreknot.com https://www.tsccoreknot.com https://auth.tsccoreknot.com https://landing.tsccoreknot.com https://accounts.google.com https://*.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://accounts.google.com https://*.google.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://accounts.google.com https://*.google.com; worker-src 'self' blob:"
         }
       ]
     },

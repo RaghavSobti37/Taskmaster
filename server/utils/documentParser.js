@@ -6,6 +6,12 @@ const MONTHS = {
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
 };
 
+const expandTwoDigitYear = (yy) => {
+  const n = Number(yy);
+  if (!Number.isFinite(n)) return null;
+  return n >= 50 ? 1900 + n : 2000 + n;
+};
+
 const dateFromParts = (year, month, day) => {
   if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
   const dt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
@@ -20,26 +26,276 @@ const dateFromParts = (year, month, day) => {
  */
 function parseDateValue(raw) {
   if (!raw) return null;
-  const text = String(raw).trim().replace(/\s+/g, ' ');
+  let text = String(raw).trim().replace(/\s+/g, ' ');
   if (!text) return null;
 
-  let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  // Normalize OCR quirks: "19/02/ 2026", "26/02, 2026", "25th Feb, 2026"
+  text = text.replace(/(\d{1,2}[\/.\-]\d{1,2})[,\/\s]+(\d{2,4})\b/, '$1/$2');
+  text = text.replace(/((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*),?\s+(\d{4})/i, '$1 $2');
+  text = text.replace(/\s*\/\s*/g, '/');
+
+  // Extract first date-like token from noisy OCR captures (e.g. "Date: 15/03/2024 GST")
+  const tokenMatch = text.match(
+    /(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{4}|\d{1,2}\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\/\d{2,4}|\d{1,2}-(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*-\d{2,4}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*,?\s*\d{4}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2}|\d{1,2}\/\d{1,2}\/\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/i,
+  );
+  const candidate = tokenMatch ? tokenMatch[1].replace(/,\s*/, ' ') : text;
+
+  let match = candidate.match(/^(\d{1,2})\/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\/(\d{2,4})$/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const yearRaw = match[3];
+    const year = yearRaw.length === 2 ? expandTwoDigitYear(yearRaw) : Number(yearRaw);
+    return dateFromParts(year, month, Number(match[1]));
+  }
+
+  match = candidate.match(/^(\d{1,2})-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*-(\d{2,4})$/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const yearRaw = match[3];
+    const year = yearRaw.length === 2 ? expandTwoDigitYear(yearRaw) : Number(yearRaw);
+    return dateFromParts(year, month, Number(match[1]));
+  }
+
+  match = candidate.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (match) {
+    const a = Number(match[1]);
+    const b = Number(match[2]);
+    const year = Number(match[3]);
+    if (b > 12) {
+      return dateFromParts(year, a, b);
+    }
+    return dateFromParts(year, b, a);
+  }
+
+  match = candidate.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2})$/);
+  if (match) {
+    const year = expandTwoDigitYear(match[3]);
+    return dateFromParts(year, Number(match[2]), Number(match[1]));
+  }
+
+  match = candidate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (match) {
+    const year = expandTwoDigitYear(match[3]);
+    return dateFromParts(year, Number(match[1]), Number(match[2]));
+  }
+
+  match = candidate.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (match) {
     return dateFromParts(Number(match[1]), Number(match[2]), Number(match[3]));
   }
 
-  match = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  match = candidate.match(/^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})$/i);
   if (match) {
-    return dateFromParts(Number(match[3]), Number(match[2]), Number(match[1]));
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    return dateFromParts(Number(match[3]), month, Number(match[1]));
   }
 
-  match = text.match(/^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})$/i);
+  match = candidate.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})$/i);
+  if (match) {
+    const month = MONTHS[match[1].slice(0, 3).toLowerCase()];
+    return dateFromParts(Number(match[3]), month, Number(match[2]));
+  }
+
+  match = candidate.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*,?\s*(\d{4})$/i);
   if (match) {
     const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
     return dateFromParts(Number(match[3]), month, Number(match[1]));
   }
 
   return null;
+}
+
+const LABELED_DATE_PATTERNS = [
+  { re: /\bpayment\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 100 },
+  { re: /\bissue\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 91 },
+  { re: /\b(?:paid|pay)\s+(?:on|date)\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 95 },
+  { re: /\b(?:invoice|bill|tax\s+invoice)\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 92 },
+  { re: /\btransaction\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 88 },
+  { re: /\b(?:receipt|voucher)\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 86 },
+  { re: /\b(?:date|dated|dt\.?)\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 78 },
+  { re: /\bdue\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 42 },
+];
+
+const INLINE_DATE_PATTERNS = [
+  /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/g,
+  /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})\b/g,
+  /\b(\d{1,2}-(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*-\d{2,4})\b/gi,
+  /\b(\d{1,2}\/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\/\d{2,4})\b/gi,
+  /\b(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b/gi,
+  /\b((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/gi,
+  /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2})\b/g,
+  /\b(\d{1,2}\/\d{1,2}\/\d{2})\b/g,
+];
+
+const NEXT_LINE_DATE_LABEL = /^(?:dated|date|invoice\s+date|bill\s+date)\s*:?\s*$/i;
+const BOOKING_DATE_LINE = /\bbooking\s+date\b/i;
+
+function extractPaymentDateFromFilename(rawName, fallbackYear = new Date().getUTCFullYear()) {
+  const name = String(rawName || '').trim();
+  if (!name) return null;
+
+  const tryYmd = (year, month, day) => dateFromParts(year, month, day) || null;
+
+  let match = name.match(/\b(\d{1,2})[-.](\d{1,2})[-.](\d{4})\b/);
+  if (match) {
+    const dt = tryYmd(Number(match[3]), Number(match[2]), Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{4})[\s._-](\d{1,2})[\s._-](\d{1,2})\b/);
+  if (match) {
+    const dt = tryYmd(Number(match[1]), Number(match[2]), Number(match[3]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{1,2})(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(\d{4})\b/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const dt = tryYmd(Number(match[3]), month, Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\breceipt[\s._-]*(\d{1,2})(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(\d{4})\b/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const dt = tryYmd(Number(match[3]), month, Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const year = Number(fallbackYear) || new Date().getUTCFullYear();
+    const dt = tryYmd(year, month, Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    const year = Number(fallbackYear) || new Date().getUTCFullYear();
+    const dt = tryYmd(year, month, Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{2})\s+(\d{2})\s+(\d{4})\b/);
+  if (match) {
+    const dt = tryYmd(Number(match[3]), Number(match[2]), Number(match[1]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/_(\d{2})(\d{2})(\d{2})_\d{4,6}/i);
+  if (match) {
+    const dt = tryYmd(2000 + Number(match[1]), Number(match[2]), Number(match[3]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/_(\d{2})(\d{2})(\d{2})(?:_|\.pdf|$)/i);
+  if (match) {
+    const dt = tryYmd(2000 + Number(match[1]), Number(match[2]), Number(match[3]));
+    if (dt) return dt;
+  }
+
+  match = name.match(/\b(\d{4})-(\d{2})-(\d{4})\b/);
+  if (match) {
+    const tail = match[3];
+    if (tail.length === 4 && tail.startsWith('0')) {
+      const month = Number(tail.slice(0, 2));
+      const day = Number(tail.slice(2, 4));
+      const year = Number(match[2]) < 80 ? 2000 + Number(match[2]) : Number(match[1]);
+      const dt = tryYmd(year, month, day);
+      if (dt) return dt;
+    }
+  }
+
+  return null;
+}
+
+function isPlausiblePaymentYear(year) {
+  const y = Number(year);
+  return Number.isFinite(y) && y >= 2005 && y <= new Date().getFullYear() + 1;
+}
+
+function scoreInlineDateContext(line, index) {
+  const lower = line.toLowerCase();
+  let score = 30;
+  if (/(?:invoice|bill|receipt|payment|transaction|dated|date)/i.test(lower)) score += 25;
+  if (/(?:start\s+date|departure|arrival)/i.test(lower)) score -= 45;
+  if (/\bbooking\s+date\b/i.test(lower)) score += 35;
+  if (/(?:gstin|pan|phone|mobile|account|ifsc|invoice\s*no|bill\s*no|#)/i.test(lower)) score -= 35;
+  if (index < 25) score += 10;
+  return score;
+}
+
+/**
+ * Score labeled + inline dates; prefer payment/invoice date lines over random numbers.
+ */
+function extractPaymentDateFromText(text) {
+  if (!text) return null;
+
+  const candidates = [];
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    for (const { re, score } of LABELED_DATE_PATTERNS) {
+      re.lastIndex = 0;
+      let match;
+      while ((match = re.exec(line)) !== null) {
+        const parsed = parseDateValue(match[1]);
+        if (parsed && isPlausiblePaymentYear(parsed.getUTCFullYear())) {
+          candidates.push({ date: parsed, score });
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    const line = lines[i].trim();
+    if (!NEXT_LINE_DATE_LABEL.test(line) && !BOOKING_DATE_LINE.test(line)) continue;
+    const next = lines[i + 1].trim();
+    const parsed = parseDateValue(next);
+    if (parsed && isPlausiblePaymentYear(parsed.getUTCFullYear())) {
+      candidates.push({ date: parsed, score: BOOKING_DATE_LINE.test(line) ? 94 : 96 });
+    }
+  }
+
+  const FORWARD_DATE_LABEL = /\b(?:invoice|bill|tax\s+invoice)\s+date\b\s*:?\s*$/i;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!FORWARD_DATE_LABEL.test(lines[i].trim())) continue;
+    for (let j = i + 1; j < Math.min(i + 6, lines.length); j += 1) {
+      const parsed = parseDateValue(lines[j]);
+      if (parsed && isPlausiblePaymentYear(parsed.getUTCFullYear())) {
+        candidates.push({ date: parsed, score: 93 });
+        break;
+      }
+    }
+  }
+
+  // IRCTC / travel tickets: "Booking Date ... DD-Mon-YYYY"
+  const bookingMatch = text.match(/\bbooking\s+date\b[^0-9a-z]{0,12}(\d{1,2}-(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*-\d{4})/i);
+  if (bookingMatch) {
+    const parsed = parseDateValue(bookingMatch[1]);
+    if (parsed && isPlausiblePaymentYear(parsed.getUTCFullYear())) {
+      candidates.push({ date: parsed, score: 90 });
+    }
+  }
+
+  lines.forEach((line, index) => {
+    for (const pattern of INLINE_DATE_PATTERNS) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(line)) !== null) {
+        const parsed = parseDateValue(match[1]);
+        if (parsed && isPlausiblePaymentYear(parsed.getUTCFullYear())) {
+          candidates.push({ date: parsed, score: scoreInlineDateContext(line, index) });
+        }
+      }
+    }
+  });
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].date;
 }
 
 /**
@@ -176,7 +432,7 @@ function extractVendorFromText(text) {
 /**
  * Regular expression parsing to extract receipt/invoice metadata from text.
  */
-function parseMetadataFromText(text) {
+function parseMetadataFromText(text, context = {}) {
   const metadata = {
     amount: 0,
     currency: 'INR',
@@ -186,10 +442,20 @@ function parseMetadataFromText(text) {
     detectedCategory: 'other'
   };
 
-  if (!text) return metadata;
+  const body = String(text || '').trim();
+  if (!body) {
+    const fallbackYear = context.createdAt
+      ? new Date(context.createdAt).getUTCFullYear()
+      : new Date().getUTCFullYear();
+    metadata.date = extractPaymentDateFromFilename(
+      [context.title, context.fileName].filter(Boolean).join(' '),
+      fallbackYear,
+    );
+    return metadata;
+  }
 
   // 1. Detect Category
-  const lowerText = text.toLowerCase();
+  const lowerText = body.toLowerCase();
   if (lowerText.includes('invoice') || lowerText.includes('bill no') || lowerText.includes('tax invoice')) {
     metadata.detectedCategory = 'invoice';
   } else if (lowerText.includes('receipt') || lowerText.includes('payment success') || lowerText.includes('ticket') || lowerText.includes('boarding pass')) {
@@ -207,18 +473,18 @@ function parseMetadataFromText(text) {
   }
 
   // 2. Extract Currency — word/symbol boundaries only (avoid "entrepreneur" → EUR)
-  if (/\$|\bUSD\b/i.test(text)) {
+  if (/\$|\bUSD\b/i.test(body)) {
     metadata.currency = 'USD';
-  } else if (/€|\bEUR\b/i.test(text)) {
+  } else if (/€|\bEUR\b/i.test(body)) {
     metadata.currency = 'EUR';
-  } else if (/£|\bGBP\b/i.test(text)) {
+  } else if (/£|\bGBP\b/i.test(body)) {
     metadata.currency = 'GBP';
-  } else if (/₹|\bINR\b/i.test(text)) {
+  } else if (/₹|\bINR\b/i.test(body)) {
     metadata.currency = 'INR';
   }
 
   // 3. Extract Amount — prefer total-line matches; handle Indian comma grouping
-  metadata.amount = extractAmountFromText(text);
+  metadata.amount = extractAmountFromText(body);
 
   // 4. Extract Tax
   const taxPatterns = [
@@ -228,7 +494,7 @@ function parseMetadataFromText(text) {
   for (const pattern of taxPatterns) {
     let match;
     pattern.lastIndex = 0;
-    while ((match = pattern.exec(text)) !== null) {
+    while ((match = pattern.exec(body)) !== null) {
       if (match[1]) {
         const taxVal = parseIndianNumber(match[1]);
         if (!isNaN(taxVal) && taxVal > 0) {
@@ -245,27 +511,20 @@ function parseMetadataFromText(text) {
     }
   }
 
-  // 5. Extract Date (DD/MM/YYYY preferred for Indian invoices)
-  const datePatterns = [
-    /\b(\d{4}[-/]\d{1,2}[-/]\d{1,2})\b/,
-    /\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b/,
-    /\b(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b/i,
-    /\b(?:date|dated|invoice date|bill date|dt)\s*[:\-]?\s*([\d.\-/a-zA-Z\s]{6,20})/i,
-  ];
-
-  for (const pattern of datePatterns) {
-    const match = text.match(pattern);
-    if (match?.[1]) {
-      const parsedDate = parseDateValue(match[1]);
-      if (parsedDate) {
-        metadata.date = parsedDate;
-        break;
-      }
-    }
+  // 5. Extract payment / invoice date (labeled lines beat random inline dates)
+  metadata.date = extractPaymentDateFromText(body);
+  if (!metadata.date) {
+    const fallbackYear = context.createdAt
+      ? new Date(context.createdAt).getUTCFullYear()
+      : new Date().getUTCFullYear();
+    metadata.date = extractPaymentDateFromFilename(
+      [context.title, context.fileName].filter(Boolean).join(' '),
+      fallbackYear,
+    );
   }
 
   // 6. Extract Vendor — header / From block only; exclude Bill To section
-  metadata.vendor = extractVendorFromText(text);
+  metadata.vendor = extractVendorFromText(body);
 
   // Known vendor normalizations (only when not clearly Bill To)
   const billToIdx = lowerText.search(/\b(?:bill\s*to|billed\s*to)\b/i);
@@ -339,6 +598,9 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
 module.exports = {
   parseDocument,
   parseMetadataFromText,
+  parseDateValue,
+  extractPaymentDateFromText,
+  extractPaymentDateFromFilename,
   parseIndianNumber,
   extractAmountFromText,
   extractVendorFromText,

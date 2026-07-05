@@ -113,6 +113,11 @@ test('pickProxyUrl uses production when VERCEL=1 but VERCEL_ENV unset', () => {
   process.env = prev;
 });
 
+test('GIT_DEPLOYMENT_CONFIG disables Vercel deploy on dev branch', () => {
+  const { GIT_DEPLOYMENT_CONFIG } = require('./generateVercelConfig.cjs');
+  assert.equal(GIT_DEPLOYMENT_CONFIG.git.deploymentEnabled.dev, false);
+});
+
 test('buildVercelSecurityHeaders adds preview CSP allowances', () => {
   const { buildContentSecurityPolicy, buildVercelHeaders } = require('./vercelSecurityHeaders.cjs');
   const preview = buildContentSecurityPolicy({ isPreview: true });

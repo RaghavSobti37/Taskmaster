@@ -62,6 +62,15 @@ const BANNED_PROXY_HOSTS = new Set([
   'your-render-service.onrender.com',
 ]);
 
+/** Dev branch → Render only; no Vercel preview/production deploy on push. */
+const GIT_DEPLOYMENT_CONFIG = {
+  git: {
+    deploymentEnabled: {
+      dev: false,
+    },
+  },
+};
+
 const POSTHOG_PROXY_PREFIX = '/ph';
 /** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
 const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)';
@@ -315,6 +324,7 @@ if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.V
 }
 
 const payload = {
+  ...GIT_DEPLOYMENT_CONFIG,
   ...(template.redirects ? { redirects: template.redirects } : {}),
   rewrites: [
     ...(nestAttendanceDestination
@@ -348,6 +358,7 @@ const buildSitePayload = (buildCommand) => {
     satelliteClerk,
   );
   return {
+    ...GIT_DEPLOYMENT_CONFIG,
     buildCommand,
     outputDirectory: '../../client/dist',
     installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
@@ -410,6 +421,7 @@ if (nestAttendanceDestination) {
 };
 
 module.exports = {
+  GIT_DEPLOYMENT_CONFIG,
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,

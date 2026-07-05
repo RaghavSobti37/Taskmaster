@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  BarChart3, Search, ChevronRight, Clock, NotebookPen, CheckCircle2, ListChecks,
+  BarChart3, Search, ChevronRight, ChevronLeft, Clock, NotebookPen, CheckCircle2, ListChecks,
   IndianRupee, Wallet, TrendingUp, PiggyBank,
 } from 'lucide-react';
 import {
@@ -9,17 +9,16 @@ import {
   BudgetUsedCell,
   ProgressCell,
   formatProjectInr,
+  formatBudgetDisplay,
 } from '../../components/project/ProjectAnalyticsTableBits';
-import { SpendCategorySummary } from '../../components/project/ProjectFinanceSpendBreakdown';
 import {
-  Badge,
   Card,
   DataLoading,
   DataTable,
   SearchInput,
   PageContainer,
   PageHeader,
-  StatCard,
+  Button,
   DesktopRecommendedBanner,
   QueryErrorBanner,
   getQueryErrorMessage,
@@ -27,6 +26,7 @@ import {
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ProjectReportRangeControls from '../../components/project/ProjectReportRangeControls';
 import ProjectAnalyticsContent from '../../components/project/ProjectAnalyticsContent';
+import ProjectAnalyticsKpiGrid from '../../components/project/ProjectAnalyticsKpiGrid';
 import { useProjects, useProjectsAnalyticsSummary } from '../../hooks/useTaskmasterQueries';
 import { useProjectReportRangeState } from '../../hooks/useProjectReportRangeState';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
@@ -38,7 +38,7 @@ const AdminProjectAnalyticsPage = () => {
   const detailSectionRef = useRef(null);
 
   const rangeState = useProjectReportRangeState();
-  const { queryParams, queryEnabled, rangeSubtitle } = rangeState;
+  const { queryParams, queryEnabled, rangeSubtitle, isAllTime } = rangeState;
 
   const {
     data: projects = [],
@@ -64,7 +64,7 @@ const AdminProjectAnalyticsPage = () => {
   const summaryByProjectId = useMemo(() => {
     const map = new Map();
     (summary?.projects || []).forEach((row) => {
-      const id = row.projectId?.toString?.() || row.projectId;
+      const id = row.projectId?.toString?.() || String(row.projectId || '');
       if (id) map.set(id, row);
     });
     return map;
@@ -72,7 +72,8 @@ const AdminProjectAnalyticsPage = () => {
 
   const allProjectRows = useMemo(() => projects
     .map((project) => {
-      const stats = summaryByProjectId.get(project._id) || {};
+      const projectKey = project._id?.toString?.() || String(project._id || '');
+      const stats = summaryByProjectId.get(projectKey) || {};
       return {
         projectId: project._id,
         name: project.name,
@@ -85,10 +86,12 @@ const AdminProjectAnalyticsPage = () => {
         taskCompletionHours: stats.taskCompletionHours || 0,
         logCount: stats.logCount || 0,
         tasksCompleted: stats.tasksCompleted || 0,
-        budget: stats.budget || 0,
+        hasBudget: stats.hasBudget ?? false,
+        budget: stats.budget ?? null,
         spentTotal: stats.spentTotal || 0,
         spentInRange: stats.spentInRange || 0,
         revenueInRange: stats.revenueInRange || 0,
+        revenueTotal: stats.revenueTotal || 0,
         remaining: stats.remaining || 0,
         budgetUsedPct: stats.budgetUsedPct ?? null,
         spendByCategory: stats.spendByCategory || {},
@@ -105,18 +108,19 @@ const AdminProjectAnalyticsPage = () => {
       .sort((a, b) => b.totalHours - a.totalHours || a.name.localeCompare(b.name));
   }, [allProjectRows, searchTerm]);
 
-  const totals = useMemo(() => allProjectRows.reduce(
+  const totals = useMemo(() => (summary?.projects || []).reduce(
     (acc, row) => ({
-      totalHours: acc.totalHours + row.totalHours,
-      manualLogHours: acc.manualLogHours + row.manualLogHours,
-      taskCompletionHours: acc.taskCompletionHours + row.taskCompletionHours,
-      logCount: acc.logCount + row.logCount,
-      tasksCompleted: acc.tasksCompleted + row.tasksCompleted,
-      budget: acc.budget + row.budget,
-      spentTotal: acc.spentTotal + row.spentTotal,
-      spentInRange: acc.spentInRange + row.spentInRange,
-      remaining: acc.remaining + row.remaining,
-      revenueInRange: acc.revenueInRange + row.revenueInRange,
+      totalHours: acc.totalHours + (row.totalHours || 0),
+      manualLogHours: acc.manualLogHours + (row.manualLogHours || 0),
+      taskCompletionHours: acc.taskCompletionHours + (row.taskCompletionHours || 0),
+      logCount: acc.logCount + (row.logCount || 0),
+      tasksCompleted: acc.tasksCompleted + (row.tasksCompleted || 0),
+      budget: acc.budget + (row.hasBudget && row.budget ? row.budget : 0),
+      spentTotal: acc.spentTotal + (row.spentTotal || 0),
+      spentInRange: acc.spentInRange + (row.spentInRange || 0),
+      remaining: acc.remaining + (row.hasBudget && row.remaining != null ? row.remaining : 0),
+      revenueInRange: acc.revenueInRange + (row.revenueInRange || 0),
+      revenueTotal: acc.revenueTotal + (row.revenueTotal || 0),
     }),
     {
       totalHours: 0,
@@ -129,13 +133,17 @@ const AdminProjectAnalyticsPage = () => {
       spentInRange: 0,
       remaining: 0,
       revenueInRange: 0,
+      revenueTotal: 0,
     }
-  ), [allProjectRows]);
+  ), [summary?.projects]);
+
+  const portfolioHasBudget = (summary?.projects || []).some((r) => r.hasBudget);
 
   const burnRatePerDay = useMemo(() => {
     const days = summary?.window?.days || 1;
-    return totals.spentInRange / days;
-  }, [summary?.window?.days, totals.spentInRange]);
+    const spendBase = isAllTime ? totals.spentTotal : totals.spentInRange;
+    return spendBase / days;
+  }, [summary?.window?.days, totals.spentInRange, totals.spentTotal, isAllTime]);
 
   const selectedProject = projects.find((p) => p._id === selectedProjectId);
   const subtitle = rangeSubtitle(summary);
@@ -190,51 +198,32 @@ const AdminProjectAnalyticsPage = () => {
       header: 'Budget',
       render: (row) => (
         <span className="tabular-nums text-xs" title="Sum of budget docs in project Finance">
-          {formatProjectInr(row.budget)}
+          {formatBudgetDisplay(row.hasBudget, row.budget)}
         </span>
       ),
     },
     {
       key: 'spentInRange',
       header: 'Spent',
-      render: (row) => {
-        const primary = row.spentInRange > 0 ? row.spentInRange : row.spentTotal;
-        const showTotalNote = row.spentTotal > 0 && row.spentInRange !== row.spentTotal;
-        return (
-          <div title={`In range · All-time ${formatProjectInr(row.spentTotal)}`}>
-            <span className="tabular-nums text-xs">{formatProjectInr(primary)}</span>
-            {showTotalNote && (
-              <p className="text-[9px] text-[var(--color-text-muted)]">
-                {row.spentInRange > 0 ? `${formatProjectInr(row.spentTotal)} total` : 'all-time'}
-              </p>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: 'spendByCategory',
-      header: 'Spend mix',
       render: (row) => (
-        <SpendCategorySummary
-          spendByCategory={row.spendByCategory}
-          mode={row.spentInRange > 0 ? 'inRange' : 'total'}
-        />
+        <span className="tabular-nums text-xs" title="Spend in selected date range">
+          {formatProjectInr(row.spentInRange)}
+        </span>
       ),
     },
     {
       key: 'remaining',
       header: 'Left',
       render: (row) => (
-        <span className="tabular-nums text-xs" title="Budget minus all-time spend">
-          {row.budget > 0 ? formatProjectInr(row.remaining) : '—'}
+        <span className="tabular-nums text-xs" title="Budget minus all-time verified spend">
+          {row.hasBudget ? formatProjectInr(row.remaining) : '—'}
         </span>
       ),
     },
     {
       key: 'budgetUsedPct',
       header: '% budget',
-      render: (row) => <BudgetUsedCell budgetUsedPct={row.budgetUsedPct} />,
+      render: (row) => <BudgetUsedCell budgetUsedPct={row.budgetUsedPct} hasBudget={row.hasBudget} />,
     },
     {
       key: 'progress',
@@ -269,13 +258,7 @@ const AdminProjectAnalyticsPage = () => {
         icon={BarChart3}
         title="Project Analytics"
         backTo={ADMIN_CONSOLE_PATH}
-      />
-
-      {!selectedProjectId && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {subtitle && (
-            <p className="text-[10px] text-[var(--color-text-muted)]">{subtitle}</p>
-          )}
+        actions={(
           <ProjectReportRangeControls
             rangeMode={rangeState.rangeMode}
             onRangeModeChange={rangeState.setRangeMode}
@@ -286,7 +269,11 @@ const AdminProjectAnalyticsPage = () => {
             onCustomStartChange={rangeState.setCustomStart}
             onCustomEndChange={rangeState.setCustomEnd}
           />
-        </div>
+        )}
+      />
+
+      {subtitle && !selectedProjectId && (
+        <p className="text-[10px] text-[var(--color-text-muted)] -mt-2">{subtitle}</p>
       )}
 
       {!queryEnabled && (
@@ -295,93 +282,93 @@ const AdminProjectAnalyticsPage = () => {
         </div>
       )}
 
-      {queryEnabled && (
+      {queryEnabled && !selectedProjectId && (
         <>
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-              Effort · selected range
-            </p>
-            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 ${summaryFetching ? 'opacity-60' : ''}`}>
-              <StatCard
-                label="Total Hours"
-                value={totals.totalHours.toFixed(1)}
-                icon={Clock}
-                variant="info"
-                info="Manual log hours + task completion hours in the selected date range."
-              />
-              <StatCard
-                label="Manual Logs"
-                value={totals.manualLogHours.toFixed(1)}
-                icon={NotebookPen}
-                variant="mint"
-                subValue={`${((totals.manualLogHours / (totals.totalHours || 1)) * 100).toFixed(0)}%`}
-              />
-              <StatCard
-                label="Task Hours"
-                value={totals.taskCompletionHours.toFixed(1)}
-                icon={BarChart3}
-                variant="apricot"
-                subValue={`${((totals.taskCompletionHours / (totals.totalHours || 1)) * 100).toFixed(0)}%`}
-              />
-              <StatCard label="Daily Logs" value={totals.logCount} icon={ListChecks} variant="slate" />
-              <StatCard
-                label="Tasks Done"
-                value={totals.tasksCompleted}
-                icon={CheckCircle2}
-                variant="rose"
-                info="Tasks marked done within the selected date range (not all-time project progress)."
-              />
-            </div>
-          </div>
+          <section className={`space-y-3 ${summaryFetching ? 'opacity-60' : ''}`}>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+              Effort · {isAllTime ? 'all time' : 'all projects'}
+            </h3>
+            <ProjectAnalyticsKpiGrid
+              columns={5}
+              items={[
+                {
+                  id: 'total',
+                  label: 'Total hours',
+                  value: totals.totalHours.toFixed(1),
+                  icon: Clock,
+                },
+                {
+                  id: 'manual',
+                  label: 'Manual logs',
+                  value: totals.manualLogHours.toFixed(1),
+                  badge: `${((totals.manualLogHours / (totals.totalHours || 1)) * 100).toFixed(0)}%`,
+                  icon: NotebookPen,
+                },
+                {
+                  id: 'task',
+                  label: 'Task hours',
+                  value: totals.taskCompletionHours.toFixed(1),
+                  badge: `${((totals.taskCompletionHours / (totals.totalHours || 1)) * 100).toFixed(0)}%`,
+                  icon: BarChart3,
+                },
+                { id: 'logs', label: 'Daily logs', value: String(totals.logCount), icon: ListChecks },
+                { id: 'done', label: 'Tasks done', value: String(totals.tasksCompleted), icon: CheckCircle2 },
+              ]}
+            />
+          </section>
 
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-              Financial · from project Finance docs
-            </p>
-            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 ${summaryFetching ? 'opacity-60' : ''}`}>
-              <StatCard
-                label="Total Budget"
-                value={formatProjectInr(totals.budget)}
-                icon={Wallet}
-                variant="slate"
-                info="Sum of Budget-category documents uploaded per project (all-time)."
-              />
-              <StatCard
-                label="Spent"
-                value={formatProjectInr(totals.spentInRange)}
-                icon={IndianRupee}
-                variant="apricot"
-                subValue={totals.spentInRange !== totals.spentTotal
-                  ? `${formatProjectInr(totals.spentTotal)} all-time`
-                  : 'in range'}
-                info="Invoices, receipts, and tax docs dated inside the selected range."
-              />
-              <StatCard
-                label="Remaining"
-                value={formatProjectInr(totals.remaining)}
-                icon={PiggyBank}
-                variant="mint"
-                info="Budget minus all-time spend (not range-limited)."
-              />
-              <StatCard
-                label="Revenue"
-                value={formatProjectInr(totals.revenueInRange)}
-                icon={TrendingUp}
-                variant="info"
-                subValue="in range"
-                info="Contract and proposal amounts dated in range. Upload finance docs per project to populate."
-              />
-              <StatCard
-                label="Burn / day"
-                value={formatProjectInr(burnRatePerDay)}
-                icon={IndianRupee}
-                variant="rose"
-                info="Range spend ÷ days in window. Not hourly-rate based — uses actual finance doc amounts."
-              />
-            </div>
-          </div>
+          <section className={`space-y-3 mt-8 ${summaryFetching ? 'opacity-60' : ''}`}>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+              Financial · all projects
+            </h3>
+            <ProjectAnalyticsKpiGrid
+              columns={5}
+              items={[
+                {
+                  id: 'budget',
+                  label: 'Total budget',
+                  value: portfolioHasBudget ? formatProjectInr(totals.budget) : 'No budget set',
+                  textValue: !portfolioHasBudget,
+                  compact: true,
+                  icon: Wallet,
+                },
+                {
+                  id: 'spent',
+                  label: 'Spent',
+                  value: (isAllTime ? totals.spentTotal : totals.spentInRange) > 0
+                    ? formatProjectInr(isAllTime ? totals.spentTotal : totals.spentInRange)
+                    : '—',
+                  badge: !isAllTime && totals.spentTotal > 0
+                    ? `${formatProjectInr(totals.spentTotal)} all-time`
+                    : undefined,
+                  icon: IndianRupee,
+                },
+                {
+                  id: 'remaining',
+                  label: 'Remaining',
+                  value: portfolioHasBudget ? formatProjectInr(totals.remaining) : '—',
+                  icon: PiggyBank,
+                },
+                {
+                  id: 'revenue',
+                  label: 'Revenue',
+                  value: (isAllTime ? totals.revenueTotal : totals.revenueInRange) > 0
+                    ? formatProjectInr(isAllTime ? totals.revenueTotal : totals.revenueInRange)
+                    : '—',
+                  badge: !isAllTime ? 'in range' : undefined,
+                  icon: TrendingUp,
+                },
+                {
+                  id: 'burn',
+                  label: 'Burn per day',
+                  value: burnRatePerDay > 0 ? formatProjectInr(burnRatePerDay) : '—',
+                  icon: IndianRupee,
+                },
+              ]}
+            />
+          </section>
 
-          <Card className="p-4 space-y-4">
+          <Card className="p-4 space-y-4 mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                 All projects ({rows.length})
@@ -421,47 +408,35 @@ const AdminProjectAnalyticsPage = () => {
               </div>
             )}
           </Card>
+        </>
+      )}
 
-          {selectedProjectId && (
-            <div ref={detailSectionRef} className="space-y-4 scroll-mt-4">
+      {queryEnabled && selectedProjectId && (
+        <div ref={detailSectionRef} className="space-y-4 scroll-mt-4">
               <div className="sticky top-0 z-20 -mx-1 px-1 py-3 bg-[var(--color-bg-primary)]/95 border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <h2 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate">
-                    {selectedProject?.name || 'Project'} — detailed analytics
-                  </h2>
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      onClick={() => selectProject(null)}
+                      className="!text-[10px] !font-bold !uppercase !tracking-wide shrink-0"
+                    >
+                      <ChevronLeft size={14} aria-hidden />
+                      Back to overview
+                    </Button>
+                    <h2 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate min-w-0">
+                      {selectedProject?.name || 'Project'} — detailed analytics
+                    </h2>
+                  </div>
                   {subtitle && (
                     <p className="text-[10px] text-[var(--color-text-muted)]">{subtitle}</p>
                   )}
-                  {selectedProject && (
-                    <Badge variant="info" className="w-fit">
-                      Viewing: {selectedProject.name}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <ProjectReportRangeControls
-                    rangeMode={rangeState.rangeMode}
-                    onRangeModeChange={rangeState.setRangeMode}
-                    timeframe={rangeState.timeframe}
-                    onTimeframeChange={rangeState.setTimeframe}
-                    customStart={rangeState.customStart}
-                    customEnd={rangeState.customEnd}
-                    onCustomStartChange={rangeState.setCustomStart}
-                    onCustomEndChange={rangeState.setCustomEnd}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => selectProject(null)}
-                    className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] whitespace-nowrap"
-                  >
-                    Back to overview
-                  </button>
                 </div>
               </div>
-              <ProjectAnalyticsContent projectId={selectedProjectId} rangeState={rangeState} />
-            </div>
-          )}
-        </>
+              <ProjectAnalyticsContent projectId={selectedProjectId} rangeState={rangeState} viewMode="admin" />
+        </div>
       )}
     </PageContainer>
   );

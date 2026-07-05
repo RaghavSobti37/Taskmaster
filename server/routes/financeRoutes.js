@@ -40,6 +40,7 @@ const { submitInvoiceBody, createFolderBody } = require('../validation/schemas/f
 const { uploadRateLimit } = require('../middleware/rateLimits');
 const { auditSensitiveMutation } = require('../services/securityAuditService');
 const { rejectClientTenantSpoof } = require('../middleware/rejectClientTenantSpoof');
+const { requireFeatureUnlock } = require('../middleware/requireFeatureUnlock');
 
 // Department gate: ops/admin or explicit finance page permission
 const financeAccess = (req, res, next) => {
@@ -68,7 +69,7 @@ router.patch('/:id/approve', opsOnly, auditSensitiveMutation({ resourceType: 'Fi
 router.patch('/:id/reject', opsOnly, auditSensitiveMutation({ resourceType: 'Finance', action: 'REJECT' }), rejectInvoice);
 
 // Remaining finance routes require finance page access or ops role
-router.use(financeAccess);
+router.use(financeAccess, requireFeatureUnlock('finance'));
 
 router.get('/next-reference', getNextReference);
 router.get('/file-proxy', proxyFileByUrl);

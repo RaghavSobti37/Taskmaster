@@ -24,6 +24,7 @@ const { captureEvent: capturePostHogEvent, identifyServerUser } = require('../..
 const {
   isClerkConfigured,
   verifyClerkSessionToken,
+  clerkTokenInstanceMismatchMessage,
   resolveUserFromClerkProfile,
 } = require('../../../utils/clerkAuth');
 const { clerkClient } = require('@clerk/clerk-sdk-node');
@@ -93,13 +94,45 @@ const formatAuthUser = (populated) => attachProfileCompletion(
 );
 
 const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
-  await finishAuthSession(req, res, populated._id);
+  const { assertLoginAllowed } = require('../../../services/tenantSecurityService');
+  try {
+    await assertLoginAllowed({ req, user: populated, authMethod });
+  } catch (err) {
+    return apiError(res, err.message, err.status || 403);
+  }
+
+  const {
+    backfillMembershipFromUser,
+    listActiveMemberships,
+    resolveInitialActiveTenantId,
+  } = require('../../../services/tenantMembershipService');
+  await backfillMembershipFromUser(populated);
+  const memberships = await listActiveMemberships(populated._id);
+  const activeTenantId = await resolveInitialActiveTenantId(populated._id);
+  const needsTenantSelection = memberships.length > 1 && !activeTenantId;
+
+  if (!needsTenantSelection) {
+    await finishAuthSession(req, res, populated._id, activeTenantId);
+  } else {
+    await finishAuthSession(req, res, populated._id, null);
+  }
+
   if (authMethod) {
     const userObj = populated.toObject ? populated.toObject() : populated;
     identifyServerUser(userObj);
     capturePostHogEvent(req, 'user_logged_in', { method: authMethod, source: 'server' });
   }
-  return res.json(formatAuthUser(populated));
+  const payload = formatAuthUser(populated);
+  payload.memberships = memberships.map((m) => ({
+    id: String(m._id),
+    role: m.role,
+    tenant: m.tenantId && typeof m.tenantId === 'object'
+      ? { _id: m.tenantId._id, name: m.tenantId.name }
+      : { _id: m.tenantId },
+  }));
+  payload.needsTenantSelection = needsTenantSelection;
+  payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
+  return res.json(payload);
 };
 
 const isRegistrationAllowed = (emailLower) => {
@@ -181,9 +214,18 @@ exports.register = async (req, res) => {
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
-    await finishAuthSession(req, res, populated._id);
+    await finishAuthSession(req, res, populated._id, await require('../../../services/tenantMembershipService').resolveInitialActiveTenantId(populated._id));
     capturePostHogEvent(req, 'user_registered', { method: 'email' });
-    return res.status(201).json(formatAuthUser(populated));
+    const authPayload = formatAuthUser(populated);
+    const memberships = await require('../../../services/tenantMembershipService').listActiveMemberships(populated._id);
+    authPayload.memberships = memberships.map((m) => ({
+      id: String(m._id),
+      role: m.role,
+      tenant: m.tenantId && typeof m.tenantId === 'object'
+        ? { _id: m.tenantId._id, name: m.tenantId.name }
+        : { _id: m.tenantId },
+    }));
+    return res.status(201).json(authPayload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -226,6 +268,25 @@ exports.login = async (req, res) => {
         clearAuthCookie(res, req);
         return apiError(res, 'Account suspended. Contact an administrator.', 403);
       }
+      const userWithMfa = await User.findById(user._id)
+        .select('+password +mfa.secretEncrypted +mfa.backupCodesHash')
+        .setOptions({ bypassTenant: true });
+      const { assertLoginAllowed } = require('../../../services/tenantSecurityService');
+      const { verifyUserMfa } = require('../../../services/mfaService');
+      try {
+        await assertLoginAllowed({ req, user: userWithMfa, authMethod: 'email_password' });
+      } catch (err) {
+        return apiError(res, err.message, err.status || 403);
+      }
+      if (userWithMfa.mfa?.enabled) {
+        const { mfaToken } = req.body;
+        if (!mfaToken) {
+          return res.status(200).json({ mfaRequired: true, email: user.email });
+        }
+        if (!verifyUserMfa(userWithMfa, mfaToken)) {
+          return apiError(res, 'Invalid MFA code', 401);
+        }
+      }
       const stillOnDefaultPassword = await user.comparePassword(getDefaultSeedPassword());
       const seededWithoutPasswordChange = user.mustChangePassword === false;
       const shouldFlagDefaultPassword = stillOnDefaultPassword
@@ -239,9 +300,7 @@ exports.login = async (req, res) => {
       const populated = await User.findById(user._id)
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-      await finishAuthSession(req, res, populated._id);
-      capturePostHogEvent(req, 'user_logged_in', { method: 'email_password' });
-      return res.json(formatAuthUser(populated));
+      return sendAuthSuccess(req, res, populated, { authMethod: 'email_password' });
     }
 
     if (user && user.googleId && !isMatch && !user.password) {
@@ -333,7 +392,28 @@ exports.getMe = async (req, res) => {
       const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
       await req.user.populate('departmentId', DEPARTMENT_POPULATE);
     }
-    return res.json(attachProfileCompletion(req.user));
+    const {
+      listActiveMemberships,
+      formatMembershipRow,
+    } = require('../../../services/tenantMembershipService');
+    const { getTokenFromRequest } = require('../../../utils/authCookie');
+    const { verifySessionToken } = require('../../../utils/authSession');
+    const memberships = await listActiveMemberships(req.user._id);
+    let activeTenantId = req.tenantId || null;
+    try {
+      const token = getTokenFromRequest(req);
+      if (token) {
+        const decoded = verifySessionToken(token);
+        activeTenantId = decoded.activeTenantId || activeTenantId;
+      }
+    } catch {
+      /* ignore */
+    }
+    const payload = attachProfileCompletion(req.user);
+    payload.memberships = memberships.map(formatMembershipRow);
+    payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
+    payload.needsTenantSelection = memberships.length > 1 && !activeTenantId;
+    return res.json(payload);
   } catch (error) {
     logger.error('authController', 'getMe failed', { error: error.message || error });
     return apiError(res, 'Failed to load user profile', 500);
@@ -605,7 +685,10 @@ const clerkEstablishSessionHandler = async (req, res) => {
 
     const profile = await verifyClerkSessionToken(token);
     if (!profile) {
-      return res.status(401).json({ error: 'Invalid Clerk session' });
+      const mismatch = clerkTokenInstanceMismatchMessage(token);
+      return res.status(401).json({
+        error: mismatch || 'Invalid Clerk session',
+      });
     }
 
     assertEstablishAllowed(profile);
@@ -969,5 +1052,55 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     logger.error('authController', 'resetPassword failed', { error: error.message || error });
     return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.mfaSetup = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).setOptions({ bypassTenant: true });
+    if (!user) return apiError(res, 'User not found', 404);
+    const { startMfaEnrollment } = require('../../../services/mfaService');
+    const { secret, otpauthUrl } = startMfaEnrollment(user);
+    await user.save();
+    return res.json({ secret, otpauthUrl });
+  } catch (error) {
+    return apiError(res, error.message, 500);
+  }
+};
+
+exports.mfaConfirm = async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return apiError(res, 'token required', 400);
+    const user = await User.findById(req.user._id)
+      .select('+mfa.pendingSecretEncrypted +mfa.secretEncrypted +mfa.backupCodesHash')
+      .setOptions({ bypassTenant: true });
+    if (!user) return apiError(res, 'User not found', 404);
+    const { confirmMfaEnrollment } = require('../../../services/mfaService');
+    const backupCodes = confirmMfaEnrollment(user, token);
+    if (!backupCodes) return apiError(res, 'Invalid MFA code', 400);
+    await user.save();
+    return res.json({ enabled: true, backupCodes });
+  } catch (error) {
+    return apiError(res, error.message, 500);
+  }
+};
+
+exports.mfaDisable = async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    const user = await User.findById(req.user._id)
+      .select('+mfa.secretEncrypted +mfa.backupCodesHash +mfa.pendingSecretEncrypted')
+      .setOptions({ bypassTenant: true });
+    if (!user) return apiError(res, 'User not found', 404);
+    const { verifyUserMfa } = require('../../../services/mfaService');
+    if (!user.mfa?.enabled || !verifyUserMfa(user, token)) {
+      return apiError(res, 'Valid MFA code required to disable', 400);
+    }
+    user.mfa = { enabled: false };
+    await user.save();
+    return res.json({ enabled: false });
+  } catch (error) {
+    return apiError(res, error.message, 500);
   }
 };

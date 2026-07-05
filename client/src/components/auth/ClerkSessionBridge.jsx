@@ -6,14 +6,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured, getPinnedClerkOrganizationId } from '../../config/clerk';
 import { isAuthSite } from '../../config/siteMode';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
-import { externalRedirectOnce } from '../../lib/postLoginRedirect';
+import { navigateAfterAuth } from '../../utils/authNavigation';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
 import {
   clearClerkEstablishError,
   setClerkEstablishError,
 } from '../../lib/clerkEstablishRegistry';
 import { fetchClerkEstablishToken } from '../../lib/clerkEstablishToken';
-import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
+import { isClerkReadyForCoreKnotEstablish, resolveClerkAuthPathname } from '../../lib/clerkSignInFlow';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 /** Dedupe establish across React StrictMode remounts. */
@@ -53,7 +53,7 @@ function ClerkSessionBridgeInner() {
   const { setActive } = useClerk();
   const location = useLocation();
   const pinnedOrgId = getPinnedClerkOrganizationId();
-  const { user, sessionReady, login, applySessionUser } = useAuth();
+  const { user, sessionReady, login, confirmSessionFromEstablish } = useAuth();
   const signOutRef = useRef(signOut);
   const redirectedRef = useRef(false);
   const [establishAttempt, setEstablishAttempt] = useState(0);
@@ -80,7 +80,7 @@ function ClerkSessionBridgeInner() {
       return undefined;
     }
     redirectedRef.current = true;
-    externalRedirectOnce(target);
+    navigateAfterAuth(null, target);
     return undefined;
   }, [user?._id, sessionReady]);
 
@@ -102,7 +102,7 @@ function ClerkSessionBridgeInner() {
       return undefined;
     }
     if (!isClerkReadyForCoreKnotEstablish({
-      pathname: resolveClerkSignInPathname(location.pathname),
+      pathname: resolveClerkAuthPathname(location.pathname),
       isLoaded,
       isSignedIn,
       sessionId,
@@ -114,7 +114,7 @@ function ClerkSessionBridgeInner() {
       return undefined;
     }
 
-    const clerkKey = userId || 'active';
+    const clerkKey = `${userId || 'active'}:${resolveClerkAuthPathname(location.pathname).split('/')[1] || 'auth'}`;
     if (establishForClerkSession === clerkKey && establishInflight) {
       return undefined;
     }
@@ -195,13 +195,13 @@ function ClerkSessionBridgeInner() {
           return;
         }
 
-        if (establishResponse?.data?._id) {
-          clearClerkEstablishError();
-          applySessionUser(establishResponse.data);
-        }
-
         try {
-          await login();
+          if (establishResponse?.data?._id) {
+            clearClerkEstablishError();
+            await confirmSessionFromEstablish(establishResponse.data);
+          } else {
+            await login();
+          }
         } catch (loginErr) {
           const { message } = extractEstablishError(
             loginErr,
@@ -240,7 +240,7 @@ function ClerkSessionBridgeInner() {
     getToken,
     setActive,
     login,
-    applySessionUser,
+    confirmSessionFromEstablish,
     establishAttempt,
   ]);
 

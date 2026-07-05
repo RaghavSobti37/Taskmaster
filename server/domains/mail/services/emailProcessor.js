@@ -282,10 +282,19 @@ const processEmailJobInner = async ({
   }
 
   const leadDoc = await Lead.findOne({ email: cleanEmail });
-  if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed' || leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid')) {
-    logger.info('Queue Service', `Skipping bad/unsubscribed recipient: ${email}`);
-    const skipStatus = (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) ? 'Unsubscribed' : 'Bounced';
-    const skipError = 'Unsubscribed or Bounced recipient';
+  const { resolveStreamForCampaign } = require('../../../services/emailStreamService');
+  const { isBlockedForStreamSend } = require('../../../utils/emailStreamUnsubscribe');
+  const streamDoc = await resolveStreamForCampaign(campaign);
+  const streamSlug = streamDoc?.slug || campaign.emailStreamSlug || 'main';
+
+  if (leadDoc && isBlockedForStreamSend(leadDoc, streamSlug)) {
+    logger.info('Queue Service', `Skipping unsubscribed recipient for stream ${streamSlug}: ${email}`);
+    const skipStatus = (leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid')
+      ? 'Bounced'
+      : 'Unsubscribed';
+    const skipError = skipStatus === 'Unsubscribed'
+      ? `Unsubscribed from stream: ${streamSlug}`
+      : 'Unsubscribed or Bounced recipient';
     const recipient = getRecipient();
     if (recipient) {
       await updateRecipientFields(Model, campaign._id, recipient._id, {
@@ -376,6 +385,7 @@ const processEmailJobInner = async ({
     leadEmail: email,
     trackingBaseUrl: baseUrl,
     removeUnsubscribe: campaign.removeUnsubscribe === true,
+    streamSlug,
   });
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;

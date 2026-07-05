@@ -1,24 +1,13 @@
-const Redis = require('ioredis');
-const { getRedisUrl } = require('./wslRedis');
+const { createRedisClient } = require('./wslRedis');
+const logger = require('./logger');
 
 let sharedRedis = null;
+let redisUnreachable = false;
+let redisWarnLogged = false;
 
 const getSharedRedis = () => {
   if (sharedRedis) return sharedRedis;
-
-  sharedRedis = new Redis(getRedisUrl(), {
-    lazyConnect: true,
-    enableOfflineQueue: false,
-    connectTimeout: 5000,
-    retryStrategy: (times) => {
-      if (times > 3) return null;
-      return Math.min(times * 50, 2000);
-    },
-    maxRetriesPerRequest: 1,
-  });
-
-  sharedRedis.on('error', () => {});
-
+  sharedRedis = createRedisClient({ maxRetriesPerRequest: 1, connectTimeout: 5000 });
   return sharedRedis;
 };
 
@@ -27,7 +16,14 @@ async function ensureSharedRedisReady() {
   const redis = getSharedRedis();
   const { status } = redis;
 
-  if (status === 'ready') return redis;
+  if (status === 'ready') {
+    redisUnreachable = false;
+    return redis;
+  }
+
+  if (redisUnreachable) {
+    throw new Error('Redis unavailable');
+  }
 
   if (status === 'connecting') {
     await new Promise((resolve, reject) => {
@@ -41,11 +37,22 @@ async function ensureSharedRedisReady() {
       redis.once('ready', onReady);
       redis.once('error', onError);
     });
+    redisUnreachable = false;
     return redis;
   }
 
   if (status === 'wait' || status === 'end' || status === 'close') {
-    await redis.connect();
+    try {
+      await redis.connect();
+      redisUnreachable = false;
+    } catch (err) {
+      redisUnreachable = true;
+      if (!redisWarnLogged) {
+        redisWarnLogged = true;
+        logger.warn('redis', 'Unavailable — in-memory fallbacks active', { error: err.message });
+      }
+      throw err;
+    }
   }
 
   return redis;

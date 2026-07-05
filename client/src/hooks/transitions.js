@@ -145,12 +145,23 @@ export function useCardTilt({ maxDeg = 12, glare = true } = {}) {
   return { wrapRef, cardRef, pointerProps, reset };
 }
 
+function prefersReducedMotion() {
+  if (typeof window === 'undefined') return false;
+  if (document.documentElement.dataset.reducedMotion === 'true') return true;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 /** Staggered text reveal on mount (.t-stagger.is-shown). */
 export function useStaggerReveal(deps = []) {
   const ref = useRef(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    if (prefersReducedMotion()) {
+      el.classList.remove('is-hiding');
+      el.classList.add('is-shown');
+      return undefined;
+    }
     el.classList.remove('is-hiding', 'is-shown');
     void el.offsetHeight;
     el.classList.add('is-shown');

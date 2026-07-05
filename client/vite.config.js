@@ -44,6 +44,20 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
   const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
+  const apiUrl = (env.VITE_API_URL || '').trim()
+  const prodApiPattern = new RegExp(`${['taskmaster', 'jfw0'].join('-')}\\.onrender\\.com|coreknot-api\\.onrender\\.com`, 'i')
+  if (mode === 'development' && prodApiPattern.test(apiUrl)) {
+    throw new Error(
+      'Local Vite dev must not use production VITE_API_URL. ' +
+      'Set client/.env.development VITE_API_URL=http://localhost:5000, unset shell/vercel production env, then restart vite.',
+    )
+  }
+  if (mode === 'development' && clerkPk.startsWith('pk_live_')) {
+    throw new Error(
+      'Clerk pk_live_ in local development. Use pk_test_ from client/.env.development. ' +
+      'vercel dev injects Production env — use npm run dev for local work.',
+    )
+  }
   if (vercelProduction && clerkPk.startsWith('pk_test_')) {
     throw new Error(
       'Clerk production build uses pk_test_ (development). Create a Clerk production instance, '

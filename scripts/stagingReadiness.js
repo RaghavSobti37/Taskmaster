@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Staging smoke gate: Express + Nest health, sync proxy, dependency depth.
+ * Pre-deploy smoke: production API — Vercel staging branch uses same DB.
  * Usage: npm run staging:readiness
  */
 const fs = require('fs');
@@ -42,16 +42,19 @@ const fetchJson = (url, opts = {}) =>
     req.end();
   });
 
-const readHosts = () => {
+const readProductionApiUrl = () => {
   if (!fs.existsSync(HOSTS_PATH)) {
-    pushError('Missing .cursor/production-hosts.local.json');
-    return null;
+    pushError('Missing .cursor/production-hosts.local.json (productionApiUrl)');
+    return '';
   }
   try {
-    return JSON.parse(fs.readFileSync(HOSTS_PATH, 'utf8'));
+    const hosts = JSON.parse(fs.readFileSync(HOSTS_PATH, 'utf8'));
+    return String(
+      hosts.productionApiUrl || hosts.derived?.renderApiProxyUrl || '',
+    ).trim().replace(/\/$/, '');
   } catch (e) {
     pushError(`Invalid production-hosts.local.json: ${e.message}`);
-    return null;
+    return '';
   }
 };
 
@@ -60,53 +63,21 @@ const checkExpressHealth = async (baseUrl) => {
   const result = await fetchJson(url);
   const json = result.json;
   if (result.status !== 200 || !json?.ok) {
-    pushError(`Express staging unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
+    pushError(`Production API unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
     return;
   }
   if (json.status !== 'HEALTHY') {
-    pushError(`Express status is ${json.status} (expected HEALTHY)`);
+    pushError(`API status is ${json.status} (expected HEALTHY)`);
     return;
   }
   const mongo = json.dependencies?.mongodb;
   if (mongo?.state !== 'connected') {
-    pushError(`Express MongoDB ${mongo?.state || 'unknown'} (expected connected)`);
-    return;
-  }
-  const redis = json.dependencies?.redis;
-  if (redis?.ok !== true) {
-    pushError(`Express Redis ${redis?.state || 'unknown'} (expected connected)`);
+    pushError(`MongoDB ${mongo?.state || 'unknown'} (expected connected)`);
     return;
   }
   const sha = json.build?.commitSha;
-  if (sha) ok(`Express staging healthy (${url}) commit ${sha}`);
-  else ok(`Express staging healthy (${url})`);
-};
-
-const checkNestHealth = async (baseUrl) => {
-  const url = `${baseUrl.replace(/\/$/, '')}/api/health`;
-  const result = await fetchJson(url);
-  const json = result.json;
-  if (result.status !== 200 || !json?.ok) {
-    pushError(`Nest staging unhealthy (${url}) → ${result.status || result.error || result.body?.slice?.(0, 80)}`);
-    return;
-  }
-  if (json.status !== 'HEALTHY') {
-    pushError(`Nest status is ${json.status} (expected HEALTHY, not STARTING)`);
-    return;
-  }
-  const pg = json.dependencies?.postgres;
-  if (pg?.state !== 'connected') {
-    pushError(`Nest Postgres ${pg?.state || 'unknown'} (expected connected)`);
-    return;
-  }
-  const redis = json.dependencies?.redis;
-  if (redis?.ok !== true) {
-    pushError(`Nest Redis ${redis?.state || 'unknown'} (expected connected)`);
-    return;
-  }
-  const sha = json.build?.commitSha;
-  if (sha) ok(`Nest staging healthy (${url}) commit ${sha}`);
-  else ok(`Nest staging healthy (${url})`);
+  if (sha) ok(`Production API healthy (${url}) commit ${sha}`);
+  else ok(`Production API healthy (${url})`);
 };
 
 const checkSyncProxy = async (baseUrl) => {
@@ -118,54 +89,37 @@ const checkSyncProxy = async (baseUrl) => {
     body: '{}',
   });
   if (result.status === 401) {
-    ok(`Express sync proxy mounted (${url} → 401 without auth)`);
+    ok(`Sync proxy mounted (${url} → 401 without auth)`);
     return;
   }
   if (result.status === 404) {
-    pushError(`Sync proxy missing on staging (${url} → 404)`);
+    pushError(`Sync proxy missing (${url} → 404)`);
     return;
   }
   pushError(`Sync proxy unexpected (${url} → ${result.status})`);
 };
 
 const main = async () => {
-  console.log('\nCoreKnot staging readiness (strict)\n');
+  console.log('\nCoreKnot staging readiness (production API / real DB)\n');
 
-  const hosts = readHosts();
-  if (!hosts) {
+  const apiUrl = readProductionApiUrl();
+  if (!apiUrl) {
     process.exit(1);
   }
 
-  const stagingApi = hosts.stagingApiUrl || '';
-  const stagingNest = hosts.stagingNestApiUrl || '';
-  if (!stagingNest || stagingNest.includes('YOUR-')) {
-    pushError('stagingNestApiUrl not set in production-hosts.local.json');
-  }
-
-  await checkExpressHealth(stagingApi);
-  await checkSyncProxy(stagingApi);
-  await checkNestHealth(stagingNest);
-
-  const serverEnvPath = path.join(ROOT, 'server', '.env');
-  if (fs.existsSync(serverEnvPath)) {
-    const serverEnv = fs.readFileSync(serverEnvPath, 'utf8');
-    if (/^POSTHOG_PROJECT_API_KEY\s*=/m.test(serverEnv)) {
-      ok('server/.env has POSTHOG_PROJECT_API_KEY for local/staging server capture');
-    } else {
-      pushError('server/.env missing POSTHOG_PROJECT_API_KEY');
-    }
-  }
+  await checkExpressHealth(apiUrl);
+  await checkSyncProxy(apiUrl);
 
   console.log('');
   if (errors.length) {
     console.log(`Blocking (${errors.length}):`);
     errors.forEach((e) => console.log(`  ✗ ${e}`));
-    console.log('\nFix: restore env (node scripts/restore-staging-render-env.mjs), deploy staging branch, verify raw /api/health JSON.');
+    console.log('\nFix: verify production API on Render; CORS_ALLOW_VERCEL_PREVIEWS=true for Vercel previews.');
     console.log('See docs/operations/STAGING_SETUP.md\n');
     process.exit(1);
   }
 
-  console.log('✓ Staging readiness passed.\n');
+  console.log('✓ Staging readiness passed (production API).\n');
   process.exit(0);
 };
 

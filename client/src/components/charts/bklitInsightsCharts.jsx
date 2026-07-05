@@ -170,6 +170,7 @@ export function BklitMultiLineChart({
   aspectRatio,
   emptyLabel = 'No data recorded for this period',
   showMarkers = false,
+  numTicks = 6,
 }) {
   const chartData = useMemo(() => normalizeTimeSeriesRows(series, xKey), [series, xKey]);
   const lineKeys = lines?.map((l) => l.key) ?? [];
@@ -210,7 +211,7 @@ export function BklitMultiLineChart({
           strokeWidth={line.strokeWidth ?? 2}
         />
       ))}
-      <XAxis numTicks={6} tickMode="data" />
+      <XAxis numTicks={numTicks} tickMode="data" />
       <ChartTooltip />
     </LineChart>
   );

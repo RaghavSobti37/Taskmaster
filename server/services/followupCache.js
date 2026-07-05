@@ -1,19 +1,11 @@
-const Redis = require('ioredis');
-const { getRedisUrl } = require('../utils/wslRedis');
+const { createRedisClient } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
-
-const redisUrl = getRedisUrl();
 
 let redisConnection = null;
 let redisAvailable = false;
 
 try {
-  redisConnection = new Redis(redisUrl, {
-    maxRetriesPerRequest: null,
-    connectTimeout: 2000,
-    lazyConnect: true,
-    retryStrategy: () => null
-  });
+  redisConnection = createRedisClient();
   
   redisConnection.connect()
     .then(() => {

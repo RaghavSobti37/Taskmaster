@@ -30,7 +30,8 @@ const buildContentSecurityPolicy = ({ isPreview = false } = {}) => {
     'https://eu-assets.i.posthog.com',
     CLERK_SCRIPT_ORIGINS,
     GOOGLE_AUTH_ORIGINS,
-    ...(isPreview ? ['https://vercel.live'] : []),
+    // ponytail: always allow Vercel toolbar script — harmless on prod, required on preview
+    'https://vercel.live',
   ].join(' ');
 
   const directives = [
@@ -96,8 +97,12 @@ function buildVercelHeaders(templateHeaders = [], options = {}) {
   };
 
   const existing = Array.isArray(templateHeaders) ? [...templateHeaders] : [];
-  const hasCatchAll = existing.some((block) => block.source === '/(.*)');
-  if (hasCatchAll) return existing;
+  const catchAllIdx = existing.findIndex((block) => block.source === '/(.*)');
+  if (catchAllIdx >= 0) {
+    const merged = [...existing];
+    merged[catchAllIdx] = securityBlock;
+    return merged;
+  }
 
   return [securityBlock, ...existing];
 }

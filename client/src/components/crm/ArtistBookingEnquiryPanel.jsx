@@ -1,6 +1,7 @@
 import React from 'react';
 import { Music, ExternalLink } from 'lucide-react';
 import { Card, Badge } from '../ui';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import { getBookingEnquiryRows, isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
 
 export default function ArtistBookingEnquiryPanel({ lead, className = '' }) {
@@ -8,9 +9,7 @@ export default function ArtistBookingEnquiryPanel({ lead, className = '' }) {
 
   const rows = getBookingEnquiryRows(lead);
   const meta = lead.metadata || {};
-  const receivedAt = lead.createdAt
-    ? new Date(lead.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : null;
+  const receivedAt = lead.createdAt ? formatDisplayDateTime(lead.createdAt) : null;
 
   return (
     <section className={className}>

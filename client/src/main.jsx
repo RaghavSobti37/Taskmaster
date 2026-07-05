@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
+import { DateFormatProvider } from './contexts/DateFormatContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { bootstrapDocumentTheme } from './lib/publicRouteTheme'
@@ -21,6 +22,9 @@ import {
   recoverFromStaleChunks,
 } from './utils/chunkRecovery';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
+import { isStagingPreviewOnProdDb } from './utils/stagingPreview';
+import { isClerkLiveKey } from './config/clerk';
+import StagingProdDbBanner from './components/StagingProdDbBanner';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { ensurePostHogForConsent, getPostHogClient } from './lib/posthog';
@@ -88,6 +92,13 @@ watchDisplayModeFlags();
 purgeExpiredNoteDrafts();
 warnIfDevPointsAtProduction();
 
+if (import.meta.env.PROD && typeof window !== 'undefined' && isStagingPreviewOnProdDb() && !isClerkLiveKey()) {
+  console.error(
+    '[STAGING] pk_test_ on preview but API is production — clerk-establish will fail. ' +
+    'Run: node scripts/push-clerk-production-env.mjs then redeploy preview.',
+  );
+}
+
 const reloadOnceForStaleAssets = () => {
   void recoverFromStaleChunks();
 };
@@ -139,6 +150,7 @@ const appTree = (
       <ClerkAppProvider>
         <AuthProvider>
           <ClerkAuthEffects />
+          <DateFormatProvider>
           <ThemeProvider>
           <MotionConfigBridge>
             <SidebarProvider>
@@ -146,6 +158,7 @@ const appTree = (
                 <ConfirmProvider>
                   <UnsavedChangesProvider>
                     <LocalFirstRoot>
+                      <StagingProdDbBanner />
                       <PostHogConsentBridge />
                       <App />
                       <PostHogAnalytics />
@@ -163,6 +176,7 @@ const appTree = (
             </SidebarProvider>
           </MotionConfigBridge>
         </ThemeProvider>
+          </DateFormatProvider>
         </AuthProvider>
       </ClerkAppProvider>
     </BrowserRouter>

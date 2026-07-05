@@ -98,7 +98,10 @@ function assertLiveKeys({ pk, sk }) {
   }
 }
 
-function vercelUpsert(cwd, key, value, envs = ['production']) {
+// Preview branch deploys hit production API/DB — same pk_live_/org as production.
+const VERCEL_ENVS = ['production', 'preview'];
+
+function vercelUpsert(cwd, key, value, envs = VERCEL_ENVS) {
   for (const env of envs) {
     spawnSync('npx', ['--yes', 'vercel@latest', 'env', 'rm', key, env, '--yes'], {
       cwd,
@@ -114,6 +117,17 @@ function vercelUpsert(cwd, key, value, envs = ['production']) {
       throw new Error(`vercel env add ${key} @ ${path.basename(cwd)} failed`);
     }
     console.log(`  Vercel ${path.basename(cwd)} [${env}]: ${key}`);
+  }
+}
+
+function vercelRemove(cwd, key, envs = ['preview']) {
+  for (const env of envs) {
+    spawnSync('npx', ['--yes', 'vercel@latest', 'env', 'rm', key, env, '--yes'], {
+      cwd,
+      stdio: 'ignore',
+      shell: true,
+    });
+    console.log(`  Vercel ${path.basename(cwd)} [${env}]: removed ${key}`);
   }
 }
 
@@ -193,14 +207,16 @@ console.log('Pushing Clerk production keys…');
 for (const { cwd, needsClerkSecret, clerkProxyUrl } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
-  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', clerkProxyUrl);
+  vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', clerkProxyUrl, ['production']);
+  vercelRemove(cwd, 'VITE_CLERK_PROXY_URL', ['preview']);
   if (keys.orgId) {
     vercelUpsert(cwd, 'VITE_CLERK_ORGANIZATION_ID', keys.orgId);
   }
   if (needsClerkSecret) {
     vercelUpsert(cwd, 'CLERK_SECRET_KEY', keys.sk);
     vercelUpsert(cwd, 'CLERK_FAPI_UPSTREAM', 'https://frontend-api.clerk.dev');
-    vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', 'https://tsccoreknot.com/__clerk');
+    vercelUpsert(cwd, 'CLERK_PROXY_PUBLIC_URL', clerkProxyUrl, ['production']);
+    vercelRemove(cwd, 'CLERK_PROXY_PUBLIC_URL', ['preview']);
   }
 }
 await renderUpsert(keys.sk, keys.orgId);

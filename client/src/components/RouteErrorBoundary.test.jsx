@@ -3,15 +3,15 @@ import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import RouteErrorBoundary, {
-  canGoBackInHistory,
-  RouteErrorFallback,
-} from './RouteErrorBoundary.jsx';
+import RouteErrorBoundary, { RouteErrorFallback } from './RouteErrorBoundary.jsx';
+import AppErrorPage from './AppErrorPage.jsx';
+import { canGoBackInHistory } from '../utils/historyNavigation.js';
 import {
   buildRouteErrorCopyText,
   buildRouteErrorReference,
   buildRouteErrorSupportMailto,
   copyRouteErrorReference,
+  resolveAppErrorPresentation,
   summarizeRouteError,
 } from '../utils/routeErrorPresentation.js';
 
@@ -97,60 +97,77 @@ describe('routeErrorPresentation', () => {
     expect(copied).toContain('Error: Error: Network failed');
     vi.unstubAllGlobals();
   });
+
+  it('resolves server unavailable title for gateway errors', () => {
+    const result = resolveAppErrorPresentation({ statusCode: 503 });
+    expect(result.title).toMatch(/temporarily unavailable/i);
+    expect(result.showHealthyBadge).toBe(true);
+  });
 });
 
-describe('RouteErrorFallback', () => {
+describe('AppErrorPage', () => {
   const error = new Error('Loading chunk 9 failed');
   const errorRef = 'CK-20260701-A1B2';
 
-  function renderFallback() {
+  function renderPage(overrides = {}) {
     return render(
       <MemoryRouter>
-        <RouteErrorFallback error={error} errorRef={errorRef} onReload={vi.fn()} />
+        <AppErrorPage
+          error={error}
+          errorRef={errorRef}
+          summary="A part of the app failed to load."
+          onRetry={vi.fn()}
+          {...overrides}
+        />
       </MemoryRouter>,
     );
   }
 
-  it('renders centered block with reference and all actions', () => {
-    renderFallback();
+  it('renders anchored card with actions and support links', () => {
+    renderPage();
 
     expect(screen.getByRole('heading', { name: /something went wrong/i })).toBeInTheDocument();
-    expect(screen.getByTestId('route-error-ref')).toHaveTextContent(errorRef);
-    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /contact admin/i })).toHaveAttribute(
+    expect(screen.getByText(/Ref CK-20260701-A1B2/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /go to dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /contact your admin/i })).toHaveAttribute(
       'href',
       expect.stringMatching(/^mailto:/),
     );
-    expect(screen.getByRole('button', { name: /what happened/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy error details/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /check system status/i })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/\/api\/health$/),
+    );
+    expect(screen.getByRole('button', { name: /show full error/i })).toBeInTheDocument();
   });
 
-  it('toggles technical detail when asked what the error is', async () => {
-    const user = userEvent.setup();
-    renderFallback();
-
-    expect(screen.queryByTestId('route-error-technical')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /what happened/i }));
-    expect(screen.getByTestId('route-error-technical')).toHaveTextContent('Loading chunk 9 failed');
-  });
-
-  it('shows copy affordance on reference row', () => {
-    renderFallback();
-    expect(screen.getByRole('button', { name: /copy error details/i })).toBeInTheDocument();
-  });
-
-  it('copies technical error from what happened panel', async () => {
+  it('toggles and copies full error details', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
-    renderFallback();
+    renderPage();
 
-    await user.click(screen.getByRole('button', { name: /what happened/i }));
-    await user.click(screen.getByRole('button', { name: /copy error message/i }));
-
-    expect(writeText).toHaveBeenCalledWith('Error: Loading chunk 9 failed');
+    expect(screen.queryByTestId('app-error-full')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /show full error/i }));
+    expect(screen.getByTestId('app-error-full')).toHaveTextContent('Loading chunk 9 failed');
+    await user.click(screen.getByRole('button', { name: /copy full error/i }));
+    expect(writeText).toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('RouteErrorFallback', () => {
+  const error = new Error('Loading chunk 9 failed');
+
+  it('delegates to AppErrorPage', () => {
+    render(
+      <MemoryRouter>
+        <RouteErrorFallback error={error} errorRef="CK-20260701-A1B2" onReload={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show full error/i })).toBeInTheDocument();
   });
 });
 
@@ -171,7 +188,7 @@ describe('RouteErrorBoundary', () => {
     expect(screen.getByText('All good')).toBeInTheDocument();
   });
 
-  it('shows fallback with generated reference on error', () => {
+  it('shows shared error page with generated reference on error', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
       <MemoryRouter>
@@ -181,7 +198,7 @@ describe('RouteErrorBoundary', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('heading', { name: /something went wrong/i })).toBeInTheDocument();
-    expect(screen.getByTestId('route-error-ref').textContent).toMatch(/^CK-/);
+    expect(screen.getByText(/Ref CK-/)).toBeInTheDocument();
     spy.mockRestore();
   });
 });

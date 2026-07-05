@@ -53,8 +53,8 @@ export const budgetStatusTone = (pct) => {
   return 'ok';
 };
 
-export const BudgetUsedCell = ({ budgetUsedPct }) => {
-  if (budgetUsedPct == null) {
+export const BudgetUsedCell = ({ budgetUsedPct, hasBudget }) => {
+  if (!hasBudget || budgetUsedPct == null) {
     return <span className="text-[10px] text-[var(--color-text-muted)]">—</span>;
   }
   const tone = budgetStatusTone(budgetUsedPct);
@@ -82,8 +82,28 @@ export const ProgressCell = ({ progress, completedTasks, totalTasks }) => {
   );
 };
 
-export const formatProjectInr = (value) => {
-  const num = Number(value) || 0;
-  if (num === 0) return '—';
+export const formatProjectInr = (value, { emptyLabel = '—' } = {}) => {
+  const num = Number(value);
+  if (value == null || Number.isNaN(num) || num === 0) return emptyLabel;
   return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+};
+
+export const formatBudgetDisplay = (hasBudget, budget, budgetSource = 'tracked') => {
+  if (!hasBudget || budget == null) return 'No budget set';
+  const base = formatProjectInr(budget, { emptyLabel: 'No budget set' });
+  if (budgetSource === 'calculated') return `${base} (calculated)`;
+  return base;
+};
+
+export const formatVarianceHours = (varianceHours) => {
+  const v = Number(varianceHours) || 0;
+  if (v === 0) return '0h';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${v.toFixed(1)}h`;
+};
+
+export const formatForeignSpendNote = (foreignSpendInRange = []) => {
+  const items = (foreignSpendInRange || []).filter((e) => e.currency && e.currency !== 'INR');
+  if (!items.length) return null;
+  return items.map((e) => `${e.currency} ${Number(e.amount).toLocaleString('en-IN')}`).join(', ');
 };

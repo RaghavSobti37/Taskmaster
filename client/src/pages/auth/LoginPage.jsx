@@ -110,7 +110,7 @@ function LoginPageView({
   if (uiState === 'BOOT_ERROR') {
     return (
       <>
-        <AppBootError message={bootError} onRefresh={() => retryBoot()} />
+        <AppBootError bootError={bootError} onRefresh={() => retryBoot()} />
         <ClearSessionCookiesButton bootError />
       </>
     );

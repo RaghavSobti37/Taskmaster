@@ -1,4 +1,4 @@
-const TIMEFRAME_DAYS = { '1d': 1, '7d': 7, '30d': 30 };
+const TIMEFRAME_DAYS = { all: 3650, '1d': 1, '7d': 7, '30d': 30 };
 
 const VALID_TIMEFRAMES = Object.keys(TIMEFRAME_DAYS);
 
@@ -8,7 +8,7 @@ const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const resolveTimeframe = (value) => (VALID_TIMEFRAMES.includes(value) ? value : '30d');
+const resolveTimeframe = (value) => (VALID_TIMEFRAMES.includes(value) ? value : 'all');
 
 const toDateKey = (input = new Date()) => {
   const value = input instanceof Date ? input : new Date(input);
@@ -58,7 +58,7 @@ const capCustomRange = (startKey, endKey) => {
   return { startKey: start, endKey: end };
 };
 
-const getRollingWindow = (timeframe = '30d') => {
+const getRollingWindow = (timeframe = 'all') => {
   const tf = resolveTimeframe(timeframe);
   const endKey = toDateKey(new Date());
   const days = TIMEFRAME_DAYS[tf];

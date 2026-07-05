@@ -6,6 +6,7 @@ import {
   useDeleteMailProfile,
   useUpdateMailProfile,
 } from '../../hooks/useTaskmasterQueries';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import { SMTP_PRESETS, getProfileRotationProviders } from '../../utils/smtpPresets';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -13,7 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 export function formatProfileResetTime(iso) {
   if (!iso) return 'Resets daily at 12:00 AM UTC';
   try {
-    return `Resets ${new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+    return `Resets ${formatDisplayDateTime(iso)} UTC`;
   } catch {
     return 'Resets daily at 12:00 AM UTC';
   }

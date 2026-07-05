@@ -4,7 +4,8 @@ import { authUrl, resolveAppNavigationTarget } from '../config/siteUrls';
 export function navigateAfterAuth(navigate, target) {
   const resolved = resolveAppNavigationTarget(target);
   if (/^https?:\/\//i.test(resolved)) {
-    window.location.replace(resolved);
+    // ponytail: brief settle so shared-domain cookie is visible before app host loads
+    window.setTimeout(() => window.location.replace(resolved), 120);
     return;
   }
   if (typeof navigate === 'function') {

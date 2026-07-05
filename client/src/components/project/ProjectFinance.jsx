@@ -13,6 +13,7 @@ import { DataTable } from '../ui';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { useConfirm } from '../../contexts/confirmContext';
+import { ESCAPE_OVERLAY_PROPS } from '../../lib/escapeBack';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Types' },
@@ -150,16 +151,17 @@ const ProjectFinance = ({ projectId }) => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory]);
 
-  // Bind Escape key to close preview modal
+  // Close preview on Escape without triggering global Escape→back
   useEffect(() => {
+    if (!selectedDoc) return;
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setSelectedDoc(null);
-      }
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setSelectedDoc(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [selectedDoc]);
 
   const { data: docsRes, isLoading } = useQuery({
     queryKey: ['project-finance-docs', projectId, selectedCategory, searchQuery, currentPage],
@@ -263,6 +265,7 @@ const ProjectFinance = ({ projectId }) => {
       <AnimatePresence>
         {selectedDoc && (
           <motion.div
+            {...ESCAPE_OVERLAY_PROPS}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

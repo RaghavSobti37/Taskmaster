@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+const { protect, requirePageAccess, requirePlatformAdmin } = require('../middleware/authMiddleware');
 const { validateBody } = require('../validation/validateBody');
 const { validateParams } = require('../validation/validateParams');
 const { runAdminScriptBody, adminScriptParams } = require('../validation/schemas/admin');
@@ -30,7 +30,7 @@ const buildScriptList = () =>
     };
   }).filter((entry) => !entry.missing);
 
-const scriptsAccess = requirePageAccess('admin_scripts');
+const scriptsAccess = requirePlatformAdmin;
 
 router.use(protect, scriptsAccess);
 

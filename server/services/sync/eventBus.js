@@ -4,8 +4,7 @@
  */
 
 const { Queue, Worker } = require('bullmq');
-const Redis = require('ioredis');
-const { getRedisUrl } = require('../../utils/wslRedis');
+const { createRedisClient } = require('../../utils/wslRedis');
 const logger = require('../../utils/logger');
 const { DOMAIN_SYNC_EVENT_TYPES } = require('../../../shared/dataOwnership');
 const { handleDomainSyncJob } = require('./handlers/routeSyncHandler');
@@ -35,13 +34,7 @@ function buildJobId(eventType, payload = {}) {
 
 function getRedisConnection() {
   if (redisConnection) return redisConnection;
-  redisConnection = new Redis(getRedisUrl(), {
-    maxRetriesPerRequest: null,
-    connectTimeout: 2000,
-    lazyConnect: true,
-    retryStrategy: () => null,
-  });
-  redisConnection.on('error', () => {});
+  redisConnection = createRedisClient();
   return redisConnection;
 }
 

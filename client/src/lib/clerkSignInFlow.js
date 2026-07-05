@@ -1,5 +1,5 @@
-/** Clerk `<SignIn routing="path" path="/login" />` sub-routes still in progress. */
-const PENDING_SIGN_IN_SEGMENTS = new Set([
+/** Clerk path-routed auth sub-routes still in progress (SignIn + SignUp). */
+const PENDING_AUTH_SEGMENTS = new Set([
   'client-trust',
   'factor-one',
   'factor-two',
@@ -9,28 +9,49 @@ const PENDING_SIGN_IN_SEGMENTS = new Set([
   'verify',
   'choose',
   'choose-wallet',
+  'continue',
 ]);
+
+const AUTH_ROUTE_PREFIXES = ['/login', '/register'];
 
 /**
  * Clerk path routing can update the browser URL before React Router pathname catches up.
- * Prefer the more specific /login/* segment when both are available.
+ * Prefer the more specific /login/* or /register/* segment when both are available.
  */
-export function resolveClerkSignInPathname(routerPathname = '/') {
+export function resolveClerkAuthPathname(routerPathname = '/') {
   const router = String(routerPathname || '');
   if (typeof window === 'undefined') return router;
   const browser = window.location.pathname || '';
-  if (!browser.startsWith('/login')) return router;
-  if (!router.startsWith('/login')) return browser;
-  return browser.length >= router.length ? browser : router;
+  const prefix = AUTH_ROUTE_PREFIXES.find(
+    (p) => browser.startsWith(p) || router.startsWith(p),
+  );
+  if (!prefix) return router;
+  if (browser.startsWith(prefix) && router.startsWith(prefix)) {
+    return browser.length >= router.length ? browser : router;
+  }
+  if (browser.startsWith(prefix)) return browser;
+  if (router.startsWith(prefix)) return router;
+  return router;
 }
 
-export function isClerkSignInSubflowPath(pathname) {
-  const match = String(pathname || '').match(/^\/login\/([^/?#]+)/);
+/** @deprecated use resolveClerkAuthPathname */
+export function resolveClerkSignInPathname(routerPathname = '/') {
+  return resolveClerkAuthPathname(routerPathname);
+}
+
+export function isClerkAuthSubflowPath(pathname) {
+  const path = String(pathname || '');
+  const match = path.match(/^\/(?:login|register)\/([^/?#]+)/);
   if (!match) return false;
-  return PENDING_SIGN_IN_SEGMENTS.has(match[1]);
+  return PENDING_AUTH_SEGMENTS.has(match[1]);
 }
 
-/** Safe to tear down `<SignIn />` and run clerk-establish. */
+/** @deprecated use isClerkAuthSubflowPath */
+export function isClerkSignInSubflowPath(pathname) {
+  return isClerkAuthSubflowPath(pathname);
+}
+
+/** Safe to tear down Clerk SignIn/SignUp and run clerk-establish. */
 export function isClerkReadyForCoreKnotEstablish({
   pathname,
   isLoaded,
@@ -38,12 +59,12 @@ export function isClerkReadyForCoreKnotEstablish({
   sessionId,
 }) {
   if (!isLoaded || !isSignedIn || !sessionId) return false;
-  if (isClerkSignInSubflowPath(pathname)) return false;
+  if (isClerkAuthSubflowPath(pathname)) return false;
   return true;
 }
 
 /**
- * Exhaustive login UI states for auth host.
+ * Exhaustive login/signup UI states for auth host.
  * @returns {'BOOT_ERROR'|'BOOT_LOADING'|'ESTABLISH_ERROR'|'ESTABLISHING'|'REDIRECTING'|'SHOW_SIGN_IN'}
  */
 export function computeLoginUiState({
@@ -63,17 +84,16 @@ export function computeLoginUiState({
   if (!clerkLoaded) return 'BOOT_LOADING';
   if (establishError) return 'ESTABLISH_ERROR';
 
-  const signInPath = resolveClerkSignInPathname(pathname);
+  const authPath = resolveClerkAuthPathname(pathname);
 
-  // Never tear down Clerk SignIn or show establish/redirect chrome during OTP/MFA subflows.
-  if (isClerkSignInSubflowPath(signInPath)) {
+  if (isClerkAuthSubflowPath(authPath)) {
     return 'SHOW_SIGN_IN';
   }
 
   if (user && sessionReady) return 'REDIRECTING';
 
   const readyForEstablish = isClerkReadyForCoreKnotEstablish({
-    pathname: signInPath,
+    pathname: authPath,
     isLoaded: clerkLoaded,
     isSignedIn: clerkSignedIn,
     sessionId: clerkSessionId,
@@ -83,7 +103,6 @@ export function computeLoginUiState({
     return 'ESTABLISHING';
   }
 
-  // Session probe — don't tear down SignIn while user is typing credentials
   if (authLoading && !clerkSignedIn) return 'BOOT_LOADING';
 
   return 'SHOW_SIGN_IN';

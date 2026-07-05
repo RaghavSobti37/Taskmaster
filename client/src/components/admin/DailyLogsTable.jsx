@@ -79,7 +79,14 @@ const DailyLogsTable = ({ entries = [], showMember = false }) => {
     cols.push(
       {
         header: 'Title',
-        render: (row) => <span className="font-bold text-[11px]">{row.title}</span>,
+        render: (row) => (
+          <span className="font-bold text-[11px] inline-flex items-center gap-1.5">
+            {row.title}
+            {row.duplicateCollapsed && (
+              <Badge variant="warning" className="!text-[7px] uppercase">deduped</Badge>
+            )}
+          </span>
+        ),
       },
       {
         header: 'Project',

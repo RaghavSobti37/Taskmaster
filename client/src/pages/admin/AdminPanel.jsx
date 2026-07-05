@@ -42,6 +42,9 @@ import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
+import ClerkDashboardUsersButton from '../../components/admin/ClerkDashboardUsersButton';
+import AdminUserGridCard from '../../components/admin/AdminUserGridCard';
+import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 
 const AdminPanel = () => {
   const { confirm } = useConfirm();
@@ -54,6 +57,7 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
   const [editUserBaseline, setEditUserBaseline] = useState(null);
+  const [reportUser, setReportUser] = useState(null);
 
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
@@ -148,50 +152,13 @@ const AdminPanel = () => {
   const showRibbon = activeTab === 'users' || activeTab === 'teams';
 
   const filteredUsers = useMemo(() => {
-    return userList.filter(u => 
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return userList
+      .filter(u =>
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [userList, searchTerm]);
-
-  const userColumns = [
-    {
-      header: 'User',
-      sortKey: 'name',
-      render: (u) => (
-        <div className="flex items-center gap-3">
-          <UserAvatar user={u} size="md" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xs">{u.name}</span>
-              <Badge variant={u.role === 'admin' ? 'rose' : 'info'} className="!text-[9px] uppercase font-mono">
-                {u.role}
-              </Badge>
-            </div>
-            <span className="text-[10px] text-[var(--color-text-muted)]">{u.email}</span>
-          </div>
-        </div>
-      )
-    },
-    {
-      header: 'Assigned Team',
-      render: (u) => (
-        <span className="text-xs font-bold uppercase text-[var(--color-text-secondary)]">
-          {u.teams?.length > 0 ? u.teams.join(', ') : 'Unassigned'}
-        </span>
-      )
-    },
-    {
-      header: 'Last Activity',
-      sortKey: 'lastOnline',
-      sortFn: (u) => (u.lastOnline ? new Date(u.lastOnline) : null),
-      render: (u) => (
-        <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-          {u.lastOnline ? formatDisplayDateTime12h(new Date(u.lastOnline)) : 'No record'}
-        </span>
-      )
-    },
-  ];
 
   const currentMeta = pageMeta[activeTab] || { title: 'Admin Panel' };
 
@@ -257,14 +224,17 @@ const AdminPanel = () => {
         ) : undefined
       }
       toolbarActions={
-        <TabSwitcher
-          activeTab={activeTab}
-          onChange={handleTabChange}
-          tabs={[
-            { id: 'users', label: 'Users' },
-            { id: 'crm', label: 'Data Hub' },
-          ]}
-        />
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {activeTab === 'users' && <ClerkDashboardUsersButton />}
+          <TabSwitcher
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            tabs={[
+              { id: 'users', label: 'Users' },
+              { id: 'crm', label: 'Data Hub' },
+            ]}
+          />
+        </div>
       }
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -278,11 +248,21 @@ const AdminPanel = () => {
               transition={{ duration: 0.2 }}
             >
               {activeTab === 'users' && (
-                <DataTable 
-                  columns={userColumns} 
-                  data={filteredUsers} 
-                  onRowClick={(u) => setSelectedUser(u)}
-                />
+                filteredUsers.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">No users match your search.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredUsers.map((u) => (
+                      <AdminUserGridCard
+                        key={u._id}
+                        user={u}
+                        metaLabel={u.teams?.length ? u.teams.join(', ') : 'Unassigned'}
+                        onEdit={setSelectedUser}
+                        onViewReport={setReportUser}
+                      />
+                    ))}
+                  </div>
+                )
               )}
               {activeTab === 'crm' && <DataHubContent />}
             </motion.div>
@@ -353,6 +333,18 @@ const AdminPanel = () => {
           </aside>
         )}
       </div>
+
+      <FullScreenWorkspace
+        isOpen={!!reportUser}
+        onClose={() => setReportUser(null)}
+        title={reportUser ? `Report — ${reportUser.name}` : 'Report'}
+        subtitle={reportUser?.email}
+        mainClassName="max-w-5xl"
+      >
+        {reportUser && (
+          <MonthlyReportPanel userId={reportUser._id} userName={reportUser.name} />
+        )}
+      </FullScreenWorkspace>
 
       {/* User Management Workspace */}
       <FullScreenWorkspace

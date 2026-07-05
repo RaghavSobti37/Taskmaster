@@ -17,7 +17,7 @@ import { runClerkSignOut } from '../lib/clerkLogoutRegistry';
 import { mergeSessionUser } from '../utils/sessionUserMerge';
 import { enrichUserDepartment } from '../utils/enrichUserDepartment';
 import { probeAuthSession } from '../utils/authSessionProbe';
-import { formatBootErrorMessage } from '../utils/bootErrorMessage';
+import { formatBootError } from '../utils/bootErrorMessage';
 import { registerUnauthorizedHandler } from '../lib/authUnauthorized';
 import { hasAnalyticsConsent } from '../lib/cookieConsent';
 import {
@@ -32,11 +32,12 @@ const defaultAuthContext = {
   loading: true,
   sessionReady: false,
   bootError: null,
-  login: async () => {},
-  logout: () => {},
-  refreshUser: () => {},
-  applySessionUser: () => {},
-  retryBoot: () => {},
+  login: async () => { },
+  confirmSessionFromEstablish: async () => { },
+  logout: () => { },
+  refreshUser: () => { },
+  applySessionUser: () => { },
+  retryBoot: () => { },
 };
 
 const AuthContext = createContext(defaultAuthContext);
@@ -63,6 +64,29 @@ const IMMEDIATE_SESSION_PROBE_PATHS = new Set([
 ]);
 
 const SESSION_RETRIES = 3;
+
+/** Retry session probe until HttpOnly cookie from clerk-establish is visible. */
+async function verifyEstablishedSessionCookie(expectedUserId, isCancelled, maxAttempts = 4) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (isCancelled()) return null;
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+    try {
+      const probe = await probeAuthSession();
+      if (
+        probe.status === 200
+        && probe.user?._id
+        && String(probe.user._id) === String(expectedUserId)
+      ) {
+        return probe.user;
+      }
+    } catch {
+      /* retry */
+    }
+  }
+  return null;
+}
 
 const applyAxiosBaseURL = () => {
   const axiosBase = getAxiosBaseURL();
@@ -162,9 +186,12 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
-    const { clearOn401 = true, retries = SESSION_RETRIES } = options;
+    const { clearOn401 = true, retries = SESSION_RETRIES, forceFresh = false } = options;
     if (fetchUserInFlightRef.current) {
-      return fetchUserInFlightRef.current;
+      if (!forceFresh) {
+        return fetchUserInFlightRef.current;
+      }
+      fetchUserInFlightRef.current = null;
     }
 
     const run = async () => {
@@ -185,7 +212,7 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
           lastError = err;
           if (attempt < retries - 1) continue;
-          setBootError(formatBootErrorMessage(err));
+          setBootError(formatBootError(err));
           setUser(null);
           setSessionReady(false);
           setLoading(false);
@@ -228,7 +255,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (lastError) {
-        setBootError(formatBootErrorMessage(lastError));
+        setBootError(formatBootError(lastError));
       }
       setUser(null);
       setSessionReady(false);
@@ -317,9 +344,19 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async () => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
+    fetchUserInFlightRef.current = null;
+    try {
+      sessionStorage.removeItem('coreknot_just_logged_out');
+    } catch {
+      /* ignore */
+    }
     queryClient.clear();
 
-    const sessionUser = await fetchUser({ clearOn401: true, retries: SESSION_RETRIES });
+    const sessionUser = await fetchUser({
+      clearOn401: true,
+      retries: SESSION_RETRIES,
+      forceFresh: true,
+    });
     if (!sessionUser) {
       setSessionReady(false);
       throw new Error('Session could not be established. Please try again.');
@@ -344,8 +381,59 @@ export const AuthProvider = ({ children }) => {
         setPostHogUser(merged);
         return merged;
       });
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
+
+  const confirmSessionFromEstablish = useCallback(async (sessionUser) => {
+    if (!sessionUser?._id) {
+      throw new Error('Session could not be established. Please try again.');
+    }
+    loggingOutRef.current = false;
+    authEpochRef.current += 1;
+    const epoch = authEpochRef.current;
+    fetchUserInFlightRef.current = null;
+    try {
+      sessionStorage.removeItem('coreknot_just_logged_out');
+    } catch {
+      /* ignore */
+    }
+    queryClient.clear();
+    setBootError(null);
+
+    const isCancelled = () => epoch !== authEpochRef.current;
+
+    let verifiedUser = await verifyEstablishedSessionCookie(
+      sessionUser._id,
+      isCancelled,
+    );
+    if (!verifiedUser) {
+      const fallback = await fetchUser({
+        clearOn401: true,
+        retries: 2,
+        forceFresh: true,
+      });
+      if (!fallback?._id || isCancelled()) {
+        throw new Error('Session could not be established. Please try again.');
+      }
+      verifiedUser = fallback;
+    }
+
+    const enriched = await enrichUserDepartment(verifiedUser).catch(() => verifiedUser);
+    if (isCancelled()) return;
+
+    setUser((prev) => {
+      const merged = mergeSessionUser(prev, enriched || verifiedUser);
+      if (hasAnalyticsConsent()) {
+        ensurePostHogForConsent();
+        setPostHogUser(merged);
+      }
+      return merged;
+    });
+    recordAttendanceSessionLogin();
+    setLoading(false);
+    setSessionReady(true);
+    refetchUserScopedQueries(queryClient);
+  }, [fetchUser, queryClient]);
 
   const retryBoot = useCallback(() => {
     loggingOutRef.current = false;
@@ -360,11 +448,12 @@ export const AuthProvider = ({ children }) => {
     sessionReady,
     bootError,
     login,
+    confirmSessionFromEstablish,
     logout,
     refreshUser: fetchUser,
     applySessionUser,
     retryBoot,
-  }), [user, loading, sessionReady, bootError, login, logout, fetchUser, applySessionUser, retryBoot]);
+  }), [user, loading, sessionReady, bootError, login, confirmSessionFromEstablish, logout, fetchUser, applySessionUser, retryBoot]);
 
   return (
     <AuthContext.Provider value={value}>

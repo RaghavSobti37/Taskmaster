@@ -105,10 +105,12 @@
     "routes": [
       "/unsubscribe"
     ],
-    "lines": 132,
+    "lines": 178,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useMemo",
+      "usePublicEmailStreams",
       "useSearchParams",
       "useState"
     ],
@@ -170,7 +172,7 @@
     "routes": [
       "/admin/control"
     ],
-    "lines": 491,
+    "lines": 483,
     "defaultExport": "AdminPanel",
     "namedExports": [],
     "hooks": [
@@ -196,6 +198,9 @@
     ],
     "apis": [],
     "components": [
+      "AdminUserGridCard",
+      "ClerkDashboardUsersButton",
+      "MonthlyReportPanel",
       "UserDeleteAction"
     ]
   },
@@ -230,7 +235,7 @@
     "routes": [
       "/admin/project-analytics"
     ],
-    "lines": 465,
+    "lines": 449,
     "defaultExport": "AdminProjectAnalyticsPage",
     "namedExports": [],
     "hooks": [
@@ -247,6 +252,7 @@
     "apis": [],
     "components": [
       "ProjectAnalyticsContent",
+      "ProjectAnalyticsKpiGrid",
       "ProjectReportRangeControls"
     ]
   },
@@ -309,11 +315,33 @@
     ]
   },
   {
+    "file": "client/src/pages/admin/AdminTenantSsoPage.jsx",
+    "routes": [
+      "/admin/tenant-sso"
+    ],
+    "lines": 114,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useEffect",
+      "useState",
+      "useToast"
+    ],
+    "apis": [
+      "/api/admin/tenants",
+      "/api/admin/tenants/${tenant._id}"
+    ],
+    "components": [
+      "QueryErrorSlot"
+    ]
+  },
+  {
     "file": "client/src/pages/admin/AdminUsers.jsx",
     "routes": [
       "/admin/users"
     ],
-    "lines": 470,
+    "lines": 462,
     "defaultExport": "AdminUsers",
     "namedExports": [],
     "hooks": [
@@ -336,6 +364,8 @@
     ],
     "apis": [],
     "components": [
+      "AdminUserGridCard",
+      "ClerkDashboardUsersButton",
       "CreateUserModal",
       "MonthlyReportPanel",
       "PagePermissionsEditor",
@@ -387,7 +417,7 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 530,
+    "lines": 531,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
@@ -436,6 +466,49 @@
     "components": [
       "ExlyDataContent",
       "MasterclassFunnelPanel"
+    ]
+  },
+  {
+    "file": "client/src/pages/admin/KnowledgeEnginePage.jsx",
+    "routes": [
+      "/admin/knowledge-engine"
+    ],
+    "lines": 401,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useApproveKnowledgeArticle",
+      "useCreateDistribution",
+      "useCreateKnowledgeArticle",
+      "useEffect",
+      "useGenerateBrief",
+      "useHook",
+      "useKnowledgeAnalytics",
+      "useKnowledgeArticles",
+      "useKnowledgeBriefs",
+      "useKnowledgeChunks",
+      "useKnowledgeConnections",
+      "useKnowledgeDashboard",
+      "useKnowledgeDistribution",
+      "useKnowledgeJobTrigger",
+      "useKnowledgeOpportunities",
+      "useKnowledgeSettings",
+      "useKnowledgeSources",
+      "useMediumPrep",
+      "useMemo",
+      "usePublishKnowledgeArticle",
+      "useRunArticlePipeline",
+      "useSearchParams",
+      "useSetMediumUrl",
+      "useState",
+      "useToast",
+      "useUpdateKnowledgeSettings"
+    ],
+    "apis": [],
+    "components": [
+      "AdminConsoleBackButton",
+      "PageHeader",
+      "SearchInput"
     ]
   },
   {
@@ -522,7 +595,7 @@
     "routes": [
       "/admin/qa"
     ],
-    "lines": 1323,
+    "lines": 1324,
     "defaultExport": "QATestingPage",
     "namedExports": [],
     "hooks": [
@@ -552,6 +625,26 @@
       "/api/qa/start"
     ],
     "components": []
+  },
+  {
+    "file": "client/src/pages/admin/SecurityAuditPage.jsx",
+    "routes": [
+      "/admin/security-audit"
+    ],
+    "lines": 83,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useMemo",
+      "useQuery",
+      "useState"
+    ],
+    "apis": [
+      "/api/admin/security-audit"
+    ],
+    "components": [
+      "QueryErrorSlot"
+    ]
   },
   {
     "file": "client/src/pages/artists/ArtistDetail.jsx",
@@ -1129,7 +1222,7 @@
     "routes": [
       "/assets/accounts"
     ],
-    "lines": 777,
+    "lines": 768,
     "defaultExport": "OrgAccountsPage",
     "namedExports": [],
     "hooks": [
@@ -1262,7 +1355,7 @@
     "routes": [
       "/register/*"
     ],
-    "lines": 137,
+    "lines": 141,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1443,16 +1536,17 @@
     "routes": [
       "/components"
     ],
-    "lines": 723,
+    "lines": 803,
     "defaultExport": "ComponentsShowcase",
     "namedExports": [],
     "hooks": [
+      "useMemo",
       "useState"
     ],
     "apis": [],
     "components": [
-      "FluidRibbonLoaderGallery",
-      "ModuleSubnavShowcase"
+      "AppErrorPage",
+      "FluidRibbonLoaderGallery"
     ]
   },
   {
@@ -1541,6 +1635,25 @@
     "components": [
       "MailProfilesPanel"
     ]
+  },
+  {
+    "file": "client/src/pages/emails/EmailsStreamsPage.jsx",
+    "routes": [
+      "/emails/streams"
+    ],
+    "lines": 142,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCreateEmailStream",
+      "useEmailStreams",
+      "useMemo",
+      "useState",
+      "useToast",
+      "useUpdateEmailStream"
+    ],
+    "apis": [],
+    "components": []
   },
   {
     "file": "client/src/pages/emails/EmailsTemplatesPage.jsx",
@@ -2393,12 +2506,13 @@
   {
     "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
     "routes": [],
-    "lines": 486,
+    "lines": 523,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useAuth",
       "useCallback",
+      "useDateFormat",
       "useEffect",
       "useMemo",
       "useNavigate",
@@ -2415,7 +2529,7 @@
   {
     "file": "client/src/pages/settings/tabs/ProgressTab.jsx",
     "routes": [],
-    "lines": 230,
+    "lines": 222,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

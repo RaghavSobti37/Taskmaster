@@ -395,10 +395,6 @@ function resolveProjectIds(projectHint, projects) {
 const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim()
   || 'tsc-newsletter@tsc-website-470512.iam.gserviceaccount.com';
 
-function sheetAccessHelpMessage(cause) {
-  return `${cause} Share the Google Sheet with ${SERVICE_ACCOUNT_EMAIL} (Viewer access is enough), then retry Import Sheet.`;
-}
-
 async function getSheetsClient() {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
     throw new Error(sheetAccessHelpMessage('Google service account credentials are missing.'));

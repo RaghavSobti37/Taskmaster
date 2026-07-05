@@ -1,8 +1,25 @@
 const Log = require('../models/Log');
+const { getDateKey, startOfDayFromKey, endOfDayFromKey } = require('./attendanceDate');
 
 const ACTIVE_LOG_FILTER = { $or: [{ voidedAt: null }, { voidedAt: { $exists: false } }] };
 
 const taskLogTypes = ['TASK_COMPLETION', 'TASK_REVIEW'];
+
+const findActiveTaskDailyLogOnDay = (userId, taskId, type, dayKey = getDateKey(new Date()), session) => {
+  const rangeStart = startOfDayFromKey(dayKey);
+  const rangeEnd = endOfDayFromKey(dayKey);
+  let q = Log.findOne({
+    userId,
+    targetId: taskId,
+    targetType: 'Task',
+    action: 'DAILY_LOG',
+    'details.type': type,
+    createdAt: { $gte: rangeStart, $lte: rangeEnd },
+    ...ACTIVE_LOG_FILTER,
+  });
+  if (session) q = q.session(session);
+  return q;
+};
 
 const findActiveTaskDailyLog = (userId, taskId, type, session) => {
   let q = Log.findOne({
@@ -51,5 +68,6 @@ module.exports = {
   ACTIVE_LOG_FILTER,
   taskLogTypes,
   findActiveTaskDailyLog,
+  findActiveTaskDailyLogOnDay,
   voidTaskDailyLogsForTask,
 };

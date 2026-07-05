@@ -1,18 +1,10 @@
 const { Worker } = require('bullmq');
-const IORedis = require('ioredis');
+const { createRedisClient } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
 const { processBookedCallLogic, processArtistEnquiryLogic, processArtistPathLogic, processNewsletterLogic, processMasterclassReviewLogic } = require('../controllers/webhookController');
 
-const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: null,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 50, 2000);
-  }
-});
-
-connection.on('error', () => {});
+const connection = createRedisClient();
 
 
 const initWebhookWorker = () => {

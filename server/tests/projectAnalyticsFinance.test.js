@@ -21,6 +21,7 @@ describe('projectFinanceRollup', () => {
     ], rangeStart, rangeEnd);
 
     const row = map.get(pid);
+    expect(row.hasBudget).toBe(true);
     expect(row.budget).toBe(100000);
     expect(row.spentTotal).toBe(35000);
     expect(row.spentInRange).toBe(30000);
@@ -32,14 +33,35 @@ describe('projectFinanceRollup', () => {
     expect(row.spendByCategory.receipt.total).toBe(5000);
   });
 
-  test('rollupFinanceByProject tracks other-category spend', () => {
+  test('rollupFinanceByProject tracks verified other-category spend', () => {
     const map = rollupFinanceByProject([
-      { project: pid, category: 'other', metadata: { amount: 1200 }, createdAt: '2026-06-05' },
+      { project: pid, category: 'other', metadata: { amount: 1200, analyticsVerified: true }, createdAt: '2026-06-05' },
     ], rangeStart, rangeEnd);
 
     const row = map.get(pid);
     expect(row.spentTotal).toBe(1200);
     expect(row.spendByCategory.other.total).toBe(1200);
+  });
+
+  test('rollupFinanceByProject excludes junk whatsapp image uploads', () => {
+    const map = rollupFinanceByProject([
+      { project: pid, category: 'other', metadata: { amount: 500 }, title: 'WhatsApp Image 2026-04-11', createdAt: '2026-06-05' },
+      { project: pid, category: 'invoice', metadata: { amount: 1000, date: '2026-06-10' }, title: 'Studio rent', createdAt: '2026-06-10' },
+    ], rangeStart, rangeEnd);
+
+    const row = map.get(pid);
+    expect(row.spentTotal).toBe(1000);
+    expect(row.excludedDocCount).toBe(1);
+  });
+
+  test('rollupFinanceByProject converts foreign currency to base INR for in-range spend', () => {
+    const map = rollupFinanceByProject([
+      { project: pid, category: 'invoice', metadata: { amount: 100, currency: 'USD', date: '2026-06-10' }, createdAt: '2026-06-10' },
+    ], rangeStart, rangeEnd);
+
+    const row = map.get(pid);
+    expect(row.spentInRangeBase).toBe(8300);
+    expect(row.foreignSpendInRange).toEqual([{ currency: 'USD', amount: 100 }]);
   });
 
   test('budgetStatusTone flags over-budget projects', () => {

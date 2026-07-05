@@ -1,7 +1,14 @@
 import React from 'react';
 import { getRollingRangeBounds } from '../../utils/projectReportRange';
 
-const PRESETS = ['1d', '7d', '30d'];
+const PRESETS = ['all', '1d', '7d', '30d'];
+
+const PRESET_LABELS = {
+  all: 'All time',
+  '1d': '1d',
+  '7d': '7d',
+  '30d': '30d',
+};
 
 const dateInputClass =
   'px-2 py-1 text-xs font-medium rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -46,7 +53,7 @@ export default function ProjectReportRangeControls({
             onClick={() => selectPreset(opt)}
             className={segmentClass(rangeMode === 'preset' && timeframe === opt)}
           >
-            {opt}
+            {PRESET_LABELS[opt] || opt}
           </button>
         ))}
         <button

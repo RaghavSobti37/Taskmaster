@@ -1,79 +1,75 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const Tenant = require('../models/Tenant');
-const logger = require('../utils/logger');
+const Project = require('../models/Project');
+const Lead = require('../domains/crm/models/Lead');
+const TenantMembership = require('../models/TenantMembership');
+const { recordAuditEvent } = require('./auditEventService');
 
-const TENANT_SCOPED_MODELS = [
-  'User',
-  'Lead',
-  'Task',
-  'Project',
-  'Log',
-  'SecurityAudit',
-];
+const EXPORT_DIR = path.join(os.tmpdir(), 'coreknot-tenant-exports');
+const jobs = new Map();
 
-async function exportTenantData(tenantId) {
-  const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true }).lean();
-  if (!tenant) {
-    const err = new Error('Tenant not found');
-    err.status = 404;
-    throw err;
-  }
-
-  const exportPayload = {
+async function collectTenantPayload(tenantId) {
+  const tid = new mongoose.Types.ObjectId(String(tenantId));
+  const [projects, leads, memberships] = await Promise.all([
+    Project.find({ tenantId: tid }).setOptions({ bypassTenant: true }).lean(),
+    Lead.find({ tenantId: tid }).setOptions({ bypassTenant: true }).lean(),
+    TenantMembership.find({ tenantId: tid }).setOptions({ bypassTenant: true }).lean(),
+  ]);
+  return {
     exportedAt: new Date().toISOString(),
-    tenant,
-    collections: {},
+    tenantId: String(tenantId),
+    counts: { projects: projects.length, leads: leads.length, memberships: memberships.length },
+    projects,
+    leads,
+    memberships,
   };
-
-  for (const name of TENANT_SCOPED_MODELS) {
-    try {
-      const Model = mongoose.model(name);
-      const docs = await Model.find({ tenantId })
-        .setOptions({ bypassTenant: true })
-        .lean();
-      exportPayload.collections[name] = docs;
-    } catch (error) {
-      logger.warn('tenantExport', `Skip ${name}`, { error: error.message });
-    }
-  }
-
-  return exportPayload;
 }
 
-async function scheduleTenantDeletion(tenantId, actorId) {
-  const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
-  if (!tenant) {
-    const err = new Error('Tenant not found');
-    err.status = 404;
-    throw err;
-  }
+async function queueTenantExport({ tenantId, actorId, actorEmail, req }) {
+  const jobId = `${tenantId}-${Date.now()}`;
+  jobs.set(jobId, { status: 'running', tenantId: String(tenantId), startedAt: new Date() });
 
-  tenant.status = 'suspended';
-  tenant.updatedAt = new Date();
-  await tenant.save();
+  setImmediate(async () => {
+    try {
+      if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR, { recursive: true });
+      const payload = await collectTenantPayload(tenantId);
+      const filePath = path.join(EXPORT_DIR, `${jobId}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
+      jobs.set(jobId, {
+        status: 'complete',
+        tenantId: String(tenantId),
+        filePath,
+        completedAt: new Date(),
+        counts: payload.counts,
+      });
+      await recordAuditEvent({
+        tenantId,
+        actorId,
+        actorEmail,
+        action: 'tenant.data.export.completed',
+        resourceType: 'tenantExport',
+        resourceId: jobId,
+        after: payload.counts,
+        req,
+      });
+    } catch (err) {
+      jobs.set(jobId, { status: 'failed', tenantId: String(tenantId), error: err.message });
+    }
+  });
 
-  const users = await User.find({ tenantId }).setOptions({ bypassTenant: true });
-  const { revokeAllUserSessions } = require('../utils/sessionRegistry');
-  for (const user of users) {
-    user.suspended = true;
-    user.suspendedAt = user.suspendedAt || new Date();
-    user.suspensionReason = `Tenant offboarding scheduled by admin ${actorId}`;
-    // eslint-disable-next-line no-await-in-loop
-    await user.save();
-    // eslint-disable-next-line no-await-in-loop
-    await revokeAllUserSessions(user._id.toString());
-  }
+  return { jobId, status: 'queued' };
+}
 
-  return {
-    tenantId: tenant._id.toString(),
-    usersSuspended: users.length,
-    purgeNote: 'Hard purge after 30d — cron job follow-up',
-  };
+function getExportJob(jobId, tenantId) {
+  const job = jobs.get(jobId);
+  if (!job || job.tenantId !== String(tenantId)) return null;
+  return job;
 }
 
 module.exports = {
-  exportTenantData,
-  scheduleTenantDeletion,
-  TENANT_SCOPED_MODELS,
+  queueTenantExport,
+  getExportJob,
+  EXPORT_DIR,
 };

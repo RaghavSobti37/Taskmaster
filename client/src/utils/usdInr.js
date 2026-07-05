@@ -1,3 +1,5 @@
+import { formatDisplayDateTime } from './dateDisplay';
+
 export const roundMoney = (value, decimals = 2) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
@@ -19,13 +21,7 @@ export const inrToUsd = (inr, rate) => {
 
 export const formatRateTime = (iso) => {
   try {
-    return new Date(iso).toLocaleString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDisplayDateTime(iso);
   } catch {
     return iso;
   }

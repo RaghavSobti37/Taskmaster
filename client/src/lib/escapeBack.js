@@ -5,6 +5,29 @@ export function isAriaModalOpen(doc = document) {
   return Boolean(doc.querySelector('[aria-modal="true"]'));
 }
 
+/** Shared DOM props for custom fullscreen overlays (not ModalShell). */
+export const ESCAPE_OVERLAY_PROPS = {
+  'data-escape-overlay': 'true',
+  role: 'dialog',
+  'aria-modal': 'true',
+};
+
+/** Custom fullscreen overlays without ModalShell — must set data-escape-overlay on root. */
+export function isEscapeOverlayOpen(doc = document) {
+  return Boolean(doc.querySelector('[data-escape-overlay="true"]'));
+}
+
+/** Call from custom overlay ESC handlers so global Escape→back does not run. */
+export function consumeEscapeKey(event) {
+  if (event?.key !== 'Escape') return false;
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === 'function') {
+    event.stopImmediatePropagation();
+  }
+  return true;
+}
+
 /** Open NexusDropdown / desktop popper menu (not hidden). */
 export function isOpenDropdownMenu(doc = document) {
   const menus = doc.querySelectorAll('.t-dropdown[data-origin]');
@@ -38,6 +61,7 @@ export function shouldBlockEscapeBack(event, doc = document) {
   if (event.defaultPrevented) return true;
   if (isShortcutRecordingActive()) return true;
   if (isAriaModalOpen(doc)) return true;
+  if (isEscapeOverlayOpen(doc)) return true;
   if (isOpenDropdownMenu(doc)) return true;
   if (isMultilineTextInput(event.target)) return false;
   if (isDatePickerInput(event.target)) return true;

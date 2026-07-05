@@ -9,6 +9,13 @@ const PersonCommunicationProfileSchema = new mongoose.Schema({
   unsubscribed: { type: Boolean, default: false, index: true },
   bounceCount: { type: Number, default: 0 },
   unsubscribeReason: { type: String },
+  unsubscribedFrom: [{
+    streamSlug: { type: String, index: true },
+    domain: String,
+    reason: String,
+    campaignId: String,
+    unsubscribedAt: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 PersonCommunicationProfileSchema.plugin(tenantPlugin);

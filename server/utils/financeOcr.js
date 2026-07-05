@@ -39,18 +39,24 @@ async function runFinanceDocumentOcr(docId, { fileUrl, fileType, fileName, fileS
     const mimeType = fileType || fileName?.split('.').pop() || 'application/pdf';
     const parsed = await parseDocument(buffer, mimeType, { fileSize: buffer.length });
 
+    const existing = await FinanceDocument.findById(docId).select('metadata').lean();
+    const prev = existing?.metadata || {};
+
     await FinanceDocument.findByIdAndUpdate(docId, {
       extractedText: parsed.extractedText || '',
       ...(parsed.metadata?.detectedCategory && parsed.metadata.detectedCategory !== 'other'
         ? { category: parsed.metadata.detectedCategory }
         : {}),
       metadata: {
-        amount: parsed.metadata?.amount || 0,
-        currency: parsed.metadata?.currency || 'INR',
-        vendor: parsed.metadata?.vendor || '',
-        date: parsed.metadata?.date || null,
-        tax: parsed.metadata?.tax || 0,
-        detectedCategory: parsed.metadata?.detectedCategory || 'other',
+        amount: parsed.metadata?.amount > 0 ? parsed.metadata.amount : (Number(prev.amount) || 0),
+        currency: parsed.metadata?.currency || prev.currency || 'INR',
+        vendor: parsed.metadata?.vendor || prev.vendor || '',
+        date: parsed.metadata?.date || prev.date || null,
+        tax: parsed.metadata?.tax > 0 ? parsed.metadata.tax : (Number(prev.tax) || 0),
+        detectedCategory: parsed.metadata?.detectedCategory || prev.detectedCategory || 'other',
+        ...(prev.baseCurrency ? { baseCurrency: prev.baseCurrency } : {}),
+        ...(prev.conversionRate != null ? { conversionRate: prev.conversionRate } : {}),
+        ...(prev.conversionRateCapturedAt ? { conversionRateCapturedAt: prev.conversionRateCapturedAt } : {}),
       },
     });
   } catch (err) {

@@ -5,15 +5,14 @@ alwaysApply: true
 
 # Date display convention
 
-**User-facing dates:** `DD/MM/YYYY` everywhere in UI, emails, and reports.
+**User-facing dates:** `DD/MM/YYYY` by default (India). Users can override in **Settings → Profile → Date format**.
 
-- Client: `client/src/utils/dateDisplay.js` — `formatDisplayDate`, `formatDisplayDateTime`, `DATE_DISPLAY_FORMAT` (`dd/MM/yyyy` date-fns tokens).
-- Server/shared: `shared/dateDisplay.js` — same convention for emails and digests.
+- Preference ids: `auto`, `dmY`, `mdY`, `Ymd`, `dmYDash`, `mdYDash`, `dmYShort`, `mdYShort`
+- `auto` → region default (`IN`/`GB` → DD/MM/YYYY, `US` → MM/DD/YYYY, `CN`/`JP`/… → YYYY-MM-DD)
+- Client: `dateFormatRegistry` + `DateFormatContext` + `dateDisplay.js` helpers
+- Shared catalog: `shared/dateFormatPreference.js`
+- Server: `User.dateFormatPreference` on profile PUT `/api/users/profile`
 
-**Do not change** ISO `yyyy-MM-dd` for:
+**Do not change** ISO `yyyy-MM-dd` for storage/API inputs.
 
-- `<input type="date">` values
-- API payloads (`workDate`, `dateKey`, sort keys)
-- Database storage
-
-Display only — use helpers; avoid inline `toLocaleDateString('en-US'|'en-IN')` or `format(..., 'MMM d')`.
+Display only — use `formatDisplayDate*` helpers; never raw `toLocaleDateString()` / `en-US` date Intl.

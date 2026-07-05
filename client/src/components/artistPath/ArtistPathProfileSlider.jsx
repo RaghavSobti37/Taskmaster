@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Mail, Phone, MapPin, Music } from 'lucide-react';
 import { FullScreenWorkspace, Badge, Card, Spinner } from '../ui';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import { useArtistPathPerson } from '../../hooks/queries/artistPath';
 import { useDataHubPersonSection } from '../../hooks/queries/dataHub';
 import { displayRespondentName, displayStageBadge } from '../../utils/artistPathDisplay';
@@ -10,14 +11,7 @@ import ArtistPathSocialLinks from './ArtistPathSocialLinks';
 const DataHubPersonDetail = lazy(() => import('../dataHub/DataHubPersonDetail'));
 
 function formatDate(d) {
-  if (!d) return '—';
-  try {
-    return new Date(d).toLocaleString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return String(d);
-  }
+  return formatDisplayDateTime(d);
 }
 
 export default function ArtistPathProfileSlider({ personId, onClose }) {

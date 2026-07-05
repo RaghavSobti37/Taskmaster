@@ -89,16 +89,22 @@ function formatDateKeyForDisplay(dateKey, { emptyLabel = EMPTY } = {}) {
   return formatDisplayDate(dateKey, { emptyLabel });
 }
 
-function formatWeekdayDateLong(value, { emptyLabel = EMPTY, timeZone = DEFAULT_TZ } = {}) {
+/** ponytail: DD/MM/YYYY only — weekday labels removed app-wide */
+function formatWeekdayDateLong(value, options) {
+  return formatDisplayDate(value, options);
+}
+
+function formatDisplayDateTimeIST(value, { emptyLabel = EMPTY, timeZone = DEFAULT_TZ } = {}) {
   const d = coerceDate(value);
   if (!d) return emptyLabel;
-  return new Intl.DateTimeFormat('en-GB', {
+  const datePart = formatDisplayDateIST(d, { emptyLabel: '', timeZone });
+  const timePart = new Intl.DateTimeFormat('en-GB', {
     timeZone,
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   }).format(d);
+  return `${datePart} ${timePart}`;
 }
 
 module.exports = {
@@ -114,4 +120,5 @@ module.exports = {
   formatDisplayDateIST,
   formatDateKeyForDisplay,
   formatWeekdayDateLong,
+  formatDisplayDateTimeIST,
 };

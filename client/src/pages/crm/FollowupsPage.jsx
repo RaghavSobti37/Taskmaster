@@ -777,7 +777,7 @@ export default function FollowupsPage() {
                       <div key={index} className="p-3.5 bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-bg-border)] space-y-1">
                         <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-mono">
                           <span className="font-bold text-[var(--color-text-primary)]">{note.author}</span>
-                          <span>{new Date(note.date).toLocaleString()}</span>
+                          <span>{formatDisplayDateTime(new Date(note.date))}</span>
                         </div>
                         <p className="text-xs font-medium text-slate-200">{note.text}</p>
                       </div>

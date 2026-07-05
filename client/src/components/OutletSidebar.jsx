@@ -36,6 +36,7 @@ import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
+import OrgSwitcher from './org/OrgSwitcher';
 import { TOUR_ATTR_BY_PATH } from '../constants/onboardingSteps';
 import { brand } from '../constants/marketingContent';
 
@@ -371,6 +372,7 @@ const OutletSidebar = () => {
           </div>
 
           <div className={`flex items-center shrink-0 ${showLabels ? 'gap-1' : 'flex-col gap-1'}`}>
+            {showLabels && <OrgSwitcher />}
             {!isMobile && (
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatDisplayDateTimeSeconds, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { 
@@ -971,7 +971,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Booking Date:</span>
                   <p className="text-[var(--color-text-primary)] font-mono">
-                    {dashboardStats.recentBooking.bookedOn ? format(new Date(dashboardStats.recentBooking.bookedOn), 'yyyy-MM-dd HH:mm:ss') : '—'}
+                    {dashboardStats.recentBooking.bookedOn ? formatDisplayDateTimeSeconds(dashboardStats.recentBooking.bookedOn) : '—'}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -1378,7 +1378,7 @@ const ExlyDataContent = ({ mode = 'campaigns', initialOfferingId = null, onIniti
 
                 <span className="text-[var(--color-text-muted)]">Created Date:</span>
                 <span className="text-right font-mono text-[var(--color-text-primary)]">
-                  {details?.offering?.createdAt ? format(new Date(details.offering.createdAt), 'yyyy-MM-dd') : '—'}
+                  {details?.offering?.createdAt ? formatDisplayDate(details.offering.createdAt) : '—'}
                 </span>
               </div>
             </div>

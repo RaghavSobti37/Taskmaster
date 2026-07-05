@@ -1,0 +1,43 @@
+{
+  "projectId": 468825,
+  "cohortId": 360238,
+  "test_account_filters": [
+    {
+      "key": "id",
+      "type": "cohort",
+      "value": "360238",
+      "operator": "in"
+    },
+    {
+      "key": "email",
+      "type": "person",
+      "operator": "regex",
+      "value": "^e2e-agent"
+    },
+    {
+      "key": "email",
+      "type": "person",
+      "operator": "regex",
+      "value": "^e2e-.+@test\\.coreknot\\.local$"
+    },
+    {
+      "key": "$host",
+      "type": "event",
+      "operator": "regex",
+      "value": "^(localhost|127\\.0\\.0\\.1)(:\\d+)?$"
+    },
+    {
+      "key": "$host",
+      "type": "event",
+      "operator": "icontains",
+      "value": "vercel.app"
+    },
+    {
+      "key": "$host",
+      "type": "event",
+      "operator": "icontains",
+      "value": "onrender.com"
+    }
+  ],
+  "test_account_filters_default_checked": true
+}

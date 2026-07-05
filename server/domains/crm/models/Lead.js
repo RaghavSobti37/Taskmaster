@@ -89,6 +89,13 @@ const LeadSchema = new mongoose.Schema({
   bounceCount: { type: Number, default: 0, index: true },
   unsubscribed: { type: Boolean, default: false, index: true },
   unsubscribeReason: { type: String },
+  unsubscribedFrom: [{
+    streamSlug: { type: String, index: true },
+    domain: String,
+    reason: String,
+    campaignId: String,
+    unsubscribedAt: { type: Date, default: Date.now },
+  }],
   
   // Concurrency Locking
   lockedBy: { type: String }, // User ID holding the lock

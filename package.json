@@ -54,6 +54,8 @@
     "dev:nest": "npm run start:dev --workspace=nestjs-server",
     "preview:etl": "cd nestjs-server && npm run etl:preview-from-hosts",
     "preview:vercel-env": "node scripts/print-vercel-preview-env.js",
+    "preview:vercel-env:push": "node scripts/push-vercel-preview-api-env.mjs",
+    "staging:delete-render": "node scripts/delete-staging-render-services.mjs",
     "production:readiness": "node scripts/productionReadiness.js",
     "render:sync-build": "node scripts/syncRenderBuildCommands.js",
     "render:sync-build:deploy": "node scripts/syncRenderBuildCommands.js --deploy --clear-cache",

@@ -41,10 +41,10 @@ describe('useEscapeBack', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('does not navigate when aria-modal is open', () => {
-    const dialog = document.createElement('div');
-    dialog.setAttribute('aria-modal', 'true');
-    document.body.appendChild(dialog);
+  it('does not navigate when data-escape-overlay is open', () => {
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-escape-overlay', 'true');
+    document.body.appendChild(overlay);
 
     renderHook(() => useEscapeBack(), { wrapper });
 

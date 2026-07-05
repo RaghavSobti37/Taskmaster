@@ -3,7 +3,6 @@ const Department = require('../../../models/Department');
 const Task = require('../../tasks/models/Task');
 const TaskAssignment = require('../../tasks/models/TaskAssignment');
 const Project = require('../../../models/Project');
-const { isAfter, subMinutes } = require('date-fns');
 const logger = require('../../../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG, ARTIST_SLUG } = require('../../../utils/departmentPermissions');
 const { validatePagePermissions } = require('../../../utils/pagePermissions');
@@ -11,6 +10,7 @@ const { buildUserMonthlyReport } = require('../../../services/monthlyReportServi
 const { validatePasswordStrength, generateSecurePassword } = require('../../../utils/passwordValidation');
 const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
+const { isValidDateFormatPreference } = require('../../../../shared/dateFormatPreference');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
 const { isClerkConfigured } = require('../../../utils/clerkAuth');
@@ -18,12 +18,6 @@ const {
   provisionClerkUserForCoreKnotUser,
   syncClerkUserPassword,
 } = require('../../../utils/clerkUserProvisioning');
-
-const isUserOnline = (u) => {
-  if (!u.lastOnline) return false;
-  const fiveMinAgo = subMinutes(new Date(), 5);
-  return isAfter(u.lastOnline, fiveMinAgo);
-};
 
 async function validateDepartmentAssignment(departmentId, requester) {
   if (departmentId === null || departmentId === '' || departmentId === undefined) {
@@ -114,8 +108,6 @@ exports.getTeam = async (req, res) => {
       email: u.email,
       avatar: u.avatar,
       departmentId: u.departmentId,
-      online: isUserOnline(u),
-      lastOnline: u.lastOnline,
       tasksDone: tasksDoneByUser[u._id.toString()] || 0,
       projectsInvolved: projectsByUser[u._id.toString()] || [],
       teams: u.teams || [],
@@ -151,7 +143,7 @@ exports.updateUserTeams = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
-  const { name, avatar, phone, departmentId, currentPassword, newPassword, teams, dateOfBirth } = req.body;
+  const { name, avatar, phone, departmentId, currentPassword, newPassword, teams, dateOfBirth, dateFormatPreference } = req.body;
   try {
     const user = await User.findById(req.user._id).select('+password').setOptions({ bypassTenant: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -162,6 +154,12 @@ exports.updateProfile = async (req, res) => {
     if (teams) user.teams = teams;
     if (dateOfBirth !== undefined) {
       user.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    }
+    if (dateFormatPreference !== undefined) {
+      if (!isValidDateFormatPreference(dateFormatPreference)) {
+        return res.status(400).json({ error: 'Invalid date format preference' });
+      }
+      user.dateFormatPreference = dateFormatPreference;
     }
 
     if (departmentId !== undefined) {
@@ -200,7 +198,6 @@ exports.updateProfile = async (req, res) => {
       passwordChanged = true;
     }
 
-    user.lastOnline = new Date();
     await user.save();
     await invalidateAuthUserCache(user._id);
 
@@ -257,7 +254,6 @@ exports.getDirectory = async (req, res) => {
       delete doc.password;
       return {
         ...doc,
-        online: isUserOnline(u),
         ...(adminView ? { hasPassword: !!u.password } : {}),
       };
     });
@@ -491,7 +487,7 @@ exports.getSalesReps = async (req, res) => {
     const salesDept = await Department.findOne({ slug: SALES_SLUG });
     const filter = salesDept ? { departmentId: salesDept._id } : { _id: null };
     const reps = await User.find(filter)
-      .select('_id name email avatar online lastOnline phone departmentId')
+      .select('_id name email avatar phone departmentId')
       .populate('departmentId', 'name slug permissionPreset pagePermissions');
     res.json(reps);
   } catch (err) {

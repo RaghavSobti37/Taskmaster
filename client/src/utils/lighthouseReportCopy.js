@@ -1,3 +1,5 @@
+import { formatDisplayDateTime } from './dateDisplay';
+
 const WEIGHT_LABEL = { heavy: 'Heavy', medium: 'Medium', light: 'Light' };
 
 /** Plain-text block matching QA Lighthouse paste format */
@@ -9,7 +11,7 @@ export function formatLighthouseReportPlain(report) {
     lines.push(`Base URL: ${report.baseUrl}`);
   }
   if (report.generatedAt) {
-    lines.push(`Generated: ${new Date(report.generatedAt).toLocaleString()}`);
+    lines.push(`Generated: ${formatDisplayDateTime(report.generatedAt)}`);
   }
   if (lines.length) lines.push('');
 
@@ -50,7 +52,7 @@ export function formatLighthouseReportMarkdown(report) {
 
   const meta = [];
   if (report.baseUrl) meta.push(`**Base URL:** \`${report.baseUrl}\``);
-  if (report.generatedAt) meta.push(`**Generated:** ${new Date(report.generatedAt).toLocaleString()}`);
+  if (report.generatedAt) meta.push(`**Generated:** ${formatDisplayDateTime(report.generatedAt)}`);
 
   const rows = report.pages.map((p) => {
     if (p.error) {

@@ -1,6 +1,11 @@
-export const VERIFIED_RESEND_DOMAIN = 'theshakticollective.in';
+import { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS } from '@shared/emailStreams.cjs';
 
-export const DEFAULT_RESEND_FROM_EMAILS = [
+export { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS };
+
+/** Legacy alias — root domain; subdomains also allowed */
+export const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;
+
+export const DEFAULT_RESEND_FROM_EMAILS = DEFAULT_EMAIL_STREAMS.find((s) => s.slug === 'main')?.fromEmails || [
   'artist@theshakticollective.in',
   'helloworld@theshakticollective.in',
   'team@theshakticollective.in',
@@ -10,6 +15,9 @@ export const RESEND_FROM_DISPLAY_NAMES = {
   'artist@theshakticollective.in': 'The Shakti Collective',
   'helloworld@theshakticollective.in': 'The Shakti Collective',
   'team@theshakticollective.in': 'The Shakti Collective',
+  'artist@artist.theshakticollective.in': 'The Shakti Collective — Artist',
+  'team@team.theshakticollective.in': 'The Shakti Collective — Team',
+  'hello@events.theshakticollective.in': 'The Shakti Collective — Events',
 };
 
 const STORAGE_KEY = 'tsc_custom_resend_from_emails';
@@ -17,7 +25,9 @@ const STORAGE_KEY = 'tsc_custom_resend_from_emails';
 export const isVerifiedResendEmail = (email) => {
   const addr = (email || '').trim().toLowerCase();
   if (!addr.includes('@')) return false;
-  return new RegExp(`^[a-z0-9._%+-]+@${VERIFIED_RESEND_DOMAIN.replace('.', '\\.')}$`, 'i').test(addr);
+  const domain = addr.split('@')[1];
+  if (domain === ROOT_DOMAIN) return true;
+  return domain.endsWith(`.${ROOT_DOMAIN}`);
 };
 
 export const getCustomResendEmails = () => {
@@ -32,7 +42,9 @@ export const getCustomResendEmails = () => {
 
 export const addCustomResendEmail = (email) => {
   const normalized = (email || '').trim().toLowerCase();
-  if (!isVerifiedResendEmail(normalized)) return { ok: false, error: `Must be a valid @${VERIFIED_RESEND_DOMAIN} address` };
+  if (!isVerifiedResendEmail(normalized)) {
+    return { ok: false, error: `Must be a valid @${ROOT_DOMAIN} or subdomain address` };
+  }
   if (DEFAULT_RESEND_FROM_EMAILS.includes(normalized)) return { ok: true, email: normalized };
   const existing = getCustomResendEmails();
   if (existing.includes(normalized)) return { ok: true, email: normalized };

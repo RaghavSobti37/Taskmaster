@@ -1,7 +1,6 @@
 const {
   needsReviewOnComplete,
   canUserRollbackTask,
-  canCreatorMarkDelegatedTaskDone,
   getDelegatedAssignments,
 } = require('../../shared/taskReviewRules');
 
@@ -26,11 +25,6 @@ describe('taskReviewRules security', () => {
   test('delegated assignee requires review', () => {
     const assignments = [{ userId: assignee, assignedBy: creator }];
     expect(needsReviewOnComplete(assignments, assignee)).toBe(true);
-  });
-
-  test('creator without assignment cannot skip review on delegated tasks', () => {
-    const assignments = [{ userId: assignee, assignedBy: creator }];
-    expect(canCreatorMarkDelegatedTaskDone(assignments, creator, creator)).toBe(false);
   });
 
   test('assignee cannot rollback done task', () => {

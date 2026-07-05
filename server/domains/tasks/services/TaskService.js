@@ -20,9 +20,7 @@ const {
   assignmentAssignerId,
   assignmentUserId: rulesAssignmentUserId,
   normalizeId: rulesNormalizeId,
-  isAssignerOnlyReviewer,
   isDelegatedAssignment,
-  canCreatorMarkDelegatedTaskDone,
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
 } = require('../../../../shared/taskReviewRules');
@@ -52,6 +50,7 @@ const {
 const { canMentionOnlyUserUpdateTask } = require('../../../utils/taskAdminBypass');
 const {
   findActiveTaskDailyLog,
+  findActiveTaskDailyLogOnDay,
   voidTaskDailyLogsForTask,
 } = require('../../../utils/taskDailyLogs');
 const GamificationService = require('../../../services/gamificationService');
@@ -333,6 +332,10 @@ const removeReviewLogsForTask = async (taskId, assigneeIds, reviewerId, session)
 const createTaskDailyLog = async ({
   userId, task, type, hours, message, title, session,
 }) => {
+  if (type === 'TASK_COMPLETION' || type === 'TASK_REVIEW') {
+    const existingSameDay = await findActiveTaskDailyLogOnDay(userId, task._id, type, undefined, session);
+    if (existingSameDay) return existingSameDay;
+  }
   const projectName = await getProjectNameForTask(task, session);
   const projectId = task.projectId?._id || task.projectId || null;
   await Log.create([{
@@ -938,28 +941,6 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
-  const hasDelegatedWork = getDelegatedAssignments(assignments).length > 0;
-
-  if (
-    coreUpdates.status === 'done'
-    && !reviewAction
-    && !canCreatorMarkDelegatedTaskDone(assignments, user._id, existing.createdBy)
-  ) {
-    throw new Error(
-      'Delegated assignees must complete this task before it can be marked done'
-    );
-  }
-
-  if (
-    coreUpdates.status === 'done'
-    && !reviewAction
-    && isAssignerOnlyReviewer(assignments, user._id)
-  ) {
-    throw new Error(
-      'This task must be completed by the assignee first. Approve it from the review queue when ready.'
-    );
-  }
-
   const existingStatus = String(existing.status || '').toLowerCase();
   const reopeningDone = existingStatus === 'done'
     && coreUpdates.status
@@ -977,6 +958,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
     const needsReview = needsReviewOnComplete(assignments, user._id, {
       mentionOnly,
+      taskCreatedBy: existing.createdBy,
     });
     if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
       coreUpdates.status = 'in-review';

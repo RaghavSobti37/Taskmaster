@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider } from './contexts/AuthContext';
+import { DateFormatProvider } from './contexts/DateFormatContext';
 import ClerkAppProvider from './components/providers/ClerkAppProvider';
 import ClerkAuthEffects from './components/auth/ClerkAuthEffects';
 import AuthApp from './AuthApp';
@@ -61,8 +62,10 @@ function AuthRoot() {
         <ClerkAppProvider>
           <AuthProvider>
             <ClerkAuthEffects />
+            <DateFormatProvider>
             <AuthApp />
             <CookieBanner />
+            </DateFormatProvider>
           </AuthProvider>
         </ClerkAppProvider>
       </BrowserRouter>

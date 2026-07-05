@@ -55,8 +55,18 @@ const uploadRateLimit = rateLimit({
   },
 });
 
+const clerkProxyRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: config.isProduction ? 120 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage('Too many Clerk proxy requests.'),
+  keyGenerator: (req) => `clerk-proxy:${clientIpKey(req)}`,
+});
+
 module.exports = {
   authRateLimit,
+  clerkProxyRateLimit,
   searchRateLimit,
   webhookRateLimit,
   uploadRateLimit,

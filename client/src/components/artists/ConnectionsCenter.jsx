@@ -7,13 +7,14 @@ import {
 import { SiApplemusic, SiBeatport, SiAudiomack, SiTelegram, SiPatreon, SiSubstack, SiWoo, SiX } from 'react-icons/si';
 import { Card, Input, Badge, Button } from '../ui';
 import ConnectAccountButton from './ConnectAccountButton';
-import { formatNumber, isHubStatusSyncable } from '../../config/integrations.config';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import {
   useConnectionHub,
   useConnectionHealth,
   useSyncPlatformConnection,
   useSaveManualConnection,
 } from '../../hooks/queries/artists';
+import { formatNumber, isHubStatusSyncable } from '../../config/integrations.config';
 
 const ICONS = {
   spotify: FaSpotify,
@@ -196,7 +197,7 @@ function SyncDashboard({ items = [], loading }) {
             <tr key={row.platform} className="border-t border-slate-100 dark:border-slate-800">
               <td className="px-3 py-2 font-medium">{row.name}</td>
               <td className="px-3 py-2 text-slate-500">
-                {row.lastSync ? new Date(row.lastSync).toLocaleString() : '—'}
+                {row.lastSync ? formatDisplayDateTime(row.lastSync) : '—'}
               </td>
               <td className="px-3 py-2">
                 <Badge variant={STATUS_BADGE[row.status]?.variant || 'default'} className="text-[10px]">

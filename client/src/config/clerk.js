@@ -3,6 +3,7 @@
  */
 
 import { isAuthSite, isLandingSite } from './siteMode';
+import { isVercelPreviewHost } from '../utils/displayMode';
 
 const trim = (value) => String(value || '').trim();
 const trimSlash = (url) => trim(url).replace(/\/$/, '');
@@ -38,6 +39,17 @@ export function isClerkConfigured() {
 /** True when publishable key is production (`pk_live_`). */
 export function isClerkLiveKey() {
   return getClerkPublishableKey().startsWith('pk_live_');
+}
+
+/** Vite dev or localhost preview — Clerk proxy is registered for production host only. */
+export function isLocalClerkRuntime() {
+  if (import.meta.env.DEV) return true;
+  if (import.meta.env.MODE === 'test') return false;
+  if (typeof window !== 'undefined') {
+    const host = window.location?.hostname || '';
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+  }
+  return false;
 }
 
 export function getClerkDashboardBaseUrl() {
@@ -84,6 +96,13 @@ export function getPinnedClerkOrganizationId() {
  */
 export function getClerkProxyUrl() {
   if (!isClerkLiveKey()) return '';
+  // ponytail: proxy URL is registered for tsccoreknot.com — localhost + pk_live → 400 Origin mismatch
+  if (isLocalClerkRuntime()) return '';
+
+  // Vercel preview: same-origin /__clerk (vercel.json rewrites to Render). Explicit tsccoreknot proxy breaks origin.
+  if (isVercelPreviewHost() && typeof window !== 'undefined') {
+    return `${trimSlash(window.location.origin)}/__clerk`;
+  }
 
   if (isAuthSite()) {
     const authOrigin = trim(import.meta.env.VITE_AUTH_URL)

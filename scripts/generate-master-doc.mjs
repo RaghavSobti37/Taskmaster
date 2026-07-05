@@ -128,9 +128,9 @@ CoreKnot is TSC's multi-tenant CRM and operations hub: projects, CRM, email camp
 | Layer | Stack |
 | --- | --- |
 | Frontend | React 18, Vite 5, Tailwind v4, TanStack Query, React Router 6, PWA |
-| API | Express + Mongoose on Render |
-| Data | MongoDB Atlas (primary), Redis/BullMQ, Supabase (secondary mirror) |
-| Auth | JWT cookie (\`coreknot_token_v3\`), Google OAuth, Clerk (optional) |
+| API | Express + Mongoose on Render; NestJS (\`nestjs-server/\`) for Postgres/sync ETL |
+| Data | MongoDB Atlas (primary), Redis/BullMQ, Supabase (secondary mirror), Postgres (Nest/local) |
+| Auth | JWT cookie (\`coreknot_token_v3\` + \`activeTenantId\`), multi-org memberships, Google OAuth, Clerk (optional), platform admin gate |
 | Deploy | Vercel (SPA) → same-origin \`/api\` proxy → Render API |
 
 **Site modes** (\`client/src/config/siteMode.js\`):
@@ -196,8 +196,74 @@ Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.
 | \`/artists/*\` | \`artists\` |
 | \`/assets/*\` | \`assets\` |
 | \`/admin/*\` | per-route \`admin_*\` keys |
+| \`/org/pick\`, \`/org/create\` | session (no page key; tenant selection) |
+| \`/invites/:token/accept\` | session + invite token |
+| \`/terms\`, \`/privacy\` | public legal |
 
 Legacy redirects: \`/leads\` → \`/crm?tab=leads\`, \`/finance\` → \`/management?tab=finance\`, etc.
+
+### Multi-org & tenant session
+
+**Isolation model:** Extend existing \`Tenant\` (no separate Organization collection). All tenant-scoped documents keep \`tenantId\` via \`tenantPlugin\`.
+
+| Model | File | Purpose |
+| --- | --- | --- |
+| \`Tenant\` | \`server/models/Tenant.js\` | Org record: \`plan\`, \`ownerId\`, \`settings\`, \`featureUnlocks\`, \`onboardingProgress\` |
+| \`TenantMembership\` | \`server/models/TenantMembership.js\` | \`{ tenantId, userId, role, status }\` — compound unique per pair |
+| \`TenantInvite\` | \`server/models/TenantInvite.js\` | Pending email invite; \`tokenHash\`, \`expiresAt\`, \`role\` |
+
+**One user, many orgs:** \`User.email\` stays globally unique. Invites attach to the existing user on accept (same person across orgs = one \`User\`, many \`TenantMembership\` rows).
+
+**JWT payload** (\`coreknot_token_v3\`, \`server/utils/authSession.js\`): \`{ id, loginAt, jti, activeTenantId? }\`. Re-issued on org switch.
+
+**Session resolution** (\`server/middleware/authMiddleware.js\` → \`applySessionTenant\`):
+
+1. Login/register/clerk-establish → \`backfillMembershipFromUser\`, resolve \`activeTenantId\`
+2. **One** active membership → auto-set tenant in JWT
+3. **Two or more** memberships, no valid \`activeTenantId\` → \`needsTenantSelection\`; most routes return **409** \`NEEDS_TENANT_SELECTION\`
+4. Whitelisted without active tenant: \`/api/auth/me\`, \`/api/tenants/memberships\`, \`/api/tenants/select\`, \`/api/tenants/create\`, \`/api/invites/*\`
+5. Client axios interceptor → \`/org/pick\` on 409
+
+**App routes (multi-org UX):**
+
+| Route | Page | Notes |
+| --- | --- | --- |
+| \`/org/pick\` | \`OrgPickerPage\` | Shown only when \`memberships.length >= 2\` |
+| \`/org/create\` | \`CreateOrganizationPage\` | Post-register or add org |
+| \`/invites/:token/accept\` | \`TenantInviteAcceptPage\` | Accept email invite |
+| \`/terms\` | \`TermsOfService\` | Public |
+
+**Shell:** \`OrgSwitcher\` in \`OutletSidebar.jsx\` (hidden when single org). \`OrgOnboardingChecklist\` on dashboard.
+
+**Tenant API** (\`server/routes/tenantRoutes.js\`, \`server/routes/inviteRoutes.js\`):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| \`GET\` | \`/api/tenants/memberships\` | List memberships + \`activeTenantId\` |
+| \`POST\` | \`/api/tenants/select\` | Switch org; re-issue JWT |
+| \`POST\` | \`/api/tenants/create\` | Create tenant + owner membership |
+| \`GET\` | \`/api/tenants/:id/unlocks\` | \`featureUnlocks\` for nav gating |
+| \`PATCH\` | \`/api/tenants/:id/onboarding\` | Checklist steps / dismiss |
+| \`POST\` | \`/api/tenants/:id/invites\` | Send invite (tenant owner/admin) |
+| \`GET\` | \`/api/invites/:token\` | Validate pending invite |
+| \`POST\` | \`/api/invites/:token/accept\` | Create membership + select tenant |
+
+**Backfill:** \`node server/scripts/migrateTenantMemberships.js\` — idempotent \`TenantMembership\` from \`User.tenantId\`.
+
+**Platform vs org admin:**
+
+| Layer | Gate | Routes |
+| --- | --- | --- |
+| Org admin | Department \`admin_*\` page keys | \`/admin/users\`, org settings, etc. |
+| Platform admin | \`requirePlatformAdmin\` (\`isRootAdminUser\`) | \`/api/admin/scripts\`, \`/api/admin/qa\`, \`/api/admin/security-audit\` |
+
+Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organizations).
+
+**Feature unlocks** (\`Tenant.featureUnlocks\`): \`resend\`, \`google\`, \`meta\`, \`knowledgeEngine\`, \`finance\`, \`artistOs\`. Client: \`navPageAccess.getNavFeatureLock()\` + locked \`EmptyState\` props.
+
+**Credentials at rest:** \`server/utils/credentialEncryption.js\` (AES-256-GCM when \`CREDENTIAL_ENCRYPTION_KEY\` set).
+
+**Launch ops:** [\`operations/PUBLIC_LAUNCH_BETA.md\`](../operations/PUBLIC_LAUNCH_BETA.md) — staging gate, migration, invite-only beta.
 
 ---
 
@@ -242,9 +308,17 @@ File: \`client/src/pages/hubs/CrmHub.jsx\` — URL query \`?tab=\` drives active
 
 Aggregates admin tools behind \`admin_*\` permissions — users, teams, roles, scripts, gamification, project analytics, exly, artist path, ops hub.
 
+Standalone admin routes (same permission model):
+
+| Route | Page | API prefix |
+| --- | --- | --- |
+| \`/admin/knowledge-engine\` | \`KnowledgeEnginePage\` | \`/api/knowledge-engine\` |
+| \`/admin/security-audit\` | \`SecurityAuditPage\` | \`/api/admin/security-audit\` |
+| \`/admin/tenant-sso\` | \`AdminTenantSsoPage\` | \`/api/admin/tenants\` |
+
 ### Email Hub (\`/emails/*\`)
 
-Layout: \`EmailHubLayout.jsx\`. Sub-routes: overview, campaigns, templates, profiles, analytics, newsletter (curate/send).
+Layout: \`EmailHubLayout.jsx\`. Sub-routes: overview, campaigns, templates, profiles, **streams**, analytics, newsletter (curate/send). Streams power Resend from-address pickers and public unsubscribe (\`/unsubscribe?stream=\`).
 
 ### Settings (\`/settings\`)
 
@@ -273,15 +347,19 @@ Express mounts route modules from \`server/routes/\` (see \`server/server.js\` f
 | Domain | Route file | Typical prefix |
 | --- | --- | --- |
 | Auth | \`authRoutes.js\`, \`authConnectRoutes.js\` | \`/api/auth\` |
+| Tenants / invites | \`tenantRoutes.js\`, \`inviteRoutes.js\` | \`/api/tenants\`, \`/api/invites\` |
 | Users / teams | \`userRoutes.js\`, \`teamRoutes.js\` | \`/api/users\`, \`/api/teams\` |
 | Projects / tasks | \`projectRoutes.js\`, \`taskRoutes.js\` | \`/api/projects\`, \`/api/tasks\` |
 | CRM | \`crmRoutes.js\`, \`crmStatsRoutes.js\` | \`/api/crm\` |
 | Data Hub | \`dataHubRoutes.js\` | \`/api/data-hub\` |
-| Mail / campaigns | \`mailRoutes.js\`, \`campaignRoutes.js\` | \`/api/mail\`, \`/api/campaigns\` |
+| Mail / campaigns | \`mailRoutes.js\`, \`campaignRoutes.js\`, \`domains/mail/routes/streamsRouter.js\` | \`/api/mail\`, \`/api/campaigns\`, \`/api/mail/streams\` |
+| Knowledge Engine | \`knowledgeEngineRoutes.js\` | \`/api/knowledge-engine\` |
+| Tenant SSO (admin) | \`tenantAdminRoutes.js\` | \`/api/admin/tenants\` |
+| Security audit (admin) | \`securityAuditRoutes.js\` | \`/api/admin/security-audit\` |
 | Finance | \`financeRoutes.js\` | \`/api/finance\` |
 | Artists | \`artistRoutes.js\`, \`artistV2Routes.js\`, \`artistPathRoutes.js\` | \`/api/artists\` |
 | Attendance / logs | \`attendanceRoutes.js\`, \`logRoutes.js\` | \`/api/attendance\`, \`/api/logs\` |
-| Admin | \`adminScriptsRoutes.js\`, \`platformSettingsRoutes.js\`, \`qaRoutes.js\` | \`/api/admin/*\` |
+| Admin | \`adminScriptsRoutes.js\`, \`platformSettingsRoutes.js\`, \`qaRoutes.js\` | \`/api/admin/*\` (scripts/QA/security-audit = **platform admin only**) |
 | Webhooks | \`webhookRoutes.js\` | \`/api/webhooks/*\` |
 | Health / public | \`publicRoutes.js\`, \`openApiRoutes.js\` | \`/api/health\`, public |
 
@@ -297,13 +375,20 @@ Full endpoint listing: \`.specify/memory/backend/express.md\` and \`.specify/mem
 
 | Area | Rule | Source |
 | --- | --- | --- |
-| Task review | Creator cannot approve own task; assignee submits for review | \`shared/taskReviewRules.js\` |
+| Multi-org | \`Tenant\` + \`TenantMembership\` + \`TenantInvite\`; JWT \`activeTenantId\`; org picker when 2+ memberships | \`server/services/tenantMembershipService.js\`, \`server/middleware/authMiddleware.js\` |
+| Tenant isolation | \`tenantPlugin\` on models; \`req.tenantId\` from session; cross-tenant spoof rejected | \`server/plugins/tenantPlugin.js\`, \`server/middleware/rejectClientTenantSpoof.js\` |
+| Feature unlocks | Progressive nav/features per tenant (\`featureUnlocks\` + onboarding checklist) | \`server/services/tenantUnlockService.js\`, \`client/src/utils/navPageAccess.js\` |
+| Task review | Creator cannot approve own task; assignee submits for review; done-task rollback window 24h unless admin/platform owner | \`shared/taskReviewRules.js\` |
+| Project analytics | Hours summary uses unified \`aggregateProjectEffort\`; \`budgetSource\` tracked vs calculated on \`Project\` | \`server/domains/projects/services/projectAnalyticsService.js\`, \`shared/projectAnalyticsCore.cjs\` |
+| Finance FX | \`conversionRate\` snapshot on \`FinanceDocument\` write for rollup | \`shared/projectFinanceRollup.js\` |
+| Daily logs | Optional \`clientRequestId\` idempotency per tenant | \`server/models/Log.js\`, \`server/routes/logRoutes.js\` |
 | Attendance | Office/WFH check-in; 1h lunch; worked vs daily-log reconciliation | \`shared/attendanceMetrics.js\` |
-| Dates (UI) | DD/MM/YYYY display; ISO in \`<input type="date">\` | \`client/src/utils/dateDisplay.js\` |
+| Dates (UI) | User format via \`DateFormatContext\` + \`shared/dateFormatPreference.js\`; default DD/MM/YYYY; ISO in \`<input type="date">\` | \`client/src/utils/dateDisplay.js\`, \`client/src/contexts/DateFormatContext.jsx\` |
+| Email streams | Branded from-address + unsubscribe slug per stream; catalog in \`shared/emailStreams.cjs\` | \`shared/emailStreams.cjs\`, \`server/services/emailStreamService.js\` |
 | CRM locks | Lead lock/audit on sensitive edits | server CRM controllers |
 | Email tracking | Locked engine — do not change pixel/redirect behavior | \`docs/reference/EMAIL_ENGINE_LOCKED.md\` |
-| Gamification | XP on task completion; weekly leaderboard IST Monday reset | \`shared/gamificationRules.js\` |
-| Multi-tenant | \`tenantPlugin\` on models; tenant from session | \`server/plugins/tenantPlugin.js\` |
+| Gamification | XP on task completion; weekly leaderboard IST Monday reset; idempotent recalc via audit trail | \`shared/gamificationRules.js\`, \`server/services/gamificationService.js\` |
+| Credentials | OAuth/Resend tokens encrypted at rest when \`CREDENTIAL_ENCRYPTION_KEY\` set | \`server/utils/credentialEncryption.js\` |
 
 ---
 
@@ -325,11 +410,12 @@ Full endpoint listing: \`.specify/memory/backend/express.md\` and \`.specify/mem
 | [\`DOCUMENTATION_INDEX.md\`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
 | [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) | Agent memory hub |
 | [\`reference/COREKNOT_MASTER.md\`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
-| [\`operations/\`](../operations/) | Deploy, startup, scripts, environments |
+| [\`operations/\`](../operations/) | Deploy, startup, scripts, environments, [\`PUBLIC_LAUNCH_BETA.md\`](../operations/PUBLIC_LAUNCH_BETA.md) |
 | [\`architecture/\`](../architecture/) | System design, data, security, debt |
 | [\`features/\`](../features/) | Domain deep-dives (Artist OS, Data Hub, integrations) |
 | [\`auth/\`](../auth/) | OAuth, Clerk, subdomain setup |
-| [\`design/\`](../design/) | UI reference |
+| [\`design/\`](../design/) | UI reference (\`DESIGN-REFERENCE.md\`, component standards) |
+| [\`reference/COMPONENT_STANDARDS.md\`](./COMPONENT_STANDARDS.md) | Client component patterns |
 
 `;
 

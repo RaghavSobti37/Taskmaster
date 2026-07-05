@@ -1,17 +1,13 @@
-const IORedis = require('ioredis');
 const { config } = require('../config');
 const { apiError } = require('../utils/apiResponse');
+const { createRedisClient } = require('../utils/wslRedis');
 
 let redis = null;
 
 function getRedis() {
   if (redis) return redis;
   try {
-    redis = new IORedis(config.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      enableOfflineQueue: false,
-      lazyConnect: true,
-    });
+    redis = createRedisClient({ maxRetriesPerRequest: 1 });
   } catch {
     redis = null;
   }

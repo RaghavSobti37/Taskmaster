@@ -100,8 +100,6 @@ export class AuthGuard implements CanActivate {
 
       request.tenantId = user.tenantId ?? undefined;
 
-      this.authService.touchLastOnline(user.id);
-
       this.tenantContext.updateContext({
 
         tenantId: user.tenantId ?? null,

@@ -18,10 +18,9 @@ Public frontend (`FRONTEND_URL` / `CLIENT_URL`): your Vercel custom domain (e.g.
 
 | Environment | `NODE_ENV` / host | MongoDB URI var | Typical DB name |
 |-------------|-------------------|-----------------|-----------------|
+| **Vercel preview / staging branch** | `production` + `VERCEL_ENV=preview` | Production API (`productionApiUrl`) | Same as production (`MONGODB_URI_PROD`) |
 | **Local dev** | `development`, localhost | `MONGODB_URI` | `taskmaster_local` |
-| **Vercel preview** | `production` + `VERCEL_ENV=preview` | `MONGODB_URI` (preview env) | `taskmaster_local` (isolated) |
-| **Staging API** | Render `coreknot-api-staging` | `MONGODB_URI` | `taskmaster_staging` |
-| **Production API** | `production` on Render | `MONGODB_URI_PROD` | `taskmaster_production` |
+| **Production API** | Render `Taskmaster` / `CoreKnot-api` | `MONGODB_URI_PROD` | `taskmaster_production` |
 
 See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
 
@@ -31,7 +30,7 @@ See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
 |-------------|----------------|-----|
 | **Local** | `http://localhost:5000` | Direct to Express (`client/.env.development`) |
 | **Production (Vercel)** | Your Render `SERVER_URL` value | Bypasses Vercel ~4.5MB proxy for large campaigns |
-| **Preview (Vercel)** | Staging API URL — see [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Never prod API on preview builds |
+| **Preview (Vercel)** | Same as production API — [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Staging branch uses production DB via prod API |
 | **Unset local** | (proxy) | Vite proxies `/api` → `localhost:5000` |
 
 `client/vercel.json` proxies `/api/*` to Render — configured at deploy time, not duplicated in docs.
@@ -59,6 +58,19 @@ BOOK_CALL_WEBHOOK_SECRET=<shared-secret>
 TASKMASTER_WEBHOOK_URL=<SERVER_URL>/api/webhooks/book-call
 TASKMASTER_ARTIST_ENQUIRY_WEBHOOK_URL=<SERVER_URL>/api/webhooks/artist-enquiry
 ```
+
+## Staging gate (verified 2026-07-05)
+
+| Check | Command / note |
+|-------|----------------|
+| Nest build | `npm run build --workspace=@coreknot/nestjs-server` |
+| Express tests | `npm test --prefix server` |
+| Readiness | `npm run staging:readiness` |
+| Redis | Render addon `taskmaster-redis-staging` linked to API + Nest |
+| Clerk proxy | `CLERK_SECRET_KEY`, `CLERK_PROXY_PUBLIC_URL`, optional `CLERK_FAPI_UPSTREAM` |
+| Hosts file | `.cursor/production-hosts.local.json` (gitignored) must match Render/Vercel |
+
+After deploy: smoke `GET /api/health` on staging API + Nest; Vercel preview `VITE_API_URL` → staging API only.
 
 ## Redis
 

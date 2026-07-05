@@ -38,14 +38,14 @@ const isAbsoluteSessionExpired = (decoded) => {
  * Issue a session JWT. `loginAt` is preserved across sliding refreshes;
  * omitted on fresh login to start the absolute 30-day window.
  */
-const generateSessionToken = (userId, loginAt = null) => {
+const generateSessionToken = (userId, loginAt = null, activeTenantId = null) => {
   const iat = nowSec();
   const sessionLoginAt = loginAt ?? iat;
-  return jwt.sign(
-    { id: userId, loginAt: sessionLoginAt, jti: newJti() },
-    process.env.JWT_SECRET,
-    { expiresIn: inactivityExpiresIn() },
-  );
+  const payload = { id: userId, loginAt: sessionLoginAt, jti: newJti() };
+  if (activeTenantId) {
+    payload.activeTenantId = String(activeTenantId);
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: inactivityExpiresIn() });
 };
 
 const verifySessionToken = (token) => jwt.verify(token, process.env.JWT_SECRET);
@@ -69,15 +69,19 @@ const refreshSessionIfDue = (res, decoded, req) => {
   if (!shouldRefreshSession(decoded)) {
     return { refreshed: false, absoluteExpired: false };
   }
-  const token = generateSessionToken(decoded.id, resolveLoginAt(decoded));
+  const token = generateSessionToken(
+    decoded.id,
+    resolveLoginAt(decoded),
+    decoded.activeTenantId || null,
+  );
   setAuthCookie(res, token, req);
   const newDecoded = verifySessionToken(token);
   return { refreshed: true, absoluteExpired: false, newDecoded };
 };
 
 /** Fresh login / register / OAuth — new absolute window + inactivity clock. */
-const establishSession = (res, userId, req) => {
-  const token = generateSessionToken(userId);
+const establishSession = (res, userId, req, activeTenantId = null) => {
+  const token = generateSessionToken(userId, null, activeTenantId);
   replaceAuthCookie(res, token, req);
   return token;
 };

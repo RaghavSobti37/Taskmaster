@@ -1109,36 +1109,9 @@ exports.getProjectHoursSummary = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to view this project' });
     }
 
-    const tasks = await taskProjectQueryService.findTasksByProjectId(
-      project._id,
-      'actualHours plannedHours'
-    );
-    const taskHours = tasks.reduce((sum, t) => sum + (t.actualHours || 0), 0);
-    const plannedHours = tasks.reduce((sum, t) => sum + (t.plannedHours || 0), 0);
-
-    const logs = await Log.find({
-      ...ACTIVE_LOG_FILTER,
-      action: 'DAILY_LOG',
-      'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] },
-      $or: [
-        { 'details.projectId': project._id },
-        { 'details.project': project.name }
-      ]
-    }).select('details').lean();
-
-    const manualLogHours = logs.reduce(
-      (sum, l) => sum + parseTimeSpentToHours(l.details?.timeSpent),
-      0
-    );
-
-    res.json({
-      projectId: project._id,
-      projectName: project.name,
-      taskHours,
-      plannedHours,
-      manualLogHours,
-      totalHours: taskHours + manualLogHours
-    });
+    const { buildProjectHoursSummary } = require('../services/projectAnalyticsService');
+    const summary = await buildProjectHoursSummary(project);
+    res.json(summary);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

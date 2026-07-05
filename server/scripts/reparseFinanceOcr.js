@@ -9,6 +9,10 @@
  *   node server/scripts/reparseFinanceOcr.js --all
  *   node server/scripts/reparseFinanceOcr.js --local --dry-run
  *   node server/scripts/reparseFinanceOcr.js --all --limit 10
+ *   node server/scripts/reparseFinanceOcr.js --prod --missing-date
+ *   node server/scripts/reparseFinanceOcr.js --prod --missing-date --reuse-text
+ *   node server/scripts/reparseFinanceOcr.js --prod --dates-only
+ *   node server/scripts/reparseFinanceOcr.js --prod --missing-date --filename-only
  */
 
 const path = require('path');
@@ -17,12 +21,16 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
 const axios = require('axios');
 const FinanceDocument = require('../models/FinanceDocument');
-const { parseDocument } = require('../utils/documentParser');
+const { parseDocument, parseMetadataFromText } = require('../utils/documentParser');
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const RUN_LOCAL = args.includes('--local') || args.includes('--all');
 const RUN_PROD = args.includes('--prod') || args.includes('--all');
+const MISSING_DATE_ONLY = args.includes('--missing-date');
+const REUSE_TEXT = args.includes('--reuse-text');
+const DATES_ONLY = args.includes('--dates-only');
+const FILENAME_ONLY = args.includes('--filename-only');
 const limitArg = args.find((arg) => arg.startsWith('--limit='));
 const LIMIT = limitArg ? Number(limitArg.split('=')[1]) : null;
 
@@ -51,12 +59,19 @@ async function reparseDatabase(label, uri) {
     isFolder: { $ne: true },
     fileUrl: { $exists: true, $nin: ['', 'folder://placeholder'] },
   };
+  if (MISSING_DATE_ONLY) {
+    query.$or = [
+      { 'metadata.date': { $exists: false } },
+      { 'metadata.date': null },
+    ];
+  }
 
   let cursor = FinanceDocument.find(query).setOptions(BYPASS).sort({ createdAt: 1 }).cursor();
   let processed = 0;
   let updated = 0;
   let skipped = 0;
   let failed = 0;
+  let datesFilled = 0;
 
   for await (const doc of cursor) {
     if (LIMIT && processed >= LIMIT) break;
@@ -67,29 +82,68 @@ async function reparseDatabase(label, uri) {
     const title = doc.title || doc.fileName || doc._id.toString();
 
     try {
-      const response = await axios.get(doc.fileUrl, {
-        responseType: 'arraybuffer',
-        timeout: 120000,
-      });
-      const buffer = Buffer.from(response.data);
-      const mimeType = resolveMimeType(doc);
-      const parsed = await parseDocument(buffer, mimeType);
+      let parsed;
+      const cachedText = String(doc.extractedText || '').trim();
+      if (FILENAME_ONLY) {
+        parsed = {
+          extractedText: cachedText,
+          metadata: parseMetadataFromText('', {
+            title: doc.title,
+            fileName: doc.fileName,
+            createdAt: doc.createdAt,
+          }),
+        };
+      } else if (REUSE_TEXT && cachedText.length >= 10) {
+        parsed = {
+          extractedText: cachedText,
+          metadata: parseMetadataFromText(cachedText, {
+            title: doc.title,
+            fileName: doc.fileName,
+            createdAt: doc.createdAt,
+          }),
+        };
+      } else {
+        const response = await axios.get(doc.fileUrl, {
+          responseType: 'arraybuffer',
+          timeout: 120000,
+        });
+        const buffer = Buffer.from(response.data);
+        const mimeType = resolveMimeType(doc);
+        parsed = await parseDocument(buffer, mimeType);
+        if (!parsed.metadata?.date) {
+          const fromName = parseMetadataFromText(parsed.extractedText || '', {
+            title: doc.title,
+            fileName: doc.fileName,
+            createdAt: doc.createdAt,
+          }).date;
+          if (fromName) parsed.metadata.date = fromName;
+        }
+      }
+
       const parsedAmount = Number(parsed.metadata?.amount) || 0;
       const parsedMeta = parsed.metadata || {};
-      const nextMetadata = {
-        ...(doc.metadata?.toObject?.() || doc.metadata || {}),
-        amount: parsedAmount > 0 ? parsedAmount : (Number(doc.metadata?.amount) || 0),
-        currency: parsedMeta.currency || doc.metadata?.currency || 'INR',
-        vendor: parsedMeta.vendor || doc.metadata?.vendor || '',
-        date: parsedMeta.date ?? doc.metadata?.date ?? null,
-        tax: parsedMeta.tax > 0 ? parsedMeta.tax : (Number(doc.metadata?.tax) || 0),
-        detectedCategory: parsedMeta.detectedCategory || doc.metadata?.detectedCategory || doc.category || 'other',
-      };
+      const baseMeta = doc.metadata?.toObject?.() || doc.metadata || {};
+
+      const nextMetadata = DATES_ONLY
+        ? {
+          ...baseMeta,
+          date: parsedMeta.date ?? baseMeta.date ?? null,
+        }
+        : {
+          ...baseMeta,
+          amount: parsedAmount > 0 ? parsedAmount : (Number(baseMeta.amount) || 0),
+          currency: parsedMeta.currency || baseMeta.currency || 'INR',
+          vendor: parsedMeta.vendor || baseMeta.vendor || '',
+          date: parsedMeta.date ?? baseMeta.date ?? null,
+          tax: parsedMeta.tax > 0 ? parsedMeta.tax : (Number(baseMeta.tax) || 0),
+          detectedCategory: parsedMeta.detectedCategory || baseMeta.detectedCategory || doc.category || 'other',
+        };
 
       const dateChanged = formatDateKey(oldDate) !== formatDateKey(nextMetadata.date);
+      const dateNewlyFilled = !oldDate && nextMetadata.date;
       const vendorChanged = (doc.metadata?.vendor || '') !== (nextMetadata.vendor || '');
       const amountChanged = oldAmount !== (Number(nextMetadata.amount) || 0);
-      const categoryChanged = parsed.metadata?.detectedCategory
+      const categoryChanged = !DATES_ONLY && parsed.metadata?.detectedCategory
         && parsed.metadata.detectedCategory !== 'other'
         && parsed.metadata.detectedCategory !== (doc.category || 'other');
 
@@ -100,14 +154,17 @@ async function reparseDatabase(label, uri) {
         if (vendorChanged) console.log(`  vendor: "${doc.metadata?.vendor || ''}" -> "${nextMetadata.vendor || ''}"`);
         if (amountChanged || dateChanged || vendorChanged || categoryChanged) updated += 1;
         else skipped += 1;
+        if (dateNewlyFilled) datesFilled += 1;
         continue;
       }
 
-      doc.extractedText = parsed.extractedText || doc.extractedText || '';
-      doc.metadata = nextMetadata;
-      if (parsed.metadata?.detectedCategory && parsed.metadata.detectedCategory !== 'other') {
-        doc.category = parsed.metadata.detectedCategory;
+      if (!DATES_ONLY) {
+        doc.extractedText = parsed.extractedText || doc.extractedText || '';
+        if (parsed.metadata?.detectedCategory && parsed.metadata.detectedCategory !== 'other') {
+          doc.category = parsed.metadata.detectedCategory;
+        }
       }
+      doc.metadata = nextMetadata;
       await doc.save();
 
       if (amountChanged || dateChanged || vendorChanged || categoryChanged) {
@@ -119,6 +176,7 @@ async function reparseDatabase(label, uri) {
         if (dateChanged) {
           console.log(`  date: ${formatDateKey(oldDate)} -> ${formatDateKey(nextMetadata.date)}`);
         }
+        if (dateNewlyFilled) datesFilled += 1;
       } else {
         skipped += 1;
       }
@@ -135,10 +193,11 @@ async function reparseDatabase(label, uri) {
   console.log(`\n${label} summary:`);
   console.log(`  processed: ${processed}`);
   console.log(`  updated:   ${updated}`);
+  console.log(`  dates filled: ${datesFilled}`);
   console.log(`  unchanged: ${skipped}`);
   console.log(`  failed:    ${failed}`);
 
-  return { processed, updated, skipped, failed };
+  return { processed, updated, skipped, failed, datesFilled };
 }
 
 async function run() {
@@ -148,6 +207,10 @@ async function run() {
   }
 
   if (DRY_RUN) console.log('DRY RUN — no database writes');
+  if (MISSING_DATE_ONLY) console.log('Filter: documents missing metadata.date');
+  if (REUSE_TEXT) console.log('Mode: reuse cached extractedText when available');
+  if (DATES_ONLY) console.log('Mode: update payment date only');
+  if (FILENAME_ONLY) console.log('Mode: filename/title date inference only (no download)');
 
   const results = [];
 
@@ -173,13 +236,15 @@ async function run() {
       updated: acc.updated + row.updated,
       skipped: acc.skipped + row.skipped,
       failed: acc.failed + row.failed,
+      datesFilled: acc.datesFilled + (row.datesFilled || 0),
     }),
-    { processed: 0, updated: 0, skipped: 0, failed: 0 }
+    { processed: 0, updated: 0, skipped: 0, failed: 0, datesFilled: 0 }
   );
 
   console.log('\n=== TOTAL ===');
   console.log(`  processed: ${totals.processed}`);
   console.log(`  updated:   ${totals.updated}`);
+  console.log(`  dates filled: ${totals.datesFilled}`);
   console.log(`  unchanged: ${totals.skipped}`);
   console.log(`  failed:    ${totals.failed}`);
 }

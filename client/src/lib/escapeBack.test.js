@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   isAriaModalOpen,
+  isEscapeOverlayOpen,
   isOpenDropdownMenu,
   isMultilineTextInput,
   isDatePickerInput,
@@ -45,6 +46,15 @@ describe('escapeBack', () => {
   it('identifies date picker inputs', () => {
     expect(isDatePickerInput({ tagName: 'INPUT', type: 'date' })).toBe(true);
     expect(isDatePickerInput({ tagName: 'INPUT', type: 'text' })).toBe(false);
+  });
+
+  it('blocks escape back when data-escape-overlay is open', () => {
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-escape-overlay', 'true');
+    document.body.appendChild(overlay);
+    const event = { key: 'Escape', defaultPrevented: false, target: document.body };
+    expect(isEscapeOverlayOpen()).toBe(true);
+    expect(shouldBlockEscapeBack(event)).toBe(true);
   });
 
   it('blocks escape back when modal is open', () => {

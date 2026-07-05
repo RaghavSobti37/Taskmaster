@@ -35,6 +35,7 @@ import {
 import { isDashboardBooting, shouldDeferWidgetRender } from '../lib/dashboardBootState';
 import { getLazyDashboardWidget } from '../lib/dashboardWidgetLoaders';
 import { isAdminUser } from '../utils/departmentPermissions';
+import OrgOnboardingChecklist from '../components/org/OrgOnboardingChecklist';
 
 const renderLazyWidget = (componentId, props = {}) => {
   const LazyComp = getLazyDashboardWidget(componentId);
@@ -303,6 +304,9 @@ const Dashboard = () => {
           <SlidersHorizontal size={14} />
           <span className="hidden sm:inline">Customize</span>
         </Button>
+      </div>
+      <div className="mb-4">
+        <OrgOnboardingChecklist />
       </div>
       <PinBoardProvider>
         <DashboardTierLayout

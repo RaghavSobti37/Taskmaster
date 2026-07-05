@@ -4,7 +4,10 @@ import axios from 'axios';
 import AuthMarketingShell from '../../components/auth/AuthMarketingShell';
 import { Button, Input } from '../../components/ui';
 import { registerCopy } from '../../constants/marketingContent';
-import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
+import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
+import { computeLoginUiState } from '../../lib/clerkSignInFlow';
+import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
@@ -15,29 +18,79 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('');
   const [pending, setPending] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
-    setPending(true);
-    try {
-      const res = await axios.post(
-        '/api/auth/access-request',
-        {
-          name: form.name.trim() || undefined,
-          email: form.email.trim(),
-          message: form.message.trim() || undefined,
-        },
-        AXIOS_SKIP_TOAST,
-      );
-      setSuccess(res.data?.message || registerCopy.successMessage);
-      setForm({ name: '', email: '', message: '' });
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Could not send access request');
-    } finally {
-      setPending(false);
+function RegisterPageWithClerk() {
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn, sessionId: clerkSessionId } = useClerkAuth();
+  const location = useLocation();
+  return (
+    <RegisterPageView
+      clerkLoaded={clerkLoaded}
+      clerkSignedIn={clerkSignedIn}
+      clerkSessionId={clerkSessionId}
+      pathname={location.pathname}
+    />
+  );
+}
+
+function RegisterPageView({
+  clerkLoaded,
+  clerkSignedIn,
+  clerkSessionId = null,
+  pathname = '/register',
+}) {
+  const { user, loading: authLoading, sessionReady, bootError, retryBoot } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigatedRef = useRef(false);
+  const [establishError, setEstablishError] = useState(null);
+  const clerkReady = isClerkConfigured();
+
+  const uiState = computeLoginUiState({
+    clerkReady,
+    clerkLoaded,
+    clerkSignedIn,
+    clerkSessionId,
+    pathname,
+    authLoading,
+    user,
+    sessionReady,
+    establishError,
+    bootError,
+  });
+
+  useEffect(() => {
+    resetNavigateGuard();
+  }, []);
+
+  useEffect(() => {
+    return subscribeClerkEstablishError(setEstablishError);
+  }, []);
+
+  useEffect(() => {
+    if (uiState !== 'REDIRECTING') {
+      navigatedRef.current = false;
+      return;
     }
-  };
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    const target = resolveLoginReturnPath({
+      stateFrom: location.state?.from,
+      search: location.search,
+    });
+    navigateOnce(navigate, target);
+  }, [uiState, navigate, location.state, location.search]);
+
+  if (uiState === 'BOOT_ERROR') {
+    return (
+      <>
+        <AppBootError bootError={bootError} onRefresh={() => retryBoot()} />
+        <ClearSessionCookiesButton bootError stuckLogin className="mt-4" />
+      </>
+    );
+  }
+
+  if (uiState === 'BOOT_LOADING' || uiState === 'ESTABLISHING' || uiState === 'REDIRECTING') {
+    return <BootScreen onRefresh={() => retryBoot()} />;
+  }
 
   const asideLinks = (
     <>

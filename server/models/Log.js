@@ -22,6 +22,8 @@ const logSchema = new mongoose.Schema({
   targetType: { type: String },
   voidedAt: { type: Date, default: null, index: true },
   voidReason: { type: String },
+  /** Client-generated idempotency key for duplicate POST prevention */
+  clientRequestId: { type: String, sparse: true, index: true },
   createdAt: { type: Date, default: Date.now, index: true, expires: '90d' },
 });
 
@@ -80,6 +82,15 @@ logSchema.index({ userId: 1, action: 1, createdAt: -1 });
 logSchema.index({ origin: 1, status: 1, timestamp: -1 });
 logSchema.index({ userId: 1, createdAt: -1 });
 logSchema.index({ tenantId: 1, createdAt: -1 });
+logSchema.index(
+  { tenantId: 1, clientRequestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      clientRequestId: { $type: 'string', $ne: '' },
+    },
+  },
+);
 
 logSchema.plugin(tenantPlugin);
 

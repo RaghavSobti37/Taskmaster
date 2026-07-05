@@ -1,29 +1,42 @@
-import React from 'react';
-import { RefreshCw } from 'lucide-react';
-import { Button } from './ui/primitives';
+import React, { useMemo } from 'react';
+import AppErrorPage from './AppErrorPage';
+import { resolveAppErrorPresentation } from '../utils/routeErrorPresentation';
 
-/** Full-screen boot failure — refresh instead of infinite spinner. */
+/** Full-screen boot failure — delegates to shared AppErrorPage. */
 export default function AppBootError({
-  message = "Couldn't load CoreKnot. Check your connection and try again.",
+  bootError = null,
+  summary,
+  message,
+  error = null,
+  statusCode = null,
+  capturedAt,
+  showHealthyBadge,
   onRefresh,
 }) {
-  const handleRefresh = onRefresh || (() => window.location.reload());
+  const props = useMemo(() => {
+    if (bootError && typeof bootError === 'object') {
+      return resolveAppErrorPresentation({
+        summary: bootError.summary,
+        error: bootError.error || error,
+        statusCode: bootError.statusCode ?? statusCode,
+        capturedAt: bootError.capturedAt ?? capturedAt,
+        showHealthyBadge: bootError.showHealthyBadge ?? showHealthyBadge,
+      });
+    }
+
+    return resolveAppErrorPresentation({
+      summary: summary || message || (typeof bootError === 'string' ? bootError : undefined),
+      error,
+      statusCode,
+      capturedAt,
+      showHealthyBadge,
+    });
+  }, [bootError, summary, message, error, statusCode, capturedAt, showHealthyBadge]);
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg-workspace)] px-6 text-center"
-      role="alert"
-    >
-      <h1 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-        Something went wrong
-      </h1>
-      <p className="text-sm text-[var(--color-text-muted)] max-w-md mb-6">
-        {message}
-      </p>
-      <Button type="button" onClick={handleRefresh} className="gap-2">
-        <RefreshCw size={14} aria-hidden />
-        Refresh
-      </Button>
-    </div>
+    <AppErrorPage
+      {...props}
+      onRetry={onRefresh || (() => window.location.reload())}
+    />
   );
 }

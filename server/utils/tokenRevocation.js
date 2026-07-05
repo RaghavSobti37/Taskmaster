@@ -10,14 +10,8 @@ let redisReady = false;
 const getRedis = () => {
   if (redisClient !== null) return redisClient;
   try {
-    const Redis = require('ioredis');
-    const { getRedisUrl } = require('./wslRedis');
-    redisClient = new Redis(getRedisUrl(), {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 2000,
-      lazyConnect: true,
-      retryStrategy: () => null,
-    });
+    const { createRedisClient } = require('./wslRedis');
+    redisClient = createRedisClient({ maxRetriesPerRequest: 1 });
     redisClient.connect()
       .then(() => { redisReady = true; })
       .catch(() => { redisReady = false; });

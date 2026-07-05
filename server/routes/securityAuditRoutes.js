@@ -1,10 +1,10 @@
 const express = require('express');
-const { protect, requirePageAccess } = require('../middleware/authMiddleware');
+const { protect, requirePlatformAdmin } = require('../middleware/authMiddleware');
 const { listSecurityAudits } = require('../services/securityAuditService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
-const adminAccess = requirePageAccess('admin_data');
+const adminAccess = requirePlatformAdmin;
 
 router.use(protect, adminAccess);
 

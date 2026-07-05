@@ -5,24 +5,21 @@ import {
 } from 'lucide-react';
 import {
   Button,
-  DataTable,
   FullScreenWorkspace,
   Input,
   PasswordInput,
   PageSkeleton,
   ListPageLayout,
   SearchInput,
-  UserAvatar,
   QueryErrorBanner,
   getQueryErrorMessage,
   DetailSidebarShell,
   DetailSidebarSection,
-  StatusBadge,
 } from '../../components/ui';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import { distributionFromField } from '../../utils/buildChartSeries';
-import { formatLastActivity } from '../../utils/formatLastActivity';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
+import AdminUserGridCard from '../../components/admin/AdminUserGridCard';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import {
   useUserDirectory, useCRMStats, useMailStats, useDataHubFolders,
@@ -35,7 +32,6 @@ import {
   getTeamConversionPercent,
   getTotalDataRecords,
 } from '../../utils/adminRibbonMetrics';
-import { isAdminUser } from '../../utils/departmentPermissions';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
@@ -43,6 +39,7 @@ import { useConfirm } from '../../contexts/confirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
 import CreateUserModal from '../../components/admin/CreateUserModal';
+import ClerkDashboardUsersButton from '../../components/admin/ClerkDashboardUsersButton';
 import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
 import { resolveDepartmentPages } from '../../utils/pagePermissions';
 import { formatDobInput, parseDobInput } from '../../utils/dateDisplay';
@@ -56,6 +53,7 @@ const AdminUsers = () => {
   const [editUserBaseline, setEditUserBaseline] = useState(null);
   const [dobError, setDobError] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [reportUser, setReportUser] = useState(null);
 
   const {
     data: users = [],
@@ -168,10 +166,12 @@ const AdminUsers = () => {
   );
 
   const filteredUsers = useMemo(() => {
-    return userList.filter(u =>
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return userList
+      .filter(u =>
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [userList, searchTerm]);
 
   const deptChart = useMemo(
@@ -181,37 +181,6 @@ const AdminUsers = () => {
       }),
     [userList]
   );
-
-  const userColumns = [
-    {
-      header: 'User',
-      sortKey: 'name',
-      render: (u) => (
-        <div className="flex items-center gap-3">
-          <UserAvatar user={u} size="md" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xs">{u.name}</span>
-              <StatusBadge role={isAdminUser(u) ? 'error' : 'neutral'} className="!text-[9px] uppercase font-mono">
-                {u.departmentId?.name || 'Unassigned'}
-              </StatusBadge>
-            </div>
-            <span className="text-[10px] text-[var(--color-text-muted)]">{u.email}</span>
-          </div>
-        </div>
-      )
-    },
-    {
-      header: 'Last Activity',
-      sortKey: 'lastOnline',
-      sortFn: (u) => (u.lastOnline ? new Date(u.lastOnline) : null),
-      render: (u) => (
-        <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-          {formatLastActivity(u.lastOnline)}
-        </span>
-      )
-    },
-  ];
 
   if (usersLoading) return <PageSkeleton />;
 
@@ -272,10 +241,13 @@ const AdminUsers = () => {
         />
       )}
       toolbarActions={
-        <Button onClick={() => setShowCreateUser(true)} size="sm" className="gap-2 shrink-0">
-          <UserPlus size={14} />
-          Add user
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ClerkDashboardUsersButton />
+          <Button onClick={() => setShowCreateUser(true)} size="sm" className="gap-2 shrink-0">
+            <UserPlus size={14} />
+            Add user
+          </Button>
+        </div>
       }
     >
       {usersError && (
@@ -286,13 +258,33 @@ const AdminUsers = () => {
         />
       )}
       {!usersError && (
-      <DataTable
-        columns={userColumns}
-        data={filteredUsers}
-        onRowClick={(u) => setSelectedUser(u)}
-        getRowId={(u) => u._id}
-      />
+        filteredUsers.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">No users match your search.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filteredUsers.map((u) => (
+              <AdminUserGridCard
+                key={u._id}
+                user={u}
+                onEdit={setSelectedUser}
+                onViewReport={setReportUser}
+              />
+            ))}
+          </div>
+        )
       )}
+
+      <FullScreenWorkspace
+        isOpen={!!reportUser}
+        onClose={() => setReportUser(null)}
+        title={reportUser ? `Report — ${reportUser.name}` : 'Report'}
+        subtitle={reportUser?.email}
+        mainClassName="max-w-5xl"
+      >
+        {reportUser && (
+          <MonthlyReportPanel userId={reportUser._id} userName={reportUser.name} />
+        )}
+      </FullScreenWorkspace>
 
       <FullScreenWorkspace
         isOpen={!!selectedUser}

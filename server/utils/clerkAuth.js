@@ -1,5 +1,6 @@
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
+const { ensurePlatformTenant } = require('./defaultTenant');
 
 const MOCK_SECRET = 'mock_clerk_secret';
 
@@ -38,6 +39,22 @@ const extractClerkOrganizationId = (verified) => {
   return nested ? String(nested) : null;
 };
 
+const clerkSecretIsLive = () =>
+  String(process.env.CLERK_SECRET_KEY || '').trim().startsWith('sk_live_');
+
+/** Best-effort JWT payload decode (no signature check) for clearer auth errors. */
+const decodeClerkJwtPayload = (token) => {
+  try {
+    const part = String(token || '').split('.')[1];
+    if (!part) return null;
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/')
+      + '='.repeat((4 - (part.length % 4)) % 4);
+    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+  } catch {
+    return null;
+  }
+};
+
 const verifyClerkSessionToken = async (token) => {
   if (!isClerkConfigured() || !token) return null;
   try {
@@ -57,6 +74,17 @@ const verifyClerkSessionToken = async (token) => {
   }
 };
 
+/** When verify fails, detect dev Clerk JWT against production secret (common on Vercel preview). */
+const clerkTokenInstanceMismatchMessage = (token) => {
+  if (!clerkSecretIsLive()) return null;
+  const payload = decodeClerkJwtPayload(token);
+  const iss = String(payload?.iss || '');
+  if (iss.includes('.clerk.accounts.dev')) {
+    return 'Clerk development session on production API — use pk_live_ on Vercel Preview (node scripts/push-clerk-production-env.mjs).';
+  }
+  return null;
+};
+
 /**
  * Find an existing CoreKnot user from a verified Clerk profile.
  * Closed system — does not auto-create accounts (admin provisions users).
@@ -71,27 +99,54 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
     throw err;
   }
 
-  let dbUser = await populateDepartment(User.findOne({ email }).select('-password'));
-  if (!dbUser && profile.clerkUserId) {
-    dbUser = await populateDepartment(
-      User.findOne({ clerkId: profile.clerkUserId }).select('-password'),
-    );
-  }
+  let dbUser = await populateDepartment(
+    User.findOne({ email }).select('-password').setOptions({ bypassTenant: true }),
+  );
   if (!dbUser) {
-    return null;
-  }
-
-  const patch = {};
-  if (profile.clerkUserId && dbUser.clerkId !== profile.clerkUserId) {
-    patch.clerkId = profile.clerkUserId;
-    dbUser.clerkId = profile.clerkUserId;
-  }
-  if (guards.tenantId && !dbUser.tenantId) {
-    patch.tenantId = guards.tenantId;
-    dbUser.tenantId = guards.tenantId;
-  }
-  if (Object.keys(patch).length) {
-    await User.updateOne({ _id: dbUser._id }, { $set: patch }).setOptions({ bypassTenant: true });
+    const allowed = guards.isRegistrationAllowed
+      ? guards.isRegistrationAllowed(email)
+      : { ok: true };
+    if (!allowed.ok) {
+      const err = new Error(allowed.error || 'Registration not allowed');
+      err.status = 403;
+      throw err;
+    }
+    let tenantId = guards.tenantId || null;
+    if (!tenantId) {
+      try {
+        tenantId = await ensurePlatformTenant();
+      } catch (err) {
+        console.error('[clerkAuth] platform tenant bootstrap failed during user creation:', err?.message || err);
+        const fail = new Error('Workspace tenant is not configured. Contact an administrator.');
+        fail.status = 503;
+        throw fail;
+      }
+    }
+    const createPayload = {
+      name: profile.name || email.split('@')[0],
+      email,
+      password: crypto.randomBytes(32).toString('hex'),
+      mustChangePassword: true,
+      clerkId: profile.clerkUserId,
+      ...(tenantId ? { tenantId } : {}),
+    };
+    dbUser = await User.create(createPayload);
+    dbUser = await populateDepartment(
+      User.findById(dbUser._id).select('-password').setOptions({ bypassTenant: true }),
+    );
+  } else {
+    const patch = {};
+    if (profile.clerkUserId && dbUser.clerkId !== profile.clerkUserId) {
+      patch.clerkId = profile.clerkUserId;
+      dbUser.clerkId = profile.clerkUserId;
+    }
+    if (guards.tenantId && !dbUser.tenantId) {
+      patch.tenantId = guards.tenantId;
+      dbUser.tenantId = guards.tenantId;
+    }
+    if (Object.keys(patch).length) {
+      await User.updateOne({ _id: dbUser._id }, { $set: patch }).setOptions({ bypassTenant: true });
+    }
   }
 
   return dbUser;
@@ -100,6 +155,7 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
 module.exports = {
   isClerkConfigured,
   verifyClerkSessionToken,
+  clerkTokenInstanceMismatchMessage,
   resolveUserFromClerkProfile,
   primaryClerkEmail,
 };

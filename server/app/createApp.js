@@ -48,7 +48,8 @@ function createApp() {
   }
 
   app.set('trust proxy', 1);
-  app.use('/__clerk', require('../middleware/clerkFapiProxy'));
+  const { clerkProxyRateLimit } = require('../middleware/rateLimits');
+  app.use('/__clerk', clerkProxyRateLimit, require('../middleware/clerkFapiProxy'));
   app.use(perfMiddleware);
   app.use(helmet({
     contentSecurityPolicy: {
@@ -87,6 +88,18 @@ function createApp() {
   app.use('/api/public', require('../routes/publicRoutes'));
 
   app.use('/api', qaProbeGate);
+
+  const { recordRequest } = require('../utils/healthRequestMetrics');
+  app.use((req, res, next) => {
+    const startedAt = process.hrtime.bigint();
+    res.on('finish', () => {
+      const url = req.originalUrl || req.url || '';
+      if (!url.startsWith('/api')) return;
+      const elapsedNs = process.hrtime.bigint() - startedAt;
+      recordRequest(Math.round(Number(elapsedNs) / 1e6), res.statusCode);
+    });
+    next();
+  });
 
   return app;
 }

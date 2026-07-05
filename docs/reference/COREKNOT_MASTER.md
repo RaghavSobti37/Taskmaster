@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-02
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-05
 
 ---
 
@@ -37,9 +37,9 @@ CoreKnot is TSC's multi-tenant CRM and operations hub: projects, CRM, email camp
 | Layer | Stack |
 | --- | --- |
 | Frontend | React 18, Vite 5, Tailwind v4, TanStack Query, React Router 6, PWA |
-| API | Express + Mongoose on Render |
-| Data | MongoDB Atlas (primary), Redis/BullMQ, Supabase (secondary mirror) |
-| Auth | JWT cookie (`coreknot_token_v3`), Google OAuth, Clerk (optional) |
+| API | Express + Mongoose on Render; NestJS (`nestjs-server/`) for Postgres/sync ETL |
+| Data | MongoDB Atlas (primary), Redis/BullMQ, Supabase (secondary mirror), Postgres (Nest/local) |
+| Auth | JWT cookie (`coreknot_token_v3` + `activeTenantId`), multi-org memberships, Google OAuth, Clerk (optional), platform admin gate |
 | Deploy | Vercel (SPA) → same-origin `/api` proxy → Render API |
 
 **Site modes** (`client/src/config/siteMode.js`):
@@ -105,14 +105,80 @@ Resolved via `getUserPagePermissions()` in `client/src/utils/pagePermissions.js`
 | `/artists/*` | `artists` |
 | `/assets/*` | `assets` |
 | `/admin/*` | per-route `admin_*` keys |
+| `/org/pick`, `/org/create` | session (no page key; tenant selection) |
+| `/invites/:token/accept` | session + invite token |
+| `/terms`, `/privacy` | public legal |
 
 Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab=finance`, etc.
+
+### Multi-org & tenant session
+
+**Isolation model:** Extend existing `Tenant` (no separate Organization collection). All tenant-scoped documents keep `tenantId` via `tenantPlugin`.
+
+| Model | File | Purpose |
+| --- | --- | --- |
+| `Tenant` | `server/models/Tenant.js` | Org record: `plan`, `ownerId`, `settings`, `featureUnlocks`, `onboardingProgress` |
+| `TenantMembership` | `server/models/TenantMembership.js` | `{ tenantId, userId, role, status }` — compound unique per pair |
+| `TenantInvite` | `server/models/TenantInvite.js` | Pending email invite; `tokenHash`, `expiresAt`, `role` |
+
+**One user, many orgs:** `User.email` stays globally unique. Invites attach to the existing user on accept (same person across orgs = one `User`, many `TenantMembership` rows).
+
+**JWT payload** (`coreknot_token_v3`, `server/utils/authSession.js`): `{ id, loginAt, jti, activeTenantId? }`. Re-issued on org switch.
+
+**Session resolution** (`server/middleware/authMiddleware.js` → `applySessionTenant`):
+
+1. Login/register/clerk-establish → `backfillMembershipFromUser`, resolve `activeTenantId`
+2. **One** active membership → auto-set tenant in JWT
+3. **Two or more** memberships, no valid `activeTenantId` → `needsTenantSelection`; most routes return **409** `NEEDS_TENANT_SELECTION`
+4. Whitelisted without active tenant: `/api/auth/me`, `/api/tenants/memberships`, `/api/tenants/select`, `/api/tenants/create`, `/api/invites/*`
+5. Client axios interceptor → `/org/pick` on 409
+
+**App routes (multi-org UX):**
+
+| Route | Page | Notes |
+| --- | --- | --- |
+| `/org/pick` | `OrgPickerPage` | Shown only when `memberships.length >= 2` |
+| `/org/create` | `CreateOrganizationPage` | Post-register or add org |
+| `/invites/:token/accept` | `TenantInviteAcceptPage` | Accept email invite |
+| `/terms` | `TermsOfService` | Public |
+
+**Shell:** `OrgSwitcher` in `OutletSidebar.jsx` (hidden when single org). `OrgOnboardingChecklist` on dashboard.
+
+**Tenant API** (`server/routes/tenantRoutes.js`, `server/routes/inviteRoutes.js`):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/tenants/memberships` | List memberships + `activeTenantId` |
+| `POST` | `/api/tenants/select` | Switch org; re-issue JWT |
+| `POST` | `/api/tenants/create` | Create tenant + owner membership |
+| `GET` | `/api/tenants/:id/unlocks` | `featureUnlocks` for nav gating |
+| `PATCH` | `/api/tenants/:id/onboarding` | Checklist steps / dismiss |
+| `POST` | `/api/tenants/:id/invites` | Send invite (tenant owner/admin) |
+| `GET` | `/api/invites/:token` | Validate pending invite |
+| `POST` | `/api/invites/:token/accept` | Create membership + select tenant |
+
+**Backfill:** `node server/scripts/migrateTenantMemberships.js` — idempotent `TenantMembership` from `User.tenantId`.
+
+**Platform vs org admin:**
+
+| Layer | Gate | Routes |
+| --- | --- | --- |
+| Org admin | Department `admin_*` page keys | `/admin/users`, org settings, etc. |
+| Platform admin | `requirePlatformAdmin` (`isRootAdminUser`) | `/api/admin/scripts`, `/api/admin/qa`, `/api/admin/security-audit` |
+
+Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organizations).
+
+**Feature unlocks** (`Tenant.featureUnlocks`): `resend`, `google`, `meta`, `knowledgeEngine`, `finance`, `artistOs`. Client: `navPageAccess.getNavFeatureLock()` + locked `EmptyState` props.
+
+**Credentials at rest:** `server/utils/credentialEncryption.js` (AES-256-GCM when `CREDENTIAL_ENCRYPTION_KEY` set).
+
+**Launch ops:** [`operations/PUBLIC_LAUNCH_BETA.md`](../operations/PUBLIC_LAUNCH_BETA.md) — staging gate, migration, invite-only beta.
 
 ---
 
 ## 3. Page catalog by domain
 
-_Total page files: 120. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 124. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -181,7 +247,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /register/* |
 | **Default export** | `function` |
-| **Lines** | 137 |
+| **Lines** | 141 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useNavigate`, `useRef`, `useState` |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignUpBlock` |
 
@@ -236,8 +302,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /unsubscribe |
 | **Default export** | `function` |
-| **Lines** | 132 |
-| **Hooks** | `useSearchParams`, `useState` |
+| **Lines** | 178 |
+| **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
 
 **API endpoints:**
 
@@ -720,6 +786,16 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `MailProfilesPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `client/src/pages/emails/EmailsStreamsPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | /emails/streams |
+| **Default export** | `function` |
+| **Lines** | 142 |
+| **Hooks** | `useCreateEmailStream`, `useEmailStreams`, `useMemo`, `useState`, `useToast`, `useUpdateEmailStream` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/emails/EmailsTemplatesPage.jsx`
 
 | Field | Value |
@@ -1132,7 +1208,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /assets/accounts |
 | **Default export** | `OrgAccountsPage` |
-| **Lines** | 777 |
+| **Lines** | 768 |
 | **Hooks** | `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useState`, `useToast`, `useUnsavedChanges` |
 | **Key components** | `MemberSelect`, `ProjectMultiSelect` |
 
@@ -1186,9 +1262,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/control |
 | **Default export** | `AdminPanel` |
-| **Lines** | 491 |
+| **Lines** | 483 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateTeam`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteTeam`, `useDeleteUser`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useSearchParams`, `useState`, `useTeams`, `useToast`, `useUpdateUser`, `useUserDirectory` |
-| **Key components** | `UserDeleteAction` |
+| **Key components** | `AdminUserGridCard`, `ClerkDashboardUsersButton`, `MonthlyReportPanel`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/AdminPlatformSettings.jsx`
@@ -1210,9 +1286,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/project-analytics |
 | **Default export** | `AdminProjectAnalyticsPage` |
-| **Lines** | 465 |
+| **Lines** | 449 |
 | **Hooks** | `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjectReportRangeState`, `useProjects`, `useProjectsAnalyticsSummary`, `useRef`, `useSearchParams`, `useState` |
-| **Key components** | `ProjectAnalyticsContent`, `ProjectReportRangeControls` |
+| **Key components** | `ProjectAnalyticsContent`, `ProjectAnalyticsKpiGrid`, `ProjectReportRangeControls` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/AdminRolesPage.jsx`
@@ -1252,15 +1328,29 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `DepartmentsPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `client/src/pages/admin/AdminTenantSsoPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | /admin/tenant-sso |
+| **Default export** | `function` |
+| **Lines** | 114 |
+| **Hooks** | `useCallback`, `useEffect`, `useState`, `useToast` |
+| **Key components** | `QueryErrorSlot` |
+
+**API endpoints:**
+
+- `/api/admin/tenants`
+- `/api/admin/tenants/${tenant._id}`
 #### `client/src/pages/admin/AdminUsers.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /admin/users |
 | **Default export** | `AdminUsers` |
-| **Lines** | 470 |
+| **Lines** | 462 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateUser`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteUser`, `useDepartments`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useState`, `useUpdateUser`, `useUserDirectory` |
-| **Key components** | `CreateUserModal`, `MonthlyReportPanel`, `PagePermissionsEditor`, `UserDeleteAction` |
+| **Key components** | `AdminUserGridCard`, `ClerkDashboardUsersButton`, `CreateUserModal`, `MonthlyReportPanel`, `PagePermissionsEditor`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/ArtistPathPage.jsx`
@@ -1290,7 +1380,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 530 |
+| **Lines** | 531 |
 | **Named exports** | `DataHubContent` |
 | **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
 | **Key components** | `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
@@ -1305,6 +1395,17 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 75 |
 | **Hooks** | `useState` |
 | **Key components** | `ExlyDataContent`, `MasterclassFunnelPanel` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `client/src/pages/admin/KnowledgeEnginePage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | /admin/knowledge-engine |
+| **Default export** | `function` |
+| **Lines** | 401 |
+| **Hooks** | `useApproveKnowledgeArticle`, `useCreateDistribution`, `useCreateKnowledgeArticle`, `useEffect`, `useGenerateBrief`, `useHook`, `useKnowledgeAnalytics`, `useKnowledgeArticles`, `useKnowledgeBriefs`, `useKnowledgeChunks`, `useKnowledgeConnections`, `useKnowledgeDashboard`, `useKnowledgeDistribution`, `useKnowledgeJobTrigger`, `useKnowledgeOpportunities`, `useKnowledgeSettings`, `useKnowledgeSources`, `useMediumPrep`, `useMemo`, `usePublishKnowledgeArticle`, `useRunArticlePipeline`, `useSearchParams`, `useSetMediumUrl`, `useState`, `useToast`, `useUpdateKnowledgeSettings` |
+| **Key components** | `AdminConsoleBackButton`, `PageHeader`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/LeadAuditsPage.jsx`
@@ -1351,7 +1452,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/qa |
 | **Default export** | `QATestingPage` |
-| **Lines** | 1323 |
+| **Lines** | 1324 |
 | **Hooks** | `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useProjects`, `useQAProgress`, `useQuery`, `useQueryClient`, `useState`, `useSystemToast` |
 
 **API endpoints:**
@@ -1366,6 +1467,19 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/qa/resolve/${testRunId}/${testCaseId}`
 - `/api/qa/results/${latestRunId}`
 - `/api/qa/start`
+#### `client/src/pages/admin/SecurityAuditPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | /admin/security-audit |
+| **Default export** | `function` |
+| **Lines** | 83 |
+| **Hooks** | `useMemo`, `useQuery`, `useState` |
+| **Key components** | `QueryErrorSlot` |
+
+**API endpoints:**
+
+- `/api/admin/security-audit`
 #### `client/src/pages/hubs/AdminConsole.jsx`
 
 | Field | Value |
@@ -1452,8 +1566,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 486 |
-| **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useNavigate`, `useState`, `useUnsavedChanges` |
+| **Lines** | 523 |
+| **Hooks** | `useAuth`, `useCallback`, `useDateFormat`, `useEffect`, `useMemo`, `useNavigate`, `useState`, `useUnsavedChanges` |
 
 **API endpoints:**
 
@@ -1466,7 +1580,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 230 |
+| **Lines** | 222 |
 | **Hooks** | `useGamificationHistory`, `useGamificationMissions`, `useGamificationProgress`, `useMemo`, `useState` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1493,9 +1607,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /components |
 | **Default export** | `ComponentsShowcase` |
-| **Lines** | 723 |
-| **Hooks** | `useState` |
-| **Key components** | `FluidRibbonLoaderGallery`, `ModuleSubnavShowcase` |
+| **Lines** | 803 |
+| **Hooks** | `useMemo`, `useState` |
+| **Key components** | `AppErrorPage`, `FluidRibbonLoaderGallery` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/hubs/TabHubLayout.jsx`
@@ -1565,9 +1679,17 @@ File: `client/src/pages/hubs/CrmHub.jsx` — URL query `?tab=` drives active pan
 
 Aggregates admin tools behind `admin_*` permissions — users, teams, roles, scripts, gamification, project analytics, exly, artist path, ops hub.
 
+Standalone admin routes (same permission model):
+
+| Route | Page | API prefix |
+| --- | --- | --- |
+| `/admin/knowledge-engine` | `KnowledgeEnginePage` | `/api/knowledge-engine` |
+| `/admin/security-audit` | `SecurityAuditPage` | `/api/admin/security-audit` |
+| `/admin/tenant-sso` | `AdminTenantSsoPage` | `/api/admin/tenants` |
+
 ### Email Hub (`/emails/*`)
 
-Layout: `EmailHubLayout.jsx`. Sub-routes: overview, campaigns, templates, profiles, analytics, newsletter (curate/send).
+Layout: `EmailHubLayout.jsx`. Sub-routes: overview, campaigns, templates, profiles, **streams**, analytics, newsletter (curate/send). Streams power Resend from-address pickers and public unsubscribe (`/unsubscribe?stream=`).
 
 ### Settings (`/settings`)
 
@@ -1591,15 +1713,19 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 | Domain | Route file | Typical prefix |
 | --- | --- | --- |
 | Auth | `authRoutes.js`, `authConnectRoutes.js` | `/api/auth` |
+| Tenants / invites | `tenantRoutes.js`, `inviteRoutes.js` | `/api/tenants`, `/api/invites` |
 | Users / teams | `userRoutes.js`, `teamRoutes.js` | `/api/users`, `/api/teams` |
 | Projects / tasks | `projectRoutes.js`, `taskRoutes.js` | `/api/projects`, `/api/tasks` |
 | CRM | `crmRoutes.js`, `crmStatsRoutes.js` | `/api/crm` |
 | Data Hub | `dataHubRoutes.js` | `/api/data-hub` |
-| Mail / campaigns | `mailRoutes.js`, `campaignRoutes.js` | `/api/mail`, `/api/campaigns` |
+| Mail / campaigns | `mailRoutes.js`, `campaignRoutes.js`, `domains/mail/routes/streamsRouter.js` | `/api/mail`, `/api/campaigns`, `/api/mail/streams` |
+| Knowledge Engine | `knowledgeEngineRoutes.js` | `/api/knowledge-engine` |
+| Tenant SSO (admin) | `tenantAdminRoutes.js` | `/api/admin/tenants` |
+| Security audit (admin) | `securityAuditRoutes.js` | `/api/admin/security-audit` |
 | Finance | `financeRoutes.js` | `/api/finance` |
 | Artists | `artistRoutes.js`, `artistV2Routes.js`, `artistPathRoutes.js` | `/api/artists` |
 | Attendance / logs | `attendanceRoutes.js`, `logRoutes.js` | `/api/attendance`, `/api/logs` |
-| Admin | `adminScriptsRoutes.js`, `platformSettingsRoutes.js`, `qaRoutes.js` | `/api/admin/*` |
+| Admin | `adminScriptsRoutes.js`, `platformSettingsRoutes.js`, `qaRoutes.js` | `/api/admin/*` (scripts/QA/security-audit = **platform admin only**) |
 | Webhooks | `webhookRoutes.js` | `/api/webhooks/*` |
 | Health / public | `publicRoutes.js`, `openApiRoutes.js` | `/api/health`, public |
 
@@ -1633,6 +1759,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/googleAccounts.js`
 - `server/routes/googleRoutes.js`
 - `server/routes/integrationsRoutes.js`
+- `server/routes/knowledgeEngineRoutes.js`
 - `server/routes/logRoutes.js`
 - `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
@@ -1653,6 +1780,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/queueAdminRoutes.js`
 - `server/routes/scheduleRoutes.js`
 - `server/routes/searchRoutes.js`
+- `server/routes/securityAuditRoutes.js`
 - `server/routes/sesRoutes.js`
 - `server/routes/subscriptionRoutes.js`
 - `server/routes/supabaseAdminRoutes.js`
@@ -1660,6 +1788,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/systemHealthAdminRoutes.js`
 - `server/routes/taskRoutes.js`
 - `server/routes/teamRoutes.js`
+- `server/routes/tenantAdminRoutes.js`
 - `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
@@ -1673,13 +1802,33 @@ Full endpoint listing: `.specify/memory/backend/express.md` and `.specify/memory
 
 | Area | Rule | Source |
 | --- | --- | --- |
-| Task review | Creator cannot approve own task; assignee submits for review | `shared/taskReviewRules.js` |
+| Multi-org | `Tenant` + `TenantMembership` + `TenantInvite`; JWT `activeTenantId`; org picker when 2+ memberships | `server/services/tenantMembershipService.js`, `server/middleware/authMiddleware.js` |
+| Tenant isolation | `tenantPlugin` on models; `req.tenantId` from session; spoof rejected in `protect` + finance router | `server/plugins/tenantPlugin.js`, `server/middleware/rejectClientTenantSpoof.js`, `server/middleware/authMiddleware.js` |
+| Feature unlocks | Server `requireFeatureUnlock` + nav `getNavFeatureLock` | `server/middleware/requireFeatureUnlock.js`, `server/services/tenantUnlockService.js` |
+| Task review | Creator cannot approve own task; assignee submits for review; done-task rollback window 24h unless admin/platform owner | `shared/taskReviewRules.js` |
+| Project analytics | Hours summary uses unified `aggregateProjectEffort`; `budgetSource` tracked vs calculated on `Project` | `server/domains/projects/services/projectAnalyticsService.js`, `shared/projectAnalyticsCore.cjs` |
+| Finance FX | `conversionRate` snapshot on `FinanceDocument` write for rollup | `shared/projectFinanceRollup.js` |
+| Daily logs | Optional `clientRequestId` idempotency per tenant | `server/models/Log.js`, `server/routes/logRoutes.js` |
 | Attendance | Office/WFH check-in; 1h lunch; worked vs daily-log reconciliation | `shared/attendanceMetrics.js` |
-| Dates (UI) | DD/MM/YYYY display; ISO in `<input type="date">` | `client/src/utils/dateDisplay.js` |
+| Dates (UI) | User format via `DateFormatContext` + `shared/dateFormatPreference.js`; default DD/MM/YYYY; ISO in `<input type="date">` | `client/src/utils/dateDisplay.js`, `client/src/contexts/DateFormatContext.jsx` |
+| Email streams | Branded from-address + unsubscribe slug per stream; catalog in `shared/emailStreams.cjs` | `shared/emailStreams.cjs`, `server/services/emailStreamService.js` |
 | CRM locks | Lead lock/audit on sensitive edits | server CRM controllers |
 | Email tracking | Locked engine — do not change pixel/redirect behavior | `docs/reference/EMAIL_ENGINE_LOCKED.md` |
-| Gamification | XP on task completion; weekly leaderboard IST Monday reset | `shared/gamificationRules.js` |
-| Multi-tenant | `tenantPlugin` on models; tenant from session | `server/plugins/tenantPlugin.js` |
+| Gamification | XP on task completion; weekly leaderboard IST Monday reset; idempotent recalc via audit trail | `shared/gamificationRules.js`, `server/services/gamificationService.js` |
+| Credentials | OAuth/Resend tokens encrypted at rest when `CREDENTIAL_ENCRYPTION_KEY` set | `server/utils/credentialEncryption.js` |
+
+### Enterprise readiness (v2 scaffold)
+
+| Area | Behavior | Key paths |
+| --- | --- | --- |
+| Plans | `free` / `pro` / `enterprise` on `Tenant.plan`; seat + feature limits | `shared/planLimits.js`, `server/services/planEnforcementService.js` |
+| Audit | `AuditEvent` per tenant; CSV export on enterprise | `server/models/AuditEvent.js`, `server/routes/enterpriseRoutes.js`, `/admin/audit-log` |
+| API keys | `ck_live_*` bearer auth on `/api/v1` | `server/models/TenantApiKey.js`, `server/routes/publicApiRoutes.js` |
+| Webhooks | HMAC-signed outbound events per tenant | `server/models/TenantWebhook.js`, `server/services/webhookDispatchService.js` |
+| Security settings | SSO/MFA/IP allowlist/branding on `Tenant` | `Tenant.security`, `Tenant.sso`, `PATCH /api/enterprise/security` |
+| Custom roles | Per-tenant `CustomRole` with `pageKeys` | `server/models/CustomRole.js` |
+| Support impersonation | Platform-admin only, reason required, logged | `POST /api/admin/support/impersonate` |
+| Docs | Sprint checklist + API map | [`ENTERPRISE_READINESS.md`](../operations/ENTERPRISE_READINESS.md) |
 
 ---
 
@@ -1701,9 +1850,10 @@ Full endpoint listing: `.specify/memory/backend/express.md` and `.specify/memory
 | [`DOCUMENTATION_INDEX.md`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
 | [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) | Agent memory hub |
 | [`reference/COREKNOT_MASTER.md`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
-| [`operations/`](../operations/) | Deploy, startup, scripts, environments |
+| [`operations/`](../operations/) | Deploy, startup, scripts, environments, [`PUBLIC_LAUNCH_BETA.md`](../operations/PUBLIC_LAUNCH_BETA.md), [`ENTERPRISE_READINESS.md`](../operations/ENTERPRISE_READINESS.md) |
 | [`architecture/`](../architecture/) | System design, data, security, debt |
 | [`features/`](../features/) | Domain deep-dives (Artist OS, Data Hub, integrations) |
 | [`auth/`](../auth/) | OAuth, Clerk, subdomain setup |
-| [`design/`](../design/) | UI reference |
+| [`design/`](../design/) | UI reference (`DESIGN-REFERENCE.md`, component standards) |
+| [`reference/COMPONENT_STANDARDS.md`](./COMPONENT_STANDARDS.md) | Client component patterns |
 

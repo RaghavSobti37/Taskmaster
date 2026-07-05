@@ -25,23 +25,20 @@ const readLocalProductionApiUrl = () => {
   }
 };
 
-/** Canonical staging API — Vercel preview must never proxy to production. */
-const CANONICAL_STAGING_API_URL = 'https://coreknot-api-staging.onrender.com';
+/** Retired staging hosts — never proxy after staging Render services removed. */
+const RETIRED_STAGING_HOSTS = new Set([
+  'coreknot-api-staging.onrender.com',
+  'coreknot-nest-staging.onrender.com',
+]);
 
-const readLocalStagingApiUrl = () => {
-  const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
-  if (!fs.existsSync(localHosts)) return '';
-  try {
-    const json = JSON.parse(fs.readFileSync(localHosts, 'utf8'));
-    return String(json.stagingApiUrl || json.derived?.stagingApiUrl || '').trim().replace(/\/$/, '');
-  } catch {
-    return '';
-  }
-};
+/** @deprecated staging branch uses production API — alias for local hosts file compat */
+const readLocalStagingApiUrl = () => readLocalProductionApiUrl();
+
+const PROD_RENDER_API_SUFFIX = `${['taskmaster', 'jfw0'].join('-')}.onrender.com`;
 
 const isProductionRenderApiHost = (hostname) => {
   const host = String(hostname || '').toLowerCase();
-  return host === 'taskmaster-jfw0.onrender.com' || host === 'coreknot-api.onrender.com';
+  return host === PROD_RENDER_API_SUFFIX || host === 'coreknot-api.onrender.com';
 };
 
 const readLocalNestApiUrl = () => {
@@ -64,6 +61,15 @@ const BANNED_PROXY_HOSTS = new Set([
   'coreknot-jfw0.onrender.com',
   'your-render-service.onrender.com',
 ]);
+
+/** Dev branch → Render only; no Vercel preview/production deploy on push. */
+const GIT_DEPLOYMENT_CONFIG = {
+  git: {
+    deploymentEnabled: {
+      dev: false,
+    },
+  },
+};
 
 const POSTHOG_PROXY_PREFIX = '/ph';
 /** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
@@ -143,30 +149,18 @@ const buildPostHogRewrites = () => {
 const normalizeProxyUrl = (raw) => String(raw || '').trim().replace(/\/$/, '');
 
 const pickProxyUrl = () => {
-  const isPreview = process.env.VERCEL_ENV === 'preview';
-  const isProductionDeploy = process.env.VERCEL_ENV === 'production';
-
   const fromEnv = [
     process.env.RENDER_API_PROXY_URL,
     process.env.VITE_API_URL,
   ].map(normalizeProxyUrl).filter(Boolean);
 
-  const candidates = [...fromEnv];
-  if (isPreview) {
-    candidates.push(readLocalStagingApiUrl(), CANONICAL_STAGING_API_URL);
-  } else if (isProductionDeploy || !process.env.VERCEL) {
-    candidates.push(readLocalProductionApiUrl());
-  }
+  const candidates = [...fromEnv, readLocalProductionApiUrl()];
 
   for (const url of candidates) {
     try {
       const host = new URL(url).hostname.toLowerCase();
-      if (BANNED_PROXY_HOSTS.has(host)) {
-        console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
-        continue;
-      }
-      if (isPreview && isProductionRenderApiHost(host)) {
-        console.warn(`[generateVercelConfig] skipping production API host on preview: ${host}`);
+      if (BANNED_PROXY_HOSTS.has(host) || RETIRED_STAGING_HOSTS.has(host)) {
+        console.warn(`[generateVercelConfig] skipping retired/banned proxy host: ${host}`);
         continue;
       }
       return url;
@@ -186,8 +180,11 @@ const pickNestProxyUrl = () => {
   for (const url of candidates) {
     try {
       const host = new URL(url).hostname.toLowerCase();
-      if (!BANNED_PROXY_HOSTS.has(host)) return url;
-      console.warn(`[generateVercelConfig] skipping banned Nest proxy host: ${host}`);
+      if (BANNED_PROXY_HOSTS.has(host) || RETIRED_STAGING_HOSTS.has(host)) {
+        console.warn(`[generateVercelConfig] skipping retired/banned Nest proxy host: ${host}`);
+        continue;
+      }
+      return url;
     } catch {
       /* ignore */
     }
@@ -196,14 +193,12 @@ const pickNestProxyUrl = () => {
 };
 
 /**
- * Nest attendance strangler: preview/staging only.
- * Production Express session cookies are not valid on Nest staging → 401 if enabled in prod.
+ * Nest attendance strangler — opt-in only (no separate Nest staging service).
  */
 const shouldEnableNestAttendanceStrangler = (nestUrl) => {
   if (!nestUrl) return false;
   const flag = String(process.env.NEST_ATTENDANCE_STRANGLER || '').toLowerCase();
-  if (flag === '1' || flag === 'true' || flag === 'yes') return true;
-  return process.env.VERCEL_ENV === 'preview';
+  return flag === '1' || flag === 'true' || flag === 'yes';
 };
 
 /** Vite embed: Socket.io must bypass Vercel (no WebSocket upgrade on rewrites). */
@@ -346,20 +341,6 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
   process.exit(1);
 }
 
-if (onVercel && process.env.VERCEL_ENV === 'preview') {
-  try {
-    const previewHost = new URL(apiDestination.replace('/api/$1', '/')).hostname.toLowerCase();
-    if (isProductionRenderApiHost(previewHost)) {
-      console.error(
-        '[generateVercelConfig] Preview build must proxy to staging API — set RENDER_API_PROXY_URL=https://coreknot-api-staging.onrender.com on Vercel Preview env',
-      );
-      process.exit(1);
-    }
-  } catch {
-    /* validated above */
-  }
-}
-
 if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.VITE_POSTHOG_PROJECT_TOKEN || '').trim()) {
   console.warn(
     '[generateVercelConfig] VITE_POSTHOG_PROJECT_TOKEN missing on Vercel production — PostHog will not capture until set and redeployed',
@@ -367,6 +348,7 @@ if (onVercel && process.env.VERCEL_ENV === 'production' && !String(process.env.V
 }
 
 const payload = {
+  ...GIT_DEPLOYMENT_CONFIG,
   ...(template.redirects ? { redirects: template.redirects } : {}),
   rewrites: [
     ...(nestAttendanceDestination
@@ -400,6 +382,7 @@ const buildSitePayload = (buildCommand) => {
     satelliteClerk,
   );
   return {
+    ...GIT_DEPLOYMENT_CONFIG,
     buildCommand,
     outputDirectory: '../../client/dist',
     installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
@@ -462,6 +445,7 @@ if (nestAttendanceDestination) {
 };
 
 module.exports = {
+  GIT_DEPLOYMENT_CONFIG,
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
@@ -472,10 +456,9 @@ module.exports = {
   existingRewritesLookValid,
   buildVercelHeaders,
   pickProxyUrl,
-  CANONICAL_STAGING_API_URL,
-  isProductionRenderApiHost,
-  shouldForcePreviewStagingViteApi,
   writeViteProductionEnv,
+  isProductionRenderApiHost,
+  RETIRED_STAGING_HOSTS,
 };
 
 if (require.main === module) {

@@ -53,25 +53,69 @@ function getApiDomainManifest() {
  * - webhooks: signature-verified, no JWT (track, webhookRoutes)
  */
 function registerRoutes(app) {
+  const healthStaticDir = path.join(__dirname, '../static');
+  app.get('/api/health/dashboard.js', (_req, res) => {
+    res.type('application/javascript');
+    res.sendFile(path.join(healthStaticDir, 'health-dashboard.js'));
+  });
+  app.get('/api/health/brand-mark.svg', (_req, res) => {
+    res.type('image/svg+xml');
+    res.sendFile(path.join(healthStaticDir, 'brand-mark.svg'));
+  });
+
   // --- Public / health ---
   app.use('/api/v1', require('../routes/v1'));
   app.use('/api', require('../routes/openApiRoutes'));
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', asyncHandler(async (req, res) => {
     const detail = SystemHealthService.getDetailedStatus();
     const { getBuildMeta } = require('../utils/buildMeta');
+    const {
+      wantsHealthHtml,
+      wantsDashboardJson,
+      buildDashboardData,
+      buildSnapshot,
+      renderHealthPage,
+    } = require('../utils/healthPageHtml');
     const healthy = detail.status === 'HEALTHY' || detail.status === 'STARTING';
-    const payload = {
+    const basePayload = {
       status: detail.status,
       reason: detail.reason || null,
       build: detail.build || getBuildMeta(),
       dependencies: detail.dependencies,
       uptimeSeconds: detail.uptimeSeconds,
     };
-    if (healthy) {
-      return apiOk(res, payload, 200);
+
+    const needsProbe = wantsHealthHtml(req) || wantsDashboardJson(req);
+    let probe = null;
+    if (needsProbe) {
+      try {
+        const { getAdminSystemHealth } = require('../services/systemHealthProbeService');
+        probe = await getAdminSystemHealth({
+          forceFullProbes: true,
+          bypassCache: req.query.refresh === '1',
+        });
+      } catch {
+        probe = null;
+      }
     }
-    return apiError(res, detail.reason || 'Service unhealthy', 503, payload);
-  });
+
+    if (wantsDashboardJson(req)) {
+      const dashboard = buildDashboardData(detail, probe);
+      const status = healthy ? 200 : 503;
+      return res.status(status).json({ ok: healthy, ...basePayload, dashboard });
+    }
+
+    if (wantsHealthHtml(req)) {
+      const snapshot = buildSnapshot(detail, probe, basePayload);
+      const html = renderHealthPage(snapshot);
+      return res.status(healthy ? 200 : 503).type('html').send(html);
+    }
+
+    if (healthy) {
+      return apiOk(res, basePayload, 200);
+    }
+    return apiError(res, detail.reason || 'Service unhealthy', 503, basePayload);
+  }));
   app.use('/api/', (req, res, next) => {
     if (req.path === '/health' || req.path === '/openapi.json') return next();
     // File uploads do not require Mongo — allow UploadThing route during DB reconnect blips.
@@ -98,6 +142,8 @@ function registerRoutes(app) {
   app.use('/api/gamification-admin', require('../routes/gamificationAdminRoutes'));
   app.use('/api/qa', require('../routes/qaRoutes'));
   app.use('/api/customization', require('../routes/customizationRoutes'));
+  app.use('/api/tenants', require('../routes/tenantRoutes'));
+  app.use('/api/invites', require('../routes/inviteRoutes'));
 
   // --- Webhooks & tracking (public, rate-limited) ---
   app.use(require('../routes/track'));
@@ -163,6 +209,10 @@ function registerRoutes(app) {
   app.use('/api/announcements', require('../routes/announcementRoutes'));
   app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
   app.use('/api/knowledge-engine', require('../routes/knowledgeEngineRoutes'));
+  app.use('/api/enterprise', require('../routes/enterpriseRoutes'));
+  app.use('/api/scim/v2', require('../routes/scimRoutes'));
+  app.use('/api/v1', require('../routes/publicApiRoutes'));
+  app.use('/api/admin/support', require('../routes/platformSupportRoutes'));
 
   // --- Admin ---
   app.use('/api/admin/media-contacts', require('../routes/mediaContactRoutes'));

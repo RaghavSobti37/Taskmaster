@@ -30,7 +30,7 @@ module.exports = function tenantPlugin(schema, options) {
         if (!defaultTenant) {
           defaultTenant = await Tenant.create({
             name: 'Default Tenant',
-            contactEmail: 'admin@theshakticollective.in',
+            contactEmail: 'helloworld@theshakticollective',
           });
         }
         this.tenantId = defaultTenant._id;

@@ -30,7 +30,8 @@ const buildContentSecurityPolicy = ({ isPreview = false } = {}) => {
     'https://eu-assets.i.posthog.com',
     CLERK_SCRIPT_ORIGINS,
     GOOGLE_AUTH_ORIGINS,
-    ...(isPreview ? ['https://vercel.live'] : []),
+    // ponytail: always allow Vercel toolbar script — harmless on prod, required on preview
+    'https://vercel.live',
   ].join(' ');
 
   const directives = [

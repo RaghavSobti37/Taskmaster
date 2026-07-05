@@ -24,6 +24,7 @@ const { captureEvent: capturePostHogEvent, identifyServerUser } = require('../..
 const {
   isClerkConfigured,
   verifyClerkSessionToken,
+  clerkTokenInstanceMismatchMessage,
   resolveUserFromClerkProfile,
 } = require('../../../utils/clerkAuth');
 const { clerkClient } = require('@clerk/clerk-sdk-node');
@@ -669,7 +670,10 @@ const clerkEstablishSessionHandler = async (req, res) => {
 
     const profile = await verifyClerkSessionToken(token);
     if (!profile) {
-      return res.status(401).json({ error: 'Invalid Clerk session' });
+      const mismatch = clerkTokenInstanceMismatchMessage(token);
+      return res.status(401).json({
+        error: mismatch || 'Invalid Clerk session',
+      });
     }
 
     assertEstablishAllowed(profile);

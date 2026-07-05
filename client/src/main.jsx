@@ -22,6 +22,9 @@ import {
   recoverFromStaleChunks,
 } from './utils/chunkRecovery';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
+import { isStagingPreviewOnProdDb } from './utils/stagingPreview';
+import { isClerkLiveKey } from './config/clerk';
+import StagingProdDbBanner from './components/StagingProdDbBanner';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { ensurePostHogForConsent, getPostHogClient } from './lib/posthog';
@@ -89,6 +92,13 @@ watchDisplayModeFlags();
 purgeExpiredNoteDrafts();
 warnIfDevPointsAtProduction();
 
+if (import.meta.env.PROD && typeof window !== 'undefined' && isStagingPreviewOnProdDb() && !isClerkLiveKey()) {
+  console.error(
+    '[STAGING] pk_test_ on preview but API is production — clerk-establish will fail. ' +
+    'Run: node scripts/push-clerk-production-env.mjs then redeploy preview.',
+  );
+}
+
 const reloadOnceForStaleAssets = () => {
   void recoverFromStaleChunks();
 };
@@ -148,6 +158,7 @@ const appTree = (
                 <ConfirmProvider>
                   <UnsavedChangesProvider>
                     <LocalFirstRoot>
+                      <StagingProdDbBanner />
                       <PostHogConsentBridge />
                       <App />
                       <PostHogAnalytics />

@@ -11,6 +11,7 @@ const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const {
   isClerkConfigured,
   verifyClerkSessionToken,
+  clerkTokenInstanceMismatchMessage,
   primaryClerkEmail,
 } = require('../utils/clerkAuth');
 
@@ -57,6 +58,17 @@ describe('clerkAuth', () => {
     verifyToken.mockRejectedValue(new Error('invalid'));
 
     await expect(verifyClerkSessionToken('bad')).resolves.toBeNull();
+  });
+
+  it('clerkTokenInstanceMismatchMessage detects dev JWT on live secret', () => {
+    process.env.CLERK_SECRET_KEY = 'sk_live_abc';
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iss: 'https://glad-monkey-58.clerk.accounts.dev',
+      sub: 'user_1',
+    })).toString('base64url');
+    const token = `${header}.${payload}.sig`;
+    expect(clerkTokenInstanceMismatchMessage(token)).toMatch(/pk_live_/);
   });
 
   it('primaryClerkEmail picks primary address', () => {

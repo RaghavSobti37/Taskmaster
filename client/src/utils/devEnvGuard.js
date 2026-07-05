@@ -1,5 +1,6 @@
 import { isViteProxyDev } from './apiBase';
 import { isClerkLiveKey } from '../config/clerk';
+import { isStagingPreviewOnProdDb } from './stagingPreview';
 
 const PROD_API_PATTERNS = [/render\.com/i, /onrender\.com/i, /tsccoreknot\.com/i];
 
@@ -9,6 +10,11 @@ const PROD_API_PATTERNS = [/render\.com/i, /onrender\.com/i, /tsccoreknot\.com/i
  */
 export function warnIfDevPointsAtProduction() {
   if (!import.meta.env.DEV) return;
+
+  // vercel dev / local against branch preview — prod API is intentional
+  if (typeof window !== 'undefined' && isStagingPreviewOnProdDb()) {
+    return;
+  }
 
   const apiUrl = (import.meta.env.VITE_API_URL || '').trim();
 

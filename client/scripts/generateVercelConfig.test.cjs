@@ -119,7 +119,7 @@ test('buildVercelSecurityHeaders adds preview CSP allowances', () => {
   assert.ok(preview.includes('https://vercel.live'));
   assert.ok(preview.includes('manifest-src'));
   const prod = buildContentSecurityPolicy({ isPreview: false });
-  assert.ok(!prod.includes('https://vercel.live'));
+  assert.ok(prod.includes('https://vercel.live'));
 
   const templateHeaders = [
     {

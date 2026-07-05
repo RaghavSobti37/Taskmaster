@@ -40,6 +40,22 @@ const extractClerkOrganizationId = (verified) => {
   return nested ? String(nested) : null;
 };
 
+const clerkSecretIsLive = () =>
+  String(process.env.CLERK_SECRET_KEY || '').trim().startsWith('sk_live_');
+
+/** Best-effort JWT payload decode (no signature check) for clearer auth errors. */
+const decodeClerkJwtPayload = (token) => {
+  try {
+    const part = String(token || '').split('.')[1];
+    if (!part) return null;
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/')
+      + '='.repeat((4 - (part.length % 4)) % 4);
+    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+  } catch {
+    return null;
+  }
+};
+
 const verifyClerkSessionToken = async (token) => {
   if (!isClerkConfigured() || !token) return null;
   try {
@@ -57,6 +73,17 @@ const verifyClerkSessionToken = async (token) => {
   } catch {
     return null;
   }
+};
+
+/** When verify fails, detect dev Clerk JWT against production secret (common on Vercel preview). */
+const clerkTokenInstanceMismatchMessage = (token) => {
+  if (!clerkSecretIsLive()) return null;
+  const payload = decodeClerkJwtPayload(token);
+  const iss = String(payload?.iss || '');
+  if (iss.includes('.clerk.accounts.dev')) {
+    return 'Clerk development session on production API — use pk_live_ on Vercel Preview (node scripts/push-clerk-production-env.mjs).';
+  }
+  return null;
 };
 
 /**
@@ -128,6 +155,7 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
 module.exports = {
   isClerkConfigured,
   verifyClerkSessionToken,
+  clerkTokenInstanceMismatchMessage,
   resolveUserFromClerkProfile,
   primaryClerkEmail,
 };

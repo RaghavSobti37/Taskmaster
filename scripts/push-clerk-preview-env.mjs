@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
  * Push Clerk *development* keys (pk_test_) to Vercel Preview + Development.
- * Reads client/.env.development — safe for branch previews (taskmaster-git-dev-…).
+ * Reads client/.env.development — local / vercel dev only.
+ *
+ * Staging previews on production MongoDB must use production Clerk keys instead:
+ *   node scripts/push-clerk-production-env.mjs
  *
  * Usage: node scripts/push-clerk-preview-env.mjs
  */

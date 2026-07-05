@@ -17,6 +17,7 @@ export * from './departments';
 export * from './adminRoles';
 export * from './gamification';
 export * from './announcements';
+export * from './orgDocuments';
 export * from './notifications';
 export * from './notes';
 export * from './misc';

@@ -99,7 +99,7 @@ Report: branch name, commit SHA (short), push result.
 
 ### Always
 
-1. **`.specify/memory/changelog/recent-changes.md`** — append dated bullet block (create file if missing):
+1. **`.specify/memory/changelog/recent-changes.md`** — prepend dated bullet block (newest first):
 
 ```markdown
 ## YYYY-MM-DD — <one-line summary>
@@ -110,7 +110,11 @@ Report: branch name, commit SHA (short), push result.
 - **Branch:** `branch-name` · **Commit:** `abc1234`
 ```
 
-2. **`.specify/memory/INDEX.md`** — bump `Last updated:` line to today.
+2. **`.specify/memory/changelog/session-patterns.md`** — if user prefs or recurring workflows emerged, append or update standing table (dedupe).
+
+3. **`.specify/memory/INDEX.md`** — bump `Last updated:` line to today.
+
+Full protocol: `.specify/memory/MEMORY_PROTOCOL.md` · skill: `memory-sync`
 
 ### When applicable (see [memory-map.md](memory-map.md))
 

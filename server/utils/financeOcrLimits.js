@@ -12,6 +12,16 @@ function shouldRunImageOcr() {
   return true;
 }
 
+/** PDF page screenshot + Tesseract — opt-in on Render; enabled for local reparse scripts. */
+function shouldRunPdfOcr() {
+  if (process.env.FINANCE_PDF_OCR === '1') return true;
+  if (process.env.FINANCE_SKIP_PDF_OCR === '1') return false;
+  if (process.env.RENDER === 'true') return false;
+  return true;
+}
+
+const MIN_PDF_TEXT_CHARS = 20;
+
 function shouldRunOcr(fileSize) {
   const maxBytes = getOcrMaxBytes();
   if (fileSize && fileSize > maxBytes) return false;
@@ -21,5 +31,7 @@ function shouldRunOcr(fileSize) {
 module.exports = {
   getOcrMaxBytes,
   shouldRunImageOcr,
+  shouldRunPdfOcr,
   shouldRunOcr,
+  MIN_PDF_TEXT_CHARS,
 };

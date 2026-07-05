@@ -9,9 +9,10 @@ Inherits platform rule: `../../../../.cursor/rules/agent-governance.mdc`
 
 ## Boot
 
-1. Read `AGENTS.md` in this package root
-2. Run `.cursor/skills/coreknot-session-boot/SKILL.md` for non-trivial edits
-3. Pick agency agent via agent-menu; record on ledger slice
+1. Read `AGENTS.md` in this package root (memory-first table)
+2. Read `.specify/memory/INDEX.md` + `changelog/recent-changes.md` + `changelog/session-patterns.md`
+3. Run `.cursor/skills/coreknot-session-boot/SKILL.md` for non-trivial edits
+4. Pick agency agent via agent-menu; record on ledger slice
 
 ## Verify bundle (before done / memory patch)
 

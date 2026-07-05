@@ -87,7 +87,7 @@ const PAGE_CONFIG = {
     icon: CircleDollarSign,
     label: 'Management',
     accessKey: 'management_hub',
-    matchPaths: ['/management', '/finance', '/announcements', '/artists'],
+    matchPaths: ['/management', '/finance', '/announcements', '/documents', '/artists'],
   },
   '/admin/console': {
     icon: Shield,

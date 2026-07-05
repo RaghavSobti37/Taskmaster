@@ -207,6 +207,7 @@ function registerRoutes(app) {
   app.use('/api/finance', require('../routes/financeRoutes'));
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));
+  app.use('/api/org-documents', require('../routes/orgDocumentRoutes'));
   app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
   app.use('/api/knowledge-engine', require('../routes/knowledgeEngineRoutes'));
   app.use('/api/enterprise', require('../routes/enterpriseRoutes'));

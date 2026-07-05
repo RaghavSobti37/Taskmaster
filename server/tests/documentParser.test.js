@@ -174,4 +174,93 @@ describe('documentParser metadata extraction', () => {
     const meta = parseMetadataFromText('blog topics for online music entrepreneur academy 2026');
     expect(meta.currency).toBe('INR');
   });
+
+  it('parses Uber weekday receipts and invoice month labels', () => {
+    const { extractPaymentDateFromText, parseDateValue } = require('../utils/documentParser');
+    expect(
+      extractPaymentDateFromText('Thursday, March 13, 2025')?.toISOString().slice(0, 10),
+    ).toBe('2025-03-13');
+    expect(parseDateValue('March 2026')?.toISOString().slice(0, 10)).toBe('2026-03-01');
+    expect(
+      extractPaymentDateFromText('Invoice Month: March 2026')?.toISOString().slice(0, 10),
+    ).toBe('2026-03-01');
+  });
+
+  it('falls back to createdAt only for spreadsheet imports with zero text', () => {
+    const meta = parseMetadataFromText('', {
+      title: 'spreadsheet-import.xlsx',
+      fileName: 'spreadsheet-import.xlsx',
+      createdAt: new Date('2025-11-20T12:00:00Z'),
+    });
+    expect(meta.date?.toISOString().slice(0, 10)).toBe('2025-11-20');
+
+    const docx = parseMetadataFromText('', {
+      fileName: 'vendor-invoice.docx',
+      createdAt: new Date('2025-11-20T12:00:00Z'),
+    });
+    expect(docx.date?.toISOString().slice(0, 10)).toBe('2025-11-20');
+
+    const invoice = parseMetadataFromText('Grand Total: 5,000', {
+      title: 'vendor-invoice.pdf',
+      createdAt: new Date('2025-11-20T12:00:00Z'),
+    });
+    expect(invoice.date).toBeNull();
+  });
+});
+
+describe('documentParser PDF OCR guards', () => {
+  const {
+    shouldRunPdfOcr,
+    MIN_PDF_TEXT_CHARS,
+  } = require('../utils/financeOcrLimits');
+  const { shouldUsePdfScreenshotOcr } = require('../utils/documentParser');
+
+  const prevRender = process.env.RENDER;
+  const prevPdfOcr = process.env.FINANCE_PDF_OCR;
+
+  afterEach(() => {
+    if (prevRender === undefined) delete process.env.RENDER;
+    else process.env.RENDER = prevRender;
+    if (prevPdfOcr === undefined) delete process.env.FINANCE_PDF_OCR;
+    else process.env.FINANCE_PDF_OCR = prevPdfOcr;
+  });
+
+  it('skips PDF screenshot OCR on Render unless forced', () => {
+    process.env.RENDER = 'true';
+    delete process.env.FINANCE_PDF_OCR;
+    expect(shouldRunPdfOcr()).toBe(false);
+    expect(shouldUsePdfScreenshotOcr('')).toBe(false);
+    process.env.FINANCE_PDF_OCR = '1';
+    expect(shouldRunPdfOcr()).toBe(true);
+    expect(shouldUsePdfScreenshotOcr('', { forcePdfOcr: true })).toBe(true);
+  });
+
+  it('triggers PDF OCR when text layer is thin', () => {
+    delete process.env.RENDER;
+    expect(MIN_PDF_TEXT_CHARS).toBe(20);
+    expect(shouldUsePdfScreenshotOcr('short')).toBe(true);
+    expect(shouldUsePdfScreenshotOcr('x'.repeat(25))).toBe(false);
+  });
+});
+
+describe('documentParser PDF info dates', () => {
+  const { pickDateFromPdfInfoNode } = require('../utils/documentParser');
+
+  it('prefers ModDate over CreationDate when both plausible', () => {
+    const mod = new Date('2025-06-15T12:00:00Z');
+    const created = new Date('2024-01-10T12:00:00Z');
+    expect(pickDateFromPdfInfoNode({ ModDate: mod, CreationDate: created })).toEqual(mod);
+  });
+
+  it('falls back to CreationDate when ModDate missing', () => {
+    const created = new Date('2023-08-01T12:00:00Z');
+    expect(pickDateFromPdfInfoNode({ CreationDate: created })).toEqual(created);
+  });
+
+  it('rejects implausible years', () => {
+    expect(pickDateFromPdfInfoNode({
+      ModDate: new Date('1999-01-01T12:00:00Z'),
+      CreationDate: new Date('2030-01-01T12:00:00Z'),
+    })).toBeNull();
+  });
 });

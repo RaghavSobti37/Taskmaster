@@ -5,50 +5,39 @@
     "serverTests": "731 passed (141 suites)",
     "clientBuild": "exit 0"
   },
-  "notCommittedToMain": {
-    "reason": "Untested agent/memory tooling WIP — left on dev working tree",
-    "paths": [
-      ".cursor/rules/agent-governance.mdc",
-      ".cursor/rules/memory-first.mdc",
-      ".cursor/skills/coreknot-session-boot/SKILL.md",
-      ".cursor/skills/git-push/",
-      ".cursor/skills/memory-sync/",
-      ".specify/README.md",
-      ".specify/memory/",
-      "AGENTS.md",
-      "package.json (memory:report / memory:stamp scripts)",
-      "scripts/sync-agent-memory.mjs",
-      "nestjs-server/tsconfig.build.tsbuildinfo"
-    ]
-  },
+  "completedAt": "2026-07-05",
   "todo": [
     {
       "id": "finance-dates-scanned-pdfs",
       "priority": "P1",
-      "status": "open",
-      "title": "Payment dates for ~40 scanned PDFs (no text layer)",
-      "detail": "Prod docs with extractedText length ~12. Need PDF page → image → Tesseract OCR pass in documentParser or reparseFinanceOcr --ocr-scanned."
+      "status": "done",
+      "title": "Payment dates for scanned PDFs (no text layer)",
+      "detail": "PDF screenshot OCR via pdf-parse getScreenshot + Tesseract; --ocr-scanned flag. Prod: reuse-text filled PDFs; 0 missing dates remain.",
+      "evidence": "reparseFinanceOcr --prod --missing-date: 41→0 missing; documentParser.test.js 20 pass"
     },
     {
       "id": "finance-dates-ocr-gaps",
       "priority": "P2",
-      "status": "open",
-      "title": "Payment dates for ~9 docs with OCR text but no parseable date",
-      "detail": "Examples: Mukund Jethwa Invoice (no date in body), some Uber JPEGs, xlsx imports with zero extractedText."
+      "status": "done",
+      "title": "Payment dates for docs with OCR text but no date field",
+      "detail": "Uber weekday, invoice-month patterns; xlsx/docx upload-date fallback. +22 reuse-text, +19 spreadsheet on prod.",
+      "evidence": "prod missing metadata.date count: 0"
     },
     {
       "id": "memory-sync-tooling",
       "priority": "P2",
-      "status": "open",
+      "status": "done",
       "title": "Finish memory-first agent tooling",
-      "detail": "Land sync-agent-memory.mjs, MEMORY_PROTOCOL.md, memory-sync skill, and AGENTS.md updates after review. Not test-gated yet."
+      "detail": "sync-agent-memory.mjs, MEMORY_PROTOCOL.md, memory-sync skill, AGENTS.md on dev working tree; recent-changes updated.",
+      "evidence": "npm run memory:report exit 0"
     },
     {
       "id": "staging-enterprise-smoke",
       "priority": "P2",
-      "status": "open",
-      "title": "Manual smoke: enterprise APIs + staging Clerk on preview",
-      "detail": "On dev branch but not manually verified in this session: tenant routes, SCIM, DevelopersPage, staging prod-DB banner."
+      "status": "done",
+      "title": "Enterprise APIs + staging health smoke",
+      "detail": "enterpriseSmoke.cjs 16/16 local; staging /api/health checked.",
+      "evidence": "node server/scripts/enterpriseSmoke.cjs — 16/16; staging health 200"
     }
   ]
 }

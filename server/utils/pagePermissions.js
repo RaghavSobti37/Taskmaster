@@ -68,6 +68,7 @@ const PAGE_GROUPS = [
     pages: [
       { key: 'finance', label: 'Finance', path: '/finance' },
       { key: 'announcements', label: 'Announcements', path: '/announcements' },
+      { key: 'org_documents', label: 'Documents', path: '/documents' },
       { key: 'artists', label: 'Artists', path: '/artists' },
     ],
   },
@@ -110,7 +111,7 @@ const BASE_PAGE_KEYS = [
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
-const OPS_EXTRA_PAGES = ['finance', 'announcements', 'office_assets'];
+const OPS_EXTRA_PAGES = ['finance', 'announcements', 'org_documents', 'office_assets'];
 const CREATIVE_EXTRA_PAGES = ['assets', 'features', 'workflows', 'office_assets'];
 
 const PRESET_PAGES = {

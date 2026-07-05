@@ -1,40 +1,58 @@
 # Specify — project memory for AI agents
 
-Structured memory Cursor agents read during `/push-and-document` and other long-running tasks.
+Structured memory every Cursor agent **reads at chat start** and **updates after verified commits**.
 
 ## Start here
 
-**[`.specify/memory/INDEX.md`](memory/INDEX.md)** — navigation hub for all component docs.
+**[`.specify/memory/INDEX.md`](memory/INDEX.md)** — navigation hub.
 
 | Need | Read |
 | --- | --- |
+| Agent loop | [`memory/MEMORY_PROTOCOL.md`](memory/MEMORY_PROTOCOL.md) |
+| Latest code deltas | [`memory/changelog/recent-changes.md`](memory/changelog/recent-changes.md) |
+| Chat patterns / prefs | [`memory/changelog/session-patterns.md`](memory/changelog/session-patterns.md) |
 | Quick overview | [`memory/platform/overview.md`](memory/platform/overview.md) |
 | Full reference | [`memory/MASTER.md`](memory/MASTER.md) (~1600 lines) |
-| Latest changes | [`memory/changelog/recent-changes.md`](memory/changelog/recent-changes.md) |
 | Locked zones | [`memory/operations/conventions.md`](memory/operations/conventions.md) |
+
+```bash
+npm run memory:report   # boot check — commits since INDEX date
+```
 
 ## Memory layout
 
 ```
 .specify/memory/
-├── INDEX.md                 ← navigation hub
-├── MASTER.md                ← complete reference (everything in one file)
-├── platform/                ← product scope, deployment
-├── architecture/            ← system diagram, data flows
-├── frontend/                ← React SPA
-├── backend/                 ← Express + NestJS migration
-├── auth/                    ← sessions, permissions, tenancy
-├── features/                ← CRM, mail, finance, attendance, etc.
-├── operations/              ← conventions, testing, audits
-└── changelog/               ← session deltas
+├── INDEX.md
+├── MEMORY_PROTOCOL.md
+├── MASTER.md
+├── platform/
+├── architecture/
+├── frontend/
+├── backend/
+├── auth/
+├── features/
+├── operations/
+└── changelog/
+    ├── recent-changes.md
+    └── session-patterns.md
 ```
 
 ## Maintenance
 
-- Updated by **push-and-document** after each successful push
-- `changelog/recent-changes.md` gets session delta each run
-- Keep entries factual; link to `docs/` for long specs (email engine, logo, production hosts)
-- Never store secrets, Mongo URIs, or live API keys — use gitignored `.cursor/production-hosts.local.json`
+- **Start of chat:** `memory-first.mdc` + `coreknot-session-boot` skill
+- **After ship:** `memory-sync` skill or `/git-push`
+- `changelog/recent-changes.md` — code deltas each push
+- `changelog/session-patterns.md` — durable preferences from chats
+- Never store secrets — use gitignored `.cursor/production-hosts.local.json`
+
+## Cursor skills
+
+| Skill | When |
+| --- | --- |
+| `coreknot-session-boot` | Session start |
+| `memory-sync` | After verify + commit |
+| `git-push` | Commit → push → memory → docs push |
 
 ## First-time setup (once per machine / clone)
 

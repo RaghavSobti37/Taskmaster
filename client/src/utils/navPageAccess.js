@@ -22,6 +22,7 @@ export const NAV_PATH_ACCESS = {
   '/bookings': 'bookings',
   '/finance': 'finance',
   '/announcements': 'announcements',
+  '/documents': 'org_documents',
   '/artists': 'artists',
   '/admin/users': 'admin_users',
   '/admin/platform-settings': 'admin_users',

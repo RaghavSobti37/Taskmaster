@@ -1,33 +1,53 @@
 ---
 name: coreknot-session-boot
 description: >-
-  Bootstraps CoreKnot (Taskmaster) agent sessions by reading authoritative
-  project context, locked zones, and memory before any code change. Use at
-  session start, before audits, refactors, or when agent is new to the repo.
+  Bootstraps CoreKnot (Taskmaster) agent sessions — read .specify/memory first,
+  then locked zones and task docs before any code change. Use at every session
+  start and before audits, refactors, or when agent is new to the repo.
 ---
 
 # CoreKnot Session Boot
 
-Run at start of non-trivial Taskmaster work.
+**Run at start of every Taskmaster session** (including small fixes).
 
-## Read order (stop when task is narrowly scoped)
+## Phase 0 — Agent memory (mandatory)
 
-1. `.cursor/production-hosts.local.json` — if hosts/env involved (never guess URLs)
-2. `docs/AI_AGENT_PROJECT_CONTEXT.md` — skim TOC; deep-read relevant §
-3. Locked zones if touching:
-   - `docs/EMAIL_ENGINE_LOCKED.md` + `.cursor/rules/email-engine-locked.mdc`
-   - `docs/LOGO_LOCKED.md` + `.cursor/rules/logo-mark-locked.mdc`
-4. `.specify/memory/changelog/recent-changes.md` — if exists
-5. Task-specific doc from `docs/DOCUMENTATION_INDEX.md`
+Read with Read tool — do not skip:
 
-## Quick anchors
+1. `.specify/memory/INDEX.md`
+2. `.specify/memory/changelog/recent-changes.md` — newest 3 blocks minimum
+3. `.specify/memory/changelog/session-patterns.md`
+4. `.specify/memory/MEMORY_PROTOCOL.md` — if first time or memory workflow unclear
 
-| Topic | Doc |
-|-------|-----|
-| RBAC | `AI_AGENT_PROJECT_CONTEXT.md` §8 |
-| Tenancy | §9 + `docs/TENANT_SECURITY_PHASE.md` |
-| UI components | `docs/COMPONENT_STANDARDS.md` |
-| Deploy/env | `docs/DEPLOY_ENV.md` |
+Optional:
+
+```bash
+npm run memory:report
+```
+
+## Phase 1 — Conventions + task context
+
+5. `.specify/memory/operations/conventions.md` — locked zones, audits
+6. `.cursor/production-hosts.local.json` — if hosts/env involved (never guess URLs)
+7. Component memory from [git-push/memory-map.md](../git-push/memory-map.md) for your slice
+8. Task doc from `docs/DOCUMENTATION_INDEX.md` or `docs/reference/COREKNOT_MASTER.md`
+
+## Phase 2 — Locked zones (if touching)
+
+| Zone | Doc + rule |
+|------|------------|
+| Email engine | `docs/reference/EMAIL_ENGINE_LOCKED.md` + `email-engine-locked.mdc` |
+| Logo / spinner | `docs/LOGO_LOCKED.md` + `logo-mark-locked.mdc` |
+| Production hosts | `.cursor/production-hosts.local.json` + `production-hosts-locked.mdc` |
+
+## Phase 3 — UI (if `client/`)
+
+- `docs/design/DESIGN-REFERENCE.md`
+- `docs/reference/COMPONENT_STANDARDS.md`
+
+## Session end
+
+After verify + commit → `.cursor/skills/memory-sync/SKILL.md` or `/git-push`
 
 ## Before commit
 
@@ -38,6 +58,8 @@ npm run audit:deadcode
 
 ## Do not
 
-- Use `CoreKnot-jfw0.onrender.com` (deprecated host)
+- Skip memory read for "quick" tasks
+- Use deprecated `CoreKnot-jfw0.onrender.com`
 - Edit locked email/logo without explicit unlock
 - Commit `production-hosts.local.json`
+- Write memory before verify passes

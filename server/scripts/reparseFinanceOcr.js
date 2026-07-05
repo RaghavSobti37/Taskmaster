@@ -12,7 +12,7 @@
  *   node server/scripts/reparseFinanceOcr.js --prod --missing-date
  *   node server/scripts/reparseFinanceOcr.js --prod --missing-date --reuse-text
  *   node server/scripts/reparseFinanceOcr.js --prod --dates-only
- *   node server/scripts/reparseFinanceOcr.js --prod --missing-date --filename-only
+ *   node server/scripts/reparseFinanceOcr.js --prod --missing-date --pdf-metadata-only --dates-only
  */
 
 const path = require('path');
@@ -21,7 +21,12 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
 const axios = require('axios');
 const FinanceDocument = require('../models/FinanceDocument');
-const { parseDocument, parseMetadataFromText } = require('../utils/documentParser');
+const {
+  parseDocument,
+  parseMetadataFromText,
+  extractPaymentDateFromPdfInfo,
+} = require('../utils/documentParser');
+const { MIN_PDF_TEXT_CHARS } = require('../utils/financeOcrLimits');
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -31,6 +36,8 @@ const MISSING_DATE_ONLY = args.includes('--missing-date');
 const REUSE_TEXT = args.includes('--reuse-text');
 const DATES_ONLY = args.includes('--dates-only');
 const FILENAME_ONLY = args.includes('--filename-only');
+const OCR_SCANNED = args.includes('--ocr-scanned');
+const PDF_METADATA_ONLY = args.includes('--pdf-metadata-only');
 const limitArg = args.find((arg) => arg.startsWith('--limit='));
 const LIMIT = limitArg ? Number(limitArg.split('=')[1]) : null;
 
@@ -65,6 +72,29 @@ async function reparseDatabase(label, uri) {
       { 'metadata.date': null },
     ];
   }
+  if (OCR_SCANNED) {
+    query.$and = [
+      ...(query.$and || []),
+      {
+        $or: [
+          { extractedText: { $exists: false } },
+          { extractedText: '' },
+          { $expr: { $lte: [{ $strLenCP: { $ifNull: ['$extractedText', ''] } }, MIN_PDF_TEXT_CHARS] } },
+        ],
+      },
+    ];
+  }
+  if (PDF_METADATA_ONLY) {
+    query.$and = [
+      ...(query.$and || []),
+      {
+        $or: [
+          { fileName: /\.pdf$/i },
+          { fileType: /pdf/i },
+        ],
+      },
+    ];
+  }
 
   let cursor = FinanceDocument.find(query).setOptions(BYPASS).sort({ createdAt: 1 }).cursor();
   let processed = 0;
@@ -84,23 +114,43 @@ async function reparseDatabase(label, uri) {
     try {
       let parsed;
       const cachedText = String(doc.extractedText || '').trim();
+      const docContext = {
+        title: doc.title,
+        fileName: doc.fileName,
+        createdAt: doc.createdAt,
+      };
+      const ext = (doc.fileName || doc.title || '').split('.').pop()?.toLowerCase() || '';
+      const isZeroTextImport = ['xlsx', 'xls', 'csv', 'docx'].includes(ext) && cachedText.length === 0;
+
       if (FILENAME_ONLY) {
         parsed = {
           extractedText: cachedText,
-          metadata: parseMetadataFromText('', {
-            title: doc.title,
-            fileName: doc.fileName,
-            createdAt: doc.createdAt,
-          }),
+          metadata: parseMetadataFromText('', docContext),
         };
-      } else if (REUSE_TEXT && cachedText.length >= 10) {
+      } else if (PDF_METADATA_ONLY) {
+        const response = await axios.get(doc.fileUrl, {
+          responseType: 'arraybuffer',
+          timeout: 120000,
+        });
+        const buffer = Buffer.from(response.data);
+        const fromText = parseMetadataFromText(cachedText, docContext);
+        let date = fromText.date;
+        if (!date) {
+          date = await extractPaymentDateFromPdfInfo(buffer);
+        }
         parsed = {
           extractedText: cachedText,
-          metadata: parseMetadataFromText(cachedText, {
-            title: doc.title,
-            fileName: doc.fileName,
-            createdAt: doc.createdAt,
-          }),
+          metadata: { ...fromText, date: date ?? null },
+        };
+      } else if (isZeroTextImport) {
+        parsed = {
+          extractedText: cachedText,
+          metadata: parseMetadataFromText('', docContext),
+        };
+      } else if (REUSE_TEXT && cachedText.length >= MIN_PDF_TEXT_CHARS && !OCR_SCANNED) {
+        parsed = {
+          extractedText: cachedText,
+          metadata: parseMetadataFromText(cachedText, docContext),
         };
       } else {
         const response = await axios.get(doc.fileUrl, {
@@ -109,13 +159,15 @@ async function reparseDatabase(label, uri) {
         });
         const buffer = Buffer.from(response.data);
         const mimeType = resolveMimeType(doc);
-        parsed = await parseDocument(buffer, mimeType);
+        parsed = await parseDocument(buffer, mimeType, {
+          fileSize: buffer.length,
+          forcePdfOcr: OCR_SCANNED,
+          title: doc.title,
+          fileName: doc.fileName,
+          createdAt: doc.createdAt,
+        });
         if (!parsed.metadata?.date) {
-          const fromName = parseMetadataFromText(parsed.extractedText || '', {
-            title: doc.title,
-            fileName: doc.fileName,
-            createdAt: doc.createdAt,
-          }).date;
+          const fromName = parseMetadataFromText(parsed.extractedText || '', docContext).date;
           if (fromName) parsed.metadata.date = fromName;
         }
       }
@@ -206,11 +258,18 @@ async function run() {
     process.exit(1);
   }
 
+  if (OCR_SCANNED) {
+    process.env.FINANCE_PDF_OCR = '1';
+    delete process.env.FINANCE_SKIP_IMAGE_OCR;
+  }
+
   if (DRY_RUN) console.log('DRY RUN — no database writes');
   if (MISSING_DATE_ONLY) console.log('Filter: documents missing metadata.date');
   if (REUSE_TEXT) console.log('Mode: reuse cached extractedText when available');
   if (DATES_ONLY) console.log('Mode: update payment date only');
   if (FILENAME_ONLY) console.log('Mode: filename/title date inference only (no download)');
+  if (OCR_SCANNED) console.log('Mode: PDF screenshot OCR + image OCR for scanned docs');
+  if (PDF_METADATA_ONLY) console.log('Mode: PDF embedded metadata dates only (no OCR)');
 
   const results = [];
 

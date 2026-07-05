@@ -1,0 +1,44 @@
+---
+description: CoreKnot agents read .specify/memory first; sync memory after verified ship
+alwaysApply: true
+---
+
+# Memory first (CoreKnot)
+
+**Iron law:** Every chat turn that touches CoreKnot — read agent memory **before** code, plans, or edits. Update memory **after** verify passes and changes are committed (or when user asks to ship).
+
+## Session start (mandatory)
+
+Read in order (use Read tool — do not skip):
+
+1. `.specify/memory/INDEX.md` — hub + last updated date
+2. `.specify/memory/changelog/recent-changes.md` — newest 3 entries minimum
+3. `.specify/memory/changelog/session-patterns.md` — user prefs + recurring chat patterns
+4. `.specify/memory/operations/conventions.md` — locked zones, audits, ship workflow
+5. Task slice from [memory-map](../../.cursor/skills/git-push/memory-map.md) (e.g. `frontend/client.md` for UI)
+
+Optional quick check:
+
+```bash
+npm run memory:report --prefix coreknot/Taskmaster
+```
+
+Then run `.cursor/skills/coreknot-session-boot/SKILL.md` for task-specific docs.
+
+## Session end (after verify + commit)
+
+Follow `.cursor/skills/memory-sync/SKILL.md` or `/git-push` (`.cursor/skills/git-push/SKILL.md`):
+
+1. Append `.specify/memory/changelog/recent-changes.md`
+2. Update component memory files touched by the change set
+3. Append durable patterns to `.specify/memory/changelog/session-patterns.md`
+4. Bump `Last updated:` in `.specify/memory/INDEX.md`
+5. Commit memory with `docs(memory): …` if not already in code commit
+
+**Never** store secrets, tokens, or live hostnames in memory — use gitignored `.cursor/production-hosts.local.json`.
+
+## Priority
+
+User message > memory-first (this file) > platform agent-governance > Agent OS.
+
+Pure Q&A with no CoreKnot code path: still read INDEX + recent-changes if answer depends on project state.

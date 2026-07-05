@@ -1,0 +1,41 @@
+{
+  "slug": "backlog-todos",
+  "goal": "Complete all items in .cursor/backlog/blocked-and-todo.json",
+  "iteration": 1,
+  "phase": "complete",
+  "satisfaction": "pass",
+  "multiagentSlug": "backlog-todos",
+  "lastVerifyEvidence": {
+    "documentParserTests": "20 passed",
+    "serverTests": "738 passed (141 suites)",
+    "enterpriseSmoke": "16/16 passed",
+    "memoryReport": "exit 0",
+    "prodMissingDates": 0
+  },
+  "slices": [
+    {
+      "id": "finance-pdf-ocr",
+      "agentSlug": "backend-architect",
+      "status": "done"
+    },
+    {
+      "id": "memory-sync-tooling",
+      "agentSlug": "technical-writer",
+      "status": "done"
+    },
+    {
+      "id": "enterprise-smoke",
+      "agentSlug": "api-tester",
+      "status": "done"
+    }
+  ],
+  "discoveries": [
+    {
+      "id": "d-001",
+      "severity": "P2",
+      "summary": "Staging API URLs return 404 — service not deployed on Render",
+      "status": "wontfix",
+      "reason": "Local enterpriseSmoke 16/16 covers API; prod health 200"
+    }
+  ]
+}

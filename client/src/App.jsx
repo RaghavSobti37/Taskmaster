@@ -319,7 +319,7 @@ function App() {
               <Route element={<PageRoute pages={['equipment', 'contacts', 'subscriptions']} />}>
                 <Route path="/office" element={<OfficeHub />} />
               </Route>
-              <Route element={<PageRoute pages={['finance', 'announcements', 'artists']} />}>
+              <Route element={<PageRoute pages={['finance', 'announcements', 'org_documents', 'artists']} />}>
                 <Route path="/management" element={<ManagementHub />} />
               </Route>
               <Route element={<PageRoute pages={['admin_users', 'admin_teams', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics', 'admin_roles']} />}>
@@ -333,6 +333,7 @@ function App() {
               <Route path="/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
               <Route path="/finance" element={<Navigate to="/management?tab=finance" replace />} />
               <Route path="/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
+              <Route path="/documents" element={<Navigate to="/management?tab=documents" replace />} />
               <Route path="/management/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
               <Route path="/artists" element={<Navigate to="/management?tab=artists" replace />} />
 

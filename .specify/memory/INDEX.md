@@ -1,7 +1,9 @@
 # CoreKnot Memory Index
 
 > **Start here.** Self-contained project memory for agents and developers.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-02
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-05
+
+**Every agent chat:** read this file → [recent-changes](changelog/recent-changes.md) → [session-patterns](changelog/session-patterns.md) → [MEMORY_PROTOCOL](MEMORY_PROTOCOL.md)
 
 ---
 
@@ -10,7 +12,7 @@
 | You are… | Read in order |
 | --- | --- |
 | **New developer** | [platform/overview](platform/overview.md) → [architecture/system](architecture/system.md) → [docs/reference/COREKNOT_MASTER.md](../../docs/reference/COREKNOT_MASTER.md) |
-| **AI coding agent** | [operations/conventions](operations/conventions.md) (locked zones) → [COREKNOT_MASTER](../../docs/reference/COREKNOT_MASTER.md) → [MASTER](MASTER.md) for API depth |
+| **AI coding agent** | [MEMORY_PROTOCOL](MEMORY_PROTOCOL.md) → [session-patterns](changelog/session-patterns.md) → [operations/conventions](operations/conventions.md) → [COREKNOT_MASTER](../../docs/reference/COREKNOT_MASTER.md) → [MASTER](MASTER.md) |
 | **Ops / deploy** | [platform/deployment](platform/deployment.md) → [docs/operations/deployment.md](../../docs/operations/deployment.md) |
 | **Security review** | [auth/security](auth/security.md) → [docs/architecture/SECURITY.md](../../docs/architecture/SECURITY.md) |
 
@@ -64,7 +66,9 @@
 
 | Doc | Contents |
 | --- | --- |
-| [changelog/recent-changes.md](changelog/recent-changes.md) | Session deltas |
+| [changelog/recent-changes.md](changelog/recent-changes.md) | Session deltas (code shipped) |
+| [changelog/session-patterns.md](changelog/session-patterns.md) | Durable prefs + patterns from chats |
+| [MEMORY_PROTOCOL.md](MEMORY_PROTOCOL.md) | Read/write loop for agents |
 
 ### Master reference (API / env depth)
 
@@ -96,6 +100,7 @@
 ```
 .specify/memory/
 ├── INDEX.md                 ← you are here
+├── MEMORY_PROTOCOL.md       ← agent read/write loop
 ├── MASTER.md                ← API/env deep reference
 ├── platform/
 ├── architecture/
@@ -105,4 +110,6 @@
 ├── features/
 ├── operations/
 └── changelog/
+    ├── recent-changes.md
+    └── session-patterns.md
 ```

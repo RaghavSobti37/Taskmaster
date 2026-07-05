@@ -49,6 +49,7 @@ setup.cd
 !.specify/memory/
 !.specify/memory/INDEX.md
 !.specify/memory/MASTER.md
+!.specify/memory/MEMORY_PROTOCOL.md
 !.specify/memory/platform/
 !.specify/memory/platform/**
 !.specify/memory/architecture/

@@ -1,5 +1,10 @@
 const Tesseract = require('tesseract.js');
-const { getOcrMaxBytes, shouldRunImageOcr } = require('./financeOcrLimits');
+const {
+  getOcrMaxBytes,
+  shouldRunImageOcr,
+  shouldRunPdfOcr,
+  MIN_PDF_TEXT_CHARS,
+} = require('./financeOcrLimits');
 
 const MONTHS = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
@@ -102,6 +107,12 @@ function parseDateValue(raw) {
     return dateFromParts(Number(match[3]), month, Number(match[1]));
   }
 
+  match = candidate.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})$/i);
+  if (match) {
+    const month = MONTHS[match[1].slice(0, 3).toLowerCase()];
+    return dateFromParts(Number(match[2]), month, 1);
+  }
+
   return null;
 }
 
@@ -113,6 +124,8 @@ const LABELED_DATE_PATTERNS = [
   { re: /\btransaction\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 88 },
   { re: /\b(?:receipt|voucher)\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 86 },
   { re: /\b(?:date|dated|dt\.?)\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 78 },
+  { re: /\b(?:invoice|billing)\s+month\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 84 },
+  { re: /\bperiod\s+of\s+(?:service|billing)\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,40})/gi, score: 72 },
   { re: /\bdue\s+date\b[^0-9a-z]{0,8}([\d.\-/a-zA-Z,\s]{4,28})/gi, score: 42 },
 ];
 
@@ -125,6 +138,7 @@ const INLINE_DATE_PATTERNS = [
   /\b((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/gi,
   /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2})\b/g,
   /\b(\d{1,2}\/\d{1,2}\/\d{2})\b/g,
+  /\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s+((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/gi,
 ];
 
 const NEXT_LINE_DATE_LABEL = /^(?:dated|date|invoice\s+date|bill\s+date)\s*:?\s*$/i;
@@ -310,6 +324,48 @@ function getPdfParseModule() {
   return pdfParseModule;
 }
 
+/** Pick best embedded PDF timestamp — ModDate before CreationDate. */
+function pickDateFromPdfInfoNode(dateNode) {
+  if (!dateNode) return null;
+  const order = [
+    dateNode.ModDate,
+    dateNode.CreationDate,
+    dateNode.XmpModifyDate,
+    dateNode.XmpCreateDate,
+    dateNode.XapModifyDate,
+    dateNode.XapCreateDate,
+    dateNode.XmpMetadataDate,
+    dateNode.XapMetadataDate,
+  ];
+  for (const candidate of order) {
+    if (candidate instanceof Date && isPlausiblePaymentYear(candidate.getUTCFullYear())) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function extractPaymentDateFromPdfInfo(buffer) {
+  let parser;
+  try {
+    const { PDFParse } = getPdfParseModule();
+    parser = new PDFParse({ data: buffer });
+    const info = await parser.getInfo();
+    return pickDateFromPdfInfoNode(info?.getDateNode?.() ?? null);
+  } catch (error) {
+    console.error('PDF info date error:', error);
+    return null;
+  } finally {
+    if (parser) {
+      try {
+        await parser.destroy();
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 async function extractTextFromPDF(buffer) {
   try {
     const { PDFParse } = getPdfParseModule();
@@ -320,6 +376,47 @@ async function extractTextFromPDF(buffer) {
   } catch (error) {
     console.error('PDFParse error:', error);
     return '';
+  }
+}
+
+function shouldUsePdfScreenshotOcr(extractedText, options = {}) {
+  if (options.forcePdfOcr) return shouldRunPdfOcr();
+  if (!shouldRunPdfOcr()) return false;
+  return String(extractedText || '').trim().length < MIN_PDF_TEXT_CHARS;
+}
+
+/** ponytail: pdf-parse getScreenshot already ships canvas — lazy path, not at boot */
+async function extractTextFromPdfViaScreenshotOcr(buffer, pageCount = 2) {
+  let parser;
+  try {
+    const { PDFParse } = getPdfParseModule();
+    parser = new PDFParse({ data: buffer });
+    const shot = await parser.getScreenshot({
+      first: pageCount,
+      desiredWidth: 1400,
+      imageDataUrl: false,
+      imageBuffer: true,
+    });
+    const parts = [];
+    for (const page of shot?.pages || []) {
+      const raw = page.data ?? page.imageBuffer;
+      if (!raw) continue;
+      const imgBuf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+      const text = await extractTextFromImage(imgBuf);
+      if (text.trim()) parts.push(text.trim());
+    }
+    return parts.join('\n\n');
+  } catch (error) {
+    console.error('PDF screenshot OCR error:', error);
+    return '';
+  } finally {
+    if (parser) {
+      try {
+        await parser.destroy();
+      } catch {
+        // ignore
+      }
+    }
   }
 }
 
@@ -451,6 +548,12 @@ function parseMetadataFromText(text, context = {}) {
       [context.title, context.fileName].filter(Boolean).join(' '),
       fallbackYear,
     );
+    // ponytail: xlsx/csv/docx imports with zero OCR text — upload date beats null
+    const names = [context.fileName, context.title].filter(Boolean);
+    const isSpreadsheetImport = names.some((n) => /\.(xlsx?|csv|docx)$/i.test(String(n)));
+    if (!metadata.date && context.createdAt && isSpreadsheetImport) {
+      metadata.date = new Date(context.createdAt);
+    }
     return metadata;
   }
 
@@ -577,9 +680,21 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
 
   let extractedText = '';
   const normalizedMime = String(mimeType || '').toLowerCase();
+  const isPdf = normalizedMime.includes('pdf')
+    || /\.pdf$/i.test(normalizedMime)
+    || /\.pdf$/i.test(String(options.fileName || ''));
 
-  if (normalizedMime.includes('pdf') || /\.pdf$/i.test(normalizedMime)) {
+  if (isPdf) {
     extractedText = await extractTextFromPDF(fileBuffer);
+    if (shouldUsePdfScreenshotOcr(extractedText, options)) {
+      const ocrText = await extractTextFromPdfViaScreenshotOcr(
+        fileBuffer,
+        options.pdfOcrPages ?? 2,
+      );
+      if (ocrText.trim().length > extractedText.trim().length) {
+        extractedText = ocrText;
+      }
+    }
   } else if (normalizedMime.includes('image') || /\.(png|jpe?g|webp)$/i.test(normalizedMime)) {
     if (!shouldRunImageOcr()) {
       return { extractedText: '', metadata: { ...EMPTY_METADATA } };
@@ -587,7 +702,16 @@ async function parseDocument(fileBuffer, mimeType, options = {}) {
     extractedText = await extractTextFromImage(fileBuffer);
   }
 
-  const metadata = parseMetadataFromText(extractedText);
+  const metadata = parseMetadataFromText(extractedText, {
+    title: options.title,
+    fileName: options.fileName,
+    createdAt: options.createdAt,
+  });
+
+  if (!metadata.date && isPdf && fileBuffer?.length) {
+    const pdfInfoDate = await extractPaymentDateFromPdfInfo(fileBuffer);
+    if (pdfInfoDate) metadata.date = pdfInfoDate;
+  }
 
   return {
     extractedText,
@@ -601,6 +725,10 @@ module.exports = {
   parseDateValue,
   extractPaymentDateFromText,
   extractPaymentDateFromFilename,
+  extractPaymentDateFromPdfInfo,
+  pickDateFromPdfInfoNode,
+  extractTextFromPdfViaScreenshotOcr,
+  shouldUsePdfScreenshotOcr,
   parseIndianNumber,
   extractAmountFromText,
   extractVendorFromText,

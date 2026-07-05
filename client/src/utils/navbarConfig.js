@@ -28,11 +28,12 @@ export const HUB_CONFIG = {
   '/management': {
     label: 'Management',
     accessKey: 'management_hub',
-    childKeys: ['finance', 'announcements', 'artists'],
+    childKeys: ['finance', 'announcements', 'org_documents', 'artists'],
     defaultTab: 'finance',
     tabs: [
       { id: 'finance', label: 'Finance', key: 'finance' },
       { id: 'announcements', label: 'Announcements', key: 'announcements' },
+      { id: 'documents', label: 'Documents', key: 'org_documents' },
       { id: 'artists', label: 'Artists', key: 'artists' },
     ],
   },
@@ -301,6 +302,7 @@ const HUB_CHILD_PATHS = new Set([
   '/subscriptions',
   '/finance',
   '/announcements',
+  '/documents',
   '/artists',
   '/admin/users',
   '/admin/teams',
@@ -446,6 +448,7 @@ const HUB_TAB_PATHS = {
   subscriptions: '/subscriptions',
   finance: '/finance',
   announcements: '/announcements',
+  documents: '/documents',
   artists: '/artists',
 };
 
@@ -510,7 +513,7 @@ export function buildPagePermissionGroups() {
 function getHubPathForChildPath(path) {
   if (['/leads', '/followups', '/bookings'].includes(path)) return '/crm';
   if (['/equipment', '/contacts', '/subscriptions'].includes(path)) return '/office';
-  if (['/finance', '/announcements', '/artists'].includes(path)) return '/management';
+  if (['/finance', '/announcements', '/documents', '/artists'].includes(path)) return '/management';
   if (path.startsWith('/admin')) return '/admin/console';
   return null;
 }

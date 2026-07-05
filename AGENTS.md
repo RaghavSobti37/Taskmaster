@@ -1,46 +1,64 @@
-# TSC Platform — Agent Instructions
+# CoreKnot (Taskmaster) — Agent Instructions
 
-Every Cursor agent in this workspace follows **Agent Governance** first.
+Every agent in this package reads **agent memory first**, then follows platform governance.
 
-## Stack (order)
+## Memory first (every chat)
+
+| Step | Path |
+|------|------|
+| 1 | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) |
+| 2 | [`.specify/memory/changelog/recent-changes.md`](.specify/memory/changelog/recent-changes.md) |
+| 3 | [`.specify/memory/changelog/session-patterns.md`](.specify/memory/changelog/session-patterns.md) |
+| 4 | [`.specify/memory/operations/conventions.md`](.specify/memory/operations/conventions.md) |
+| 5 | Component doc per task — [memory-map](.cursor/skills/git-push/memory-map.md) |
+
+**Protocol:** [`.specify/memory/MEMORY_PROTOCOL.md`](.specify/memory/MEMORY_PROTOCOL.md)  
+**Rule:** `.cursor/rules/memory-first.mdc` (always on)  
+**Boot skill:** `.cursor/skills/coreknot-session-boot/SKILL.md`  
+**End-of-session:** `.cursor/skills/memory-sync/SKILL.md` or `/git-push`
+
+```bash
+npm run memory:report   # commits since INDEX date — run at session start if unsure
+```
+
+## Platform stack (after memory read)
 
 | # | Component | Location |
 |---|-----------|----------|
 | 1 | Agent governance | `.cursor/rules/agent-governance.mdc` |
 | 2 | Agent OS | `.cursor/rules/agent-os.mdc` |
-| 3 | Agent menu | `.cursor/skills/agent-menu/SKILL.md` |
-| 4 | Loop engineering | `.cursor/skills/loop-engineering/SKILL.md` (build tasks) |
-| 5 | Multiagent | `.cursor/skills/multiagent/SKILL.md` (2+ slices) |
+| 3 | Agent menu | `../../../../.cursor/skills/agent-menu/SKILL.md` |
+| 4 | Loop engineering | `../../../../.cursor/skills/loop-engineering/SKILL.md` |
 
 ## Memory gate
 
-**Never** mark work complete in memory/ledgers until verify exits 0:
+Never mark work complete in memory until verify exits 0:
 
 ```bash
-node .cursor/scripts/agent-memory-gate.mjs verify-and-patch \
+node ../../../../.cursor/scripts/agent-memory-gate.mjs verify-and-patch \
   --ledger .cursor/loop-engineering/<slug>-ledger.json \
   --patch '{"satisfaction":"pass"}' \
-  -- "<verify commands>"
+  -- "npm test --prefix client && npm test --prefix server"
 ```
 
-## Primary app
+## Verify bundle (before done / memory write)
 
-**CoreKnot** — `coreknot/Taskmaster/AGENTS.md`
+```bash
+npm test --prefix client
+npm test --prefix server
+npm run build --prefix client
+```
+
+## Design reference (mandatory for `client/`)
+
+[`docs/design/DESIGN-REFERENCE.md`](docs/design/DESIGN-REFERENCE.md) · [`docs/reference/COMPONENT_STANDARDS.md`](docs/reference/COMPONENT_STANDARDS.md) · [`docs/reference/COREKNOT_MASTER.md`](docs/reference/COREKNOT_MASTER.md)
+
+## Dates
+
+User-facing **DD/MM/YYYY** — `client/src/utils/dateDisplay.js`. Storage/API stay ISO `yyyy-MM-dd`.
 
 ## Heal loop
 
-Autonomous browser tests: `node .cursor/healing-loop/run-loop.mjs --root ./coreknot/Taskmaster --agent-continue`
-
-## Design reference (mandatory for client UI)
-
-**Before any change under `client/`**, read and apply:
-
-`docs/design/DESIGN-REFERENCE.md`
-
-Complementary: `docs/reference/COMPONENT_STANDARDS.md`, `client/design_guidelines.md`.
-
-**Page-level catalog:** `docs/reference/COREKNOT_MASTER.md`
-
-## Date display
-
-User-facing dates are **DD/MM/YYYY** (en-GB style). Use helpers in `client/src/utils/dateDisplay.js` (`formatDisplayDate`, `formatDateKeyForDisplay`, etc.). Never show MM/DD/YYYY in labels, nav, or tables. Native `<input type="date">` values stay ISO (`yyyy-MM-dd`); overlay or companion text for visible DD/MM/YYYY.
+```bash
+node ../../../../.cursor/healing-loop/run-loop.mjs --root ./coreknot/Taskmaster --agent-continue
+```

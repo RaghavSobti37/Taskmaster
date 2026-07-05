@@ -47,7 +47,9 @@ npm run audit:history     # After history rewrite or fork import
 | `.cursor/rules/react-query-errors.mdc` | TanStack Query error UX |
 | `.cursor/skills/coreknot-session-boot/SKILL.md` | Session bootstrap before code changes |
 
-Repo skills: `git-push`, `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`, `coreknot-session-boot`.
+Repo skills: `git-push`, `memory-sync`, `rbac-audit`, `resend-email-debug`, `prod-data-sync`, `failure-modes-map`, `coreknot-session-boot`.
+
+**Memory loop:** Every chat reads `.specify/memory/` first (`memory-first.mdc`). After push → update `recent-changes.md`, `session-patterns.md` if needed, INDEX date. See `memory-sync` skill.
 
 **Platform settings UI:** Admin → Platform settings (`/admin/platform-settings`) — configure notification recipients and protected roles without editing env/render.yaml.
 

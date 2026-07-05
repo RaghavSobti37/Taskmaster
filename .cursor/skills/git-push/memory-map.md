@@ -23,6 +23,7 @@ What changed?
 | Path | Update when |
 | --- | --- |
 | `.specify/memory/changelog/recent-changes.md` | Every push — session delta log |
+| `.specify/memory/changelog/session-patterns.md` | Durable chat prefs / workflows |
 | `.specify/memory/INDEX.md` | Every push — `Last updated` stamp |
 | `.specify/memory/MASTER.md` | Rare — new env var, route mount, or architecture shift only |
 | `.specify/memory/architecture/data.md` | DB, backup, Supabase mirror, email analytics |

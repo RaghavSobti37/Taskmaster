@@ -1,6 +1,32 @@
 # Recent changes
 
-Session deltas appended by `/git-push` and agent ship workflows. Newest first.
+Session deltas appended by `/git-push`, `memory-sync`, and agent ship workflows. Newest first.
+
+---
+
+## 2026-07-05 — Finance payment dates: PDF screenshot OCR + prod backfill complete
+
+- **What:** `documentParser` PDF screenshot OCR via `pdf-parse` `getScreenshot` + Tesseract when text layer &lt; 20 chars; `shouldRunPdfOcr` guards; `reparseFinanceOcr.js --ocr-scanned`; Uber weekday + invoice-month date patterns; xlsx/docx upload-date fallback for zero-text imports.
+- **Why:** ~41 prod finance docs missing `metadata.date`; project rollups need payment dates.
+- **Prod:** Reuse-text pass +22 dates; spreadsheet pass +19; **0 missing** `metadata.date` remaining.
+- **Files:** `server/utils/documentParser.js`, `server/utils/financeOcrLimits.js`, `server/scripts/reparseFinanceOcr.js`, `server/tests/documentParser.test.js`
+- **Verify:** `npm test --prefix server -- tests/documentParser.test.js` (20 pass); `node server/scripts/enterpriseSmoke.cjs` (16/16)
+
+---
+
+## 2026-07-05 — Dev branch ship batch (finance, staging, enterprise)
+
+- **Commits:** `b8ddb278` finance date extraction + reparse tooling; `155f934c` Clerk establish on preview + prod DB banner; `8e1ef30a` boot timeout AppErrorPage; `437c7bab` enterprise APIs + staging prod API/DB; `09a1ce8b` CSP blob frame-src; `e57875be` delegated task done by creator.
+- **Branch:** `dev` → merged local `main` (not pushed per user request).
+
+---
+
+## 2026-07-05 — Agentic memory loop (read-first + sync-after-ship)
+
+- **What:** `memory-first.mdc` always-on rule; `MEMORY_PROTOCOL.md`; `session-patterns.md`; `memory-sync` skill; `scripts/sync-agent-memory.mjs` (`memory:report` / `memory:stamp`); updated `AGENTS.md`, session-boot, INDEX, git-push.
+- **Why:** User wants every agent chat to read `.specify/memory/` first and update memory after commits with patterns from prior chats.
+- **Files:** `.cursor/rules/memory-first.mdc`, `.cursor/skills/memory-sync/`, `.specify/memory/MEMORY_PROTOCOL.md`, `.specify/memory/changelog/session-patterns.md`, `scripts/sync-agent-memory.mjs`, `AGENTS.md`
+- **Patterns:** See `session-patterns.md` § 2026-07-05
 
 ---
 

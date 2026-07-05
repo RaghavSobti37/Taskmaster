@@ -27,6 +27,8 @@
     "lint": "npm run lint --prefix client",
     "build": "npm run build --prefix client",
     "docs:generate": "node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs",
+    "memory:report": "node scripts/sync-agent-memory.mjs report",
+    "memory:stamp": "node scripts/sync-agent-memory.mjs stamp",
     "openapi:sync": "node scripts/generate-openapi.mjs",
     "openapi:check": "node scripts/generate-openapi.mjs --check",
     "typecheck": "tsc --noEmit -p tsconfig.json",

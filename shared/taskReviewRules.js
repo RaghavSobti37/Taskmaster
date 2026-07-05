@@ -87,10 +87,13 @@ const canUserRollbackTask = (user, task, assignments, { platformOwnerId, taskCre
  * True when this user's completion must route through review.
  * Covers corrupted assignment rows (assigner reset on edit) when task still has delegated work.
  */
-const needsReviewOnComplete = (assignments, userId, { mentionOnly = false } = {}) => {
+const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy } = {}) => {
   if (mentionOnly) return true;
   const uid = normalizeId(userId);
   if (!uid) return false;
+
+  const creatorId = normalizeId(taskCreatedBy);
+  if (creatorId && uid === creatorId) return false;
 
   const delegated = getDelegatedAssignments(assignments);
 
@@ -109,15 +112,6 @@ const needsReviewOnComplete = (assignments, userId, { mentionOnly = false } = {}
   }
 
   return requiresReviewForUser(assignments, uid);
-};
-
-/** Creator who is not an assignee cannot mark delegated tasks done without review approval. */
-const canCreatorMarkDelegatedTaskDone = (assignments, userId, taskCreatedBy) => {
-  const uid = normalizeId(userId);
-  const creatorId = normalizeId(taskCreatedBy);
-  if (!uid || !creatorId || uid !== creatorId) return true;
-  if (getDelegatedAssignments(assignments).length === 0) return true;
-  return Boolean(getAssignmentForUser(assignments, uid));
 };
 
 /** Task has no delegated assignees — self-work only; should never stay in-review. */
@@ -172,5 +166,4 @@ module.exports = {
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
   isAssignerOnlyReviewer,
-  canCreatorMarkDelegatedTaskDone,
 };

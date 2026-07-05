@@ -109,7 +109,7 @@ describe('task review workflow', () => {
     expect(updated.status).toBe('in-review');
   });
 
-  test('creator cannot mark delegated task done without assignee completing', async () => {
+  test('creator can mark delegated task done without assignee completing', async () => {
     const task = await Task.create({
       title: 'Creator bypass',
       createdBy: creator._id,
@@ -121,9 +121,10 @@ describe('task review workflow', () => {
       assignedBy: creator._id,
     });
 
-    await expect(
-      TaskService.updateTask(task._id, { status: 'done' }, creator, null)
-    ).rejects.toThrow('Delegated assignees must complete');
+    await TaskService.updateTask(task._id, { status: 'done' }, creator, null);
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('done');
   });
 
   test('only creator can reopen completed task', async () => {

@@ -61,10 +61,13 @@ export const canUserRollbackTask = (user, task, assignments, { platformOwnerId, 
   return canUserApproveReview(user, assignments);
 };
 
-export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false } = {}) => {
+export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy } = {}) => {
   if (mentionOnly) return true;
   const uid = normalizeId(userId);
   if (!uid) return false;
+
+  const creatorId = normalizeId(taskCreatedBy);
+  if (creatorId && uid === creatorId) return false;
 
   const delegated = getDelegatedAssignments(assignments);
 
@@ -80,14 +83,6 @@ export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false
   if (assignmentAssignerId(mine) === uid) return false;
 
   return requiresReviewForUser(assignments, uid);
-};
-
-export const canCreatorMarkDelegatedTaskDone = (assignments, userId, taskCreatedBy) => {
-  const uid = normalizeId(userId);
-  const creatorId = normalizeId(taskCreatedBy);
-  if (!uid || !creatorId || uid !== creatorId) return true;
-  if (getDelegatedAssignments(assignments).length === 0) return true;
-  return Boolean(getAssignmentForUser(assignments, uid));
 };
 
 export const normalizeAssigneeIds = (assigneeIds, creatorId) => {

@@ -204,12 +204,12 @@ async function runReviewCreatorCanComplete(def, ctx) {
   });
   const status = res.data?.status || res.data?.data?.status;
   if (res.status === 400 || res.status === 403) {
-    return { ...probePass(def, 'Creator blocked from completing delegated task without assignee'), artifacts: ctx.artifacts };
+    return { ...probeFail(def, 'Creator blocked from completing delegated task without assignee'), artifacts: ctx.artifacts };
   }
   if (status === 'done') {
-    return { ...probeFail(def, 'Creator completed delegated task without assignee (security regression)'), artifacts: ctx.artifacts };
+    return { ...probePass(def, 'Creator may complete delegated task without assignee'), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, `Expected block, got ${status || res.status}`), artifacts: ctx.artifacts };
+  return { ...probeFail(def, `Expected done, got ${status || res.status}`), artifacts: ctx.artifacts };
 }
 
 async function resolvePlatformOwnerProbeUser() {

@@ -5,6 +5,7 @@ import { resolveAppErrorPresentation } from '../utils/routeErrorPresentation';
 /** Full-screen boot failure — delegates to shared AppErrorPage. */
 export default function AppBootError({
   bootError = null,
+  summary,
   message,
   error = null,
   statusCode = null,
@@ -24,13 +25,13 @@ export default function AppBootError({
     }
 
     return resolveAppErrorPresentation({
-      summary: message || (typeof bootError === 'string' ? bootError : undefined),
+      summary: summary || message || (typeof bootError === 'string' ? bootError : undefined),
       error,
       statusCode,
       capturedAt,
       showHealthyBadge,
     });
-  }, [bootError, message, error, statusCode, capturedAt, showHealthyBadge]);
+  }, [bootError, summary, message, error, statusCode, capturedAt, showHealthyBadge]);
 
   return (
     <AppErrorPage

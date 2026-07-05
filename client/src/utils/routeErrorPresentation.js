@@ -29,7 +29,7 @@ export function resolveAppErrorTitle({ statusCode, summary }) {
   if ([502, 503, 504].includes(statusCode)) return 'Server temporarily unavailable';
   if (statusCode === 404) return 'Page not found';
   if (statusCode === 401 || statusCode === 403) return 'Access denied';
-  if (/timed out/i.test(String(summary || ''))) return 'Connection timed out';
+  if (/timed out|taking too long/i.test(String(summary || ''))) return 'Connection timed out';
   return 'Something went wrong';
 }
 

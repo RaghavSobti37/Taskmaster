@@ -128,5 +128,13 @@ describe('security hardening', () => {
       expect(csp).toContain('https://vercel.live');
       expect(csp).toContain('manifest-src');
     });
+
+    it('allows blob: and self in frame-src for inline PDF previews', () => {
+      const headers = buildVercelHeaders([]);
+      const csp = headers[0].headers.find((h) => h.key === 'Content-Security-Policy')?.value || '';
+      const frameSrc = csp.split(';').find((d) => d.trim().startsWith('frame-src')) || '';
+      expect(frameSrc).toContain("'self'");
+      expect(frameSrc).toContain('blob:');
+    });
   });
 });

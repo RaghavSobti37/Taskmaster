@@ -180,6 +180,27 @@ const removeSession = async (userId, jti) => {
   writeMemory(userId, list);
 };
 
+/** Revoke all sessions except keepJti (password change — stay signed in on this device). */
+const revokeOtherUserSessions = async (userId, keepJti, { expFallbackSec = 60 * 60 * 24 * 7 } = {}) => {
+  if (!userId) return { revoked: 0 };
+  const { revokeToken } = require('./tokenRevocation');
+  const fromRedis = await redisGetAll(userId);
+  const sessions = fromRedis ?? readMemory(userId);
+  let revoked = 0;
+  for (const session of sessions) {
+    if (!session?.jti || session.jti === keepJti) continue;
+    const exp = session.expiresAt
+      ? Math.floor(session.expiresAt / 1000)
+      : Math.floor(Date.now() / 1000) + expFallbackSec;
+    // eslint-disable-next-line no-await-in-loop
+    await revokeToken({ jti: session.jti, exp });
+    // eslint-disable-next-line no-await-in-loop
+    await removeSession(userId, session.jti);
+    revoked += 1;
+  }
+  return { revoked };
+};
+
 /** Revoke every active session for a user (admin suspend / offboarding). */
 const revokeAllUserSessions = async (userId, { expFallbackSec = 60 * 60 * 24 * 7 } = {}) => {
   if (!userId) return { revoked: 0 };
@@ -217,6 +238,25 @@ const finishAuthSession = async (req, res, userId, activeTenantId = null) => {
   return token;
 };
 
+/** Password change: revoke other devices; keep current session when request is authenticated. */
+const revokeSessionsOnPasswordChange = async (req, userId) => {
+  const { getTokenFromRequest } = require('./authCookie');
+  const { verifySessionToken } = require('./authSession');
+  const uid = String(userId);
+  let keepJti = null;
+  const token = req ? getTokenFromRequest(req) : null;
+  if (token) {
+    try {
+      const decoded = verifySessionToken(token);
+      if (decoded?.jti && String(decoded.id) === uid) keepJti = decoded.jti;
+    } catch {
+      keepJti = null;
+    }
+  }
+  if (keepJti) return revokeOtherUserSessions(uid, keepJti);
+  return revokeAllUserSessions(uid);
+};
+
 module.exports = {
   listUserSessions,
   registerSession,
@@ -224,6 +264,7 @@ module.exports = {
   touchSession,
   rotateSession,
   removeSession,
+  revokeOtherUserSessions,
   revokeAllUserSessions,
   finishAuthSession,
   decodeToken,

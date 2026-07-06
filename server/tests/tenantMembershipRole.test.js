@@ -112,7 +112,7 @@ describe('tenant membership role handling', () => {
     expect(membership.needsRoleReview).toBe(false);
   });
 
-  it('createInvite normalizes role to admin or member', async () => {
+  it('createInvite requires explicit admin or member role', async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const tenant = await Tenant.create({
       name: `Invite Tenant ${stamp}`,
@@ -126,12 +126,25 @@ describe('tenant membership role handling', () => {
       tenantId: tenant._id,
     });
 
+    await expect(createInvite({
+      tenantId: tenant._id,
+      email: `new-${stamp}@coreknot-test.local`,
+      invitedBy: owner._id,
+    })).rejects.toMatchObject({ status: 400 });
+
+    await expect(createInvite({
+      tenantId: tenant._id,
+      email: `bad-${stamp}@coreknot-test.local`,
+      role: 'superuser',
+      invitedBy: owner._id,
+    })).rejects.toMatchObject({ status: 400 });
+
     const { invite } = await createInvite({
       tenantId: tenant._id,
       email: `new-${stamp}@coreknot-test.local`,
-      role: 'superuser',
+      role: 'admin',
       invitedBy: owner._id,
     });
-    expect(invite.role).toBe('member');
+    expect(invite.role).toBe('admin');
   });
 });

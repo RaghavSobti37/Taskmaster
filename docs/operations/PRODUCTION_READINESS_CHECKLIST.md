@@ -8,6 +8,13 @@
 
 Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise customers · ⚪ polish/nice-to-have
 
+**Verify evidence (2026-07-06 batch 2):**
+
+| Command | Result |
+|---------|--------|
+| `npm test --prefix server -- --testPathPatterns=productionReadinessGates` | **5 passed** |
+| `npm test --prefix server -- --testPathPatterns=taskReviewRules.security\|tenantMembershipRole\|mustChangePassword` | **16 passed** |
+
 **Verify evidence (2026-07-06):**
 
 | Command | Result |
@@ -33,10 +40,10 @@ Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise cus
 - [ ] Summary vs. detail analytics hours reconciled via single `aggregateProjectEffort` path — **NOT VERIFIED**
 - [ ] `conversionRate` snapshot on all `FinanceDocument` writes — **NOT VERIFIED**
 - [ ] `budgetSource` displayed distinctly everywhere budget appears — **NOT VERIFIED**
-- [ ] Assignment→completion join regression test in CI — **NOT VERIFIED**
-- [ ] `clientRequestId` idempotency (unique index) on `Log` writes — **NOT VERIFIED**
+- [x] Assignment→completion join regression test in CI — evidence: `server/tests/projectAnalyticsCore.test.js` (`tasksCompleted 1`); `productionReadinessGates.test.js` analytics path covered via shared core
+- [x] `clientRequestId` idempotency (unique index) on `Log` writes — evidence: `Log.js` unique `{tenantId, clientRequestId}`; `logRoutes.js` returns existing; `productionReadinessGates.test.js`
 - [ ] Gamification level recalculation idempotent — **NOT VERIFIED**
-- [ ] Task rollback window (24h) enforced server-side — **NOT VERIFIED**
+- [x] Task rollback window (24h) enforced server-side — evidence: `shared/taskReviewRules.js` `ROLLBACK_WINDOW_MS`; `taskReviewRules.security.test.js` 24h denial
 - [ ] Task status transitions atomic — **NOT VERIFIED**
 
 ## 3. Multi-tenancy & data isolation 🔴
@@ -47,13 +54,13 @@ Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise cus
 - [x] `TenantMembership` compound unique `{tenantId, userId}` — evidence: `server/models/TenantMembership.js` line 17
 - [ ] `featureUnlocks` enforced server-side on mutating routes — **PARTIAL**: `requireFeatureUnlock` middleware exists; full route coverage **NOT VERIFIED**
 - [ ] IDOR spot-check across resource types — **NOT VERIFIED** (MANUAL ONLY)
-- [ ] Platform-admin routes unreachable by org `admin` — **NOT VERIFIED** (MANUAL ONLY; needs real customer-org admin account)
+- [ ] Platform-admin routes unreachable by org `admin` — **PARTIAL**: `requirePlatformAdmin` on admin scripts/QA/security routes; `productionReadinessGates.test.js` org-admin 403 on `/api/admin/scripts`
 
 ## 4. Auth, security & secrets 🔴
 
 - [x] Rate limiting on `authRoutes.js` (login, OTP, clerk-establish) — evidence: `server/domains/auth/routes.js` `authLoginLimiter`, `authSignupLimiter`, `clerkEstablishLimiter`; `server/middleware/rateLimits.js`
-- [ ] Password reset / OTP tokens short-lived and single-use — **NOT VERIFIED** this pass
-- [ ] `SessionsTab` revoke-all on password change — **NOT VERIFIED**
+- [x] Password reset / OTP tokens short-lived and single-use — evidence: `PASSWORD_RESET_EXPIRY_MS` 1h; token cleared on reset; `productionReadinessGates.test.js` expired + reuse rejection
+- [x] `SessionsTab` revoke-all on password change — evidence: `passwordSessionRevoke.js` + `changeRequiredPassword`/`updateProfile` revoke others; `resetPassword`/`updateUserAdmin` revoke all; `productionReadinessGates.test.js`
 - [ ] CORS locked to production domains — **NOT VERIFIED** this pass
 - [ ] CSRF on cookie-authenticated mutating endpoints — **NOT VERIFIED**
 - [ ] OAuth/Resend/Meta credentials encrypted at rest; `CREDENTIAL_ENCRYPTION_KEY` set in prod — **NOT VERIFIED** (MANUAL ONLY)
@@ -95,12 +102,12 @@ Documented in `docs/operations/environments.md` § Clerk org-first flags.
 ## 6. Organization creation & onboarding UX 🟡
 
 - [x] `/org/create` multi-step wizard — evidence: `CreateOrganizationPage.jsx` + `client/src/pages/org/create/` steps (modified in Sprint E)
-- [ ] Step 3 requires role before email — **NOT VERIFIED** this pass
-- [ ] `TenantMembership.role` non-null at schema — **PARTIAL**: model allows null; enforcement **NOT VERIFIED**
+- [x] Step 3 requires role before email — evidence: `CreateOrganizationPage.jsx` `validateStep` step 3; server `requireInviteRole` in `tenantMembershipService.js`; `tenantMembershipRole.test.js`
+- [x] `TenantMembership.role` non-null at schema — evidence: `TenantMembership.js` `required: true`, default `member`; `tenantMembershipRole.test.js`
 - [ ] SSO/SCIM JIT default to restrictive preset — **NOT VERIFIED**
 - [ ] Org creation transaction + queued invite emails — **PARTIAL**: `tenantInviteEmailQueue.js` + worker added; E2E **NOT VERIFIED**
 - [x] Success screen → dashboard with checklist — evidence: `OrgCreateSuccessPage.jsx`, `OrgOnboardingChecklist.jsx` updates
-- [ ] `profile_complete` server-side event — **PARTIAL**: `onboardingListener.js` + tests exist; full wiring **NOT VERIFIED**
+- [x] `profile_complete` server-side event — evidence: `onboardingListener.js` + `onboardingListener.test.js`; emitted from `userController` profile update
 - [ ] `first_project` server hook + Finance unlock — **NOT VERIFIED**
 - [ ] `applicableIf(tenant)` on onboarding steps — **PARTIAL**: `shared/orgOnboardingChecklist.js`; **NOT VERIFIED** E2E
 - [ ] Checklist returns null when complete — **NOT VERIFIED**
@@ -131,7 +138,7 @@ Documented in `docs/operations/environments.md` § Clerk org-first flags.
 ## 9. Billing & plan enforcement 🟡
 
 - [ ] Stripe integrated — **DEFERRED** (`ENTERPRISE_READINESS.md`: payment deferred)
-- [ ] Seat limits at invite time post-Clerk — **NOT VERIFIED** after Sprint C
+- [ ] Seat limits at invite time post-Clerk — **PARTIAL**: `assertSeatAvailable` in legacy + Clerk invite paths; `productionReadinessGates.test.js` free-plan seat cap
 - [x] Plan-tier gates server-side — **PARTIAL**: `planEnforcementService.js`, `requireFeatureUnlock`; enterprise features in `shared/planLimits.js`
 - [ ] Usage dashboard — **NOT VERIFIED**
 - [ ] Overage handling — **NOT VERIFIED**

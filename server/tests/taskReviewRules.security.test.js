@@ -63,6 +63,19 @@ describe('taskReviewRules security', () => {
     ).toBe(true);
   });
 
+  test('creator cannot rollback done task after 24h window', () => {
+    const assignments = [{ userId: assignee, assignedBy: creator }];
+    const completedAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+    expect(
+      canUserRollbackTask(
+        { _id: creator },
+        { status: 'done', completedAt },
+        assignments,
+        { taskCreatedBy: creator }
+      )
+    ).toBe(false);
+  });
+
   test('getDelegatedAssignments ignores self-assigned rows', () => {
     const assignments = [
       { userId: assignee, assignedBy: assignee },

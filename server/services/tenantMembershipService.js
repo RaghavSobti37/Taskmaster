@@ -28,6 +28,16 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 
 const normalizeInviteRole = (role) => (role === 'admin' ? 'admin' : 'member');
 
+const requireInviteRole = (role) => {
+  const raw = String(role ?? '').trim().toLowerCase();
+  if (!raw || !['admin', 'member'].includes(raw)) {
+    const err = new Error('Invite role must be admin or member');
+    err.status = 400;
+    throw err;
+  }
+  return raw;
+};
+
 const resolveMembershipRoleFromExternal = (externalRole) => {
   const raw = String(externalRole || '').trim().toLowerCase();
   if (!raw || raw === 'standard') {
@@ -147,11 +157,12 @@ const createTenantForUser = async (userId, payload = {}) => {
   if (taken) slug = `${slug}-${Date.now().toString(36)}`;
 
   const normalizedInvites = (Array.isArray(invites) ? invites : [])
-    .map((row) => ({
-      email: String(row?.email || '').trim().toLowerCase(),
-      role: normalizeInviteRole(row?.role),
-    }))
-    .filter((row) => row.email);
+    .map((row) => {
+      const email = String(row?.email || '').trim().toLowerCase();
+      if (!email) return null;
+      return { email, role: requireInviteRole(row?.role) };
+    })
+    .filter(Boolean);
 
   const completedSteps = normalizedInvites.length > 0 ? ['invite_teammate'] : [];
 
@@ -271,6 +282,7 @@ const createInvite = async ({ tenantId, email, role, invitedBy }) => {
 
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) throw new Error('Email required');
+  const inviteRole = requireInviteRole(role);
 
   await assertSeatAvailable(tenantId);
   await TenantInvite.updateMany(
@@ -282,7 +294,7 @@ const createInvite = async ({ tenantId, email, role, invitedBy }) => {
   const invite = await TenantInvite.create({
     tenantId,
     email: normalized,
-    role: normalizeInviteRole(role),
+    role: inviteRole,
     tokenHash: hashToken(rawToken),
     expiresAt: new Date(Date.now() + INVITE_TTL_MS),
     status: 'pending',

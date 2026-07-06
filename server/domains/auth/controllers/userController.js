@@ -223,6 +223,8 @@ exports.updateProfile = async (req, res) => {
           });
         }
       }
+      const { revokeSessionsOnPasswordChange } = require('../../../utils/passwordSessionRevoke');
+      await revokeSessionsOnPasswordChange(req, user._id);
     }
 
     const updatedUser = await User.findById(user._id)
@@ -475,6 +477,10 @@ exports.updateUserAdmin = async (req, res) => {
           error: clerkErr.message || 'Password saved locally but Clerk sync failed. Try again.',
         });
       }
+    }
+    if (adminPasswordPlain) {
+      const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
+      await revokeAllUserSessions(targetUser._id.toString());
     }
     await invalidateAuthUserCache(targetUser._id);
 

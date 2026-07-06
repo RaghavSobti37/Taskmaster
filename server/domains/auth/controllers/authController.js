@@ -536,6 +536,9 @@ exports.changeRequiredPassword = async (req, res) => {
       }
     }
 
+    const { revokeSessionsOnPasswordChange } = require('../../../utils/passwordSessionRevoke');
+    await revokeSessionsOnPasswordChange(req, user._id);
+
     const populated = await User.findById(user._id)
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
@@ -837,17 +840,8 @@ exports.revokeOtherSessions = async (req, res) => {
     if (!decoded?.jti || !decoded.id) {
       return res.status(401).json({ error: 'Not authorized' });
     }
-    const sessions = await listUserSessions(decoded.id, decoded.jti);
-    const { revokeToken } = require('../../../utils/tokenRevocation');
-    let revoked = 0;
-    for (const session of sessions) {
-      if (session.current) continue;
-      // eslint-disable-next-line no-await-in-loop
-      await revokeToken({ jti: session.jti, exp: decoded.exp });
-      // eslint-disable-next-line no-await-in-loop
-      await removeSession(decoded.id, session.jti);
-      revoked += 1;
-    }
+    const { revokeOtherUserSessions } = require('../../../utils/sessionRegistry');
+    const { revoked } = await revokeOtherUserSessions(decoded.id, decoded.jti);
     return res.json({ success: true, revoked });
   } catch (error) {
     logger.error('authController', 'revokeOtherSessions failed', { error: error.message || error });
@@ -1073,6 +1067,9 @@ exports.resetPassword = async (req, res) => {
         });
       }
     }
+
+    const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
+    await revokeAllUserSessions(user._id.toString());
 
     return res.json({ message: 'Password updated successfully. You can now sign in with your new password.' });
   } catch (error) {

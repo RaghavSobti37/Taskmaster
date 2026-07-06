@@ -30,6 +30,7 @@ const SERVICE_ALLOWLIST = new Set([
   'resendWebhookHandler.js',
   'queueService.js',
   'emailProcessor.js',
+  'scimProvisioningService.js',
 ]);
 
 /** Controllers/middleware that bypass before tenant context exists or for break-glass ops. */
@@ -62,6 +63,7 @@ const USE_CASES = {
   AUTH_LOOKUP: 'login before tenant context exists',
   ATTENDANCE_REFRESH: 'cron attendance metrics without request tenant',
   FINANCE_ADMIN: 'finance admin rollup before tenant backfill',
+  SCIM_PROVISION: 'IdP SCIM user lookup/provision before request tenant context',
 };
 
 function isRouteBypassAllowed(routeFile) {

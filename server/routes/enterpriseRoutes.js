@@ -56,7 +56,7 @@ router.get(
   '/audit/export',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'auditExport')) {
       return res.status(402).json({ error: 'Audit export requires enterprise plan', code: 'PLAN_UPGRADE_REQUIRED' });
     }
@@ -89,8 +89,7 @@ router.get(
   '/security',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true })
-      .select('security sso domainVerification auditRetentionDays branding plan');
+    const tenant = await Tenant.findById(req.tenantId)      .select('security sso domainVerification auditRetentionDays branding plan');
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
     res.json({
       security: tenant.security,
@@ -114,7 +113,7 @@ router.patch(
   '/security',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(req.tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
     const { security, sso, domainVerification, auditRetentionDays, branding } = req.body || {};
     if (security) tenant.security = { ...tenant.security?.toObject?.() || tenant.security || {}, ...security };
@@ -147,7 +146,7 @@ router.get(
   '/roles',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'customRoles')) {
       return res.status(402).json({ error: 'Custom roles require enterprise plan' });
     }
@@ -160,7 +159,7 @@ router.post(
   '/roles',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'customRoles')) {
       return res.status(402).json({ error: 'Custom roles require enterprise plan' });
     }
@@ -191,7 +190,7 @@ router.get(
   '/api-keys',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'apiKeys')) {
       return res.status(402).json({ error: 'API keys require enterprise plan' });
     }
@@ -206,7 +205,7 @@ router.post(
   '/api-keys',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'apiKeys')) {
       return res.status(402).json({ error: 'API keys require enterprise plan' });
     }
@@ -256,7 +255,7 @@ router.get(
   '/webhooks',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'webhooks')) {
       return res.status(402).json({ error: 'Webhooks require enterprise plan' });
     }
@@ -271,7 +270,7 @@ router.post(
   '/webhooks',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan');
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
     if (!planAllowsFeature(tenant?.plan || 'free', 'webhooks')) {
       return res.status(402).json({ error: 'Webhooks require enterprise plan' });
     }
@@ -291,7 +290,7 @@ router.post(
   '/scim/token',
   asyncHandler(async (req, res) => {
     if (!assertActiveTenant(req, res)) return;
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true }).select('plan sso');
+    const tenant = await Tenant.findById(req.tenantId).select('plan sso');
     if (!planAllowsFeature(tenant?.plan || 'free', 'sso')) {
       return res.status(402).json({ error: 'SCIM requires enterprise plan' });
     }
@@ -368,13 +367,13 @@ router.post(
       tenantId: req.tenantId,
       userId: req.user._id,
       status: 'active',
-    }).setOptions({ bypassTenant: true });
+    });
     if (!membership || membership.role !== 'owner') {
       if (!isAdminUser(req.user)) {
         return res.status(403).json({ error: 'Organization owner required' });
       }
     }
-    const tenant = await Tenant.findById(req.tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(req.tenantId);
     const graceDays = 14;
     tenant.offboarding = {
       scheduledDeletionAt: new Date(Date.now() + graceDays * 86400000),

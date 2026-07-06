@@ -19,7 +19,14 @@ describe('bypassTenantPolicy', () => {
   it('allows documented service-layer bypass', () => {
     expect(isServiceBypassAllowed('DataHubService.js')).toBe(true);
     expect(isServiceBypassAllowed('leadWriteService.js')).toBe(true);
+    expect(isServiceBypassAllowed('scimProvisioningService.js')).toBe(true);
     expect(SERVICE_ALLOWLIST.size).toBeGreaterThanOrEqual(5);
+  });
+
+  it('rejects bypass in org/enterprise route files (service layer only)', () => {
+    expect(isRouteBypassAllowed('tenantRoutes.js')).toBe(false);
+    expect(isRouteBypassAllowed('enterpriseRoutes.js')).toBe(false);
+    expect(isRouteBypassAllowed('scimRoutes.js')).toBe(false);
   });
 
   it('allows auth controllers before tenant context', () => {

@@ -1,19 +1,21 @@
 const express = require('express');
-const crypto = require('crypto');
-const User = require('../models/User');
-const TenantMembership = require('../models/TenantMembership');
 const { recordAuditEvent } = require('../services/auditEventService');
 const { scimAuth } = require('../middleware/scimAuth');
 const asyncHandler = require('../middleware/asyncHandler');
+const {
+  listActiveMembershipUsers,
+  findUserByEmail,
+  createScimUser,
+  upsertMembership,
+  findMembership,
+} = require('../services/scimProvisioningService');
 
 const router = express.Router();
 
 router.use(scimAuth);
 
 router.get('/Users', asyncHandler(async (req, res) => {
-  const memberships = await TenantMembership.find({ tenantId: req.tenantId, status: 'active' })
-    .setOptions({ bypassTenant: true })
-    .populate('userId', 'email name suspended');
+  const memberships = await listActiveMembershipUsers(req.tenantId);
   const resources = memberships
     .filter((m) => m.userId && !m.userId.suspended)
     .map((m) => ({
@@ -42,22 +44,20 @@ router.post('/Users', asyncHandler(async (req, res) => {
     });
   }
 
-  let user = await User.findOne({ email }).setOptions({ bypassTenant: true });
+  let user = await findUserByEmail(email);
   if (!user) {
-    user = await User.create({
-      name: name?.formatted || email.split('@')[0],
+    user = await createScimUser({
       email,
-      password: crypto.randomBytes(16).toString('hex'),
+      name: name?.formatted,
     });
   }
 
   const jitRole = req.scimTenant?.sso?.jitDefaultRole || 'member';
   const membershipRole = jitRole === 'standard' ? 'member' : jitRole;
-  await TenantMembership.findOneAndUpdate(
-    { tenantId: req.tenantId, userId: user._id },
-    { role: membershipRole, status: active === false ? 'suspended' : 'active' },
-    { upsert: true, new: true },
-  ).setOptions({ bypassTenant: true });
+  await upsertMembership(req.tenantId, user._id, {
+    role: membershipRole,
+    status: active === false ? 'suspended' : 'active',
+  });
 
   await recordAuditEvent({
     tenantId: req.tenantId,
@@ -80,10 +80,7 @@ router.post('/Users', asyncHandler(async (req, res) => {
 
 router.patch('/Users/:id', asyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const membership = await TenantMembership.findOne({
-    tenantId: req.tenantId,
-    userId,
-  }).setOptions({ bypassTenant: true });
+  const membership = await findMembership(req.tenantId, userId);
   if (!membership) {
     return res.status(404).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
@@ -111,10 +108,7 @@ router.patch('/Users/:id', asyncHandler(async (req, res) => {
 
 router.delete('/Users/:id', asyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const membership = await TenantMembership.findOne({
-    tenantId: req.tenantId,
-    userId,
-  }).setOptions({ bypassTenant: true });
+  const membership = await findMembership(req.tenantId, userId);
   if (!membership) {
     return res.status(404).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],

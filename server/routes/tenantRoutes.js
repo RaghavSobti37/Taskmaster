@@ -127,7 +127,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const tenantId = req.params.id;
     assertActiveTenantAccess(req, tenantId);
-    const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
     res.json({ tenant: formatTenantSettings(tenant) });
   }),
@@ -146,7 +146,7 @@ router.patch(
       return res.status(403).json({ error: 'Organization admin required to update settings' });
     }
 
-    const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
 
     const { name, logo, industry, teamSize, settings } = req.body || {};
@@ -191,7 +191,7 @@ router.get(
     if (String(req.tenantId) !== String(tenantId)) {
       return res.status(403).json({ error: 'Not authorized for this organization' });
     }
-    const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(tenantId);
     const unlocks = await getTenantUnlocks(tenantId);
     const checklist = buildOnboardingChecklistPayload(tenant?.onboardingProgress, tenant);
     res.json({ unlocks, ...checklist });
@@ -206,7 +206,7 @@ router.patch(
     if (String(req.tenantId) !== String(tenantId)) {
       return res.status(403).json({ error: 'Not authorized for this organization' });
     }
-    const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
+    const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
 
     const { completedStep, dismissedChecklist, dismissChecklist } = req.body || {};

@@ -1,5 +1,6 @@
-/** Default categories for org management documents (ops/admin). */
-const ORG_DOCUMENT_CATEGORIES = [
+/** Default categories for org management documents (ops/admin). ESM entry for Vite client. */
+
+export const ORG_DOCUMENT_CATEGORIES = [
   'Legal',
   'HR',
   'Finance',
@@ -8,5 +9,3 @@ const ORG_DOCUMENT_CATEGORIES = [
   'Policies',
   'Other',
 ];
-
-module.exports = { ORG_DOCUMENT_CATEGORIES };

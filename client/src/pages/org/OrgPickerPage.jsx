@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/primitives';
+import {
+  clerkOrgSelectionUrl,
+  isOrgFirstAuthEnabled,
+  loadOrgFirstAuthConfig,
+} from '../../lib/orgFirstAuth';
 
 const fetchMemberships = async () => {
   const { data } = await axios.get('/api/tenants/memberships', { withCredentials: true });
@@ -12,7 +17,19 @@ const fetchMemberships = async () => {
 export default function OrgPickerPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [configReady, setConfigReady] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['tenantMemberships'], queryFn: fetchMemberships });
+
+  useEffect(() => {
+    void loadOrgFirstAuthConfig().then(() => setConfigReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (!configReady) return;
+    if (isOrgFirstAuthEnabled()) {
+      window.location.assign(clerkOrgSelectionUrl());
+    }
+  }, [configReady]);
 
   const selectMutation = useMutation({
     mutationFn: async (tenantId) => {
@@ -25,6 +42,10 @@ export default function OrgPickerPage() {
   });
 
   const memberships = data?.memberships || [];
+
+  if (!configReady || isOrgFirstAuthEnabled()) {
+    return null;
+  }
 
   if (!isLoading && memberships.length <= 1) {
     navigate('/dashboard', { replace: true });

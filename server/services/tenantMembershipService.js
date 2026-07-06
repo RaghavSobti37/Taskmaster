@@ -2,11 +2,18 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Tenant = require('../models/Tenant');
 const TenantMembership = require('../models/TenantMembership');
+const { MEMBERSHIP_ROLES } = require('../models/TenantMembership');
 const TenantInvite = require('../models/TenantInvite');
 const User = require('../models/User');
 const { establishSession } = require('../utils/authSession');
 const { registerSession, decodeToken } = require('../utils/sessionRegistry');
 const { assertSeatAvailable } = require('./planEnforcementService');
+const { enqueueTenantInviteEmails } = require('./tenantInviteEmailQueue');
+const { syncTenantToClerkOrganization } = require('./clerkOrgService');
+const {
+  isClerkIdentityWritePathEnabled,
+  createClerkOrganizationInvitation,
+} = require('./clerkInviteService');
 
 const BYPASS = { bypassTenant: true };
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -19,8 +26,41 @@ const slugify = (name) => String(name || 'org')
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
+const normalizeInviteRole = (role) => (role === 'admin' ? 'admin' : 'member');
+
+const resolveMembershipRoleFromExternal = (externalRole) => {
+  const raw = String(externalRole || '').trim().toLowerCase();
+  if (!raw || raw === 'standard') {
+    return { role: 'member', needsRoleReview: false };
+  }
+  if (MEMBERSHIP_ROLES.includes(raw) && raw !== 'owner') {
+    return { role: raw, needsRoleReview: false };
+  }
+  return { role: 'member', needsRoleReview: true };
+};
+
+const withOptionalTransaction = async (work) => {
+  // ponytail: memory Mongo in Jest lacks replica set / retryable writes
+  if (process.env.NODE_ENV === 'test') {
+    return work(null);
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    let result;
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+    return result;
+  } finally {
+    await session.endSession();
+  }
+};
+
 const resolveSessionTenantId = (decoded, user) => {
   if (decoded?.activeTenantId) return decoded.activeTenantId;
+  // ponytail: org-centric — authenticated session without activeTenantId must not scope via stale user.tenantId
+  if (decoded) return null;
   if (user?.tenantId) return user.tenantId;
   return null;
 };
@@ -30,7 +70,7 @@ const listActiveMemberships = async (userId) => TenantMembership.find({
   status: 'active',
 })
   .setOptions(BYPASS)
-  .populate('tenantId', 'name slug plan status')
+  .populate('tenantId', 'name slug plan status branding')
   .lean();
 
 const getMembership = async (userId, tenantId) => TenantMembership.findOne({
@@ -72,40 +112,134 @@ const resolveInitialActiveTenantId = async (userId) => {
 const formatMembershipRow = (row) => ({
   id: String(row._id),
   role: row.role,
+  needsRoleReview: Boolean(row.needsRoleReview),
   status: row.status,
   tenant: row.tenantId && typeof row.tenantId === 'object'
-    ? { _id: row.tenantId._id, name: row.tenantId.name, slug: row.tenantId.slug, plan: row.tenantId.plan }
+    ? {
+      _id: row.tenantId._id,
+      name: row.tenantId.name,
+      slug: row.tenantId.slug,
+      plan: row.tenantId.plan,
+      logoUrl: row.tenantId.branding?.logoUrl || null,
+    }
     : { _id: row.tenantId },
 });
 
-const createTenantForUser = async (userId, { name, contactEmail }) => {
+const createTenantForUser = async (userId, payload = {}) => {
+  const {
+    name,
+    contactEmail,
+    slug: requestedSlug,
+    logo,
+    industry,
+    teamSize,
+    settings = {},
+    invites = [],
+  } = payload;
+
   const user = await User.findById(userId).setOptions(BYPASS);
   if (!user) throw new Error('User not found');
+  if (!name || !String(name).trim()) throw new Error('Organization name required');
 
-  let slug = slugify(name);
+  const trimmedName = String(name).trim();
+  let slug = requestedSlug ? slugify(requestedSlug) : slugify(trimmedName);
   const taken = await Tenant.findOne({ slug }).setOptions(BYPASS);
   if (taken) slug = `${slug}-${Date.now().toString(36)}`;
 
-  const tenant = await Tenant.create({
-    name: String(name).trim(),
+  const normalizedInvites = (Array.isArray(invites) ? invites : [])
+    .map((row) => ({
+      email: String(row?.email || '').trim().toLowerCase(),
+      role: normalizeInviteRole(row?.role),
+    }))
+    .filter((row) => row.email);
+
+  const completedSteps = normalizedInvites.length > 0 ? ['invite_teammate'] : [];
+
+  const tenantSettings = {
+    timezone: settings.timezone || 'Asia/Kolkata',
+    defaultCurrency: settings.currency || settings.defaultCurrency || 'INR',
+    dateFormat: settings.dateFormat || 'DD/MM/YYYY',
+  };
+
+  const tenantPayload = {
+    name: trimmedName,
     slug,
     contactEmail: contactEmail || user.email,
     ownerId: user._id,
     plan: 'free',
     status: 'trial',
-  });
+    industry: industry ? String(industry).trim() : undefined,
+    teamSize: teamSize ? String(teamSize).trim() : undefined,
+    settings: tenantSettings,
+    branding: logo ? { logoUrl: String(logo).trim() } : undefined,
+    onboardingProgress: {
+      completedSteps,
+      dismissedChecklist: false,
+      checklistSnoozedUntil: null,
+    },
+  };
 
-  await TenantMembership.create({
-    tenantId: tenant._id,
-    userId: user._id,
-    role: 'owner',
-    status: 'active',
-    joinedAt: new Date(),
+  const { tenant, inviteRows } = await withOptionalTransaction(async (session) => {
+    const createOpts = session ? { session } : {};
+    const [createdTenant] = await Tenant.create([tenantPayload], createOpts);
+
+    await TenantMembership.create([{
+      tenantId: createdTenant._id,
+      userId: user._id,
+      role: 'admin',
+      needsRoleReview: false,
+      status: 'active',
+      joinedAt: new Date(),
+    }], createOpts);
+
+    const createdInvites = [];
+    for (const inviteRow of normalizedInvites) {
+      // eslint-disable-next-line no-await-in-loop
+      await assertSeatAvailable(createdTenant._id);
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      // eslint-disable-next-line no-await-in-loop
+      const [invite] = await TenantInvite.create([{
+        tenantId: createdTenant._id,
+        email: inviteRow.email,
+        role: inviteRow.role,
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+        status: 'pending',
+        invitedBy: user._id,
+      }], createOpts);
+      createdInvites.push({ invite, rawToken });
+    }
+
+    return { tenant: createdTenant, inviteRows: createdInvites };
   });
 
   if (!user.tenantId) {
     user.tenantId = tenant._id;
     await user.save();
+  }
+
+  if (inviteRows.length > 0) {
+    await enqueueTenantInviteEmails(inviteRows.map(({ invite, rawToken }) => ({
+      inviteId: String(invite._id),
+      tenantId: String(tenant._id),
+      tenantName: tenant.name,
+      email: invite.email,
+      role: invite.role,
+      inviteToken: rawToken,
+      inviterName: user.name,
+    })));
+  }
+
+  const clerkSync = await syncTenantToClerkOrganization({
+    tenantName: tenant.name,
+    slug: tenant.slug,
+    creatorClerkId: user.clerkId,
+    creatorUserId: user._id,
+  });
+  if (clerkSync.synced && clerkSync.clerkOrganizationId) {
+    tenant.clerkOrganizationId = clerkSync.clerkOrganizationId;
+    tenant.updatedAt = new Date();
+    await tenant.save();
   }
 
   return tenant;
@@ -131,6 +265,10 @@ const selectTenant = async (req, res, userId, tenantId) => {
 };
 
 const createInvite = async ({ tenantId, email, role, invitedBy }) => {
+  if (isClerkIdentityWritePathEnabled()) {
+    return createClerkOrganizationInvitation({ tenantId, email, role, invitedBy });
+  }
+
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) throw new Error('Email required');
 
@@ -144,7 +282,7 @@ const createInvite = async ({ tenantId, email, role, invitedBy }) => {
   const invite = await TenantInvite.create({
     tenantId,
     email: normalized,
-    role: role === 'admin' ? 'admin' : 'member',
+    role: normalizeInviteRole(role),
     tokenHash: hashToken(rawToken),
     expiresAt: new Date(Date.now() + INVITE_TTL_MS),
     status: 'pending',
@@ -192,15 +330,18 @@ const acceptInvite = async (token, userId) => {
   await TenantMembership.findOneAndUpdate(
     { tenantId, userId },
     {
-      $setOnInsert: {
-        role: invite.role,
+      $set: {
+        role: normalizeInviteRole(invite.role),
         status: 'active',
         invitedBy: invite.invitedBy,
+        needsRoleReview: false,
+      },
+      $setOnInsert: {
         joinedAt: new Date(),
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
+  ).setOptions(BYPASS);
 
   invite.status = 'accepted';
   await invite.save();
@@ -233,4 +374,6 @@ module.exports = {
   acceptInvite,
   migrateAllUsersToMemberships,
   hashToken,
+  normalizeInviteRole,
+  resolveMembershipRoleFromExternal,
 };

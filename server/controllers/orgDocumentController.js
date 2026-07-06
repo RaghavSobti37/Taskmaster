@@ -1,6 +1,6 @@
 const OrgDocument = require('../models/OrgDocument');
 const { utapi } = require('../utils/uploadthingServer');
-const { ORG_DOCUMENT_CATEGORIES } = require('../../shared/orgDocumentCategories');
+const { ORG_DOCUMENT_CATEGORIES } = require('../../shared/orgDocumentCategories.cjs');
 const {
   isAllowedFinanceFileUrl,
   downloadFinanceFile,

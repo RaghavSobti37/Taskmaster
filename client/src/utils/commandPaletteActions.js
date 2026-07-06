@@ -1,4 +1,6 @@
 /** Department zero-state nav presets for Command Palette */
+import { HUB_CONFIG } from './navbarConfig';
+import { hasPageAccess } from './pagePermissions';
 
 /** Universal create actions — wired to QuickAdd modals via quickActionId */
 export const QUICK_ACTIONS = [
@@ -131,6 +133,22 @@ const G_CHORD_MAP = {
 export function getDepartmentPaletteActions(departmentSlug) {
   const slug = String(departmentSlug || '').toLowerCase();
   return DEPARTMENT_PRESETS[slug] || FALLBACK_ACTIONS;
+}
+
+/** Admin console tile destinations for Cmd+K — filtered by caller via hasPageAccess */
+export function getAdminConsolePaletteActions(user) {
+  const tiles = HUB_CONFIG['/admin/console']?.tiles || [];
+  return tiles
+    .filter((tile) => tile.path && hasPageAccess(user, tile.key))
+    .map((tile) => ({
+      id: `admin-${tile.id}`,
+      label: tile.label,
+      sublabel: tile.description,
+      path: tile.path,
+      icon: tile.icon,
+      type: 'nav',
+      iconTone: tile.platformAdmin ? 'amber' : 'slate',
+    }));
 }
 
 function findPaletteActionById(actions, id) {

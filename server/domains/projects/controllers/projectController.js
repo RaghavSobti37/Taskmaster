@@ -160,18 +160,40 @@ async function upsertWorkspacePreferenceOrder(userId, order) {
   );
 }
 
-async function getSortedWorkspacesForUser(userId) {
+async function loadWorkspacesForContext() {
   let workspaces = await Workspace.find().lean();
+  if (workspaces.length > 0) return workspaces;
+
+  const tenantId = getTenantId();
+  if (!tenantId) return workspaces;
+
+  // Legacy rows may lack tenantId — tenant-scoped find returns empty while names still exist globally.
+  return Workspace.find({
+    $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
+  })
+    .setOptions({ bypassTenant: true })
+    .lean();
+}
+
+async function getSortedWorkspacesForUser(userId) {
+  let workspaces = await loadWorkspacesForContext();
   if (workspaces.length === 0) {
-    await Workspace.insertMany(
-      DEFAULT_WORKSPACES.map((w, idx) => ({
-        name: w.name,
-        color: w.color,
-        order: idx,
-        createdBy: userId,
-      }))
-    );
-    workspaces = await Workspace.find().lean();
+    try {
+      await Workspace.insertMany(
+        DEFAULT_WORKSPACES.map((w, idx) => ({
+          name: w.name,
+          color: w.color,
+          order: idx,
+          createdBy: userId,
+        }))
+      );
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+    }
+    workspaces = await loadWorkspacesForContext();
+    if (workspaces.length === 0) {
+      workspaces = await Workspace.find().setOptions({ bypassTenant: true }).lean();
+    }
   }
 
   const pref = await findWorkspacePreferenceForUser(userId);
@@ -394,6 +416,8 @@ exports.createProject = async (req, res) => {
     });
 
     broadcastRealtimeEvent('projects', 'project_change', { projectId: project._id, action: 'create' });
+    const { emitOnboardingEvent } = require('../../../services/onboardingEvents');
+    emitOnboardingEvent('project.created', { tenantId });
     res.status(201).json(project);
   } catch (error) {
     logger.error('projectController', 'Create Project ', { error: error.message || error });

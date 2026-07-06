@@ -1,5 +1,8 @@
 const SPOOF_KEYS = ['tenantId', 'organizationId', 'orgId'];
 
+/** Routes that intentionally accept a different tenant than the current session. */
+const SPOOF_EXEMPT = (path) => /\/api\/tenants\/select\b/.test(path);
+
 function collectSuppliedTenantIds(req) {
   const values = [];
   for (const key of SPOOF_KEYS) {
@@ -17,6 +20,9 @@ function collectSuppliedTenantIds(req) {
  */
 function rejectClientTenantSpoof(req, res, next) {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+
+  const path = req.originalUrl || req.url || '';
+  if (SPOOF_EXEMPT(path)) return next();
 
   const supplied = collectSuppliedTenantIds(req);
   if (!supplied.length) return next();

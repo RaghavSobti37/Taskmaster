@@ -1,5 +1,5 @@
 import React, { useMemo, Suspense, useState, useEffect, lazy } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { PageContainer, Button } from '../components/ui/primitives';
 import QueryErrorBanner, { getQueryErrorMessage } from '../components/ui/QueryErrorBanner';
@@ -50,6 +50,8 @@ const renderLazyWidget = (componentId, props = {}) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const orgCreateHandoff = location.state?.fromOrgCreate ? location.state : null;
   const { user, sessionReady } = useAuth();
   const queriesEnabled = !!user?._id && sessionReady;
   const permissionPreset = useMemo(() => {
@@ -306,7 +308,10 @@ const Dashboard = () => {
         </Button>
       </div>
       <div className="mb-4">
-        <OrgOnboardingChecklist />
+        <OrgOnboardingChecklist
+          defaultExpanded={Boolean(orgCreateHandoff)}
+          optimisticCompletedSteps={orgCreateHandoff?.invitesSent ? ['invite_teammate'] : []}
+        />
       </div>
       <PinBoardProvider>
         <DashboardTierLayout

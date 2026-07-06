@@ -85,6 +85,13 @@ const QUEUE_WORKERS = [
     description: 'Background campaign email dispatch (BullMQ)',
   },
   {
+    id: 'tenant-invite-email',
+    module: '../workers/tenantInviteEmailWorker',
+    init: 'initTenantInviteEmailWorker',
+    queue: 'TenantInviteEmailQueue',
+    description: 'Org-create wizard invite emails (BullMQ)',
+  },
+  {
     id: 'knowledge-engine',
     module: '../workers/knowledgeEngineWorker',
     init: 'initKnowledgeEngineWorker',

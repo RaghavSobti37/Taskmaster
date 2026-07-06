@@ -27,10 +27,11 @@ const mockAuthRes = () => {
 };
 
 /** Mint CoreKnot session cookie on supertest agent — no HTTP /login. */
-async function mintSessionAgent(agent, userId) {
+async function mintSessionAgent(agent, userId, options = {}) {
   const req = mockAuthReq();
   const res = mockAuthRes();
-  await finishAuthSession(req, res, userId);
+  const activeTenantId = options?.activeTenantId ? String(options.activeTenantId) : null;
+  await finishAuthSession(req, res, userId, activeTenantId);
   const token = res.getCookie(COOKIE_NAME);
   if (!token) {
     throw new Error(`mintSessionAgent: no session token for user ${userId}`);

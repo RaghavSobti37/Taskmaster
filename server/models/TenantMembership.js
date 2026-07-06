@@ -6,7 +6,8 @@ const MEMBERSHIP_STATUSES = ['active', 'invited', 'suspended'];
 const tenantMembershipSchema = new mongoose.Schema({
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  role: { type: String, enum: MEMBERSHIP_ROLES, default: 'member' },
+  role: { type: String, enum: MEMBERSHIP_ROLES, default: 'member', required: true },
+  needsRoleReview: { type: Boolean, default: false },
   status: { type: String, enum: MEMBERSHIP_STATUSES, default: 'active' },
   customRoleId: { type: mongoose.Schema.Types.ObjectId, ref: 'CustomRole' },
   invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

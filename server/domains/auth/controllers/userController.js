@@ -10,7 +10,7 @@ const { buildUserMonthlyReport } = require('../../../services/monthlyReportServi
 const { validatePasswordStrength, generateSecurePassword } = require('../../../utils/passwordValidation');
 const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
-const { isValidDateFormatPreference } = require('../../../../shared/dateFormatPreference');
+const { isValidDateFormatPreference } = require('../../../../shared/dateFormatPreference.cjs');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
 const { isClerkConfigured } = require('../../../utils/clerkAuth');
@@ -228,6 +228,11 @@ exports.updateProfile = async (req, res) => {
     const updatedUser = await User.findById(user._id)
       .select('-password')
       .populate('departmentId', 'name slug permissionPreset pagePermissions signupAllowed');
+    const { emitOnboardingEvent } = require('../../../services/onboardingEvents');
+    emitOnboardingEvent('profile.updated', {
+      user: updatedUser,
+      tenantId: req.tenantId || user.tenantId || user.activeTenantId,
+    });
     res.json(attachProfileCompletion(updatedUser));
   } catch (err) {
     res.status(500).json({ error: err.message });

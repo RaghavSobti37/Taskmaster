@@ -115,6 +115,7 @@ export const HUB_CONFIG = {
         section: 'access-control',
         accent: 'blue',
         description: 'Finance, permissions, and admin mutation audit trail',
+        platformAdmin: true,
       },
       {
         id: 'tenant-sso',
@@ -126,6 +127,8 @@ export const HUB_CONFIG = {
         accent: 'blue',
         description: 'Link Clerk organizations for enterprise SAML/OIDC',
         riskLevel: 'caution',
+        platformAdmin: true,
+        setupRequiredKey: 'sso',
       },
       {
         id: 'audit-log',
@@ -207,6 +210,7 @@ export const HUB_CONFIG = {
         accent: 'orange',
         description: 'Global platform configuration and feature toggles',
         riskLevel: 'caution',
+        platformAdmin: true,
       },
       {
         id: 'scripts',
@@ -218,6 +222,7 @@ export const HUB_CONFIG = {
         accent: 'orange',
         description: 'Run one-off maintenance scripts',
         riskLevel: 'caution',
+        platformAdmin: true,
       },
       {
         id: 'exly',
@@ -258,6 +263,7 @@ export const HUB_CONFIG = {
         section: 'developer',
         accent: 'green',
         description: 'Run QA test suites and validation checks',
+        platformAdmin: true,
       },
       {
         id: 'render-logs',
@@ -268,6 +274,7 @@ export const HUB_CONFIG = {
         accent: 'green',
         description: 'Production API, staging API, and Nest log streams on Render',
         path: '/',
+        platformAdmin: true,
       },
       {
         id: 'posthog',

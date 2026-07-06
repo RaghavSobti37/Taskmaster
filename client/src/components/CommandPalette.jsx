@@ -25,6 +25,16 @@ import {
   NotebookPen,
   Pin,
   Link2,
+  Shield,
+  Brackets,
+  Building2,
+  Settings2,
+  ScrollText,
+  Trophy,
+  BarChart3,
+  Music,
+  Newspaper,
+  Layers,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,12 +42,13 @@ import { useStatusCounts } from '../hooks/useTaskmasterQueries';
 import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { getDepartmentSlug, isAdminUser } from '../utils/departmentPermissions';
-import { getDepartmentPaletteActions, QUICK_ACTIONS } from '../utils/commandPaletteActions';
+import { getDepartmentPaletteActions, getAdminConsolePaletteActions, QUICK_ACTIONS } from '../utils/commandPaletteActions';
 import {
   canAccessNavPath,
   filterActionsByPageAccess,
   filterQuickActionsByPageAccess,
 } from '../utils/navPageAccess';
+import { hasPageAccess } from '../utils/pagePermissions';
 import { resolvePaletteQuery } from '../utils/commandPaletteResolver';
 import { useToast } from '../contexts/ToastContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -67,6 +78,16 @@ const ICON_MAP = {
   NotebookPen,
   Pin,
   Link2,
+  Shield,
+  Brackets,
+  Building2,
+  Settings2,
+  ScrollText,
+  Trophy,
+  BarChart3,
+  Music,
+  Newspaper,
+  Layers,
   Zap,
 };
 
@@ -155,6 +176,11 @@ const CommandPalette = () => {
     [bindingsMap, user]
   );
 
+  const adminConsoleActions = useMemo(() => {
+    if (!hasPageAccess(user, 'admin_console')) return [];
+    return getAdminConsolePaletteActions(user);
+  }, [user]);
+
   const { data: searchData, isFetching: searchLoading } = useUnifiedSearch(search, {
     enabled: isOpen && !!user,
   });
@@ -241,13 +267,16 @@ const CommandPalette = () => {
 
     return [
       { id: 'actions', title: 'Quick actions', items: quickActions },
+      ...(adminConsoleActions.length
+        ? [{ id: 'admin', title: 'Admin console', items: adminConsoleActions }]
+        : []),
       {
         id: 'nav',
         title: departmentSlug ? `${departmentSlug} shortcuts` : 'Go to',
         items: navItems,
       },
     ];
-  }, [search, quickActions, navItems, specialAction, searchResults, departmentSlug]);
+  }, [search, quickActions, adminConsoleActions, navItems, specialAction, searchResults, departmentSlug]);
 
   const sectionsWithIndex = useMemo(() => {
     let idx = 0;

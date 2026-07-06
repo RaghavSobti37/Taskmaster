@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
@@ -24,6 +24,7 @@ import {
   Building2,
   CircleDollarSign,
   Shield,
+  Lock,
 } from 'lucide-react';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +34,7 @@ import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
+import { useTenantUnlocks } from '../hooks/useTenantUnlocks';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
@@ -120,7 +122,7 @@ const NAV_ICON_TONES = {
   '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId, featureLock, onLockedClick }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
@@ -135,19 +137,12 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
   const iconOnly = collapsed && !isMobile;
   const tone = iconTone || NAV_ICON_TONES[pathOnly] || NAV_ICON_TONES['/dashboard'];
   const navTitle = iconOnly ? label : undefined;
+  const isLocked = Boolean(featureLock);
 
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      title={navTitle}
-      aria-label={navTitle || label}
-      aria-current={isActive ? 'page' : undefined}
-      data-tour={tourId || undefined}
-      className={`tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''}`}
-    >
+  const itemClassName = `tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''} ${isLocked ? 'tm-sidebar-nav-item--locked opacity-75' : ''}`;
+
+  const itemBody = (
+    <>
       <div className="relative flex items-center justify-center shrink-0">
         <span
           className="tm-sidebar-icon-chip"
@@ -176,6 +171,43 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
           )}
         </>
       )}
+      {isLocked && (
+        <Lock size={12} className="shrink-0 text-[var(--color-text-muted)]" aria-hidden />
+      )}
+    </>
+  );
+
+  if (isLocked) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          onClick?.(event);
+          onLockedClick?.(featureLock);
+        }}
+        onMouseEnter={onMouseEnter}
+        title={featureLock?.lockedReason || navTitle}
+        aria-label={`${label} — locked`}
+        className={itemClassName}
+      >
+        {itemBody}
+      </button>
+    );
+  }
+
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      title={navTitle}
+      aria-label={navTitle || label}
+      aria-current={isActive ? 'page' : undefined}
+      data-tour={tourId || undefined}
+      className={itemClassName}
+    >
+      {itemBody}
     </NavLink>
   );
 };
@@ -218,6 +250,8 @@ const OutletSidebar = () => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { getFeatureLock } = useTenantUnlocks();
   const asideRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [shellQueriesReady, setShellQueriesReady] = useState(false);
@@ -311,10 +345,13 @@ const OutletSidebar = () => {
       const navPath = page.path === '/management'
         ? getManagementHubPath(user, hasPageAccess)
         : page.path;
+      const featureLock = getFeatureLock(page.path);
       return (
         <NavItem
           key={page.path}
           to={navPath}
+          featureLock={featureLock}
+          onLockedClick={(lock) => navigate(lock?.unlockPath || '/dashboard')}
           icon={config.icon}
           label={page.label || config.label}
           iconTone={NAV_ICON_TONES[page.path]}
@@ -340,8 +377,13 @@ const OutletSidebar = () => {
       : SIDEBAR_SHELL_WIDTH_COLLAPSED;
 
   const shellClassName = isMobile
-    ? `fixed left-0 top-0 h-screen z-[70] tm-sidebar-shell transition-transform duration-300 ease-in-out ${isMobileOpen ? 'translate-x-0' : '-translate-x-[216px]'}`
+    ? 'fixed left-0 top-0 h-screen z-[70] tm-sidebar-shell transition-transform duration-300 ease-in-out'
     : `fixed left-0 top-0 h-screen z-[70] tm-sidebar-shell transition-[width] duration-300 ease-in-out ${showLabels ? '' : 'tm-sidebar-shell--collapsed'}`;
+
+  const shellStyle = {
+    width: shellWidth,
+    ...(isMobile ? { transform: isMobileOpen ? 'translateX(0)' : `translateX(-${SIDEBAR_MOBILE_SHELL_WIDTH}px)` } : {}),
+  };
 
   return (
     <>
@@ -358,44 +400,73 @@ const OutletSidebar = () => {
         aria-label="Main navigation"
         data-tour="sidebar-nav"
         className={shellClassName}
-        style={{ width: shellWidth }}
+        style={shellStyle}
       >
         <div className="tm-sidebar-panel">
-        <div className={`tm-sidebar-header flex items-center overflow-hidden ${showLabels ? 'px-3 py-3 justify-between' : 'px-2 py-2 justify-center flex-col gap-2'}`}>
-          <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2.5' : ''}`}>
-            <BrandLogo size={28} className="shrink-0" />
+        <div
+          className={`tm-sidebar-header flex overflow-visible ${
+            showLabels ? 'flex-col gap-2.5 px-3 py-3' : 'flex-col items-center justify-center gap-2 px-2 py-2'
+          }`}
+        >
+          <div className="flex w-full min-w-0 items-center gap-2">
+            <BrandLogo size={26} className="shrink-0" />
             {showLabels && (
-              <span className="font-semibold text-[13px] tracking-tight text-[var(--color-text-primary)] truncate">
+              <span className="min-w-0 flex-1 truncate font-semibold text-[13px] tracking-tight text-[var(--color-text-primary)]">
                 {brand.name}
               </span>
             )}
-          </div>
-
-          <div className={`flex items-center shrink-0 ${showLabels ? 'gap-1' : 'flex-col gap-1'}`}>
-            {showLabels && <OrgSwitcher />}
-            {!isMobile && (
+            {showLabels && !isMobile && (
               <button
                 type="button"
                 onClick={toggleSidebar}
                 aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-                className="tm-sidebar-control p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                className="tm-sidebar-control shrink-0 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 {isOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
               </button>
             )}
-            {isMobileOpen && (
+            {showLabels && isMobileOpen && (
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => closeMobileSidebar({ returnFocus: true })}
                 aria-label="Close navigation menu"
-                className="lg:hidden tm-sidebar-control p-1.5 text-[var(--color-text-muted)] transition-colors"
+                className="lg:hidden tm-sidebar-control shrink-0 p-1.5 text-[var(--color-text-muted)] transition-colors"
               >
                 <X size={16} />
               </button>
             )}
           </div>
+
+          {showLabels && <OrgSwitcher variant="sidebar" className="w-full" />}
+
+          {!showLabels && (
+            <div className="flex w-full shrink-0 flex-col items-center gap-1">
+              {!isMobile && (
+                <button
+                  type="button"
+                  onClick={toggleSidebar}
+                  aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                  title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                  className="tm-sidebar-control p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                >
+                  {isOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+                </button>
+              )}
+              {isMobileOpen && (
+                <button
+                  ref={closeButtonRef}
+                  type="button"
+                  onClick={() => closeMobileSidebar({ returnFocus: true })}
+                  aria-label="Close navigation menu"
+                  className="lg:hidden tm-sidebar-control p-1.5 text-[var(--color-text-muted)] transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar min-h-0" aria-label="Application pages">

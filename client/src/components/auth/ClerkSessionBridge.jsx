@@ -164,7 +164,9 @@ function ClerkSessionBridgeInner() {
             '/api/auth/clerk-establish',
             {
               token,
-              ...(pinnedOrgId ? { organizationId: pinnedOrgId } : {}),
+              ...(pinnedOrgId
+                ? { organizationId: pinnedOrgId }
+                : (orgId ? { organizationId: orgId } : {})),
             },
             { withCredentials: true, ...AXIOS_SKIP_TOAST },
           );

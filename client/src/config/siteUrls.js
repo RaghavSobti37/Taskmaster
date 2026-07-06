@@ -66,6 +66,7 @@ export const usesExternalLandingHost = () => {
 
 const AUTH_ROUTE_PATHS = new Set([
   '/login',
+  '/login/choose',
   '/register',
   '/forgot-password',
   '/reset-password',

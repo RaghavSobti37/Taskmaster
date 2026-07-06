@@ -43,6 +43,8 @@ import ClerkDashboardUsersButton from '../../components/admin/ClerkDashboardUser
 import PagePermissionsEditor from '../../components/admin/PagePermissionsEditor';
 import { resolveDepartmentPages } from '../../utils/pagePermissions';
 import { formatDobInput, parseDobInput } from '../../utils/dateDisplay';
+import TenantMemberRoleBadge, { getTenantMembershipFromUser } from '../../components/org/TenantMemberRoleBadge';
+import AdminBulkActionBar from '../../components/admin/AdminBulkActionBar';
 
 const AdminUsers = () => {
   const { confirm } = useConfirm();
@@ -54,6 +56,9 @@ const AdminUsers = () => {
   const [dobError, setDobError] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [reportUser, setReportUser] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDepartmentId, setBulkDepartmentId] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const {
     data: users = [],
@@ -174,6 +179,60 @@ const AdminUsers = () => {
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
   }, [userList, searchTerm]);
 
+  const toggleUserSelection = useCallback((userId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const runBulkUpdate = useCallback(async (patchFn) => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setBulkBusy(true);
+    try {
+      for (const id of ids) {
+        const user = userList.find((u) => u._id === id);
+        if (!user) continue;
+        await patchFn(user);
+      }
+      clearSelection();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message || 'Bulk update failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [selectedIds, userList, clearSelection]);
+
+  const handleBulkSuspend = useCallback(() => {
+    runBulkUpdate((user) => updateUserMutation.mutateAsync({
+      id: user._id,
+      data: { suspended: true, suspensionReason: 'Bulk suspend from admin' },
+    }));
+  }, [runBulkUpdate, updateUserMutation]);
+
+  const handleBulkActivate = useCallback(() => {
+    runBulkUpdate((user) => updateUserMutation.mutateAsync({
+      id: user._id,
+      data: { suspended: false, suspensionReason: '' },
+    }));
+  }, [runBulkUpdate, updateUserMutation]);
+
+  const handleBulkAssignDepartment = useCallback(() => {
+    if (!bulkDepartmentId) {
+      alert('Choose a department first.');
+      return;
+    }
+    runBulkUpdate((user) => updateUserMutation.mutateAsync({
+      id: user._id,
+      data: { departmentId: bulkDepartmentId },
+    }));
+  }, [runBulkUpdate, updateUserMutation, bulkDepartmentId]);
+
   const deptChart = useMemo(
     () =>
       distributionFromField(userList, 'departmentId', {
@@ -190,6 +249,7 @@ const AdminUsers = () => {
       title="Users"
       icon={Users}
       backTo={ADMIN_CONSOLE_PATH}
+      breadcrumbs={[{ label: 'Users' }]}
       overviewMobileMaxStats={2}
       overview={{
         stats: [
@@ -262,17 +322,52 @@ const AdminUsers = () => {
           <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">No users match your search.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredUsers.map((u) => (
-              <AdminUserGridCard
-                key={u._id}
-                user={u}
-                onEdit={setSelectedUser}
-                onViewReport={setReportUser}
-              />
-            ))}
+            {filteredUsers.map((u) => {
+              const tenantMembership = getTenantMembershipFromUser(u);
+              return (
+                <div key={u._id} className="flex flex-col gap-1.5">
+                  {tenantMembership && (
+                    <div className="px-1">
+                      <TenantMemberRoleBadge {...tenantMembership} />
+                    </div>
+                  )}
+                  <AdminUserGridCard
+                    user={u}
+                    onEdit={setSelectedUser}
+                    onViewReport={setReportUser}
+                    selectionMode
+                    selected={selectedIds.has(u._id)}
+                    onSelectToggle={toggleUserSelection}
+                  />
+                </div>
+              );
+            })}
           </div>
         )
       )}
+
+      <AdminBulkActionBar selectedCount={selectedIds.size} onClear={clearSelection}>
+        <Button type="button" size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkActivate}>
+          Activate
+        </Button>
+        <Button type="button" size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkSuspend}>
+          Suspend
+        </Button>
+        <select
+          className="text-xs rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-2 py-1.5"
+          value={bulkDepartmentId}
+          onChange={(e) => setBulkDepartmentId(e.target.value)}
+          aria-label="Department for bulk assign"
+        >
+          <option value="">Assign department…</option>
+          {departments.map((d) => (
+            <option key={d._id} value={d._id}>{d.name}</option>
+          ))}
+        </select>
+        <Button type="button" size="sm" disabled={bulkBusy || !bulkDepartmentId} onClick={handleBulkAssignDepartment}>
+          Apply dept
+        </Button>
+      </AdminBulkActionBar>
 
       <FullScreenWorkspace
         isOpen={!!reportUser}
@@ -318,6 +413,14 @@ const AdminUsers = () => {
           >
             <DetailSidebarSection label="User Details">
               <div className="tm-stat-shell p-4 space-y-4">
+                {selectedUser && getTenantMembershipFromUser(selectedUser) && (
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
+                      Organization role
+                    </label>
+                    <TenantMemberRoleBadge {...getTenantMembershipFromUser(selectedUser)} />
+                  </div>
+                )}
                 <Input
                   label="Full Name"
                   value={editUserData.name || ''}

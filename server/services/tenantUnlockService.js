@@ -9,7 +9,26 @@ const DEFAULT_UNLOCKS = {
   artistOs: false,
 };
 
+const ALL_UNLOCKED = Object.fromEntries(Object.keys(DEFAULT_UNLOCKS).map((k) => [k, true]));
+
+function isBillingConfigured() {
+  return Boolean(
+    String(process.env.STRIPE_SECRET_KEY || '').trim()
+    || String(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
+  );
+}
+
+/** ponytail: open all features until Stripe billing is wired (or explicit env override). */
+function isUnlockAllMode() {
+  const flag = String(process.env.FEATURE_UNLOCK_ALL || '').trim().toLowerCase();
+  if (flag === 'true') return true;
+  if (flag === 'false') return false;
+  if (process.env.NODE_ENV === 'test') return false;
+  return !isBillingConfigured();
+}
+
 const evaluateUnlocks = async (tenant) => {
+  if (isUnlockAllMode()) return { ...ALL_UNLOCKED };
   const base = { ...DEFAULT_UNLOCKS, ...(tenant?.featureUnlocks || {}) };
   const progress = tenant?.onboardingProgress?.completedSteps || [];
 
@@ -21,6 +40,7 @@ const evaluateUnlocks = async (tenant) => {
 };
 
 const getTenantUnlocks = async (tenantId) => {
+  if (isUnlockAllMode()) return { ...ALL_UNLOCKED };
   const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
   if (!tenant) return DEFAULT_UNLOCKS;
   return evaluateUnlocks(tenant);
@@ -28,6 +48,9 @@ const getTenantUnlocks = async (tenantId) => {
 
 module.exports = {
   DEFAULT_UNLOCKS,
+  ALL_UNLOCKED,
+  isBillingConfigured,
+  isUnlockAllMode,
   evaluateUnlocks,
   getTenantUnlocks,
 };

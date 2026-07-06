@@ -46,6 +46,7 @@ const AuthContext = createContext(defaultAuthContext);
 const PUBLIC_MARKETING_PATHS = new Set([
   '/',
   '/login',
+  '/login/choose',
   '/register',
   '/forgot-password',
   '/reset-password',
@@ -58,6 +59,7 @@ const PUBLIC_MARKETING_PATHS = new Set([
 /** Auth routes need an immediate session probe so stale cookies redirect before login submit. */
 const IMMEDIATE_SESSION_PROBE_PATHS = new Set([
   '/login',
+  '/login/choose',
   '/register',
   '/forgot-password',
   '/reset-password',

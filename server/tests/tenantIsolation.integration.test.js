@@ -138,4 +138,42 @@ describe('tenant isolation (required CI gate)', () => {
     expect([403, 402]).toContain(res.statusCode);
     await Tenant.deleteOne({ _id: lockedTenant._id });
   });
+
+  it('POST /api/tenants/select switches active tenant for multi-org member', async () => {
+    const dept = await ensureOpsDept();
+    const email = `tenant-select-${stamp}@coreknot-test.local`;
+    await User.deleteOne({ email });
+    const user = await User.create({
+      name: 'Tenant Select User',
+      email,
+      password: DEV_DEFAULT_PASSWORD,
+      gender: 'male',
+      departmentId: dept._id,
+      tenantId: tenantA._id,
+    });
+    await TenantMembership.findOneAndUpdate(
+      { tenantId: tenantA._id, userId: user._id },
+      { $set: { role: 'admin', status: 'active', joinedAt: new Date() } },
+      { upsert: true },
+    );
+    await TenantMembership.findOneAndUpdate(
+      { tenantId: tenantB._id, userId: user._id },
+      { $set: { role: 'member', status: 'active', joinedAt: new Date() } },
+      { upsert: true },
+    );
+
+    const agent = request.agent(app);
+    await mintSessionAgent(agent, user._id, { activeTenantId: String(tenantA._id) });
+
+    const res = await agent
+      .post('/api/tenants/select')
+      .send({ tenantId: String(tenantB._id) });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.activeTenantId).toBe(String(tenantB._id));
+
+    const membershipsRes = await agent.get('/api/tenants/memberships');
+    expect(membershipsRes.statusCode).toBe(200);
+    expect(membershipsRes.body.activeTenantId).toBe(String(tenantB._id));
+  });
 });

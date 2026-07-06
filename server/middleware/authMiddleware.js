@@ -15,33 +15,44 @@ const { rejectClientTenantSpoof } = require('./rejectClientTenantSpoof');
 
 const applySessionTenant = async (req, user, decoded = null) => {
   await backfillMembershipFromUser(user);
-  let tenantId = resolveSessionTenantId(decoded, user);
   const memberships = await listActiveMemberships(user._id);
+  let tenantId = resolveSessionTenantId(decoded, user);
+  const orgFirst = require('../utils/orgFirstAuth').isOrgFirstAuthEnabled();
 
-  if (!tenantId) {
-    if (memberships.length === 1) {
-      tenantId = memberships[0].tenantId?._id || memberships[0].tenantId;
-      return { tenantId, needsTenantSelection: false };
+  if (tenantId) {
+    const membership = await getMembership(user._id, tenantId);
+    if (!membership) {
+      if (orgFirst && memberships.length > 0) {
+        return { tenantId: null, needsTenantSelection: true };
+      }
+      if (memberships.length === 1) {
+        return {
+          tenantId: memberships[0].tenantId?._id || memberships[0].tenantId,
+          needsTenantSelection: false,
+        };
+      }
+      if (memberships.length > 1) {
+        return { tenantId: null, needsTenantSelection: true };
+      }
     }
-    if (memberships.length > 1) {
+    return { tenantId, needsTenantSelection: false };
+  }
+
+  if (orgFirst) {
+    if (memberships.length > 0) {
       return { tenantId: null, needsTenantSelection: true };
     }
     return { tenantId: user.tenantId || null, needsTenantSelection: false };
   }
 
-  const membership = await getMembership(user._id, tenantId);
-  if (!membership) {
-    if (memberships.length === 1) {
-      return {
-        tenantId: memberships[0].tenantId?._id || memberships[0].tenantId,
-        needsTenantSelection: false,
-      };
-    }
-    if (memberships.length > 1) {
-      return { tenantId: null, needsTenantSelection: true };
-    }
+  if (memberships.length === 1) {
+    tenantId = memberships[0].tenantId?._id || memberships[0].tenantId;
+    return { tenantId, needsTenantSelection: false };
   }
-  return { tenantId, needsTenantSelection: false };
+  if (memberships.length > 1) {
+    return { tenantId: null, needsTenantSelection: true };
+  }
+  return { tenantId: user.tenantId || null, needsTenantSelection: false };
 };
 
 const authContext = (req, user, tenantId) => ({
@@ -136,7 +147,9 @@ const optionalAuthenticate = async (req, res, next) => {
   if (!user) return next();
   const session = await applySessionTenant(req, user, decoded);
   req.user = user;
-  req.tenantId = session.tenantId || user.tenantId;
+  req.tenantId = session.tenantId != null
+    ? session.tenantId
+    : (session.needsTenantSelection ? null : user.tenantId);
   req.needsTenantSelection = session.needsTenantSelection;
   return runWithContext(authContext(req, user, req.tenantId), next);
 };
@@ -186,7 +199,9 @@ const protect = async (req, res, next) => {
   }
 
   req.user = effectiveUser;
-  req.tenantId = session.tenantId || user.tenantId;
+  req.tenantId = session.tenantId != null
+    ? session.tenantId
+    : (session.needsTenantSelection ? null : user.tenantId);
   return rejectClientTenantSpoof(req, res, () => runWithContext(authContext(req, effectiveUser, req.tenantId), next));
 };
 
@@ -323,6 +338,7 @@ const requirePlatformAdmin = (req, res, next) => {
 module.exports = {
   protect,
   optionalAuthenticate,
+  applySessionTenant,
   resolveRequestUser,
   isDebugBypassEnabled,
   admin,

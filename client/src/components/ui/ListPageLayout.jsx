@@ -5,6 +5,7 @@ import PageToolbar from './PageToolbar';
 import ActiveFilterBar from './ActiveFilterBar';
 import QueryErrorSlot from './QueryErrorSlot';
 import AdminConsoleBackButton from '../admin/AdminConsoleBackButton';
+import AdminBreadcrumbs from '../admin/AdminBreadcrumbs';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 
 /**
@@ -38,6 +39,7 @@ export default function ListPageLayout({
   queryErrorFallback = 'Failed to load data',
   onQueryRetry,
   header,
+  breadcrumbs,
 }) {
   const hasInsights =
     insights &&
@@ -60,6 +62,7 @@ export default function ListPageLayout({
     <div className={shellClass}>
       <div className={`list-page-stack ${className}`.trim()}>
         {header}
+        {breadcrumbs?.length > 0 && <AdminBreadcrumbs crumbs={breadcrumbs} />}
         {showOverviewTitleRow && (
           <div className="flex items-center gap-2 min-w-0">
             {backLeading}

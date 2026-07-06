@@ -8,7 +8,7 @@ const CalendarTodayCard = ({ calendar = [], loading = false }) => {
   if (loading) {
     return (
       <DashboardWidgetShell title="Today's Calendar" icon={CalendarIcon}>
-        <div className="space-y-3 -mx-4">
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="px-4 py-3 border-b border-[var(--color-bg-border)] space-y-2">
               <div className="h-3.5 bg-[var(--color-bg-border)] rounded animate-pulse w-3/4" />
@@ -32,7 +32,7 @@ const CalendarTodayCard = ({ calendar = [], loading = false }) => {
           No events planned for today
         </p>
       ) : (
-        <div className="-mx-4">
+        <div>
           {calendar.map((event) => {
             const joinUrl = event.eventType === 'meeting' && event.meetingLink
               ? normalizeMeetingLink(event.meetingLink)

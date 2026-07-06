@@ -8,6 +8,8 @@ loadConfig();
 const { initPostHog } = require('./utils/posthog');
 initPostHog();
 
+require('./services/onboardingListener');
+
 const { createApp } = require('./app/createApp');
 const { registerRoutes } = require('./app/registerRoutes');
 const { startServer } = require('./app/startServer');

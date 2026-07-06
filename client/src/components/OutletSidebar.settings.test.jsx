@@ -22,8 +22,8 @@ vi.mock('../contexts/SidebarContext', () => ({
     closeMobileSidebar: vi.fn(),
   }),
   SIDEBAR_SHELL_WIDTH_COLLAPSED: 60,
-  SIDEBAR_SHELL_WIDTH_OPEN: 174,
-  SIDEBAR_MOBILE_SHELL_WIDTH: 196,
+  SIDEBAR_SHELL_WIDTH_OPEN: 236,
+  SIDEBAR_MOBILE_SHELL_WIDTH: 236,
 }));
 
 vi.mock('../contexts/ThemeContext', () => ({
@@ -36,6 +36,16 @@ vi.mock('../hooks/useStatusCounts', () => ({
 
 vi.mock('../hooks/useBreakpoint', () => ({
   useIsMobile: () => mockUseIsMobile(),
+}));
+
+vi.mock('../hooks/useTenantUnlocks', () => ({
+  UNLOCK_ALL: true,
+  useTenantUnlocks: () => ({
+    unlocks: {},
+    isLoading: false,
+    isFeatureUnlocked: () => true,
+    getFeatureLock: () => null,
+  }),
 }));
 
 vi.mock('./org/OrgSwitcher', () => ({

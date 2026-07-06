@@ -72,6 +72,19 @@ TASKMASTER_ARTIST_ENQUIRY_WEBHOOK_URL=<SERVER_URL>/api/webhooks/artist-enquiry
 
 After deploy: smoke `GET /api/health` on staging API + Nest; Vercel preview `VITE_API_URL` → staging API only.
 
+## Clerk org-first flags (env-gated — default OFF in production)
+
+Set only after Sprint F backfill + staging soak (`docs/operations/PRODUCTION_READINESS_CHECKLIST.md` §5).
+
+| Variable | Where | When `true` |
+|----------|-------|-------------|
+| `CLERK_WEBHOOK_SECRET` | Render API | Required for `POST /api/webhooks/clerk` Svix verification |
+| `CLERK_IDENTITY_WRITE_PATH` | Render API | Tenant invites/membership writes go to Clerk API first |
+| `CLERK_ORG_FIRST_AUTH` | Render API | Session resolves org before routes; reduces `NEEDS_TENANT_SELECTION` 409 |
+| `VITE_ORG_FIRST_AUTH` | Vercel client | Client mirror; omit to follow `GET /api/auth/config` |
+
+Related: `CLERK_SECRET_KEY`, `CLERK_PROXY_PUBLIC_URL`, optional `CLERK_FAPI_UPSTREAM` (staging gate table above).
+
 ## Redis
 
 | Environment | Required? |

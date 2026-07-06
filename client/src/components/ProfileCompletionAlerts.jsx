@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Circle, CheckCircle2, ListChecks } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useIsMobile } from '../hooks/useBreakpoint';
 import { getProfileCompletionIssues } from '../utils/profileCompleteness';
 import { hasCompletedOnboarding } from '../utils/onboardingStorage';
 
@@ -10,6 +11,7 @@ const alertClassName =
 
 export default function ProfileCompletionAlerts() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const checklist = useMemo(() => {
     if (!user) return [];
@@ -37,16 +39,18 @@ export default function ProfileCompletionAlerts() {
       });
     }
 
-    const tourDone = hasCompletedOnboarding(user._id);
-    items.push({
-      id: 'tour',
-      label: 'Complete the product tour',
-      done: tourDone,
-      action: tourDone ? null : 'replay-tour',
-    });
+    if (!isMobile) {
+      const tourDone = hasCompletedOnboarding(user._id);
+      items.push({
+        id: 'tour',
+        label: 'Complete the product tour',
+        done: tourDone,
+        action: tourDone ? null : 'replay-tour',
+      });
+    }
 
     return items;
-  }, [user]);
+  }, [user, isMobile]);
 
   const openTour = useCallback(() => {
     window.dispatchEvent(new CustomEvent('coreknot:replay-onboarding'));

@@ -13,6 +13,8 @@ const tenantSchema = new mongoose.Schema({
   contactEmail: { type: String, required: true },
   plan: { type: String, enum: ['free', 'pro', 'enterprise'], default: 'free' },
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  industry: { type: String, trim: true },
+  teamSize: { type: String, trim: true },
   settings: {
     defaultCurrency: { type: String, default: 'INR' },
     dateFormat: { type: String, default: 'DD/MM/YYYY' },
@@ -29,6 +31,8 @@ const tenantSchema = new mongoose.Schema({
   onboardingProgress: {
     dismissedChecklist: { type: Boolean, default: false },
     completedSteps: [{ type: String }],
+    /** Hide checklist until this time (24h snooze from Dismiss). */
+    checklistSnoozedUntil: { type: Date },
   },
   security: {
     mfaRequired: { type: Boolean, default: false },

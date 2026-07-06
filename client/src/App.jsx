@@ -66,6 +66,7 @@ const TermsOfService = lazyWithRetry(() => import('./pages/legal/TermsOfService'
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
 const OrgPickerPage = lazyWithRetry(() => import('./pages/org/OrgPickerPage'));
 const CreateOrganizationPage = lazyWithRetry(() => import('./pages/org/CreateOrganizationPage'));
+const OrgCreateSuccessPage = lazyWithRetry(() => import('./pages/org/OrgCreateSuccessPage'));
 const TenantInviteAcceptPage = lazyWithRetry(() => import('./pages/org/TenantInviteAcceptPage'));
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
@@ -83,6 +84,7 @@ const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/Newsl
 const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
 const CreateCampaignPage = lazyWithRetry(() => import('./pages/workspace/CreateCampaignPage'));
 const OTPVerificationPage = lazyWithRetry(() => import('./pages/auth/OTPVerificationPage'));
+const OrgChoosePage = lazyWithRetry(() => import('./pages/auth/OrgChoosePage'));
 const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
 const EquipmentPage = lazyWithRetry(() => import('./pages/management/EquipmentPage'));
@@ -182,6 +184,7 @@ const externalAuthRouteElements = (
 
 const marketingAuthRoutes = (
   <>
+    <Route path="/login/choose" element={<OrgChoosePage />} />
     <Route path="/login/*" element={<LoginPage />} />
     <Route path="/register/*" element={<RegisterPage />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -251,6 +254,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/org/pick" element={<OrgPickerPage />} />
             <Route path="/org/create" element={<CreateOrganizationPage />} />
+            <Route path="/org/create/success" element={<OrgCreateSuccessPage />} />
             <Route path="/invites/:token/accept" element={<TenantInviteAcceptPage />} />
             <Route path="/artist-workspace/:id/accept" element={<ArtistMembershipAccept />} />
             <Route
@@ -282,6 +286,7 @@ function App() {
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/developers" element={<DevelopersPage />} />
               </Route>
+              <Route path="/org/settings" element={<Navigate to="/settings?tab=organization" replace />} />
 
               <Route element={<PageRoute page="logs" />}>
                 <Route path="/logs" element={<DailyLogPage />} />

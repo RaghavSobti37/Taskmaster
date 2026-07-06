@@ -1,8 +1,10 @@
+/** ESM entry for Vite client — keep in sync with dateFormatPreference.cjs */
+
 /** @typedef {'auto'|'dmY'|'mdY'|'Ymd'|'dmYDash'|'mdYDash'|'dmYShort'|'mdYShort'} DateFormatPreferenceId */
 
-const PREFERENCE_IDS = ['auto', 'dmY', 'mdY', 'Ymd', 'dmYDash', 'mdYDash', 'dmYShort', 'mdYShort'];
+export const PREFERENCE_IDS = ['auto', 'dmY', 'mdY', 'Ymd', 'dmYDash', 'mdYDash', 'dmYShort', 'mdYShort'];
 
-const PATTERN_MAP = {
+export const PATTERN_MAP = {
   dmY: {
     date: 'dd/MM/yyyy',
     dateShort: 'dd/MM',
@@ -75,7 +77,7 @@ const PATTERN_MAP = {
   },
 };
 
-const CATALOG = [
+export const CATALOG = [
   { id: 'auto', label: 'Automatic (region)', example: '—' },
   { id: 'dmY', label: 'DD/MM/YYYY', example: PATTERN_MAP.dmY.example },
   { id: 'mdY', label: 'MM/DD/YYYY', example: PATTERN_MAP.mdY.example },
@@ -86,7 +88,7 @@ const CATALOG = [
   { id: 'mdYShort', label: 'MM/DD/YY', example: PATTERN_MAP.mdYShort.example },
 ];
 
-function regionDefaultPreference(region = 'en-IN') {
+export function regionDefaultPreference(region = 'en-IN') {
   const r = String(region || 'en-IN');
   if (r === 'en-US' || r.startsWith('en-US')) return 'mdY';
   if (r === 'zh-CN' || r === 'ja-JP' || r === 'ko-KR' || r.startsWith('zh') || r.startsWith('ja') || r.startsWith('ko')) {
@@ -95,18 +97,18 @@ function regionDefaultPreference(region = 'en-IN') {
   return 'dmY';
 }
 
-function resolvePreferenceId(preference, region = 'en-IN') {
+export function resolvePreferenceId(preference, region = 'en-IN') {
   const pref = preference || 'auto';
   if (pref === 'auto') return regionDefaultPreference(region);
   return pref;
 }
 
-function getDateFormatPatterns(preference, region = 'en-IN') {
+export function getDateFormatPatterns(preference, region = 'en-IN') {
   const id = resolvePreferenceId(preference, region);
   return PATTERN_MAP[id] || PATTERN_MAP.dmY;
 }
 
-function getDobPlaceholder(patterns) {
+export function getDobPlaceholder(patterns) {
   const p = patterns?.dobParse || 'dd/MM/yyyy';
   if (p === 'dd/MM/yyyy') return 'DD/MM/YYYY';
   if (p === 'MM/dd/yyyy') return 'MM/DD/YYYY';
@@ -118,22 +120,10 @@ function getDobPlaceholder(patterns) {
   return p.toUpperCase().replace(/d/g, 'D').replace(/y/g, 'Y').replace(/m/g, 'M');
 }
 
-function isValidDateFormatPreference(value) {
+export function isValidDateFormatPreference(value) {
   return PREFERENCE_IDS.includes(value);
 }
 
-function listDateFormatOptions() {
+export function listDateFormatOptions() {
   return CATALOG;
 }
-
-module.exports = {
-  PREFERENCE_IDS,
-  CATALOG,
-  PATTERN_MAP,
-  regionDefaultPreference,
-  resolvePreferenceId,
-  getDateFormatPatterns,
-  getDobPlaceholder,
-  isValidDateFormatPreference,
-  listDateFormatOptions,
-};

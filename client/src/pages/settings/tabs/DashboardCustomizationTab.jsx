@@ -408,12 +408,23 @@ export default function DashboardCustomizationTab() {
     return null;
   };
 
+  const layoutWidgetCount = (elements) => (elements || []).length;
+
   const handleSave = async () => {
     const layoutName = resolveSaveLayoutName();
     if (layoutName) {
       await persistLayout(layoutName);
       return;
     }
+
+    const original = JSON.parse(originalSnapshot || '{}');
+    const sameWidgetCount = layoutWidgetCount(dashboardElements) === layoutWidgetCount(original.elements);
+    const existingName = dashboardPreset?.name?.trim();
+    if (sameWidgetCount && existingName) {
+      await persistLayout(existingName);
+      return;
+    }
+
     setLayoutNameInput('');
     setSaveError('');
     setNameModalOpen(true);

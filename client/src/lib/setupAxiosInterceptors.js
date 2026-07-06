@@ -10,6 +10,11 @@ import { inferModuleFromRoute, SEVERITY } from './systemLogContract';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from '../utils/projectUtils';
 import { normalizeTasks, normalizeSchedulePayload } from '../utils/normalizeTask';
 import { triggerUnauthorized } from './authUnauthorized';
+import {
+  clerkOrgSelectionUrl,
+  isOrgFirstAuthEnabled,
+  loadOrgFirstAuthConfig,
+} from './orgFirstAuth';
 
 const normalizeProjectsInResponse = (url, data) => {
   if (data == null) return data;
@@ -34,6 +39,8 @@ const normalizeProjectsInResponse = (url, data) => {
 
 /** Register global axios interceptors (deferred from App mount to shrink initial JS). */
 export function setupAxiosInterceptors() {
+  void loadOrgFirstAuthConfig();
+
   const reqInterceptor = axios.interceptors.request.use((config) => {
     if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
       config.headers['X-Trace-Id'] = getClientTraceId();
@@ -87,8 +94,8 @@ export function setupAxiosInterceptors() {
       }
       if (status === 409 && error.response?.data?.code === 'NEEDS_TENANT_SELECTION') {
         const path = window.location?.pathname || '';
-        if (!path.startsWith('/org/pick') && !path.startsWith('/org/create')) {
-          window.location.assign('/org/pick');
+        if (!path.startsWith('/org/pick') && !path.startsWith('/org/create') && !path.startsWith('/login/choose')) {
+          window.location.assign(isOrgFirstAuthEnabled() ? clerkOrgSelectionUrl() : '/org/pick');
         }
       }
       if (status >= 500 && import.meta.env.DEV) {

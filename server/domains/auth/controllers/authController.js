@@ -93,7 +93,7 @@ const formatAuthUser = (populated) => attachProfileCompletion(
   populated.toObject ? populated.toObject() : populated
 );
 
-const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
+const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTenantId } = {}) => {
   const { assertLoginAllowed } = require('../../../services/tenantSecurityService');
   try {
     await assertLoginAllowed({ req, user: populated, authMethod });
@@ -108,14 +108,19 @@ const sendAuthSuccess = async (req, res, populated, { authMethod } = {}) => {
   } = require('../../../services/tenantMembershipService');
   await backfillMembershipFromUser(populated);
   const memberships = await listActiveMemberships(populated._id);
-  const activeTenantId = await resolveInitialActiveTenantId(populated._id);
-  const needsTenantSelection = memberships.length > 1 && !activeTenantId;
+  const orgFirst = require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled();
 
-  if (!needsTenantSelection) {
-    await finishAuthSession(req, res, populated._id, activeTenantId);
-  } else {
-    await finishAuthSession(req, res, populated._id, null);
+  let activeTenantId = clerkActiveTenantId ? String(clerkActiveTenantId) : null;
+  if (!activeTenantId && !orgFirst) {
+    activeTenantId = await resolveInitialActiveTenantId(populated._id);
+    if (activeTenantId) activeTenantId = String(activeTenantId);
   }
+
+  const needsTenantSelection = orgFirst
+    ? memberships.length > 0 && !activeTenantId
+    : memberships.length > 1 && !activeTenantId;
+
+  await finishAuthSession(req, res, populated._id, activeTenantId || null);
 
   if (authMethod) {
     const userObj = populated.toObject ? populated.toObject() : populated;
@@ -412,7 +417,10 @@ exports.getMe = async (req, res) => {
     const payload = attachProfileCompletion(req.user);
     payload.memberships = memberships.map(formatMembershipRow);
     payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
-    payload.needsTenantSelection = memberships.length > 1 && !activeTenantId;
+    const orgFirst = require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled();
+    payload.needsTenantSelection = orgFirst
+      ? memberships.length > 0 && !activeTenantId
+      : memberships.length > 1 && !activeTenantId;
     return res.json(payload);
   } catch (error) {
     logger.error('authController', 'getMe failed', { error: error.message || error });
@@ -427,6 +435,7 @@ exports.getAuthConfig = (req, res) => {
   return res.json({
     clerkConfigured: isClerkConfigured(),
     publishableKeyPrefix,
+    orgFirstAuth: require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled(),
     apiGitSha: String(process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || '').slice(0, 7) || 'unknown',
     cookieDomain: process.env.COOKIE_DOMAIN || '.tsccoreknot.com',
   });
@@ -699,6 +708,20 @@ const clerkEstablishSessionHandler = async (req, res) => {
     });
     const tenant = await resolveTenantForOrganization(clerkOrganizationId);
 
+    if (require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled()) {
+      if (!clerkOrganizationId) {
+        return res.status(400).json({
+          error: 'Organization selection required',
+          code: 'NEEDS_ORGANIZATION_SELECTION',
+        });
+      }
+      if (!tenant) {
+        return res.status(403).json({
+          error: 'No workspace found for this organization. Contact your administrator.',
+        });
+      }
+    }
+
     if (shouldEnforceClerkOrganization() && clerkOrganizationId) {
       await ensureClerkOrganizationAccess({
         clerkClient,
@@ -722,7 +745,10 @@ const clerkEstablishSessionHandler = async (req, res) => {
       return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
 
-    return await sendAuthSuccess(req, res, populated, { authMethod: 'clerk' });
+    return await sendAuthSuccess(req, res, populated, {
+      authMethod: 'clerk',
+      clerkActiveTenantId: tenant?._id,
+    });
   } catch (error) {
     if (error?.name === 'JsonWebTokenError' || error?.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Invalid Clerk session' });

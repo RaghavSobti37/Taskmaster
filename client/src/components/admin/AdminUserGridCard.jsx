@@ -3,16 +3,27 @@ import { FileText, Pencil } from 'lucide-react';
 import { Button, StatusBadge, UserAvatar } from '../ui';
 import { isAdminUser } from '../../utils/departmentPermissions';
 
-export default function AdminUserGridCard({ user, onEdit, onViewReport, metaLabel }) {
+export default function AdminUserGridCard({ user, onEdit, onViewReport, metaLabel, selected, onSelectToggle, selectionMode }) {
   const badgeText = metaLabel ?? (user.departmentId?.name || 'Unassigned');
 
   return (
-    <article className="flex flex-col gap-3 p-4 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-action-primary)]/40 transition-colors">
-      <button
-        type="button"
-        onClick={() => onEdit(user)}
-        className="flex items-start gap-3 text-left min-w-0 w-full"
-      >
+    <article className={`flex flex-col gap-3 p-4 rounded-[var(--radius-atomic)] border bg-[var(--color-bg-primary)] hover:border-[var(--color-action-primary)]/40 transition-colors ${selected ? 'border-[var(--color-action-primary)] ring-1 ring-[var(--color-action-primary)]/30' : 'border-[var(--color-bg-border)]'}`}>
+      <div className="flex items-start gap-2">
+        {selectionMode && (
+          <input
+            type="checkbox"
+            className="mt-1 shrink-0"
+            checked={!!selected}
+            onChange={() => onSelectToggle?.(user._id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select ${user.name}`}
+          />
+        )}
+        <button
+          type="button"
+          onClick={() => onEdit(user)}
+          className="flex items-start gap-3 text-left min-w-0 flex-1"
+        >
         <UserAvatar user={user} size="md" className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -24,6 +35,7 @@ export default function AdminUserGridCard({ user, onEdit, onViewReport, metaLabe
           <p className="text-[11px] text-[var(--color-text-muted)] truncate mt-0.5">{user.email}</p>
         </div>
       </button>
+      </div>
       <div className="flex items-center gap-2">
         <Button
           variant="secondary"

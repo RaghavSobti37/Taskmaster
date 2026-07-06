@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, LayoutDashboard, Clock, Target, CalendarDays,
-  Receipt, LogOut, ArrowLeft, Shield, Keyboard, Bell
+  Receipt, LogOut, ArrowLeft, Shield, Keyboard, Bell, Building2
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,6 +22,7 @@ const SETTINGS_TAB_LOADERS = {
   Progress: () => lazyWithRetry(() => import('./tabs/ProgressTab')),
   Leave: () => lazyWithRetry(() => import('./tabs/LeaveTab')),
   Invoice: () => lazyWithRetry(() => import('./tabs/InvoiceTab')),
+  Organization: () => lazyWithRetry(() => import('./tabs/OrganizationTab')),
 };
 
 const settingsTabCache = new Map();
@@ -48,6 +49,7 @@ const SettingsPage = () => {
     { id: 'Progress', icon: Target, label: 'Progress' },
     { id: 'Leave', icon: CalendarDays, label: 'Leave' },
     { id: 'Invoice', icon: Receipt, label: 'Reimbursement' },
+    { id: 'Organization', icon: Building2, label: 'Organization' },
   ];
 
   useEffect(() => {

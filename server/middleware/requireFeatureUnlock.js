@@ -1,5 +1,5 @@
 const Tenant = require('../models/Tenant');
-const { getTenantUnlocks } = require('../services/tenantUnlockService');
+const { getTenantUnlocks, isUnlockAllMode } = require('../services/tenantUnlockService');
 const { planAllowsFeature } = require('../../shared/planLimits');
 
 const FEATURE_ROUTE_MAP = {
@@ -26,6 +26,8 @@ const requireFeatureUnlock = (featureKey) => async (req, res, next) => {
   if (!tenant) {
     return res.status(403).json({ error: 'Organization not found' });
   }
+
+  if (isUnlockAllMode()) return next();
 
   // ponytail: integration tests without enterprise fixtures skip unlock gate
   if (process.env.NODE_ENV === 'test') {

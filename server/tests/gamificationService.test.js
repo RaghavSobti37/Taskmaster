@@ -5,8 +5,23 @@ const User = require('../models/User');
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
 const { computeTimeBasedXp } = require('../../shared/gamificationRules');
+const { ensurePlatformTenant, resetDefaultTenantCache } = require('../utils/defaultTenant');
 
 describe('GamificationService XP resolution', () => {
+  let testTenantId;
+
+  beforeAll(async () => {
+    resetDefaultTenantCache();
+    testTenantId = await ensurePlatformTenant();
+  });
+
+  beforeEach(async () => {
+    await GamificationConfig.deleteMany({ tenantId: testTenantId });
+  });
+
+  const seedGamificationConfig = (overrides = {}) =>
+    GamificationConfig.create({ tenantId: testTenantId, ...overrides });
+
   test('computeTimeBasedXp multiplies hours by rate', () => {
     expect(computeTimeBasedXp(2, 10)).toBe(20);
     expect(computeTimeBasedXp(1.5, 10)).toBe(15);
@@ -14,7 +29,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('resolveLogAmount uses hours × rate for time-based actions', async () => {
-    await GamificationConfig.create({ taskCompletion: 10, dailyLog: 8 });
+    await seedGamificationConfig({ taskCompletion: 10, dailyLog: 8 });
     const config = await GamificationService.getConfigPlain();
 
     expect(GamificationService.resolveLogAmount(config, {
@@ -31,7 +46,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('resolveLogAmount keeps stored amount for legacy time-based logs without hours', async () => {
-    await GamificationConfig.create({ taskCompletion: 25 });
+    await seedGamificationConfig({ taskCompletion: 25 });
     const config = await GamificationService.getConfigPlain();
 
     expect(GamificationService.resolveLogAmount(config, {
@@ -46,7 +61,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('computeActionXp uses task hours for COMPLETE_TASK', async () => {
-    await GamificationConfig.create({ taskCompletion: 10 });
+    await seedGamificationConfig({ taskCompletion: 10 });
     const config = await GamificationService.getConfig();
 
     expect(GamificationService.computeActionXp(config, 'COMPLETE_TASK', { hours: 2 })).toBe(20);
@@ -60,14 +75,14 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('getExpForLevel uses linear stepXp without rounding to 100', async () => {
-    await GamificationConfig.create({ stepXp: 150 });
+    await seedGamificationConfig({ stepXp: 150 });
     expect(await GamificationService.getExpForLevel(1)).toBe(0);
     expect(await GamificationService.getExpForLevel(2)).toBe(150);
     expect(await GamificationService.getExpForLevel(3)).toBe(300);
   });
 
   test('getLevelFromExp aligns with getExpForLevel thresholds', async () => {
-    await GamificationConfig.create({ stepXp: 150 });
+    await seedGamificationConfig({ stepXp: 150 });
     expect(await GamificationService.getLevelFromExp(0)).toBe(1);
     expect(await GamificationService.getLevelFromExp(149)).toBe(1);
     expect(await GamificationService.getLevelFromExp(150)).toBe(2);
@@ -76,7 +91,7 @@ describe('GamificationService XP resolution', () => {
 
   test('syncAuditLogAmountsFromConfig updates time-based audit amounts from hours', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10, dailyLog: 8 });
+    await seedGamificationConfig({ taskCompletion: 10, dailyLog: 8 });
     await XPAuditLog.create({
       userId,
       action: 'COMPLETE_TASK',
@@ -102,7 +117,7 @@ describe('GamificationService XP resolution', () => {
 
   test('syncAuditLogAmountsFromConfig applies manual daily log overtime on rate change', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ dailyLog: 10 });
+    await seedGamificationConfig({ dailyLog: 10 });
     await XPAuditLog.create({
       userId,
       action: 'DAILY_LOG',
@@ -110,7 +125,7 @@ describe('GamificationService XP resolution', () => {
       details: { hours: 10, logId: new mongoose.Types.ObjectId() },
     });
 
-    await GamificationConfig.updateOne({}, { dailyLog: 12 });
+    await GamificationConfig.updateOne({ tenantId: testTenantId }, { dailyLog: 12 });
     const sync = await GamificationService.syncAuditLogAmountsFromConfig({ log: false });
     expect(sync.updatedLogs).toBe(1);
 
@@ -184,7 +199,7 @@ describe('GamificationService XP resolution', () => {
   test('sync backfills task hours when audit row omits details.hours', async () => {
     const userId = new mongoose.Types.ObjectId();
     const taskId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10 });
+    await seedGamificationConfig({ taskCompletion: 10 });
     await Task.collection.insertOne({
       _id: taskId,
       title: 'Backfill task',
@@ -222,7 +237,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('resolveLogAmount uses hours x rate when hours present', async () => {
-    await GamificationConfig.create({ taskCompletion: 20 });
+    await seedGamificationConfig({ taskCompletion: 20 });
     const config = await GamificationService.getConfigPlain();
     const amount = GamificationService.resolveLogAmount(config, {
       action: 'COMPLETE_TASK',
@@ -233,7 +248,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('resolveLogAmount caps legacy inflated COMPLETE_TASK without hours', async () => {
-    await GamificationConfig.create({ taskCompletion: 20 });
+    await seedGamificationConfig({ taskCompletion: 20 });
     const config = await GamificationService.getConfigPlain();
     const amount = GamificationService.resolveLogAmount(config, {
       action: 'COMPLETE_TASK',
@@ -245,7 +260,7 @@ describe('GamificationService XP resolution', () => {
 
   test('buildWeeklyGroupedBreakdown groups task completions together', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 20 });
+    await seedGamificationConfig({ taskCompletion: 20 });
     const config = await GamificationService.getConfigPlain();
     const logs = [
       { userId, action: 'COMPLETE_TASK', amount: 20, details: { hours: 1 } },
@@ -265,7 +280,7 @@ describe('GamificationService XP resolution', () => {
 
   test('aggregateWeeklyXpFromLogs dedupes entity-scoped actions before summing', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ attendanceLog: 10 });
+    await seedGamificationConfig({ attendanceLog: 10 });
     const config = await GamificationService.getConfigPlain();
     const weekStart = new Date('2026-06-02T00:00:00Z');
     const weekEnd = new Date('2026-06-08T23:59:59Z');
@@ -315,7 +330,7 @@ describe('GamificationService XP resolution', () => {
 
   test('recalculateAllUsersFromConfig syncs user exp from time-based audit history', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10, stepXp: 100 });
+    await seedGamificationConfig({ taskCompletion: 10, stepXp: 100 });
     await User.create({ _id: userId, name: 'Test User', email: 'xp@test.com', exp: 15, level: 1 });
     await XPAuditLog.create({
       userId,
@@ -330,7 +345,7 @@ describe('GamificationService XP resolution', () => {
       details: { hours: 1 },
     });
 
-    await GamificationConfig.updateOne({}, { taskCompletion: 12 });
+    await GamificationConfig.updateOne({ tenantId: testTenantId }, { taskCompletion: 12 });
 
     const result = await GamificationService.recalculateAllUsersFromConfig();
     expect(result.updatedUsers).toBe(1);
@@ -341,7 +356,7 @@ describe('GamificationService XP resolution', () => {
 
   test('recalculateAllUsersFromConfig is idempotent on second run', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10, stepXp: 100 });
+    await seedGamificationConfig({ taskCompletion: 10, stepXp: 100 });
     await User.create({ _id: userId, name: 'Idem User', email: 'idem-xp@test.com', exp: 0, level: 1 });
     await XPAuditLog.create({
       userId,
@@ -361,7 +376,7 @@ describe('GamificationService XP resolution', () => {
   });
 
   test('computeActionXp clamps inflated hours to max per event', async () => {
-    await GamificationConfig.create({ taskCompletion: 15, dailyLog: 10 });
+    await seedGamificationConfig({ taskCompletion: 15, dailyLog: 10 });
     const config = await GamificationService.getConfig();
     expect(GamificationService.computeActionXp(config, 'COMPLETE_TASK', { hours: 100 })).toBe(180);
     expect(GamificationService.computeActionXp(config, 'DAILY_LOG', { hours: 50 })).toBe(140);
@@ -413,7 +428,7 @@ describe('GamificationService XP resolution', () => {
   test('DAILY_LOG daily cap blocks sixth manual award same day', async () => {
     const userId = new mongoose.Types.ObjectId();
     await User.create({ _id: userId, name: 'Cap', email: 'cap@test.com', exp: 0, level: 1 });
-    await GamificationConfig.create({ dailyLog: 10 });
+    await seedGamificationConfig({ dailyLog: 10 });
 
     const awards = [];
     for (let i = 0; i < 6; i += 1) {
@@ -434,7 +449,7 @@ describe('GamificationService XP resolution', () => {
   test('DAILY_LOG daily cap ignores awards without logId (non-manual)', async () => {
     const userId = new mongoose.Types.ObjectId();
     await User.create({ _id: userId, name: 'Cap2', email: 'cap2@test.com', exp: 0, level: 1 });
-    await GamificationConfig.create({ dailyLog: 10 });
+    await seedGamificationConfig({ dailyLog: 10 });
     await XPAuditLog.create({
       userId,
       action: 'DAILY_LOG',
@@ -468,7 +483,7 @@ describe('GamificationService XP resolution', () => {
 
   test('getMonthlyLeaderboard resolves time-based amounts from stored hours', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10 });
+    await seedGamificationConfig({ taskCompletion: 10 });
     const { monthStart } = require('../utils/attendanceDate').getCurrentMonthRange();
 
     await XPAuditLog.create({
@@ -487,7 +502,7 @@ describe('GamificationService XP resolution', () => {
 
   test('getWeeklyLeaderboard resolves time-based amounts from stored hours', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await GamificationConfig.create({ taskCompletion: 10 });
+    await seedGamificationConfig({ taskCompletion: 10 });
     const { weekStart } = require('../utils/attendanceDate').getCurrentWeekRange();
 
     await XPAuditLog.create({

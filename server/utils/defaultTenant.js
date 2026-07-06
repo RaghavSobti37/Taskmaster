@@ -19,6 +19,10 @@ async function resolveDefaultTenantId() {
     return cachedDefaultTenantId;
   }
 
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('WEBHOOK_TENANT_ID or DEFAULT_TENANT_ID required in production when tenant context is missing');
+  }
+
   const Tenant = require('../models/Tenant');
   const tenantLookup = { bypassTenant: true };
   let tenant = await Tenant.findOne({ status: 'active' }).sort({ createdAt: 1 }).setOptions(tenantLookup).lean();

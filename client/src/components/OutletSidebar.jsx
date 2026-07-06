@@ -24,7 +24,6 @@ import {
   Building2,
   CircleDollarSign,
   Shield,
-  Lock,
 } from 'lucide-react';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -139,7 +138,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
   const navTitle = iconOnly ? label : undefined;
   const isLocked = Boolean(featureLock);
 
-  const itemClassName = `tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''} ${isLocked ? 'tm-sidebar-nav-item--locked opacity-75' : ''}`;
+  const itemClassName = `tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''} ${isLocked ? 'tm-sidebar-nav-item--locked' : ''}`;
 
   const itemBody = (
     <>
@@ -171,9 +170,6 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
           )}
         </>
       )}
-      {isLocked && (
-        <Lock size={12} className="shrink-0 text-[var(--color-text-muted)]" aria-hidden />
-      )}
     </>
   );
 
@@ -183,10 +179,10 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
         type="button"
         onClick={(event) => {
           onClick?.(event);
-          onLockedClick?.(featureLock);
+          onLockedClick?.(featureLock, to);
         }}
         onMouseEnter={onMouseEnter}
-        title={featureLock?.lockedReason || navTitle}
+        title={featureLock?.navTooltip || featureLock?.lockedReason || navTitle}
         aria-label={`${label} — locked`}
         className={itemClassName}
       >
@@ -351,7 +347,7 @@ const OutletSidebar = () => {
           key={page.path}
           to={navPath}
           featureLock={featureLock}
-          onLockedClick={(lock) => navigate(lock?.unlockPath || '/dashboard')}
+          onLockedClick={(lock, navTo) => navigate(lock?.navPath || navTo || '/dashboard')}
           icon={config.icon}
           label={page.label || config.label}
           iconTone={NAV_ICON_TONES[page.path]}

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 const { VALID_DASHBOARD_COMPONENT_IDS } = require('../utils/dashboardComponents');
 
 const dashboardPresetSchema = new mongoose.Schema({
@@ -6,8 +7,6 @@ const dashboardPresetSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
   },
   name: {
     type: String,
@@ -92,7 +91,9 @@ const dashboardPresetSchema = new mongoose.Schema({
   collection: 'dashboardPresets'
 });
 
-dashboardPresetSchema.index({ userId: 1, createdAt: -1 });
+dashboardPresetSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
+dashboardPresetSchema.index({ tenantId: 1, userId: 1, createdAt: -1 });
+dashboardPresetSchema.plugin(tenantPlugin);
 
 // Department presets (static)
 const DEPARTMENT_PRESETS = {

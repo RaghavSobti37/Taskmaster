@@ -93,18 +93,26 @@ describe('resolveUserFromClerkProfile', () => {
   afterEach(async () => {
     process.env.CLERK_SECRET_KEY = originalSecret;
     process.env.NODE_ENV = originalNodeEnv;
+    delete process.env.DEFAULT_TENANT_ID;
+    const { resetDefaultTenantCache } = require('../utils/defaultTenant');
+    resetDefaultTenantCache();
     await User.deleteMany({ email: 'clerk-new@example.com' });
     await Tenant.deleteMany({ name: 'Default Tenant' });
+    await Tenant.deleteMany({ name: 'Clerk Auth Tenant' });
     jest.clearAllMocks();
   });
 
   it('creates a user with default tenant in production when tenant context is missing', async () => {
     process.env.NODE_ENV = 'production';
+    const { resetDefaultTenantCache, resolveDefaultTenantId } = require('../utils/defaultTenant');
     const tenant = await Tenant.create({
       name: 'Clerk Auth Tenant',
       contactEmail: 'clerk-auth@test.com',
       status: 'active',
     });
+    process.env.DEFAULT_TENANT_ID = String(tenant._id);
+    resetDefaultTenantCache();
+    expect(String(await resolveDefaultTenantId())).toBe(String(tenant._id));
 
     const profile = {
       clerkUserId: 'user_clerk_new',

@@ -52,7 +52,6 @@ export const HUB_CONFIG = {
       'admin_scripts',
       'admin_gamification',
       'admin_project_analytics',
-      'admin_audit_log',
       'admin_developers',
     ],
     tiles: [
@@ -107,17 +106,6 @@ export const HUB_CONFIG = {
         description: 'Curate media listings and published assets',
       },
       {
-        id: 'security-audit',
-        label: 'Security Audit',
-        path: '/admin/security-audit',
-        key: 'admin_data',
-        icon: 'ScrollText',
-        section: 'access-control',
-        accent: 'blue',
-        description: 'Finance, permissions, and admin mutation audit trail',
-        platformAdmin: true,
-      },
-      {
         id: 'tenant-sso',
         label: 'Tenant SSO',
         path: '/admin/tenant-sso',
@@ -129,16 +117,6 @@ export const HUB_CONFIG = {
         riskLevel: 'caution',
         platformAdmin: true,
         setupRequiredKey: 'sso',
-      },
-      {
-        id: 'audit-log',
-        label: 'Audit Log',
-        path: '/admin/audit-log',
-        key: 'admin_audit_log',
-        icon: 'ScrollText',
-        section: 'access-control',
-        accent: 'blue',
-        description: 'Organization security and admin mutation audit trail',
       },
       {
         id: 'developers',

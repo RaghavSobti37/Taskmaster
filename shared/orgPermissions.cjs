@@ -30,8 +30,11 @@ const canDeleteOrganization = ({ user, membership, tenant } = {}) => {
   return Boolean(ownerId && uid && userIdStr(ownerId) === uid);
 };
 
+const canManageBilling = (ctx) => canManageOrganizationSettings(ctx);
+
 module.exports = {
   canManageOrganizationSettings,
+  canManageBilling,
   canDeleteOrganization,
   isDepartmentAdmin,
 };

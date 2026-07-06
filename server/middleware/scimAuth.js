@@ -1,5 +1,6 @@
 const Tenant = require('../models/Tenant');
 const { verifyScimBearer } = require('../services/tenantSecurityService');
+const { runWithContext } = require('../utils/tenantContext');
 const asyncHandler = require('./asyncHandler');
 
 const scimAuth = asyncHandler(async (req, res, next) => {
@@ -25,7 +26,7 @@ const scimAuth = asyncHandler(async (req, res, next) => {
   }
   req.tenantId = tenant._id;
   req.scimTenant = tenant;
-  return next();
+  return runWithContext({ tenantId: String(tenant._id) }, () => next());
 });
 
 module.exports = { scimAuth };

@@ -1,7 +1,7 @@
 # CoreKnot Memory Index
 
 > **Start here.** Self-contained project memory for agents and developers.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-05
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-06
 
 **Every agent chat:** read this file → [recent-changes](changelog/recent-changes.md) → [session-patterns](changelog/session-patterns.md) → [MEMORY_PROTOCOL](MEMORY_PROTOCOL.md)
 
@@ -24,7 +24,7 @@
 
 | Doc | Contents |
 | --- | --- |
-| [**docs/reference/COREKNOT_MASTER.md**](../../docs/reference/COREKNOT_MASTER.md) | **1,700+ lines** — auto-generated page catalog + routing rules |
+| [**docs/reference/COREKNOT_MASTER.md**](../../docs/reference/COREKNOT_MASTER.md) | **2,000+ lines** — auto-generated page catalog + routing rules |
 | Regenerate | `node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs` |
 
 ---

@@ -7,7 +7,6 @@ const ROUTE_ALLOWLIST = new Set([
   'track.js',
   'campaignRoutes.js',
   'campaignApiRouter.js',
-  'calendarRoutes.js',
   'attendanceRoutes.js',
 ]);
 

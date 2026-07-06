@@ -14,38 +14,55 @@ const {
 } = require('../utils/dashboardComponents');
 const { getCache, setCache, deleteCache } = require('../services/cacheService');
 
-const shortcutCacheKey = (userId) => `customization:shortcuts:v1:${userId}`;
+const shortcutCacheKey = (userId, tenantId) => `customization:shortcuts:v1:${tenantId || 'no-tenant'}:${userId}`;
 const SHORTCUT_CACHE_TTL_SECONDS = 120;
+const requestTenantId = (req) => req.tenantId || req.user?.activeTenantId || req.user?.tenantId;
 
-// ============ DASHBOARD ENDPOINTS ============
+const DEFAULT_DASHBOARD_ELEMENTS = [
+  { componentId: 'leaderboard', size: '1', col: 1, row: 1, order: 1, visible: true },
+  { componentId: 'announcements', size: '1', col: 2, row: 1, order: 2, visible: true },
+  { componentId: 'pinboard', size: '1', col: 3, row: 1, order: 3, visible: true },
+  { componentId: 'schedule', size: '1', col: 4, row: 1, order: 4, visible: true },
+  { componentId: 'review-queue', size: '2', col: 1, row: 2, order: 5, visible: true },
+  { componentId: 'todos-overdue', size: '2', col: 3, row: 2, order: 6, visible: true },
+  { componentId: 'todos-today', size: '2', col: 1, row: 3, order: 7, visible: true },
+  { componentId: 'projects-today', size: '4', col: 1, row: 4, order: 8, visible: true },
+  { componentId: 'notes', size: '2', col: 1, row: 5, order: 9, visible: true },
+  { componentId: 'composer', size: '2', col: 3, row: 5, order: 10, visible: true },
+];
+
+async function ensureDashboardPreset(userId, tenantId) {
+  let preset = await DashboardPreset.findOne({ userId });
+
+  if (preset) return preset;
+
+  const createPayload = {
+    userId,
+    name: 'My Dashboard',
+    department: 'custom',
+    elements: DEFAULT_DASHBOARD_ELEMENTS,
+    ...(tenantId ? { tenantId } : {}),
+  };
+
+  try {
+    preset = await DashboardPreset.create(createPayload);
+    return preset;
+  } catch (err) {
+    if (err?.code === 11000) {
+      const existing = await DashboardPreset.findOne({ userId, tenantId }).setOptions({ bypassTenant: true });
+      if (existing) return existing;
+    }
+    throw err;
+  }
+}
 
 /** Get user's current dashboard preset */
 exports.getDashboardPreset = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tenantId = req.tenantId || req.user?.activeTenantId || req.user?.tenantId;
 
-    let preset = await DashboardPreset.findOne({ userId });
-
-    if (!preset) {
-      // Create default preset on first access
-      preset = await DashboardPreset.create({
-        userId,
-        name: 'My Dashboard',
-        department: 'custom',
-        elements: [
-          { componentId: 'leaderboard', size: '1', col: 1, row: 1, order: 1, visible: true },
-          { componentId: 'announcements', size: '1', col: 2, row: 1, order: 2, visible: true },
-          { componentId: 'pinboard', size: '1', col: 3, row: 1, order: 3, visible: true },
-          { componentId: 'schedule', size: '1', col: 4, row: 1, order: 4, visible: true },
-          { componentId: 'review-queue', size: '2', col: 1, row: 2, order: 5, visible: true },
-          { componentId: 'todos-overdue', size: '2', col: 3, row: 2, order: 6, visible: true },
-          { componentId: 'todos-today', size: '2', col: 1, row: 3, order: 7, visible: true },
-          { componentId: 'projects-today', size: '4', col: 1, row: 4, order: 8, visible: true },
-          { componentId: 'notes', size: '2', col: 1, row: 5, order: 9, visible: true },
-          { componentId: 'composer', size: '2', col: 3, row: 5, order: 10, visible: true }
-        ]
-      });
-    }
+    const preset = await ensureDashboardPreset(userId, tenantId);
 
     const presetObj = preset.toObject ? preset.toObject() : preset;
     res.json({
@@ -62,6 +79,7 @@ exports.getDashboardPreset = async (req, res, next) => {
 exports.saveDashboardPreset = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tenantId = requestTenantId(req);
     const { name, layoutName, elements, department, layoutVersion, sectionState } = req.body;
     const savedLayoutName = (layoutName || name || '').trim();
 
@@ -108,13 +126,16 @@ exports.saveDashboardPreset = async (req, res, next) => {
     const preset = await DashboardPreset.findOneAndUpdate(
       { userId },
       {
-        name: savedLayoutName,
-        elements: sortedElements,
-        department: department || 'custom',
-        ...(layoutVersion != null ? { layoutVersion } : {}),
-        ...(sectionState && typeof sectionState === 'object' ? { sectionState } : {}),
-        presets,
-        updatedAt: new Date(),
+        $set: {
+          name: savedLayoutName,
+          elements: sortedElements,
+          department: department || 'custom',
+          ...(layoutVersion != null ? { layoutVersion } : {}),
+          ...(sectionState && typeof sectionState === 'object' ? { sectionState } : {}),
+          presets,
+          updatedAt: new Date(),
+        },
+        ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
       { new: true, upsert: true }
     );
@@ -178,6 +199,7 @@ exports.loadSavedLayout = async (req, res, next) => {
 exports.loadDepartmentPreset = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tenantId = requestTenantId(req);
     const { department } = req.params;
 
     if (!DEPARTMENT_PRESETS[department]) {
@@ -187,8 +209,11 @@ exports.loadDepartmentPreset = async (req, res, next) => {
     const preset = await DashboardPreset.findOneAndUpdate(
       { userId },
       {
-        ...DEPARTMENT_PRESETS[department],
-        updatedAt: new Date()
+        $set: {
+          ...DEPARTMENT_PRESETS[department],
+          updatedAt: new Date(),
+        },
+        ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
       { new: true, upsert: true }
     );
@@ -297,7 +322,8 @@ function sanitizeShortcutBindings(raw = {}) {
 exports.getShortcutPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const cacheKey = shortcutCacheKey(userId);
+    const tenantId = requestTenantId(req);
+    const cacheKey = shortcutCacheKey(userId, tenantId);
     const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
@@ -309,7 +335,7 @@ exports.getShortcutPreferences = async (req, res, next) => {
         doc = await ShortcutPreference.create({ userId, bindings: {} });
       } catch (error) {
         if (error.code !== 11000) throw error;
-        doc = await ShortcutPreference.findOne({ userId }).setOptions({ bypassTenant: true });
+        doc = await ShortcutPreference.findOne({ userId, tenantId }).setOptions({ bypassTenant: true });
         if (!doc) throw error;
       }
     }
@@ -334,6 +360,7 @@ exports.getShortcutPreferences = async (req, res, next) => {
 exports.saveShortcutPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tenantId = req.tenantId || req.user?.activeTenantId || req.user?.tenantId;
     const { bindings } = req.body;
 
     if (!bindings || typeof bindings !== 'object') {
@@ -344,12 +371,15 @@ exports.saveShortcutPreferences = async (req, res, next) => {
 
     const doc = await ShortcutPreference.findOneAndUpdate(
       { userId },
-      { bindings: sanitized, updatedAt: new Date() },
+      {
+        $set: { bindings: sanitized, updatedAt: new Date() },
+        ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
+      },
       { new: true, upsert: true }
     );
 
     const overrides = doc.bindings || {};
-    await deleteCache(shortcutCacheKey(userId));
+    await deleteCache(shortcutCacheKey(userId, tenantId));
     res.json({
       bindings: overrides,
       effectiveBindings: mergeShortcutBindings(overrides),
@@ -365,14 +395,18 @@ exports.saveShortcutPreferences = async (req, res, next) => {
 exports.resetShortcutPreferences = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const tenantId = requestTenantId(req);
 
     const doc = await ShortcutPreference.findOneAndUpdate(
       { userId },
-      { bindings: {}, updatedAt: new Date() },
+      {
+        $set: { bindings: {}, updatedAt: new Date() },
+        ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
+      },
       { new: true, upsert: true }
     );
 
-    await deleteCache(shortcutCacheKey(userId));
+    await deleteCache(shortcutCacheKey(userId, tenantId));
     res.json({
       bindings: {},
       effectiveBindings: mergeShortcutBindings({}),

@@ -74,8 +74,14 @@ async function resolveCreatorUser(preferredUserId) {
   return any;
 }
 
-async function seedMusicContentCalendar({ year = new Date().getFullYear(), dryRun = false, creatorUserId } = {}) {
+async function seedMusicContentCalendar({
+  year = new Date().getFullYear(),
+  dryRun = false,
+  creatorUserId,
+  tenantId,
+} = {}) {
   const creator = await resolveCreatorUser(creatorUserId);
+  const scopedTenantId = tenantId || creator.tenantId;
   let created = 0;
   let skipped = 0;
   let updated = 0;
@@ -86,15 +92,21 @@ async function seedMusicContentCalendar({ year = new Date().getFullYear(), dryRu
     const dayStart = startOfDayFromKey(dateKey);
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-    const existing = await CalendarEvent.findOne({
+    const existingQuery = {
       title,
       date: { $gte: dayStart, $lt: dayEnd },
-    }).setOptions(BYPASS).select('_id title tenantId eventType visibility');
+    };
+    if (scopedTenantId) existingQuery.tenantId = scopedTenantId;
+
+    const existing = await (scopedTenantId
+      ? CalendarEvent.findOne(existingQuery)
+      : CalendarEvent.findOne(existingQuery).setOptions(BYPASS)
+    ).select('_id title tenantId eventType visibility');
 
     if (existing) {
       const needsPatch = existing.eventType !== 'musical_day'
         || existing.visibility !== 'public'
-        || (creator.tenantId && String(existing.tenantId) !== String(creator.tenantId));
+        || (scopedTenantId && String(existing.tenantId) !== String(scopedTenantId));
       if (needsPatch && !dryRun) {
         await CalendarEvent.updateOne(
           { _id: existing._id },
@@ -102,10 +114,10 @@ async function seedMusicContentCalendar({ year = new Date().getFullYear(), dryRu
             $set: {
               eventType: 'musical_day',
               visibility: 'public',
-              ...(creator.tenantId ? { tenantId: creator.tenantId } : {}),
+              ...(scopedTenantId ? { tenantId: scopedTenantId } : {}),
             },
           }
-        ).setOptions(BYPASS);
+        ).setOptions(scopedTenantId ? {} : BYPASS);
         updated += 1;
       } else {
         skipped += 1;
@@ -128,7 +140,7 @@ async function seedMusicContentCalendar({ year = new Date().getFullYear(), dryRu
       workspace: '',
       projectId: null,
       createdBy: creator._id,
-      ...(creator.tenantId ? { tenantId: creator.tenantId } : {}),
+      ...(scopedTenantId ? { tenantId: scopedTenantId } : {}),
     });
 
     created += 1;
@@ -140,7 +152,7 @@ async function seedMusicContentCalendar({ year = new Date().getFullYear(), dryRu
     created,
     updated,
     skipped,
-    creator: { id: creator._id, name: creator.name, tenantId: creator.tenantId },
+    creator: { id: creator._id, name: creator.name, tenantId: scopedTenantId || creator.tenantId },
   };
 }
 

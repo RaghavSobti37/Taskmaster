@@ -125,6 +125,12 @@ function registerRoutes(app) {
   app.use(traceMiddleware);
   app.use('/api', apiIdempotency);
 
+  const { rejectClientTenantSpoof } = require('../middleware/rejectClientTenantSpoof');
+  app.use('/api', (req, res, next) => {
+    if (!req.tenantId && !req.user?.tenantId) return next();
+    return rejectClientTenantSpoof(req, res, next);
+  });
+
   // --- Auth (pre-logger) ---
   app.use('/api/auth', require('../domains/auth/routes'));
   app.use('/api/v1/sync', require('../routes/syncRoutes'));
@@ -148,19 +154,28 @@ function registerRoutes(app) {
   // --- Webhooks & tracking (public, rate-limited) ---
   app.use(require('../routes/track'));
   app.post('/api/crm/unsubscribe', crmUnsubscribeLimiter, asyncHandler(async (req, res) => {
-    const { email, reason } = req.body;
+    const { email, reason, tenantSlug, orgSlug } = req.body;
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ error: 'Email required' });
+    }
+    const slug = String(tenantSlug || orgSlug || '').trim().toLowerCase();
+    if (!slug) {
+      return res.status(400).json({ error: 'tenantSlug required' });
+    }
+    const Tenant = require('../models/Tenant');
+    const tenant = await Tenant.findOne({ slug }).setOptions({ bypassTenant: true }).lean();
+    if (!tenant) {
+      return res.status(404).json({ error: 'Organization not found' });
     }
     const cleanEmail = email.toLowerCase().trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
     const Lead = require('../domains/crm/models/Lead');
-    const leadDoc = await Lead.findOne({ email: cleanEmail });
+    const leadDoc = await Lead.findOne({ email: cleanEmail, tenantId: tenant._id });
     const leadName = leadDoc ? leadDoc.name : '';
     await Lead.updateMany(
-      { email: cleanEmail },
+      { email: cleanEmail, tenantId: tenant._id },
       { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } },
     );
     const { syncUnsubscribeToSheet } = require('../services/holySheetService');

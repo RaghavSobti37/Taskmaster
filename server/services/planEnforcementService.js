@@ -1,7 +1,7 @@
 const Tenant = require('../models/Tenant');
 const TenantMembership = require('../models/TenantMembership');
 const TenantUsage = require('../models/TenantUsage');
-const { getPlanLimits } = require('../../shared/planLimits');
+const { getPlanLimits } = require('../../shared/planLimits.cjs');
 const { isUnlockAllMode } = require('./tenantUnlockService');
 
 function currentPeriodKey(date = new Date()) {

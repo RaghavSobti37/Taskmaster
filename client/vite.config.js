@@ -95,6 +95,12 @@ export default defineConfig(({ mode }) => {
   const posthogApiTarget = `https://${posthogRegion}.i.posthog.com`
   const posthogAssetsTarget = `https://${posthogRegion}-assets.i.posthog.com`
   const isAuthBuild = mode === 'auth'
+  // ponytail: COEP blocks Razorpay checkout iframe — only enable for OPFS local-first dev
+  const isolatedForOpfs = env.VITE_LOCAL_FIRST === 'true'
+  const crossOriginDevHeaders = {
+    'Cross-Origin-Opener-Policy': isolatedForOpfs ? 'same-origin' : 'same-origin-allow-popups',
+    ...(isolatedForOpfs ? { 'Cross-Origin-Embedder-Policy': 'credentialless' } : {}),
+  }
 
   return {
   // ponytail: Vercel/Clerk docs often set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY — expose alongside VITE_
@@ -184,10 +190,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-    },
+    headers: crossOriginDevHeaders,
     // OneDrive on Windows rewrites mtimes on synced files (public/ and src/) → spurious full reloads.
     watch: {
       // Collapse OneDrive double-touch / sync churn into a single reload per real save.
@@ -272,10 +275,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-    },
+    headers: crossOriginDevHeaders,
     proxy: {
       // Strangler: VITE_NEST_ATTENDANCE=true or VITE_ATTENDANCE_PROXY=http://127.0.0.1:5001
       '/api/attendance': {

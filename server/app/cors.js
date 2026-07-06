@@ -47,6 +47,8 @@ const corsOptions = {
     'X-Requested-With',
     'x-skip-toast',
     'X-Skip-Toast',
+    'x-silent-auth-probe',
+    'X-Silent-Auth-Probe',
     'X-Trace-Id',
     'x-trace-id',
     'x-uploadthing-package',

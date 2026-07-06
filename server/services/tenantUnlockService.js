@@ -1,52 +1,44 @@
 const Tenant = require('../models/Tenant');
+const { getPlanLimits } = require('../../shared/planLimits.cjs');
 
 const DEFAULT_UNLOCKS = {
-  resend: false,
-  google: false,
-  meta: false,
-  knowledgeEngine: false,
-  finance: false,
-  artistOs: false,
-  integrations: false,
+  resend: true,
+  google: true,
+  meta: true,
+  knowledgeEngine: true,
+  finance: true,
+  artistOs: true,
+  integrations: true,
 };
 
-const ALL_UNLOCKED = Object.fromEntries(Object.keys(DEFAULT_UNLOCKS).map((k) => [k, true]));
+const ALL_UNLOCKED = { ...DEFAULT_UNLOCKS };
 
 function isBillingConfigured() {
-  return Boolean(
-    String(process.env.STRIPE_SECRET_KEY || '').trim()
-    || String(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
-  );
+  return false;
 }
 
-/** ponytail: open all features until Stripe billing is wired (or explicit env override). */
 function isUnlockAllMode() {
-  const flag = String(process.env.FEATURE_UNLOCK_ALL || '').trim().toLowerCase();
-  if (flag === 'true') return true;
-  if (flag === 'false') return false;
-  if (process.env.NODE_ENV === 'test') return false;
-  return !isBillingConfigured();
+  return true;
 }
 
-const evaluateUnlocks = async (tenant) => {
-  if (isUnlockAllMode()) return { ...ALL_UNLOCKED };
-  const base = { ...DEFAULT_UNLOCKS, ...(tenant?.featureUnlocks || {}) };
-  const progress = tenant?.onboardingProgress?.completedSteps || [];
+const evaluateUnlocks = async () => ({ ...ALL_UNLOCKED });
 
-  if (progress.includes('first_project')) base.finance = true;
-  if (progress.includes('resend_domain')) base.resend = true;
-  if (progress.includes('google_connected')) base.google = true;
-  if (progress.includes('integrations_connected')) base.integrations = true;
+function buildFeatureLocks() {
+  return {};
+}
 
-  return base;
-};
-
-const getTenantUnlocks = async (tenantId) => {
-  if (isUnlockAllMode()) return { ...ALL_UNLOCKED };
+async function getTenantUnlockState(tenantId) {
   const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
-  if (!tenant) return DEFAULT_UNLOCKS;
-  return evaluateUnlocks(tenant);
-};
+  const plan = tenant?.plan || 'free';
+  return {
+    plan,
+    limits: getPlanLimits(plan),
+    unlocks: { ...ALL_UNLOCKED },
+    locks: {},
+  };
+}
+
+const getTenantUnlocks = async () => ({ ...ALL_UNLOCKED });
 
 module.exports = {
   DEFAULT_UNLOCKS,
@@ -54,5 +46,7 @@ module.exports = {
   isBillingConfigured,
   isUnlockAllMode,
   evaluateUnlocks,
+  buildFeatureLocks,
+  getTenantUnlockState,
   getTenantUnlocks,
 };

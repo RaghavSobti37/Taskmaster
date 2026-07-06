@@ -6,7 +6,6 @@ const shortcutPreferenceSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
     index: true,
   },
   /** Sparse overrides: actionId -> { keys: string[] } or null (disabled) */
@@ -23,5 +22,6 @@ const shortcutPreferenceSchema = new mongoose.Schema({
 });
 
 shortcutPreferenceSchema.plugin(tenantPlugin);
+shortcutPreferenceSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model('ShortcutPreference', shortcutPreferenceSchema);

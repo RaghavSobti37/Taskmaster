@@ -11,6 +11,7 @@ import {
   resolveNavAccessKey,
 
   NAV_PATH_ACCESS,
+  getNavFeatureLock,
 
 } from './navPageAccess';
 
@@ -47,6 +48,7 @@ describe('navPageAccess', () => {
     expect(NAV_PATH_ACCESS['/workflows']).toBe('workflows');
 
     expect(NAV_PATH_ACCESS['/settings']).toBe('settings');
+    expect(NAV_PATH_ACCESS['/developers']).toBe('admin_developers');
 
     expect(NAV_PATH_ACCESS['/admin/artist-path']).toBe('admin_artist_path');
 
@@ -61,6 +63,7 @@ describe('navPageAccess', () => {
     expect(resolveNavAccessKey('/projects/abc123')).toBe('projects');
 
     expect(resolveNavAccessKey('/campaign/foo')).toBe('campaigns');
+    expect(resolveNavAccessKey('/developers')).toBe('admin_developers');
 
     expect(resolveNavAccessKey('/unknown-page')).toBeNull();
 
@@ -132,6 +135,12 @@ describe('navPageAccess', () => {
 
     expect(filtered.map((a) => a.id)).toEqual(['quick-note']);
 
+  });
+
+  it('does not lock nav items when paywalls are removed', () => {
+    expect(getNavFeatureLock('/finance', { finance: false }, {
+      finance: { code: 'PLAN_UPGRADE_REQUIRED' },
+    })).toBeNull();
   });
 
 });

@@ -41,6 +41,7 @@ export const NAV_PATH_ACCESS = {
   '/admin/crm-stats': 'admin_data',
   '/admin/media-list': 'admin_data',
   '/admin/control': 'admin_data',
+  '/developers': 'admin_developers',
   '/campaign': 'campaigns',
   '/crm': 'crm_hub',
   '/office': 'office_hub',
@@ -69,6 +70,7 @@ const NAV_PATH_PREFIXES = [
   ['/admin/lead-audits', 'admin_data'],
   ['/admin/crm-stats', 'admin_data'],
   ['/admin/media-list', 'admin_data'],
+  ['/developers', 'admin_developers'],
   ['/campaign', 'campaigns'],
   ['/emails', 'emails'],
   ['/projects', 'projects'],
@@ -166,7 +168,8 @@ export function filterNavGroupsForUser(groups, user, hasPageAccessFn = hasPageAc
     .filter((group) => group.pages.length > 0);
 }
 
-/** Nav paths gated by tenant featureUnlocks (visible but locked until unlocked). */
+
+/** Nav paths that were gated by plan (paywalls removed — kept for route metadata). */
 export const FEATURE_UNLOCK_BY_PATH = {
   '/emails': 'resend',
   '/finance': 'finance',
@@ -174,13 +177,6 @@ export const FEATURE_UNLOCK_BY_PATH = {
   '/artists': 'artistOs',
 };
 
-export function getNavFeatureLock(path, unlocks = {}) {
-  const key = FEATURE_UNLOCK_BY_PATH[path];
-  if (!key) return null;
-  if (unlocks[key]) return null;
-  return {
-    lockedReason: 'Complete onboarding to unlock this area',
-    unlockCta: 'View checklist',
-    unlockPath: '/dashboard',
-  };
+export function getNavFeatureLock() {
+  return null;
 }

@@ -25,6 +25,7 @@ const {
   artistConnectionParams,
   trackedVideoBody,
 } = require('../../validation/schemas/artist');
+const { requireFeatureUnlock } = require('../../middleware/requireFeatureUnlock');
 
 const callback = (provider) => (req, res) => {
   req.params.provider = provider;
@@ -47,6 +48,7 @@ router.get('/:id/auth/spotify', connectionAuth.legacySpotifyRedirect);
 router.get('/:id/auth/youtube', connectionAuth.legacyYoutubeRedirect);
 
 router.use(protect);
+router.use(requireFeatureUnlock('artistOs'));
 
 router.get('/config/integrations', artistOrAdmin, artistController.getIntegrationsConfig);
 router.get('/portfolio/summary', artistOrAdmin, artistController.getPortfolioSummary);

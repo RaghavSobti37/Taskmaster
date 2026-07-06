@@ -55,7 +55,7 @@ router.put('/config', protect, gamificationAccess, validateBody(gamificationConf
     const updates = req.body;
     let config = await GamificationConfig.findOne().sort({ updatedAt: -1 });
     if (!config) {
-      config = new GamificationConfig();
+      config = await GamificationService.ensureConfigForTenant();
     }
 
     const changedFields = [];

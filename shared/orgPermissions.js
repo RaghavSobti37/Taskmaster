@@ -1,4 +1,4 @@
-/** ESM entry for Vite client — keep in sync with orgPermissions.cjs */
+/** ESM — keep in sync with orgPermissions.cjs */
 
 const ADMIN_SLUG = 'admin';
 
@@ -9,10 +9,6 @@ export const isDepartmentAdmin = (dept) => {
 
 const userIdStr = (id) => (id?._id ? String(id._id) : id != null ? String(id) : '');
 
-/**
- * Whether user may edit organization settings (name, branding, defaults).
- * @param {{ user?: object, membership?: { role?: string }|null, tenant?: { ownerId?: unknown }|null }} ctx
- */
 export const canManageOrganizationSettings = ({ user, membership, tenant } = {}) => {
   const role = membership?.role;
   if (role && ['owner', 'admin'].includes(role)) return true;
@@ -22,6 +18,9 @@ export const canManageOrganizationSettings = ({ user, membership, tenant } = {})
   if (isDepartmentAdmin(user?.departmentId)) return true;
   return false;
 };
+
+/** Owner/admin may change plan and open Razorpay checkout. */
+export const canManageBilling = (ctx) => canManageOrganizationSettings(ctx);
 
 export const canDeleteOrganization = ({ user, membership, tenant } = {}) => {
   if (membership?.role === 'owner') return true;

@@ -84,6 +84,10 @@ export const setPostHogUser = (user) => {
   const id = String(user._id || user.id || '');
   if (!id) return;
   posthog.identify(id, postHogPersonPropertiesForUser(user));
+  const tenantId = user.activeTenantId || user.tenantId;
+  if (tenantId) {
+    posthog.group('organization', String(tenantId));
+  }
 };
 
 export const clearPostHogUser = () => {

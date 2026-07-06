@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { getNavFeatureLock } from '../utils/navPageAccess';
 
-/** ponytail: flip false (or VITE_UNLOCK_ALL=false) when billing gates go live */
-export const UNLOCK_ALL = import.meta.env.VITE_UNLOCK_ALL !== 'false';
+export const UNLOCK_ALL = true;
 
 export const TENANT_UNLOCK_KEYS = [
   'resend',
@@ -19,7 +17,7 @@ const ALL_UNLOCKED = Object.fromEntries(TENANT_UNLOCK_KEYS.map((key) => [key, tr
 
 const fetchTenantUnlocks = async (tenantId) => {
   const { data } = await axios.get(`/api/tenants/${tenantId}/unlocks`, { withCredentials: true });
-  return data?.unlocks ?? {};
+  return data ?? {};
 };
 
 export function useTenantUnlocks() {
@@ -29,27 +27,23 @@ export function useTenantUnlocks() {
   const query = useQuery({
     queryKey: ['tenantUnlocks', tenantId],
     queryFn: () => fetchTenantUnlocks(tenantId),
-    enabled: Boolean(tenantId) && !UNLOCK_ALL,
+    enabled: Boolean(tenantId),
     staleTime: 60_000,
   });
 
-  const unlocks = UNLOCK_ALL ? ALL_UNLOCKED : (query.data ?? {});
-
-  const isFeatureUnlocked = (featureKey) => {
-    if (!featureKey) return true;
-    if (UNLOCK_ALL) return true;
-    return Boolean(unlocks[featureKey]);
-  };
-
-  const getFeatureLock = (path) => {
-    if (UNLOCK_ALL) return null;
-    return getNavFeatureLock(path, unlocks);
-  };
+  const isFeatureUnlocked = () => true;
+  const getFeatureLock = () => null;
+  const getFeatureLockByKey = () => null;
 
   return {
-    unlocks,
-    isLoading: UNLOCK_ALL ? false : query.isLoading,
+    unlocks: ALL_UNLOCKED,
+    locks: {},
+    plan: query.data?.plan || user?.activeTenant?.plan || user?.tenant?.plan || 'free',
+    limits: query.data?.limits,
+    isLoading: query.isLoading,
+    refetch: query.refetch,
     isFeatureUnlocked,
     getFeatureLock,
+    getFeatureLockByKey,
   };
 }

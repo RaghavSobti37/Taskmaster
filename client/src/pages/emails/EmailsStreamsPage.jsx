@@ -1,21 +1,32 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Radio } from 'lucide-react';
-import { PageContainer } from '../../components/ui/primitives';
-import EmptyState from '../../components/ui/EmptyState';
+import { PageContainer, DataTable, PageLoadGuard, PageSkeleton } from '../../components/ui';
+import { useEmailStreams } from '../../hooks/queries/mail';
 
 export default function EmailsStreamsPage() {
-  const navigate = useNavigate();
+  const { data: streams = [], isLoading } = useEmailStreams();
 
   return (
     <PageContainer>
-      <EmptyState
-        icon={Radio}
-        title="Email streams"
-        description="Broadcast streams and automation triggers will appear here once Resend is connected."
-        actionLabel="Back to email hub"
-        onAction={() => navigate('/emails')}
-      />
+      <PageLoadGuard loading={isLoading} skeleton={PageSkeleton}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Radio size={20} className="text-[var(--color-action-primary)]" aria-hidden="true" />
+            <h1 className="tm-page-title">Email streams</h1>
+          </div>
+          <DataTable
+            columns={[
+              { header: 'Stream', render: (row) => row.name || row.slug },
+              { header: 'Slug', render: (row) => row.slug },
+              { header: 'From addresses', render: (row) => (row.fromEmails || []).join(', ') || '-' },
+              { header: 'Status', render: (row) => (row.isActive === false ? 'Inactive' : 'Active') },
+            ]}
+            data={streams}
+            paginated={false}
+            getRowId={(row) => row.slug}
+          />
+        </div>
+      </PageLoadGuard>
     </PageContainer>
   );
 }

@@ -28,7 +28,7 @@ services:
         value: production
       - key: JSON_BODY_LIMIT
         value: 50mb
-      # Vercel staging branch / PR previews hit this API (same DB as production)
+      # Explicit prod-preview mode: PR previews may hit this API unless VITE_API_URL points to staging.
       - key: CORS_ALLOW_VERCEL_PREVIEWS
         value: "true"
       - key: LOG_LEVEL

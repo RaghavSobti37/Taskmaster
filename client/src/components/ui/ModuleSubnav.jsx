@@ -28,7 +28,9 @@ function TabBadge({ badge, badgeVariant }) {
 function ItemContent({ icon: Icon, label, badge, badgeVariant }) {
   return (
     <>
-      {Icon && <Icon size={12} className="shrink-0 opacity-75" strokeWidth={2} aria-hidden />}
+      <span className="relative inline-flex shrink-0 items-center justify-center">
+        {Icon && <Icon size={12} className="shrink-0 opacity-75" strokeWidth={2} aria-hidden />}
+      </span>
       <span>{label}</span>
       <TabBadge badge={badge} badgeVariant={badgeVariant} />
     </>
@@ -70,7 +72,6 @@ export default function ModuleSubnav({
   onTabChange,
   action,
   ariaLabel = 'Section navigation',
-  /** When true, grey pill track is w-fit (content-width), not full row width. */
   tabsFitContent = false,
   className = '',
 }) {
@@ -81,30 +82,23 @@ export default function ModuleSubnav({
     movePill(true);
   }, [activeId, location.pathname, items.length, movePill]);
 
-  const renderRouteItem = (item) => (
-    <NavLink
-      key={item.id}
-      to={item.to}
-      end={item.end}
-      className={({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`}
-      aria-selected={undefined}
-    >
-      <ItemContent {...item} />
-    </NavLink>
-  );
+  const renderRouteItem = (item) => {
+    const classNameFn = ({ isActive }) => `${tabBase} ${isActive ? tabActive : tabInactive}`;
+    return (
+      <NavLink key={item.id} to={item.to} end={item.end} className={classNameFn}>
+        <ItemContent {...item} />
+      </NavLink>
+    );
+  };
 
-  const renderTabItem = (item) => {
-    const active = item.id === activeId;
+  const renderButtonItem = (item) => {
+    const isActive = activeId === item.id;
     return (
       <button
         key={item.id}
         type="button"
-        role="tab"
-        aria-selected={active}
-        aria-controls={item.panelId || `hub-panel-${item.id}`}
-        id={item.tabId || `hub-tab-${item.id}`}
         onClick={() => onTabChange?.(item.id)}
-        className={`${tabBase} ${active ? tabActive : tabInactive}`}
+        className={`${tabBase} ${isActive ? tabActive : tabInactive}`}
       >
         <ItemContent {...item} />
       </button>
@@ -112,33 +106,30 @@ export default function ModuleSubnav({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row lg:items-center gap-3 min-w-0 py-1 ${className}`}>
-      {title && (
-        <div className="flex items-center gap-2 shrink-0">
-          {TitleIcon && (
-            <div className="p-1.5 rounded-lg bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]">
-              <TitleIcon size={16} aria-hidden />
-            </div>
+    <nav
+      className={`tm-module-subnav flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between ${className}`}
+      aria-label={ariaLabel}
+    >
+      {(title || TitleIcon) && (
+        <div className="flex items-center gap-2 min-w-0 shrink-0">
+          {TitleIcon && <TitleIcon size={16} className="shrink-0 text-[var(--color-action-primary)]" aria-hidden />}
+          {title && (
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-primary)] truncate">
+              {title}
+            </h2>
           )}
-          <span className="text-sm font-bold tracking-tight">{title}</span>
         </div>
       )}
-
-      <nav
-        ref={barRef}
-        role={mode === 'tabs' ? 'tablist' : 'navigation'}
-        aria-label={ariaLabel}
-        className={`t-tabs flex gap-1 overflow-x-auto custom-scrollbar ${
-          tabsFitContent
-            ? 'w-fit max-w-full shrink-0'
-            : 'min-w-0 flex-1 lg:justify-center'
-        }`}
-      >
-        <div ref={pillRef} className="t-tabs-pill" aria-hidden />
-        {items.map(mode === 'route' ? renderRouteItem : renderTabItem)}
-      </nav>
-
-      {action && <div className="shrink-0 lg:ml-auto">{renderAction(action)}</div>}
-    </div>
+      <div className="flex items-center gap-2 min-w-0 flex-1 lg:justify-end">
+        <div
+          ref={barRef}
+          className={`tm-sliding-tabs relative flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--color-bg-secondary)]/60 overflow-x-auto ${tabsFitContent ? 'w-fit max-w-full' : 'w-full lg:w-auto'}`}
+        >
+          <span ref={pillRef} className="tm-sliding-tabs-pill" aria-hidden />
+          {items.map((item) => (mode === 'route' ? renderRouteItem(item) : renderButtonItem(item)))}
+        </div>
+        {renderAction(action)}
+      </div>
+    </nav>
   );
 }

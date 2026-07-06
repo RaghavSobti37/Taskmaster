@@ -9,7 +9,7 @@ const {
   integrationCallbackUri,
   buildOAuthUrl,
 } = require('./oauthService');
-const { planAllowsFeature } = require('../../../../shared/planLimits');
+const { planAllowsFeature } = require('../../../../shared/planLimits.cjs');
 const { recordAuditEvent } = require('../../../services/auditEventService');
 const webhookInAdapter = require('../adapters/webhookInAdapter');
 

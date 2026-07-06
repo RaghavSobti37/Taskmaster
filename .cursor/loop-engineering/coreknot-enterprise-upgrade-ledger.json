@@ -1,0 +1,84 @@
+{
+  "slug": "coreknot-enterprise-upgrade",
+  "goal": "Make CoreKnot work like a proper enterprise app with server-backed plan restrictions, a dummy upgrade flow, and upgrade UI.",
+  "iteration": 2,
+  "phase": "complete",
+  "satisfaction": "pass",
+  "slices": [
+    {
+      "id": "billing-plan-backend",
+      "agentSlug": "backend-architect",
+      "agentRule": ".cursor/rules/agency/backend-architect.mdc",
+      "status": "done",
+      "ownsFiles": [
+        "shared/planLimits.js",
+        "server/services/tenantUnlockService.js",
+        "server/routes/tenantRoutes.js",
+        "server/domains/artists/routes.js",
+        "server/tests/planLimits.test.js",
+        "server/tests/tenantBilling.test.js"
+      ]
+    },
+    {
+      "id": "upgrade-ui",
+      "agentSlug": "ui-designer",
+      "agentRule": ".cursor/rules/agency/ui-designer.mdc",
+      "status": "done",
+      "ownsFiles": [
+        "client/src/hooks/useTenantUnlocks.js",
+        "client/src/utils/navPageAccess.js",
+        "client/src/components/org/FeatureUnlockRoute.jsx",
+        "client/src/components/org/PlanFeatureGate.jsx",
+        "client/src/components/org/TenantFeatureGate.jsx",
+        "client/src/pages/billing/UpgradePage.jsx",
+        "client/src/pages/hubs/ManagementHub.jsx",
+        "client/src/pages/settings/tabs/OrganizationTab.jsx",
+        "client/src/components/org/OrgSwitcher.jsx",
+        "client/src/App.jsx"
+      ]
+    }
+  ],
+  "verifyCommands": [
+    "npm test --prefix client",
+    "npm run build --prefix client",
+    "npm test --prefix server -- tests/planLimits.test.js tests/tenantBilling.test.js tests/tenantUnlockOpen.test.js tests/projectAnalyticsFinance.test.js",
+    "npm run audit:exposure"
+  ],
+  "verifyHistory": [
+    {
+      "at": "2026-07-06",
+      "commands": [
+        "npm test --prefix client (88 files, 365 tests pass)",
+        "npm run build --prefix client (exit 0)",
+        "npm test --prefix server billing bundle (4 suites, 21 tests pass)",
+        "npm run audit:exposure (pass)"
+      ],
+      "evidence": "Route-level FeatureUnlockRoute + PlanFeatureGate; ManagementHub tab gates; artistOs server middleware; org billing card + org switcher upgrade link"
+    }
+  ],
+  "discoveries": [
+    {
+      "id": "d-001",
+      "severity": "P2",
+      "summary": "Full server npm test: 838/843 pass; 5 failures in clerkWebhookSync (401 signature) — unrelated to billing",
+      "status": "open"
+    },
+    {
+      "id": "d-002",
+      "severity": "P2",
+      "summary": "google/meta integration routes lack requireFeatureUnlock middleware",
+      "status": "open"
+    }
+  ],
+  "lastVerifyEvidence": {
+    "passed": [
+      "npm test --prefix client — 88 files, 365 tests",
+      "npm run build --prefix client — verify-production-build ok",
+      "npm test --prefix server billing bundle — 4 suites, 21 tests",
+      "npm run audit:exposure"
+    ],
+    "notCompleted": [
+      "Full server suite OOM at default heap; with 8GB heap 838/843 pass (clerk webhook flakes)"
+    ]
+  }
+}

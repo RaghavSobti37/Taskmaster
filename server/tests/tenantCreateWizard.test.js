@@ -12,6 +12,11 @@ const User = require('../models/User');
 const Tenant = require('../models/Tenant');
 const TenantMembership = require('../models/TenantMembership');
 const TenantInvite = require('../models/TenantInvite');
+const Department = require('../models/Department');
+const Workspace = require('../models/Workspace');
+const GamificationConfig = require('../models/GamificationConfig');
+const CRMConfig = require('../domains/crm/models/CRMConfig');
+const Lead = require('../domains/crm/models/Lead');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
@@ -89,6 +94,18 @@ describe('tenant create wizard API', () => {
     );
 
     expect(dispatchEmailPayload).toHaveBeenCalledTimes(2);
+
+    const depts = await Department.find({ tenantId: tenant._id }).setOptions({ bypassTenant: true });
+    expect(depts.length).toBeGreaterThan(0);
+    const workspaces = await Workspace.find({ tenantId: tenant._id }).setOptions({ bypassTenant: true });
+    expect(workspaces).toHaveLength(1);
+    expect(workspaces[0].name).toBe('MAIN');
+    const gamification = await GamificationConfig.findOne({ tenantId: tenant._id }).setOptions({ bypassTenant: true });
+    expect(gamification).toBeTruthy();
+    const crmConfig = await CRMConfig.findOne({ tenantId: tenant._id, configKey: 'default' }).setOptions({ bypassTenant: true });
+    expect(crmConfig).toBeTruthy();
+    const leads = await Lead.find({ tenantId: tenant._id }).setOptions({ bypassTenant: true });
+    expect(leads).toHaveLength(0);
   });
 
   it('persists clerkOrganizationId when Clerk org sync succeeds', async () => {

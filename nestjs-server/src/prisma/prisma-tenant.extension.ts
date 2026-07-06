@@ -80,7 +80,11 @@ export function createTenantExtension(tenantContext: TenantContextService) {
           }
 
           const tenantId = tenantContext.getTenantId();
+          const nodeEnv = process.env.NODE_ENV ?? 'development';
           if (!tenantId) {
+            if (nodeEnv === 'production') {
+              throw new Error('tenantId required: missing tenant context in production');
+            }
             return query(args);
           }
 

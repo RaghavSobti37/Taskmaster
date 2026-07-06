@@ -7,6 +7,10 @@ const TenantMembership = require('../models/TenantMembership');
 const Department = require('../models/Department');
 const FinanceDocument = require('../models/FinanceDocument');
 const Project = require('../models/Project');
+const Lead = require('../domains/crm/models/Lead');
+const GamificationConfig = require('../models/GamificationConfig');
+const LeaveRequest = require('../models/LeaveRequest');
+const { bootstrapTenant } = require('../services/tenantBootstrapService');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 const { mintSessionAgent } = require('./helpers/mintTestSession');
 const { PRESET_PAGES } = require('../utils/pagePermissions');
@@ -175,5 +179,84 @@ describe('tenant isolation (required CI gate)', () => {
     const membershipsRes = await agent.get('/api/tenants/memberships');
     expect(membershipsRes.statusCode).toBe(200);
     expect(membershipsRes.body.activeTenantId).toBe(String(tenantB._id));
+  });
+
+  it('GET /departments/public requires tenantSlug', async () => {
+    const res = await request(app).get('/api/departments/public');
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('GET /departments/public returns only requested tenant departments', async () => {
+    const slug = `iso-public-${stamp}`;
+    let tenant = await Tenant.findOne({ slug }).setOptions({ bypassTenant: true });
+    if (!tenant) {
+      tenant = await Tenant.create({
+        name: `ISO Public ${stamp}`,
+        slug,
+        contactEmail: `iso-public-${stamp}@coreknot-test.local`,
+        plan: 'pro',
+      });
+    }
+    await bootstrapTenant(tenant._id);
+
+    const res = await request(app).get(`/api/departments/public?tenantSlug=${encodeURIComponent(tenant.slug)}`);
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    const slugs = res.body.map((d) => d.slug);
+    expect(slugs).toContain('ops');
+
+    await Tenant.deleteOne({ _id: tenant._id });
+  });
+
+  it('gamification config is isolated per tenant', async () => {
+    await bootstrapTenant(tenantA._id);
+    await bootstrapTenant(tenantB._id);
+
+    const cfgA = await GamificationConfig.findOne({ tenantId: tenantA._id }).setOptions({ bypassTenant: true });
+    const cfgB = await GamificationConfig.findOne({ tenantId: tenantB._id }).setOptions({ bypassTenant: true });
+    expect(cfgA).toBeTruthy();
+    expect(cfgB).toBeTruthy();
+    expect(String(cfgA._id)).not.toBe(String(cfgB._id));
+
+    cfgA.taskCompletion = 99;
+    await cfgA.save();
+
+    const cfgBReload = await GamificationConfig.findOne({ tenantId: tenantB._id }).setOptions({ bypassTenant: true });
+    expect(cfgBReload.taskCompletion).not.toBe(99);
+  });
+
+  it('leave requests do not leak across tenants', async () => {
+    const { user: userA } = await seedTenantUser({ stamp, tenantId: tenantA._id, emailSuffix: 'leave-a' });
+    const { user: userB } = await seedTenantUser({ stamp, tenantId: tenantB._id, emailSuffix: 'leave-b' });
+
+    await LeaveRequest.create({
+      userId: userA._id,
+      tenantId: tenantA._id,
+      fromDate: new Date(),
+      toDate: new Date(),
+      status: 'approved',
+    });
+    await LeaveRequest.create({
+      userId: userB._id,
+      tenantId: tenantB._id,
+      fromDate: new Date(),
+      toDate: new Date(),
+      status: 'approved',
+    });
+
+    const tenantALeaves = await LeaveRequest.find({ tenantId: tenantA._id }).setOptions({ bypassTenant: true });
+    const tenantBLeaves = await LeaveRequest.find({ tenantId: tenantB._id }).setOptions({ bypassTenant: true });
+    expect(tenantALeaves).toHaveLength(1);
+    expect(tenantBLeaves).toHaveLength(1);
+    expect(String(tenantALeaves[0].userId)).toBe(String(userA._id));
+
+    await LeaveRequest.deleteMany({ tenantId: { $in: [tenantA._id, tenantB._id] } }).setOptions({ bypassTenant: true });
+  });
+
+  it('new tenant bootstrap has zero leads', async () => {
+    await bootstrapTenant(tenantB._id);
+    const leads = await Lead.find({ tenantId: tenantB._id }).setOptions({ bypassTenant: true });
+    expect(leads).toHaveLength(0);
   });
 });

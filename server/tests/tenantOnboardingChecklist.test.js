@@ -22,44 +22,45 @@ async function ensureOpsDept() {
   return dept;
 }
 
+async function seedChecklistTenant(stamp) {
+  const tenant = await Tenant.create({
+    name: `Onboarding Checklist ${stamp}`,
+    slug: `onboarding-checklist-${stamp}`,
+    contactEmail: `onboarding-checklist-${stamp}@coreknot-test.local`,
+    plan: 'free',
+    onboardingProgress: {
+      completedSteps: [],
+      dismissedChecklist: false,
+    },
+  });
+
+  const dept = await ensureOpsDept();
+  const email = `onboarding-checklist-member-${stamp}@coreknot-test.local`;
+  await User.deleteOne({ email });
+  const user = await User.create({
+    name: 'Onboarding Checklist Member',
+    email,
+    password: DEV_DEFAULT_PASSWORD,
+    gender: 'male',
+    departmentId: dept._id,
+    tenantId: tenant._id,
+    pagePermissions: ['dashboard'],
+  });
+  await TenantMembership.findOneAndUpdate(
+    { tenantId: tenant._id, userId: user._id },
+    { $set: { role: 'admin', status: 'active', joinedAt: new Date() } },
+    { upsert: true },
+  );
+  return { tenant, user };
+}
+
 describe('tenant onboarding checklist', () => {
-  const stamp = Date.now();
   let tenant;
   let user;
 
-  beforeAll(async () => {
-    tenant = await Tenant.create({
-      name: `Onboarding Checklist ${stamp}`,
-      slug: `onboarding-checklist-${stamp}`,
-      contactEmail: `onboarding-checklist-${stamp}@coreknot-test.local`,
-      plan: 'free',
-      onboardingProgress: {
-        completedSteps: [],
-        dismissedChecklist: false,
-      },
-    });
-
-    const dept = await ensureOpsDept();
-    const email = `onboarding-checklist-member-${stamp}@coreknot-test.local`;
-    await User.deleteOne({ email });
-    user = await User.create({
-      name: 'Onboarding Checklist Member',
-      email,
-      password: DEV_DEFAULT_PASSWORD,
-      gender: 'male',
-      departmentId: dept._id,
-      tenantId: tenant._id,
-      pagePermissions: ['dashboard'],
-    });
-    await TenantMembership.findOneAndUpdate(
-      { tenantId: tenant._id, userId: user._id },
-      { $set: { role: 'admin', status: 'active', joinedAt: new Date() } },
-      { upsert: true },
-    );
-  });
-
-  afterAll(async () => {
-    if (tenant?._id) await Tenant.deleteOne({ _id: tenant._id });
+  beforeEach(async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    ({ tenant, user } = await seedChecklistTenant(stamp));
   });
 
   async function authedAgent() {

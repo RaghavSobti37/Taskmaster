@@ -86,25 +86,25 @@ export class AuthGuard implements CanActivate {
 
     try {
 
-      const user = await this.resolveUser(request, token);
+      const resolved = await this.resolveUser(request, token);
 
-      if (!user) {
+      if (!resolved.user) {
 
         throw new UnauthorizedException({ error: 'User no longer exists' });
 
       }
 
+      const sessionTenantId = resolved.activeTenantId ?? resolved.user.tenantId ?? undefined;
 
+      request.user = resolved.user;
 
-      request.user = user;
-
-      request.tenantId = user.tenantId ?? undefined;
+      request.tenantId = sessionTenantId;
 
       this.tenantContext.updateContext({
 
-        tenantId: user.tenantId ?? null,
+        tenantId: sessionTenantId ?? null,
 
-        userId: user.id,
+        userId: resolved.user.id,
 
       });
 
@@ -124,11 +124,13 @@ export class AuthGuard implements CanActivate {
 
 
 
-  private async resolveUser(request: Request, token: string) {
+  private async resolveUser(request: Request, token: string): Promise<{ user: Awaited<ReturnType<AuthService['loadAuthUser']>>; activeTenantId?: string }> {
 
     const bypassUser = await this.tryDebugBypass(request, token);
 
-    if (bypassUser) return bypassUser;
+    if (bypassUser) {
+      return { user: bypassUser, activeTenantId: bypassUser.tenantId ?? undefined };
+    }
 
 
 
@@ -170,7 +172,9 @@ export class AuthGuard implements CanActivate {
 
 
 
-    return this.authService.loadAuthUser(decoded.id);
+    const user = await this.authService.loadAuthUser(decoded.id);
+
+    return { user, activeTenantId: decoded.activeTenantId };
 
   }
 

@@ -9,7 +9,8 @@ import { isOrgFirstAuthEnabled, loadOrgFirstAuthConfig } from '../../lib/orgFirs
 import { reestablishClerkOrgSession } from '../../lib/reestablishClerkOrgSession';
 import { resetNavigateGuard } from '../../lib/postLoginRedirect';
 import { useAuth } from '../../contexts/AuthContext';
-import { navigateAfterAuth } from '../../utils/authNavigation';
+import { onOrgSwitch } from '../../lib/tenantClientCache';
+import { useQueryClient } from '@tanstack/react-query';
 import { appUrl } from '../../config/siteUrls';
 
 export default function OrgChoosePage() {
@@ -36,6 +37,7 @@ function OrgChoosePageWithClerk() {
   const { getToken, setActive } = useClerk();
   const { confirmSessionFromEstablish } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState(null);
   const [establishing, setEstablishing] = useState(false);
@@ -54,13 +56,14 @@ function OrgChoosePageWithClerk() {
         orgId: targetOrgId,
         confirmSessionFromEstablish,
       });
-      navigateAfterAuth(navigate, appUrl('/dashboard'));
+      await onOrgSwitch(queryClient);
+      window.location.assign(appUrl('/dashboard'));
     } catch (err) {
       handledOrgRef.current = null;
       setError(err?.message || 'Could not open workspace');
       setEstablishing(false);
     }
-  }, [establishing, getToken, setActive, confirmSessionFromEstablish, navigate]);
+  }, [establishing, getToken, setActive, confirmSessionFromEstablish, queryClient]);
 
   useEffect(() => {
     resetNavigateGuard();

@@ -1,8 +1,11 @@
 /** Persist page filter state in localStorage with safe parse/write. */
 
-export function loadPageFilters(key, defaults = {}) {
+import { scopedStorageKey } from '../lib/tenantSession';
+
+export function loadPageFilters(key, defaults = {}, tenantId) {
+  const storageKey = scopedStorageKey(key, tenantId);
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw);
     return { ...defaults, ...parsed };
@@ -11,9 +14,10 @@ export function loadPageFilters(key, defaults = {}) {
   }
 }
 
-export function savePageFilters(key, values) {
+export function savePageFilters(key, values, tenantId) {
+  const storageKey = scopedStorageKey(key, tenantId);
   try {
-    localStorage.setItem(key, JSON.stringify(values));
+    localStorage.setItem(storageKey, JSON.stringify(values));
   } catch {
     /* quota / private mode */
   }

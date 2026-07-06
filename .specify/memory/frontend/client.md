@@ -43,7 +43,7 @@ React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Frame
 | --- | --- | --- |
 | `app` (default) | `tsccoreknot.com` | Workspace + legal; `/` → landing if logged out; auth paths → `auth.tsccoreknot.com` |
 | `landing` | `landing.tsccoreknot.com` | `/` landing, `/privacy`, `/userdata` |
-| `auth` | `auth.tsccoreknot.com` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/relegends`, `/auth/google/success`, legal |
+| `auth` | `auth.tsccoreknot.com` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/google/success`, legal; `/relegends` redirects to `/login` |
 
 URL helpers: `client/src/config/siteUrls.js` — `landingUrl()`, `authUrl()`, `appUrl()`, `resolveAppNavigationTarget()`.
 
@@ -53,7 +53,7 @@ URL helpers: `client/src/config/siteUrls.js` — `landingUrl()`, `authUrl()`, `a
 | --- | --- |
 | `/login`, `/register` | Auth pages (`auth.tsccoreknot.com`) |
 | `/forgot-password`, `/reset-password` | Password reset |
-| `/relegends` | OTP verification |
+| `/relegends` | Legacy OTP slug; redirects to `/login` until an OTP backend exists |
 | `/auth/google/success` | OAuth ticket exchange |
 | `/privacy`, `/userdata` | Legal pages |
 | `/unsubscribe` | Email unsubscribe (app host) |
@@ -78,8 +78,8 @@ Landing marketing page: `landing.tsccoreknot.com/` only (not on app host).
 | `/artists/:id/*` | Artist detail (Artist OS) |
 | `/artist-workspace/:id/*` | Membership-gated artist workspace |
 | `/artist-workspace/:id/accept` | Accept team invite |
-| `/artist/:slug` | Public artist profile (stub) |
-| `/artists/portfolio` | Portfolio dashboard (stub) |
+| `/artist/:slug` | Public artist profile |
+| `/artists/portfolio` | Portfolio dashboard with KPI summary |
 | `/assets`, `/assets/accounts` | Assets hub |
 
 Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub` → `/admin`

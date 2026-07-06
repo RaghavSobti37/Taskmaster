@@ -12,7 +12,7 @@ const {
 describe('bypassTenantPolicy', () => {
   it('allows known public route files', () => {
     expect(isRouteBypassAllowed('track.js')).toBe(true);
-    expect(ROUTE_ALLOWLIST.has('calendarRoutes.js')).toBe(true);
+    expect(ROUTE_ALLOWLIST.has('calendarRoutes.js')).toBe(false);
     expect(isRouteBypassAllowed('notificationRoutes.js')).toBe(false);
   });
 

@@ -223,12 +223,13 @@ exports.getDepartmentStats = async (req, res) => {
 exports.getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
+    const tenantKey = String(req.tenantId || '');
     const fieldsParam = String(req.query.fields || '').trim().toLowerCase();
     const calendarOnly = fieldsParam === 'calendar';
 
     const cacheKey = calendarOnly
-      ? `dashboard:summary:calendar:v1:${userId}`
-      : `dashboard:summary:v2:${userId}`;
+      ? `dashboard:summary:calendar:v2:${tenantKey}:${userId}`
+      : `dashboard:summary:v3:${tenantKey}:${userId}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       res.set('Cache-Control', PRIVATE_CACHE_60);
@@ -245,7 +246,7 @@ exports.getDashboardSummary = async (req, res) => {
           { createdBy: userId },
         ],
         date: { $gte: today, $lte: todayEndTime },
-      }).setOptions({ bypassTenant: true }).lean();
+      }).lean();
 
       const payload = { calendar: calendar || [] };
       await setCache(cacheKey, payload, 60);
@@ -293,13 +294,13 @@ exports.getDashboardSummary = async (req, res) => {
       ]),
 
       // 5. Calendar Events (Today)
-      mongoose.model('CalendarEvent').find({ 
+      mongoose.model('CalendarEvent').find({
         $or: [
           { visibility: 'public' },
           { createdBy: userId }
         ],
         date: { $gte: today, $lte: todayEndTime }
-      }).setOptions({ bypassTenant: true }).lean(),
+      }).lean(),
 
       // 6. Campaign bounce count
       countUserCampaignBounces(userId),

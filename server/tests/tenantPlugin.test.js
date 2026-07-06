@@ -24,9 +24,9 @@ describe('tenantPlugin validate hook', () => {
     expect(String(doc.tenantId)).toBe(String(tenant._id));
   });
 
-  it('falls back to Default Tenant in non-production without context', async () => {
+  it('falls back to Default Tenant in test without context', async () => {
     const prev = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    process.env.NODE_ENV = 'test';
     try {
       const doc = await TestModel.create({ name: 'fallback' });
       const defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });

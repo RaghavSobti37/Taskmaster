@@ -1,8 +1,15 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 const { DEFAULT_XP } = require('../../shared/gamificationRules');
 
 const gamificationConfigSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      unique: true,
+      index: true,
+    },
     taskCompletion: { type: Number, default: DEFAULT_XP.taskCompletion },
     taskCreation: { type: Number, default: DEFAULT_XP.taskCreation },
     projectCreation: { type: Number, default: DEFAULT_XP.projectCreation },
@@ -24,7 +31,7 @@ const gamificationConfigSchema = new mongoose.Schema(
     baseXp: { type: Number, default: DEFAULT_XP.baseXp },
 
     updatedAt: { type: Date, default: Date.now },
-    /** Last global XP recalc (audit sync + user totals). */
+    /** Last tenant XP recalc (audit sync + user totals). */
     lastRecalculatedAt: { type: Date },
     /** Per-user weekly XP (stored amounts) captured immediately before last recalc. */
     lastRecalcWeeklyPrior: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -35,5 +42,7 @@ const gamificationConfigSchema = new mongoose.Schema(
 gamificationConfigSchema.pre('save', function () {
   this.updatedAt = new Date();
 });
+
+gamificationConfigSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('GamificationConfig', gamificationConfigSchema);

@@ -5,7 +5,6 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import OTPVerificationPage from './pages/auth/OTPVerificationPage';
 import GoogleSuccessPage from './pages/auth/GoogleSuccessPage';
 import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 import UserDataDeletion from './pages/legal/UserDataDeletion';
@@ -27,7 +26,7 @@ export default function AuthApp() {
         <Route path="/register/*" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/relegends" element={<OTPVerificationPage />} />
+        <Route path="/relegends" element={<Navigate to="/login" replace />} />
         <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/userdata" element={<UserDataDeletion />} />

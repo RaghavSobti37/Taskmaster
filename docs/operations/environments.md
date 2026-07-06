@@ -103,11 +103,11 @@ npm run audit:exposure      # scan committed files for leaked hosts
 
 | Doc | Use when |
 |-----|----------|
-| [`DOCUMENTATION_INDEX.md`](./DOCUMENTATION_INDEX.md) | What to read first |
-| [`AI_AGENT_PROJECT_CONTEXT.md`](./AI_AGENT_PROJECT_CONTEXT.md) | Full system reference |
+| [`DOCUMENTATION_INDEX.md`](../DOCUMENTATION_INDEX.md) | What to read first |
+| [`AI_AGENT_PROJECT_CONTEXT.md`](../AI_AGENT_PROJECT_CONTEXT.md) | Full system reference |
 | [`STARTUP_GUIDE.md`](./STARTUP_GUIDE.md) | Local setup |
-| [`EMAIL_ENGINE_LOCKED.md`](./EMAIL_ENGINE_LOCKED.md) | Mail tracking |
-| [`LEGACY_FREEZE.md`](./LEGACY_FREEZE.md) | APIs not to extend |
+| [`EMAIL_ENGINE_LOCKED.md`](../reference/EMAIL_ENGINE_LOCKED.md) | Mail tracking |
+| [`LEGACY_FREEZE.md`](../architecture/LEGACY_FREEZE.md) | APIs not to extend |
 | [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Staging API + preview wiring |
 | [`DEPLOY_ROLLBACK.md`](./DEPLOY_ROLLBACK.md) | App rollback runbook |
 | [`MONITORING_ALERTS.md`](./MONITORING_ALERTS.md) | Datadog + Sentry alerts |

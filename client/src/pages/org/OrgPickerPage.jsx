@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { onOrgSwitch } from '../../lib/tenantClientCache';
 import { Button } from '../../components/ui/primitives';
 import {
   clerkOrgSelectionUrl,
@@ -35,9 +36,9 @@ export default function OrgPickerPage() {
     mutationFn: async (tenantId) => {
       await axios.post('/api/tenants/select', { tenantId }, { withCredentials: true });
     },
-    onSuccess: () => {
-      queryClient.clear();
-      navigate('/dashboard', { replace: true });
+    onSuccess: async () => {
+      await onOrgSwitch(queryClient);
+      window.location.assign('/dashboard');
     },
   });
 

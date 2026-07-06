@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const ArtistAuthSchema = new mongoose.Schema({
-  artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true, unique: true },
+  artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true },
   oauthCredentials: {
     youtube: {
       accessToken: { type: String, select: false },
@@ -37,6 +38,8 @@ const ArtistAuthSchema = new mongoose.Schema({
   isSynced: { type: Boolean, default: false }
 });
 
+ArtistAuthSchema.index({ tenantId: 1, artistId: 1 }, { unique: true });
+
 // Input sanitization hook
 ArtistAuthSchema.pre('save', function () {
   if (this.oauthCredentials?.spotify?.artistId) {
@@ -49,5 +52,7 @@ ArtistAuthSchema.pre('save', function () {
     this.oauthCredentials.meta.igAccountId = this.oauthCredentials.meta.igAccountId.trim();
   }
 });
+
+ArtistAuthSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ArtistAuth', ArtistAuthSchema);

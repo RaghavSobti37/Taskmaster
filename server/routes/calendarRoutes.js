@@ -10,6 +10,7 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
+const TenantMembership = require('../models/TenantMembership');
 const { validateCalendarEventRange, buildDateTimeFromParts, toDateKey } = require('../utils/dateValidation');
 const { formatWeekdayDateLong } = require('../../shared/dateDisplay');
 const { validateQuery } = require('../validation/validateQuery');
@@ -69,7 +70,6 @@ router.get('/', validateQuery(calendarQuery), async (req, res) => {
     };
 
     const events = await CalendarEvent.find(eventQuery)
-      .setOptions({ bypassTenant: true })
       .populate('createdBy', 'name avatar')
       .populate('projectId', 'name workspace')
       .lean();
@@ -136,6 +136,7 @@ router.post('/seed-music-content', async (req, res) => {
       year,
       dryRun: false,
       creatorUserId: req.user._id,
+      tenantId: req.tenantId,
     });
     res.json({
       message: `Music Content Calendar seeded for ${year}`,
@@ -211,7 +212,14 @@ router.post('/', validateBody(calendarEventBody), async (req, res) => {
 
     if (visibility === 'public') {
       try {
-        const allUsers = await User.find({ email: { $exists: true, $ne: '' } }, 'email name');
+        const membershipRows = await TenantMembership.find({
+          tenantId: req.tenantId,
+          status: 'active',
+        }).select('userId').lean();
+        const memberIds = membershipRows.map((row) => row.userId).filter(Boolean);
+        const allUsers = memberIds.length
+          ? await User.find({ _id: { $in: memberIds }, email: { $exists: true, $ne: '' } }, 'email name')
+          : [];
         const eventDate = formatWeekdayDateLong(eventDateTime);
 
         const emailPromises = allUsers.map((user) =>

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const schema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -13,5 +14,8 @@ const schema = new mongoose.Schema({
   completed: { type: Boolean, default: false },
   date: { type: Date, required: true }
 });
+
+schema.index({ tenantId: 1, userId: 1, date: 1 });
+schema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('DailyMission', schema);

@@ -10,7 +10,8 @@ const {
   createInvite,
   getMembership,
 } = require('../services/tenantMembershipService');
-const { getTenantUnlocks } = require('../services/tenantUnlockService');
+const { isAdminUser } = require('../utils/departmentPermissions');
+const { getTenantUnlockState } = require('../services/tenantUnlockService');
 const Tenant = require('../models/Tenant');
 const {
   buildOnboardingChecklistPayload,
@@ -212,9 +213,9 @@ router.get(
     }
     await handleProfileUpdated({ user: req.user, tenantId });
     const tenant = await Tenant.findById(tenantId);
-    const unlocks = await getTenantUnlocks(tenantId);
+    const unlockState = await getTenantUnlockState(tenantId);
     const checklist = buildOnboardingChecklistPayload(tenant?.onboardingProgress, tenant);
-    res.json({ unlocks, ...checklist });
+    res.json({ ...unlockState, ...checklist });
   }),
 );
 

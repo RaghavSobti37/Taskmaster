@@ -14,7 +14,7 @@ const mockRes = () => {
 };
 
 describe('getWorkspaces', () => {
-  it('returns legacy workspaces without tenantId when tenant context is set', async () => {
+  it('does not return legacy workspaces without tenantId for a tenant', async () => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const legacyName = `LEGACY-WS-${suffix}`;
 
@@ -48,6 +48,7 @@ describe('getWorkspaces', () => {
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalled();
     const payload = res.json.mock.calls[0][0];
-    expect(payload.some((w) => w.name === legacyName.toUpperCase())).toBe(true);
+    expect(payload.some((w) => w.name === legacyName.toUpperCase())).toBe(false);
+    expect(payload.every((w) => String(w.tenantId) === String(tenant._id))).toBe(true);
   });
 });

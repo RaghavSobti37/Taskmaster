@@ -130,7 +130,7 @@ CoreKnot is TSC's multi-tenant CRM and operations hub: projects, CRM, email camp
 | Frontend | React 18, Vite 5, Tailwind v4, TanStack Query, React Router 6, PWA |
 | API | Express + Mongoose on Render; NestJS (\`nestjs-server/\`) for Postgres/sync ETL |
 | Data | MongoDB Atlas (primary), Redis/BullMQ, Supabase (secondary mirror), Postgres (Nest/local) |
-| Auth | JWT cookie (\`coreknot_token_v3\` + \`activeTenantId\`), multi-org memberships, Google OAuth, Clerk (optional), platform admin gate |
+| Auth | Clerk primary in production/preview, JWT cookie (\`coreknot_token_v3\` + \`activeTenantId\`) after establish, email/password fallback when Clerk is unconfigured |
 | Deploy | Vercel (SPA) → same-origin \`/api\` proxy → Render API |
 
 **Site modes** (\`client/src/config/siteMode.js\`):
@@ -182,6 +182,7 @@ Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.
 | \`/projects/*\` | \`projects\` |
 | \`/calendar\` | \`calendar\` |
 | \`/settings\` | \`settings\` |
+| \`/developers\` | \`admin_developers\` |
 | \`/logs\` | \`logs\` |
 | \`/attendance\` | \`attendance\` |
 | \`/schedule\` | \`schedule\` |
@@ -190,17 +191,17 @@ Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.
 | \`/notes/*\` | \`notes\` |
 | \`/crm\` | \`leads\`, \`followups\`, \`bookings\` (any) |
 | \`/office\` | \`equipment\`, \`contacts\`, \`subscriptions\` (any) |
-| \`/management\` | \`finance\`, \`announcements\`, \`artists\` (any) |
+| \`/management\` | \`finance\`, \`announcements\`, \`org_documents\`, \`artists\` (any) |
 | \`/admin/console\` | multiple \`admin_*\` keys |
 | \`/emails/*\` | \`emails\` |
 | \`/artists/*\` | \`artists\` |
 | \`/assets/*\` | \`assets\` |
 | \`/admin/*\` | per-route \`admin_*\` keys |
-| \`/org/pick\`, \`/org/create\` | session (no page key; tenant selection) |
+| \`/org/pick\`, \`/org/create\`, \`/org/create/success\` | session (no page key; tenant selection) |
 | \`/invites/:token/accept\` | session + invite token |
 | \`/terms\`, \`/privacy\` | public legal |
 
-Legacy redirects: \`/leads\` → \`/crm?tab=leads\`, \`/finance\` → \`/management?tab=finance\`, etc.
+Legacy redirects: \`/leads\` → \`/crm?tab=leads\`, \`/finance\` → \`/management?tab=finance\`, \`/data-hub\` → \`/admin\`, etc.
 
 ### Multi-org & tenant session
 
@@ -302,11 +303,12 @@ File: \`client/src/pages/hubs/CrmHub.jsx\` — URL query \`?tab=\` drives active
 | --- | --- | --- |
 | \`finance\` | \`FinancePage\` | \`finance\` |
 | \`announcements\` | \`AnnouncementsPage\` | \`announcements\` |
+| \`documents\` | Org documents panel | \`org_documents\` |
 | \`artists\` | \`ArtistsCollection\` | \`artists\` |
 
 ### Admin Console (\`/admin/console\`)
 
-Aggregates admin tools behind \`admin_*\` permissions — users, teams, roles, scripts, gamification, project analytics, exly, artist path, ops hub.
+Aggregates admin tools behind \`admin_*\` permissions — users, teams, roles, developers, scripts, gamification, project analytics, exly, artist path, ops hub.
 
 Standalone admin routes (same permission model):
 
@@ -353,6 +355,7 @@ Express mounts route modules from \`server/routes/\` (see \`server/server.js\` f
 | CRM | \`crmRoutes.js\`, \`crmStatsRoutes.js\` | \`/api/crm\` |
 | Data Hub | \`dataHubRoutes.js\` | \`/api/data-hub\` |
 | Mail / campaigns | \`mailRoutes.js\`, \`campaignRoutes.js\`, \`domains/mail/routes/streamsRouter.js\` | \`/api/mail\`, \`/api/campaigns\`, \`/api/mail/streams\` |
+| Integrations | \`domains/integrations/integrationsRoutes.js\` | \`/api/integrations\` |
 | Knowledge Engine | \`knowledgeEngineRoutes.js\` | \`/api/knowledge-engine\` |
 | Tenant SSO (admin) | \`tenantAdminRoutes.js\` | \`/api/admin/tenants\` |
 | Security audit (admin) | \`securityAuditRoutes.js\` | \`/api/admin/security-audit\` |

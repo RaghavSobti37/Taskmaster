@@ -11,7 +11,7 @@ const TenantApiKey = require('../models/TenantApiKey');
 const TenantWebhook = require('../models/TenantWebhook');
 const { createTenantApiKey } = require('../services/tenantApiKeyService');
 const { createTenantWebhook, listDeliveryLogs } = require('../services/webhookDispatchService');
-const { planAllowsFeature } = require('../../shared/planLimits');
+const { planAllowsFeature } = require('../../shared/planLimits.cjs');
 const { queueTenantExport, getExportJob } = require('../services/tenantExportService');
 const { issueScimBearer } = require('../services/tenantSecurityService');
 
@@ -411,7 +411,7 @@ router.post(
       }
     }
     const tenant = await Tenant.findById(req.tenantId);
-    const graceDays = 14;
+    const graceDays = process.env.NODE_ENV === 'development' ? 0 : 14;
     tenant.offboarding = {
       scheduledDeletionAt: new Date(Date.now() + graceDays * 86400000),
       requestedBy: req.user._id,
@@ -428,6 +428,13 @@ router.post(
       after: tenant.offboarding,
       req,
     });
+
+    if (graceDays === 0) {
+      const { processDueOffboardings } = require('../services/tenantOffboardingService');
+      await processDueOffboardings();
+      return res.json({ deleted: true, immediate: true });
+    }
+
     res.json({ scheduledDeletionAt: tenant.offboarding.scheduledDeletionAt });
   }),
 );

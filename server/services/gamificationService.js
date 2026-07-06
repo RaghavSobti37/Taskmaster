@@ -84,12 +84,36 @@ const startOfToday = () => todayStart();
 const endOfToday = () => todayEnd();
 
 class GamificationService {
-  static async getConfig() {
-    let config = await GamificationConfig.findOne().sort({ updatedAt: -1 });
-    if (!config) {
-      config = await GamificationConfig.create({});
+  static async resolveConfigTenantId(tenantId) {
+    if (tenantId) return tenantId;
+    const { getTenantId } = require('../utils/tenantContext');
+    const fromCtx = getTenantId();
+    if (fromCtx) return fromCtx;
+    if (process.env.NODE_ENV === 'test') {
+      const { ensurePlatformTenant } = require('../utils/defaultTenant');
+      return ensurePlatformTenant();
     }
-    return config;
+    throw new Error('GamificationConfig requires tenant context');
+  }
+
+  static async ensureConfigForTenant(tenantId) {
+    const id = await this.resolveConfigTenantId(tenantId);
+    const lookup = { bypassTenant: true };
+    const existing = await GamificationConfig.findOne({ tenantId: id }).setOptions(lookup);
+    if (existing) return existing;
+    try {
+      return await GamificationConfig.create({ tenantId: id });
+    } catch (err) {
+      if (err?.code === 11000) {
+        const retry = await GamificationConfig.findOne({ tenantId: id }).setOptions(lookup);
+        if (retry) return retry;
+      }
+      throw err;
+    }
+  }
+
+  static async getConfig() {
+    return this.ensureConfigForTenant();
   }
 
   static async getConfigPlain() {

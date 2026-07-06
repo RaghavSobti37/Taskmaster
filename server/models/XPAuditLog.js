@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const schema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -16,8 +17,12 @@ const schema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-schema.index({ userId: 1, createdAt: -1 });
-schema.index({ action: 1, createdAt: -1 });
-schema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
+schema.index({ tenantId: 1, userId: 1, createdAt: -1 });
+schema.index({ tenantId: 1, action: 1, createdAt: -1 });
+schema.index(
+  { tenantId: 1, dedupeKey: 1 },
+  { unique: true, partialFilterExpression: { dedupeKey: { $type: 'string' } } },
+);
+schema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('XPAuditLog', schema);

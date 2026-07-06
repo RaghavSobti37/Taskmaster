@@ -7,7 +7,7 @@ const tenantPlugin = require('../../../plugins/tenantPlugin');
  * Abstracted to eliminate hardcoded fallbacks in controllers.
  */
 const CRMConfigSchema = new mongoose.Schema({
-  configKey: { type: String, required: true, unique: true, default: 'default' },
+  configKey: { type: String, required: true, default: 'default' },
   callStatuses: [{ type: String }],
   leadStatuses: [{ type: String }],
   artistTypes: [{ type: String }],
@@ -16,6 +16,7 @@ const CRMConfigSchema = new mongoose.Schema({
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+CRMConfigSchema.index({ tenantId: 1, configKey: 1 }, { unique: true });
 CRMConfigSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('CRMConfig', CRMConfigSchema);

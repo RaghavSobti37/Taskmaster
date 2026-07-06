@@ -1,5 +1,8 @@
+import { tenantQueryKey } from './tenantQuery';
+
 /** Sidebar / bottom-nav badge counts */
-export function invalidateStatusCounts(queryClient) {
+export function invalidateStatusCounts(queryClient, tenantId) {
+  queryClient.invalidateQueries({ queryKey: tenantQueryKey(tenantId, 'statusCounts') });
   queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
 }
 

@@ -42,4 +42,4 @@ Frequency: 1 minute. Alert on 2 consecutive failures.
 
 ## Env vars
 
-See [`DEPLOY_ENV.md`](./DEPLOY_ENV.md) observability section and `.env.example` files.
+See [`DEPLOY_ENV.md`](../DEPLOY_ENV.md) observability section and `.env.example` files.

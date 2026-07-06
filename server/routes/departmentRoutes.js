@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Department = require('../models/Department');
+const Tenant = require('../models/Tenant');
 const User = require('../models/User');
 const TaskType = require('../models/TaskType');
 const { protect, requireAnyPageAccess } = require('../middleware/authMiddleware');
+const { runWithContext } = require('../utils/tenantContext');
 
 const deptAdminAccess = requireAnyPageAccess('admin_users', 'admin_roles');
-const { seedDepartments } = require('../services/departmentService');
+const { seedDepartments, seedDepartmentsForTenant } = require('../services/departmentService');
 const { PRESET_VALUES } = require('../utils/departmentPermissions');
 const {
   PAGE_GROUPS,
@@ -38,11 +40,22 @@ const uniqueSlug = async (base) => {
 
 router.get('/public', async (req, res) => {
   try {
-    let depts = await Department.find({ signupAllowed: true }).sort('sortOrder').lean();
-    if (depts.length === 0) {
-      await seedDepartments();
-      depts = await Department.find({ signupAllowed: true }).sort('sortOrder').lean();
+    const slug = String(req.query.tenantSlug || req.query.orgSlug || '').trim().toLowerCase();
+    if (!slug) {
+      return res.status(400).json({ error: 'tenantSlug query parameter required' });
     }
+    const tenant = await Tenant.findOne({ slug }).setOptions({ bypassTenant: true }).lean();
+    if (!tenant) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    const depts = await runWithContext({ tenantId: String(tenant._id) }, async () => {
+      let rows = await Department.find({ signupAllowed: true }).sort('sortOrder').lean();
+      if (rows.length === 0) {
+        await seedDepartmentsForTenant(tenant._id);
+        rows = await Department.find({ signupAllowed: true }).sort('sortOrder').lean();
+      }
+      return rows;
+    });
     res.json(depts);
   } catch (err) {
     res.status(500).json({ error: err.message });

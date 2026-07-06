@@ -34,7 +34,7 @@ describe('reorderWorkspaces', () => {
     await Workspace.create({ name: wsB, color: '#2ecc71', order: 1, createdBy: user._id, tenantId: tenant._id });
   });
 
-  it('backfills tenantId on legacy preference rows', async () => {
+  it('ignores legacy unscoped preference rows and writes tenant-scoped order', async () => {
     await WorkspacePreference.collection.insertOne({
       userId: user._id,
       order: [wsA, wsB],
@@ -52,9 +52,11 @@ describe('reorderWorkspaces', () => {
     expect(res.json).toHaveBeenCalled();
 
     const prefs = await WorkspacePreference.find({ userId: user._id }).setOptions({ bypassTenant: true });
-    expect(prefs).toHaveLength(1);
-    expect(String(prefs[0].tenantId)).toBe(String(tenant._id));
-    expect(prefs[0].order).toEqual([wsB.toUpperCase(), wsA.toUpperCase()]);
+    expect(prefs).toHaveLength(2);
+    const scoped = prefs.find((p) => String(p.tenantId || '') === String(tenant._id));
+    const legacy = prefs.find((p) => !p.tenantId);
+    expect(scoped.order).toEqual([wsB.toUpperCase(), wsA.toUpperCase()]);
+    expect(legacy.order).toEqual([wsA, wsB]);
   });
 
   it('creates a tenant-scoped preference when none exists', async () => {

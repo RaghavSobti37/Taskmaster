@@ -69,8 +69,23 @@ const syncTenantToClerkOrganization = async ({
   }
 };
 
+const deleteClerkOrganization = async (clerkOrganizationId) => {
+  if (!isClerkConfigured() || !clerkOrganizationId) {
+    return { deleted: false, reason: 'not_configured' };
+  }
+  try {
+    await clerkClient.organizations.deleteOrganization(clerkOrganizationId);
+    return { deleted: true };
+  } catch (err) {
+    const message = String(err?.errors?.[0]?.message || err?.message || 'Clerk org delete failed');
+    logger.warn('clerkOrgService', 'Clerk org delete failed', { clerkOrganizationId, error: message });
+    return { deleted: false, reason: message };
+  }
+};
+
 module.exports = {
   CLERK_ORG_ADMIN_ROLE,
   isAlreadyMemberError,
   syncTenantToClerkOrganization,
+  deleteClerkOrganization,
 };

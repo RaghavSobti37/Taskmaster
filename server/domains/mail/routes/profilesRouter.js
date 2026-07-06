@@ -4,10 +4,11 @@ const { protect, requirePageAccess } = require('../../../middleware/authMiddlewa
 const { validateBody } = require('../../../validation/validateBody');
 const { mailProfileBody, updateMailProfileBody } = require('../../../validation/schemas/mail');
 const profilesController = require('../controllers/profilesController');
+const { requireFeatureUnlock } = require('../../../middleware/requireFeatureUnlock');
 
 const emailsAccess = requirePageAccess('emails');
 
-router.use(protect, emailsAccess);
+router.use(protect, emailsAccess, requireFeatureUnlock('resend'));
 
 router.get('/smtp-usage', profilesController.getSmtpUsage);
 router.get('/profiles', profilesController.list);

@@ -26,6 +26,8 @@ import {
   clearPostHogUser,
   capturePostHogEvent,
 } from '../lib/posthog';
+import { resolveActiveTenantId } from '../hooks/useActiveTenant';
+import { setActiveTenantIdInSession } from '../lib/tenantSession';
 
 const defaultAuthContext = {
   user: null,
@@ -98,11 +100,13 @@ const applyAxiosBaseURL = () => {
 applyAxiosBaseURL();
 axios.defaults.withCredentials = true;
 
-function userSessionChanged(prev, next) {
+export function userSessionChanged(prev, next) {
   if (!prev && !next) return false;
   if (!prev || !next) return true;
   const pick = (u) => ({
     id: String(u._id || ''),
+    tenantId: String(u.tenantId || ''),
+    activeTenantId: String(u.activeTenantId || ''),
     updatedAt: u.updatedAt || '',
     name: u.name || '',
     avatar: u.avatar || '',
@@ -119,6 +123,8 @@ function userSessionChanged(prev, next) {
   const b = pick(next);
   return (
     a.id !== b.id ||
+    a.tenantId !== b.tenantId ||
+    a.activeTenantId !== b.activeTenantId ||
     a.updatedAt !== b.updatedAt ||
     a.departmentId !== b.departmentId ||
     a.pagePermissions !== b.pagePermissions ||
@@ -138,6 +144,8 @@ export const AuthProvider = ({ children }) => {
   const authEpochRef = useRef(0);
   const loggingOutRef = useRef(false);
   const fetchUserInFlightRef = useRef(null);
+  const activeTenantRef = useRef('');
+  const activeTenantInitializedRef = useRef(false);
 
   useEffect(() => {
     userRef.current = user;
@@ -168,7 +176,7 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     setSessionReady(false);
     setUser(null);
-    setBootError(null);
+    setActiveTenantIdInSession(null);
     capturePostHogEvent('user_logged_out');
     clearPostHogUser();
     try {
@@ -185,6 +193,23 @@ export const AuthProvider = ({ children }) => {
       await logout();
     });
   }, [logout]);
+
+  const activeTenantId = resolveActiveTenantId(user);
+
+  useEffect(() => {
+    const nextTenantId = activeTenantId ? String(activeTenantId) : '';
+    if (!activeTenantInitializedRef.current) {
+      activeTenantInitializedRef.current = true;
+      activeTenantRef.current = nextTenantId;
+      setActiveTenantIdInSession(nextTenantId || null);
+      return;
+    }
+    if (activeTenantRef.current === nextTenantId) return;
+
+    activeTenantRef.current = nextTenantId;
+    setActiveTenantIdInSession(nextTenantId || null);
+    queryClient.clear();
+  }, [activeTenantId, queryClient]);
 
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;

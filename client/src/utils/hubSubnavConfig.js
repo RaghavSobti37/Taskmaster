@@ -28,16 +28,24 @@ export const HUB_TAB_ICONS = {
   artists: Music2,
 };
 
-/** Route-based subnav for /emails/* */
+/** Route-based subnav for /emails/* — all sections share the resend gate. */
+export const EMAIL_HUB_FEATURE_KEY = 'resend';
+
 export const EMAIL_SUBNAV_ITEMS = [
-  { id: 'overview', to: '/emails', label: 'Overview', icon: LayoutDashboard, end: true },
-  { id: 'campaigns', to: '/emails/campaigns', label: 'Campaigns', icon: Mail },
-  { id: 'templates', to: '/emails/templates', label: 'Templates', icon: FileCode },
-  { id: 'profiles', to: '/emails/profiles', label: 'Profiles', icon: Zap },
-  { id: 'streams', to: '/emails/streams', label: 'Streams', icon: Globe },
-  { id: 'analytics', to: '/emails/analytics', label: 'Analytics', icon: BarChart2 },
-  { id: 'newsletter', to: '/emails/newsletter', label: 'Newsletter', icon: Newspaper },
+  { id: 'overview', to: '/emails', label: 'Overview', icon: LayoutDashboard, end: true, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'campaigns', to: '/emails/campaigns', label: 'Campaigns', icon: Mail, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'templates', to: '/emails/templates', label: 'Templates', icon: FileCode, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'profiles', to: '/emails/profiles', label: 'Profiles', icon: Zap, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'streams', to: '/emails/streams', label: 'Streams', icon: Globe, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'analytics', to: '/emails/analytics', label: 'Analytics', icon: BarChart2, featureKey: EMAIL_HUB_FEATURE_KEY },
+  { id: 'newsletter', to: '/emails/newsletter', label: 'Newsletter', icon: Newspaper, featureKey: EMAIL_HUB_FEATURE_KEY },
 ];
+
+/** Management hub tabs gated by plan. */
+export const HUB_TAB_FEATURE_KEYS = {
+  finance: 'finance',
+  artists: 'artistOs',
+};
 
 /** Route-based subnav for /assets/* */
 export const ASSETS_SUBNAV_ITEMS = [

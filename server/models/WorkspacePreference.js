@@ -6,7 +6,6 @@ const workspacePreferenceSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
     index: true,
   },
   /** Uppercase workspace names in display order */
@@ -23,5 +22,6 @@ const workspacePreferenceSchema = new mongoose.Schema({
 });
 
 workspacePreferenceSchema.plugin(tenantPlugin);
+workspacePreferenceSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model('WorkspacePreference', workspacePreferenceSchema);

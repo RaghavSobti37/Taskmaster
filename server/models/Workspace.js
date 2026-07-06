@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
 const workspaceSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  name: { type: String, required: true, uppercase: true, trim: true },
   color: { type: String, default: '#64748b' },
   order: { type: Number, default: 0 },
   defaultMembers: [{
@@ -13,6 +13,7 @@ const workspaceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+workspaceSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 workspaceSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Workspace', workspaceSchema);

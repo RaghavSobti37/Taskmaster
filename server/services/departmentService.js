@@ -58,38 +58,57 @@ const inferTypeFromTitle = (title) => {
   return 'general';
 };
 
-const seedDepartments = async () => {
-  await migrateLegacyOpsSlug();
-  const results = [];
-  for (const dept of DEFAULT_DEPARTMENTS) {
-    const existing = await Department.findOne({ slug: dept.slug });
-    if (!existing) {
-      results.push(await Department.create(dept));
-    } else {
-      let changed = false;
-      if (dept.permissionPreset && !existing.permissionPreset) {
-        existing.permissionPreset = dept.permissionPreset;
-        changed = true;
-      }
-      if (dept.pagePermissions?.length && (!existing.pagePermissions || existing.pagePermissions.length === 0)) {
-        existing.pagePermissions = dept.pagePermissions;
-        changed = true;
-      }
-      if (dept.slug === 'artist-management') {
-        const presetPages = PRESET_PAGES['artist-management'];
-        const current = existing.pagePermissions || [];
-        const merged = [...new Set([...current, ...presetPages])];
-        if (merged.length !== current.length || !current.includes('artists')) {
-          existing.pagePermissions = merged;
-          existing.permissionPreset = 'artist-management';
+const seedDepartmentsForTenant = async (tenantId) => {
+  if (!tenantId) throw new Error('tenantId required to seed departments');
+  const { runWithContext } = require('../utils/tenantContext');
+  return runWithContext({ tenantId: String(tenantId) }, async () => {
+    await migrateLegacyOpsSlug();
+    const results = [];
+    for (const dept of DEFAULT_DEPARTMENTS) {
+      const existing = await Department.findOne({ slug: dept.slug });
+      if (!existing) {
+        results.push(await Department.create(dept));
+      } else {
+        let changed = false;
+        if (dept.permissionPreset && !existing.permissionPreset) {
+          existing.permissionPreset = dept.permissionPreset;
           changed = true;
         }
+        if (dept.pagePermissions?.length && (!existing.pagePermissions || existing.pagePermissions.length === 0)) {
+          existing.pagePermissions = dept.pagePermissions;
+          changed = true;
+        }
+        if (dept.slug === 'artist-management') {
+          const presetPages = PRESET_PAGES['artist-management'];
+          const current = existing.pagePermissions || [];
+          const merged = [...new Set([...current, ...presetPages])];
+          if (merged.length !== current.length || !current.includes('artists')) {
+            existing.pagePermissions = merged;
+            existing.permissionPreset = 'artist-management';
+            changed = true;
+          }
+        }
+        if (changed) await existing.save();
+        results.push(existing);
       }
-      if (changed) await existing.save();
-      results.push(existing);
+    }
+    return results;
+  });
+};
+
+/** @deprecated use seedDepartmentsForTenant inside tenant context */
+const seedDepartments = async () => {
+  const { getTenantId } = require('../utils/tenantContext');
+  let tenantId = getTenantId();
+  if (!tenantId) {
+    if (process.env.NODE_ENV === 'test') {
+      const { ensurePlatformTenant } = require('../utils/defaultTenant');
+      tenantId = await ensurePlatformTenant();
+    } else {
+      throw new Error('tenantId required to seed departments');
     }
   }
-  return results;
+  return seedDepartmentsForTenant(tenantId);
 };
 
 const mineTaskTypes = async () => {
@@ -151,6 +170,7 @@ module.exports = {
   DEFAULT_DEPARTMENTS,
   BASE_ROLE_SLUGS,
   seedDepartments,
+  seedDepartmentsForTenant,
   mineTaskTypes,
   inferTypeFromTitle,
   TASK_CATEGORIES,

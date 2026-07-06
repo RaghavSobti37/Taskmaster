@@ -37,7 +37,7 @@
     "routes": [
       "/dashboard"
     ],
-    "lines": 352,
+    "lines": 361,
     "defaultExport": "Dashboard",
     "namedExports": [],
     "hooks": [
@@ -49,6 +49,7 @@
       "useDashboardTaskActions",
       "useDashboardTasks",
       "useEffect",
+      "useLocation",
       "useMemo",
       "useNavigate",
       "useProjects",
@@ -61,7 +62,8 @@
     "apis": [],
     "components": [
       "BrandedLoadingPanel",
-      "DashboardTierLayout"
+      "DashboardTierLayout",
+      "OrgOnboardingChecklist"
     ]
   },
   {
@@ -235,7 +237,7 @@
     "routes": [
       "/admin/project-analytics"
     ],
-    "lines": 449,
+    "lines": 446,
     "defaultExport": "AdminProjectAnalyticsPage",
     "namedExports": [],
     "hooks": [
@@ -301,16 +303,20 @@
     "routes": [
       "/admin/teams"
     ],
-    "lines": 90,
+    "lines": 168,
     "defaultExport": "AdminTeamsPage",
     "namedExports": [],
     "hooks": [
+      "useCallback",
       "useDepartments",
       "useMemo",
+      "useState",
+      "useUpdateUser",
       "useUserDirectory"
     ],
     "apis": [],
     "components": [
+      "AdminBulkActionBar",
       "DepartmentsPanel"
     ]
   },
@@ -341,7 +347,7 @@
     "routes": [
       "/admin/users"
     ],
-    "lines": 462,
+    "lines": 565,
     "defaultExport": "AdminUsers",
     "namedExports": [],
     "hooks": [
@@ -364,6 +370,7 @@
     ],
     "apis": [],
     "components": [
+      "AdminBulkActionBar",
       "AdminUserGridCard",
       "ClerkDashboardUsersButton",
       "CreateUserModal",
@@ -393,6 +400,21 @@
       "ArtistProductHint",
       "SearchInput"
     ]
+  },
+  {
+    "file": "client/src/pages/admin/AuditLogPage.jsx",
+    "routes": [],
+    "lines": 66,
+    "defaultExport": "AuditLogPage",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useState"
+    ],
+    "apis": [
+      "/api/enterprise/audit"
+    ],
+    "components": []
   },
   {
     "file": "client/src/pages/admin/CrmStatsPage.jsx",
@@ -1330,32 +1352,36 @@
     "components": []
   },
   {
-    "file": "client/src/pages/auth/OTPVerificationPage.jsx",
+    "file": "client/src/pages/auth/OrgChoosePage.jsx",
     "routes": [
-      "/relegends"
+      "/login/choose"
     ],
-    "lines": 315,
-    "defaultExport": "OTPVerificationPage",
+    "lines": 142,
+    "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useAuth",
       "useCallback",
-      "useState",
-      "useSystemToast"
+      "useClerk",
+      "useClerkAuth",
+      "useEffect",
+      "useNavigate",
+      "useQueryClient",
+      "useRef",
+      "useState"
     ],
-    "apis": [
-      "/api/otp/send-email",
-      "/api/otp/send-phone",
-      "/api/otp/verify-email",
-      "/api/otp/verify-phone"
-    ],
-    "components": []
+    "apis": [],
+    "components": [
+      "AuthMarketingShell",
+      "BootScreen"
+    ]
   },
   {
     "file": "client/src/pages/auth/RegisterPage.jsx",
     "routes": [
       "/register/*"
     ],
-    "lines": 141,
+    "lines": 187,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1367,13 +1393,14 @@
       "useRef",
       "useState"
     ],
-    "apis": [],
+    "apis": [
+      "/api/auth/access-request"
+    ],
     "components": [
       "AppBootError",
       "AuthMarketingShell",
       "BootScreen",
-      "ClearSessionCookiesButton",
-      "ClerkSignUpBlock"
+      "ClearSessionCookiesButton"
     ]
   },
   {
@@ -1386,6 +1413,25 @@
     "namedExports": [],
     "hooks": [],
     "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/billing/UpgradePage.jsx",
+    "routes": [],
+    "lines": 160,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useMemo",
+      "useQueryClient",
+      "useState",
+      "useTenantUnlocks",
+      "useToast"
+    ],
+    "apis": [
+      "/api/tenants/${tenantId}/billing/checkout"
+    ],
     "components": []
   },
   {
@@ -1641,16 +1687,11 @@
     "routes": [
       "/emails/streams"
     ],
-    "lines": 142,
+    "lines": 33,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
-      "useCreateEmailStream",
-      "useEmailStreams",
-      "useMemo",
-      "useState",
-      "useToast",
-      "useUpdateEmailStream"
+      "useEmailStreams"
     ],
     "apis": [],
     "components": []
@@ -1676,7 +1717,7 @@
     "routes": [
       "(tab: finance)"
     ],
-    "lines": 1308,
+    "lines": 1314,
     "defaultExport": "FinancePage",
     "namedExports": [],
     "hooks": [
@@ -1719,16 +1760,22 @@
     "routes": [
       "/admin/console"
     ],
-    "lines": 182,
+    "lines": 344,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useAdminConsoleSummary",
       "useAuth",
+      "useCallback",
       "useMemo",
-      "useNavigate"
+      "useNavigate",
+      "useState",
+      "useTenantUnlocks"
     ],
     "apis": [],
     "components": [
+      "DataListRow",
+      "DataOverviewSection",
       "PageHeader"
     ]
   },
@@ -1749,9 +1796,9 @@
   {
     "file": "client/src/pages/hubs/ManagementHub.jsx",
     "routes": [
-      "/management?tab=finance|announcements|artists"
+      "/management?tab=finance|announcements|documents|artists"
     ],
-    "lines": 19,
+    "lines": 21,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -1828,7 +1875,7 @@
     "routes": [
       "/privacy"
     ],
-    "lines": 158,
+    "lines": 165,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -1838,6 +1885,16 @@
       "MarketingPageBackground",
       "MarketingThemeToggle"
     ]
+  },
+  {
+    "file": "client/src/pages/legal/TermsOfService.jsx",
+    "routes": [],
+    "lines": 24,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
   },
   {
     "file": "client/src/pages/legal/UserDataDeletion.jsx",
@@ -1951,6 +2008,41 @@
       "ListPageSkeleton",
       "SearchInput"
     ]
+  },
+  {
+    "file": "client/src/pages/management/DocumentsPage.jsx",
+    "routes": [],
+    "lines": 296,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useConfirm",
+      "useCreateOrgDocument",
+      "useDeleteOrgDocument",
+      "useMemo",
+      "useOrgDocuments",
+      "useState",
+      "useUpdateOrgDocument"
+    ],
+    "apis": [
+      "/api/org-documents/${doc._id}/file"
+    ],
+    "components": [
+      "ListPageLayout",
+      "ListPageSkeleton",
+      "OrgDocumentModal",
+      "SearchInput"
+    ]
+  },
+  {
+    "file": "client/src/pages/management/DocumentsPage.test.jsx",
+    "routes": [],
+    "lines": 82,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
   },
   {
     "file": "client/src/pages/management/EquipmentPage.jsx",
@@ -2116,6 +2208,146 @@
     ]
   },
   {
+    "file": "client/src/pages/org/CreateOrganizationPage.jsx",
+    "routes": [
+      "/org/create"
+    ],
+    "lines": 153,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useNavigate",
+      "useState"
+    ],
+    "apis": [
+      "/api/tenants/create"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/OrgCreateSuccessPage.jsx",
+    "routes": [
+      "/org/create/success"
+    ],
+    "lines": 53,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useCallback",
+      "useEffect",
+      "useLocation",
+      "useNavigate",
+      "useRef"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/OrgPickerPage.jsx",
+    "routes": [
+      "/org/pick"
+    ],
+    "lines": 82,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useMutation",
+      "useNavigate",
+      "useQuery",
+      "useQueryClient",
+      "useState"
+    ],
+    "apis": [
+      "/api/tenants/memberships",
+      "/api/tenants/select"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/TenantInviteAcceptPage.jsx",
+    "routes": [
+      "/invites/:token/accept"
+    ],
+    "lines": 63,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useEffect",
+      "useNavigate",
+      "useParams",
+      "useState"
+    ],
+    "apis": [
+      "/api/invites/${token}",
+      "/api/invites/${token}/accept"
+    ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/OrgCreateProgress.jsx",
+    "routes": [],
+    "lines": 44,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/OrgLogoPicker.jsx",
+    "routes": [],
+    "lines": 79,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useRef"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/steps/StepIdentity.jsx",
+    "routes": [],
+    "lines": 75,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/steps/StepInvites.jsx",
+    "routes": [],
+    "lines": 87,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/steps/StepProfile.jsx",
+    "routes": [],
+    "lines": 87,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/org/create/steps/StepReview.jsx",
+    "routes": [],
+    "lines": 73,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
     "file": "client/src/pages/productivity/DailyLogPage.jsx",
     "routes": [
       "/logs"
@@ -2177,17 +2409,19 @@
     "routes": [
       "/projects/:id/analytics"
     ],
-    "lines": 40,
+    "lines": 55,
     "defaultExport": "ProjectAnalyticsPage",
     "namedExports": [],
     "hooks": [
       "useNavigate",
       "useParams",
-      "useProject"
+      "useProject",
+      "useProjectReportRangeState"
     ],
     "apis": [],
     "components": [
-      "ProjectAnalyticsContent"
+      "ProjectAnalyticsContent",
+      "ProjectReportRangeControls"
     ]
   },
   {
@@ -2374,11 +2608,33 @@
     ]
   },
   {
+    "file": "client/src/pages/settings/DevelopersPage.jsx",
+    "routes": [
+      "/developers"
+    ],
+    "lines": 375,
+    "defaultExport": "DevelopersPage",
+    "namedExports": [],
+    "hooks": [
+      "useEffect",
+      "useState",
+      "useWebhookDeliveries"
+    ],
+    "apis": [
+      "/api/enterprise/api-keys",
+      "/api/enterprise/usage",
+      "/api/enterprise/webhooks",
+      "/api/enterprise/webhooks/${id}",
+      "/api/openapi.json"
+    ],
+    "components": []
+  },
+  {
     "file": "client/src/pages/settings/SettingsPage.jsx",
     "routes": [
       "/settings"
     ],
-    "lines": 181,
+    "lines": 185,
     "defaultExport": "SettingsPage",
     "namedExports": [],
     "hooks": [
@@ -2409,7 +2665,7 @@
   {
     "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
     "routes": [],
-    "lines": 965,
+    "lines": 976,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2427,6 +2683,26 @@
     "apis": [
       "/api/customization/dashboard/preset"
     ],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/IntegrationsTab.jsx",
+    "routes": [],
+    "lines": 153,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useConnectIntegration",
+      "useDisconnectIntegration",
+      "useIntegrationHealth",
+      "useIntegrationProviders",
+      "useIntegrationSync",
+      "useMemo",
+      "usePatchIntegrationMetadata",
+      "useSearchParams",
+      "useState"
+    ],
+    "apis": [],
     "components": []
   },
   {
@@ -2501,6 +2777,27 @@
       "useState"
     ],
     "apis": [],
+    "components": []
+  },
+  {
+    "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+    "routes": [],
+    "lines": 183,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useAuth",
+      "useNavigate",
+      "useOffboardOrganization",
+      "useOrgSettings",
+      "useQuery",
+      "useQueryClient",
+      "useUpdateOrgSettings"
+    ],
+    "apis": [
+      "/api/tenants/memberships",
+      "/api/tenants/select"
+    ],
     "components": []
   },
   {

@@ -27,6 +27,7 @@ const tenantSchema = new mongoose.Schema({
     knowledgeEngine: { type: Boolean, default: false },
     finance: { type: Boolean, default: false },
     artistOs: { type: Boolean, default: false },
+    integrations: { type: Boolean, default: false },
   },
   onboardingProgress: {
     dismissedChecklist: { type: Boolean, default: false },

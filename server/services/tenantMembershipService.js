@@ -10,6 +10,7 @@ const { registerSession, decodeToken } = require('../utils/sessionRegistry');
 const { assertSeatAvailable } = require('./planEnforcementService');
 const { enqueueTenantInviteEmails } = require('./tenantInviteEmailQueue');
 const { syncTenantToClerkOrganization } = require('./clerkOrgService');
+const { bootstrapTenant } = require('./tenantBootstrapService');
 const {
   isClerkIdentityWritePathEnabled,
   createClerkOrganizationInvitation,
@@ -296,6 +297,8 @@ const createTenantForUser = async (userId, payload = {}) => {
     tenant.updatedAt = new Date();
     await tenant.save();
   }
+
+  await bootstrapTenant(tenant._id, { creatorUserId: user._id });
 
   return tenant;
 };

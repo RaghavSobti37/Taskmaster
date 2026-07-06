@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 
 export interface SessionTokenPayload {
   id: string;
+  activeTenantId?: string;
   loginAt?: number;
   jti?: string;
   purpose?: string;

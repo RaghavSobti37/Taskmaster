@@ -114,13 +114,18 @@ const resolveUserFromClerkProfile = async (profile, guards = {}) => {
     }
     let tenantId = guards.tenantId || null;
     if (!tenantId) {
+      const { resolveDefaultTenantId, ensurePlatformTenant } = require('./defaultTenant');
       try {
-        tenantId = await ensurePlatformTenant();
+        tenantId = await resolveDefaultTenantId();
       } catch (err) {
-        console.error('[clerkAuth] platform tenant bootstrap failed during user creation:', err?.message || err);
-        const fail = new Error('Workspace tenant is not configured. Contact an administrator.');
-        fail.status = 503;
-        throw fail;
+        try {
+          tenantId = await ensurePlatformTenant();
+        } catch (bootstrapErr) {
+          console.error('[clerkAuth] platform tenant bootstrap failed during user creation:', bootstrapErr?.message || bootstrapErr);
+          const fail = new Error('Workspace tenant is not configured. Contact an administrator.');
+          fail.status = 503;
+          throw fail;
+        }
       }
     }
     const createPayload = {

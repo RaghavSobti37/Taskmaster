@@ -110,18 +110,7 @@ const sortWorkspacesForUser = (workspaces, userOrder) => {
 };
 
 async function findWorkspacePreferenceForUser(userId) {
-  const pref = await WorkspacePreference.findOne({ userId }).lean();
-  if (pref) return pref;
-
-  const tenantId = getTenantId();
-  if (!tenantId) return null;
-
-  return WorkspacePreference.findOne({
-    userId,
-    $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
-  })
-    .setOptions({ bypassTenant: true })
-    .lean();
+  return WorkspacePreference.findOne({ userId }).lean();
 }
 
 async function upsertWorkspacePreferenceOrder(userId, order) {
@@ -136,13 +125,6 @@ async function upsertWorkspacePreferenceOrder(userId, order) {
   if (existing) return existing;
 
   if (tenantId) {
-    const legacy = await WorkspacePreference.findOneAndUpdate(
-      { userId, $or: [{ tenantId: { $exists: false } }, { tenantId: null }] },
-      { $set: { ...update, tenantId } },
-      { new: true }
-    ).setOptions({ bypassTenant: true });
-    if (legacy) return legacy;
-
     return WorkspacePreference.findOneAndUpdate(
       { userId },
       {
@@ -161,18 +143,7 @@ async function upsertWorkspacePreferenceOrder(userId, order) {
 }
 
 async function loadWorkspacesForContext() {
-  let workspaces = await Workspace.find().lean();
-  if (workspaces.length > 0) return workspaces;
-
-  const tenantId = getTenantId();
-  if (!tenantId) return workspaces;
-
-  // Legacy rows may lack tenantId — tenant-scoped find returns empty while names still exist globally.
-  return Workspace.find({
-    $or: [{ tenantId: { $exists: false } }, { tenantId: null }],
-  })
-    .setOptions({ bypassTenant: true })
-    .lean();
+  return Workspace.find().lean();
 }
 
 async function getSortedWorkspacesForUser(userId) {
@@ -191,9 +162,6 @@ async function getSortedWorkspacesForUser(userId) {
       if (error?.code !== 11000) throw error;
     }
     workspaces = await loadWorkspacesForContext();
-    if (workspaces.length === 0) {
-      workspaces = await Workspace.find().setOptions({ bypassTenant: true }).lean();
-    }
   }
 
   const pref = await findWorkspacePreferenceForUser(userId);

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { getTenantId } = require('../utils/tenantContext');
-const { isProduction } = require('../utils/workerTenantContext');
 const { tenantIdFilter } = require('../utils/mongoId');
 
 module.exports = function tenantPlugin(schema, options) {
@@ -22,11 +21,9 @@ module.exports = function tenantPlugin(schema, options) {
       const tenantId = getTenantId();
       if (tenantId) {
         this.tenantId = tenantId;
-      } else if (isProduction()) {
-        throw new Error('tenantId required: missing tenant context in production');
-      } else {
+      } else if (process.env.NODE_ENV !== 'production') {
         const Tenant = require('../models/Tenant');
-        let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
+        let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' }).setOptions({ bypassTenant: true });
         if (!defaultTenant) {
           defaultTenant = await Tenant.create({
             name: 'Default Tenant',
@@ -34,6 +31,8 @@ module.exports = function tenantPlugin(schema, options) {
           });
         }
         this.tenantId = defaultTenant._id;
+      } else {
+        throw new Error('tenantId required: missing tenant context');
       }
     }
   });

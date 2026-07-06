@@ -1395,6 +1395,21 @@ a.tm-hashtag-chip:hover {
   padding: 0.5rem;
 }
 
+/* Locked items use <button> — match NavLink chrome exactly */
+button.tm-sidebar-nav-item {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  appearance: none;
+}
+
+.tm-sidebar-nav-item--locked {
+  cursor: pointer;
+}
+
 .tm-sidebar-icon-chip {
   display: inline-flex;
   align-items: center;

@@ -4,7 +4,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/auth.types';
 import { SyncService } from './sync.service';
 
-@Controller('api/v1/sync')
+@Controller('v1/sync')
 export class SyncController {
   constructor(private readonly syncService: SyncService) {}
 

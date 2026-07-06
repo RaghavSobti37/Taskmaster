@@ -3,7 +3,7 @@ import { useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasPageAccess } from '../../utils/pagePermissions';
 import { HUB_CONFIG } from '../../utils/navbarConfig';
-import { HUB_NAV_META, withHubTabIcons } from '../../utils/hubSubnavConfig';
+import { HUB_NAV_META, withHubTabIcons, HUB_TAB_FEATURE_KEYS } from '../../utils/hubSubnavConfig';
 import HubPageLayout from '../../components/ui/HubPageLayout';
 import ModuleSubnav from '../../components/ui/ModuleSubnav';
 
@@ -43,6 +43,7 @@ export default function TabHubLayout({ hubPath, panels }) {
     id: tab.id,
     label: tab.label,
     icon: tab.icon,
+    featureKey: HUB_TAB_FEATURE_KEYS[tab.id],
   }));
 
   return (

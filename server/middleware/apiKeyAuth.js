@@ -1,4 +1,5 @@
 const { verifyApiKey } = require('../services/tenantApiKeyService');
+const { runWithContext } = require('../utils/tenantContext');
 
 /** Bearer ck_live_* tenant API key auth — sets req.tenantId + req.apiKeyScopes */
 const apiKeyAuth = async (req, res, next) => {
@@ -14,7 +15,7 @@ const apiKeyAuth = async (req, res, next) => {
   req.tenantId = row.tenantId;
   req.apiKeyScopes = row.scopes || [];
   req.authViaApiKey = true;
-  return next();
+  return runWithContext({ tenantId: String(row.tenantId) }, () => next());
 };
 
 module.exports = { apiKeyAuth };

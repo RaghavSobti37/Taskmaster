@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const STATUS = ['active', 'expired', 'pending_reauth'];
 
@@ -20,6 +21,7 @@ const ArtistConnectionSchema = new mongoose.Schema({
   lastError: { type: String },
 }, { timestamps: true });
 
-ArtistConnectionSchema.index({ artistId: 1, provider: 1, accountHandle: 1 }, { unique: true });
+ArtistConnectionSchema.index({ tenantId: 1, artistId: 1, provider: 1, accountHandle: 1 }, { unique: true });
+ArtistConnectionSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ArtistConnection', ArtistConnectionSchema);

@@ -113,17 +113,6 @@ export const useResetAttendance = () => {
   });
 };
 
-const useUpdateAttendance = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => axios.put(`/api/attendance/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['attendanceRosterUsers'] });
-    },
-  });
-};
-
 export const useUpsertAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({

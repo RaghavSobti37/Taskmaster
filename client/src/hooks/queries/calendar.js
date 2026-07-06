@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
+import { useAuth } from '../../contexts/AuthContext';
 
 function defaultCalendarRange() {
   const now = new Date();
@@ -73,11 +74,14 @@ export async function fetchCalendarEvents(range) {
 }
 
 export const useCalendarEvents = (range) => {
+  const { user } = useAuth();
+  const tenantId = user?.activeTenantId || user?.tenantId || '';
   const { start, end } = buildRangeParams(range);
   const query = useQuery({
-    queryKey: ['calendarEvents', start, end],
+    queryKey: ['calendarEvents', tenantId, start, end],
     queryFn: () => fetchCalendarEvents({ start, end }),
     staleTime: 1000 * 60,
+    enabled: Boolean(tenantId),
   });
 
   return {

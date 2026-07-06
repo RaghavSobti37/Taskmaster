@@ -74,8 +74,8 @@ exports.exportTenant = async (req, res) => {
 
 exports.deleteTenant = async (req, res) => {
   try {
-    const { scheduleTenantDeletion } = require('../services/tenantExportService');
-    const result = await scheduleTenantDeletion(req.params.id, req.user._id.toString());
+    const { executeTenantCascadeDelete } = require('../services/tenantCascadeDeleteService');
+    const result = await executeTenantCascadeDelete(req.params.id, { deleteClerk: true });
     res.json({ success: true, ...result });
   } catch (error) {
     logger.error('tenantAdmin', 'deleteTenant', { error: error.message });

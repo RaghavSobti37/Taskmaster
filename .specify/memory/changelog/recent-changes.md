@@ -4,6 +4,15 @@ Session deltas appended by `/git-push`, `memory-sync`, and agent ship workflows.
 
 ---
 
+## 2026-07-06 - Code/docs/config/contract mismatch reconciliation
+
+- **What:** Reconciled the extended mismatch audit across client routes, API contracts, generated docs, OpenAPI, server debug code, and NestJS sync routing. Legacy `/relegends` now redirects to `/login`; deleted the stale OTP page that called missing `/api/otp/*`; `/developers` now uses `admin_developers`; `/data-hub` redirects to `/admin`; Nest sync token route now resolves at `/api/v1/sync/token`; mail streams stay GET-only; orphan attendance/update and CSV importer contracts were cleaned up.
+- **Docs:** Regenerated page inventory + `COREKNOT_MASTER`; updated auth/frontend memory, operations links, logo locked path, Render preview-CORS comment, OpenAPI `/v1/leads` + `tenantApiKey`, and added `docs/operations/COREKNOT_MISMATCH_AUDIT_2026-07-06.md`.
+- **Verify:** Memory gate passed with `npm test --prefix coreknot/Taskmaster/client && NODE_OPTIONS=--max-old-space-size=8192 npm test --prefix coreknot/Taskmaster/server && npm run build --prefix coreknot/Taskmaster/client`; Nest build also passed separately with `npm run build --prefix nestjs-server`.
+- **Ledger:** `.cursor/loop-engineering/coreknot-mismatch-reconciliation-ledger.json` marked `satisfaction: pass` only after verify exited 0.
+
+---
+
 ## 2026-07-05 — Finance payment dates: PDF screenshot OCR + prod backfill complete
 
 - **What:** `documentParser` PDF screenshot OCR via `pdf-parse` `getScreenshot` + Tesseract when text layer &lt; 20 chars; `shouldRunPdfOcr` guards; `reparseFinanceOcr.js --ocr-scanned`; Uber weekday + invoice-month date patterns; xlsx/docx upload-date fallback for zero-text imports.

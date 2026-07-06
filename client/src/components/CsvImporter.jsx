@@ -8,6 +8,7 @@ export default function CsvImporter({ onImportComplete }) {
   const [csvData, setCsvData] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [mapping, setMapping] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null);
 
@@ -15,7 +16,9 @@ export default function CsvImporter({ onImportComplete }) {
 
   const handleFileChange = (e) => {
     if (!e.target.files?.[0]) return;
-    Papa.parse(e.target.files[0], {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
@@ -46,27 +49,13 @@ export default function CsvImporter({ onImportComplete }) {
     setIsImporting(true);
     setImportStatus(null);
 
-    const standardizedLeads = csvData.map(row => {
-      const lead = { metadata: {} };
-      Object.keys(mapping).forEach(systemKey => {
-        const csvCol = mapping[systemKey];
-        if (!csvCol || !row[csvCol]) return;
-
-        const val = row[csvCol].toString().trim();
-        if (systemKey === 'tags') {
-          lead[systemKey] = val.split(',').map(t => t.trim()).filter(Boolean);
-        } else if (systemFields.includes(systemKey)) {
-          lead[systemKey] = val;
-        } else {
-          lead.metadata[systemKey] = val;
-        }
-      });
-      return lead;
-    });
-
     try {
-      const res = await axios.post('/api/crm/import-leads', { leads: standardizedLeads });
-      setImportStatus({ success: true, count: res.data.processed || standardizedLeads.length });
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      const res = await axios.post('/api/crm/leads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setImportStatus({ success: true, count: res.data.processed || csvData.length });
       if (onImportComplete) onImportComplete();
     } catch (err) {
       console.error('Import error:', err);
@@ -89,7 +78,7 @@ export default function CsvImporter({ onImportComplete }) {
           </div>
         </div>
         {csvData.length > 0 && (
-          <Button size="xs" variant="ghost" onClick={() => { setCsvData([]); setHeaders([]); setMapping({}); setImportStatus(null); }} className="text-rose-500 hover:bg-rose-500/10">
+          <Button size="xs" variant="ghost" onClick={() => { setCsvData([]); setHeaders([]); setMapping({}); setSelectedFile(null); setImportStatus(null); }} className="text-rose-500 hover:bg-rose-500/10">
             Reset Matrix
           </Button>
         )}

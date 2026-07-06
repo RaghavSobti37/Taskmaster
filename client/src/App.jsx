@@ -5,6 +5,7 @@ import { isClerkConfigured } from './config/clerk';
 import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
+import FeatureUnlockRoute from './components/org/FeatureUnlockRoute';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootError from './components/AppBootError';
 import BootScreen from './components/BootScreen';
@@ -83,7 +84,6 @@ const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterP
 const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
 const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
 const CreateCampaignPage = lazyWithRetry(() => import('./pages/workspace/CreateCampaignPage'));
-const OTPVerificationPage = lazyWithRetry(() => import('./pages/auth/OTPVerificationPage'));
 const OrgChoosePage = lazyWithRetry(() => import('./pages/auth/OrgChoosePage'));
 const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
@@ -100,9 +100,7 @@ const AdminPlatformSettings = lazyWithRetry(() => import('./pages/admin/AdminPla
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const MediaListPage = lazyWithRetry(() => import('./pages/admin/MediaListPage'));
 const LeadAuditsPage = lazyWithRetry(() => import('./pages/admin/LeadAuditsPage'));
-const SecurityAuditPage = lazyWithRetry(() => import('./pages/admin/SecurityAuditPage'));
 const AdminTenantSsoPage = lazyWithRetry(() => import('./pages/admin/AdminTenantSsoPage'));
-const AuditLogPage = lazyWithRetry(() => import('./pages/admin/AuditLogPage'));
 const DevelopersPage = lazyWithRetry(() => import('./pages/settings/DevelopersPage'));
 const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
@@ -189,7 +187,7 @@ const marketingAuthRoutes = (
     <Route path="/register/*" element={<RegisterPage />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
-    <Route path="/relegends" element={<OTPVerificationPage />} />
+    <Route path="/relegends" element={<Navigate to="/login" replace />} />
     <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
     <Route path="/privacy" element={<PrivacyPolicy />} />
     <Route path="/terms" element={<TermsOfService />} />
@@ -271,6 +269,7 @@ function App() {
               <Route element={<PageRoute page="dashboard" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
               </Route>
+              <Route path="/upgrade" element={<Navigate to="/settings?tab=organization" replace />} />
               <Route element={<PageRoute page="projects" />}>
                 <Route path="/projects" element={<ProjectsView />} />
                 <Route path="/projects/new" element={<ProjectCreate />} />
@@ -285,9 +284,12 @@ function App() {
               <Route element={<PageRoute page="settings" />}>
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/profile" element={<Navigate to="/settings?tab=profile" replace />} />
+              </Route>
+              <Route element={<PageRoute page="admin_developers" />}>
                 <Route path="/developers" element={<DevelopersPage />} />
               </Route>
               <Route path="/org/settings" element={<Navigate to="/settings?tab=organization" replace />} />
+              <Route path="/data-hub" element={<Navigate to="/admin" replace />} />
 
               <Route element={<PageRoute page="logs" />}>
                 <Route path="/logs" element={<DailyLogPage />} />
@@ -370,7 +372,7 @@ function App() {
                 <Route path="/admin/qa" element={<QATestingPage />} />
                 <Route path="/admin/media-list" element={<MediaListPage />} />
                 <Route path="/admin/lead-audits" element={<LeadAuditsPage />} />
-                <Route path="/admin/security-audit" element={<SecurityAuditPage />} />
+                <Route path="/admin/security-audit" element={<Navigate to="/admin/console" replace />} />
                 <Route path="/admin/crm-stats" element={<CrmStatsPage />} />
                 <Route path="/admin/audits" element={<Navigate to="/admin/lead-audits" replace />} />
               </Route>
@@ -378,7 +380,7 @@ function App() {
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
                 <Route path="/admin/tenant-sso" element={<AdminTenantSsoPage />} />
-                <Route path="/admin/audit-log" element={<AuditLogPage />} />
+                <Route path="/admin/audit-log" element={<Navigate to="/admin/console" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_teams" />}>
                 <Route path="/admin/teams" element={<AdminTeamsPage />} />
@@ -399,34 +401,40 @@ function App() {
                 <Route path="/admin/ops-hub" element={<OpsHubPage />} />
               </Route>
               <Route element={<PageRoute pages={['admin_knowledge_engine', 'admin_data']} />}>
-                <Route path="/admin/knowledge-engine" element={<KnowledgeEnginePage />} />
+                <Route element={<FeatureUnlockRoute featureKey="knowledgeEngine" />}>
+                  <Route path="/admin/knowledge-engine" element={<KnowledgeEnginePage />} />
+                </Route>
               </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
               <Route element={<PageRoute page="emails" />}>
-                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
-                <Route element={<EmailHubLayout />}>
-                  <Route path="/emails" element={<EmailsOverviewPage />} />
-                  <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
-                  <Route path="/emails/templates" element={<EmailsTemplatesPage />} />
-                  <Route path="/emails/profiles" element={<EmailsProfilesPage />} />
-                  <Route path="/emails/streams" element={<EmailsStreamsPage />} />
-                  <Route path="/emails/analytics" element={<EmailsAnalyticsPage />} />
-                  <Route path="/emails/newsletter" element={<NewsletterPage />} />
-                  <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
-                  <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
+                <Route element={<FeatureUnlockRoute featureKey="resend" />}>
+                  <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
+                  <Route element={<EmailHubLayout />}>
+                    <Route path="/emails" element={<EmailsOverviewPage />} />
+                    <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
+                    <Route path="/emails/templates" element={<EmailsTemplatesPage />} />
+                    <Route path="/emails/profiles" element={<EmailsProfilesPage />} />
+                    <Route path="/emails/streams" element={<EmailsStreamsPage />} />
+                    <Route path="/emails/analytics" element={<EmailsAnalyticsPage />} />
+                    <Route path="/emails/newsletter" element={<NewsletterPage />} />
+                    <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
+                    <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
+                  </Route>
+                  <Route path="/emails/create" element={<CreateCampaignPage />} />
                 </Route>
-                <Route path="/emails/create" element={<CreateCampaignPage />} />
               </Route>
               <Route path="/workspace/emails" element={<Navigate to="/emails" replace />} />
               <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
-                <Route path="/artists/portfolio" element={<PortfolioDashboard />} />
-                <Route path="/artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
-                <Route path="/artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
-                <Route path="/artists/:id/*" element={<ArtistDetail />} />
+                <Route element={<FeatureUnlockRoute featureKey="artistOs" />}>
+                  <Route path="/artists/portfolio" element={<PortfolioDashboard />} />
+                  <Route path="/artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
+                  <Route path="/artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
+                  <Route path="/artists/:id/*" element={<ArtistDetail />} />
+                </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />
             </Route>

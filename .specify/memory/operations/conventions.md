@@ -32,7 +32,7 @@ npm run audit:history     # After history rewrite or fork import
 | --- | --- | --- |
 | **Production hosts** | `.cursor/rules/production-hosts-locked.mdc` | `.cursor/production-hosts.local.json` |
 | **Email engine** | `.cursor/rules/email-engine-locked.mdc` | `docs/reference/EMAIL_ENGINE_LOCKED.md` |
-| **Logo & spinner** | `.cursor/rules/logo-mark-locked.mdc` | `docs/LOGO_LOCKED.md` |
+| **Logo & spinner** | `.cursor/rules/logo-mark-locked.mdc` | `docs/reference/LOGO_LOCKED.md` |
 | **Legacy APIs** | — | `docs/LEGACY_FREEZE.md` |
 
 ## Cursor agent rules (committed)

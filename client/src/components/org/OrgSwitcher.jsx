@@ -7,6 +7,7 @@ import { OrganizationSwitcher, useAuth as useClerkAuth, useClerk } from '@clerk/
 import { isClerkConfigured } from '../../config/clerk';
 import { isOrgFirstAuthEnabled } from '../../lib/orgFirstAuth';
 import { reestablishClerkOrgSession } from '../../lib/reestablishClerkOrgSession';
+import { onOrgSwitch } from '../../lib/tenantClientCache';
 import { useAuth } from '../../contexts/AuthContext';
 
 const fetchMemberships = async () => {
@@ -107,7 +108,7 @@ function ClerkOrgSwitcherPanel({ variant, className }) {
     })
       .then(() => {
         queryClient.clear();
-        window.location.reload();
+        void onOrgSwitch(queryClient).finally(() => window.location.reload());
       })
       .catch(() => {
         switchingRef.current = false;
@@ -180,8 +181,7 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
       return tenantId;
     },
     onSuccess: () => {
-      queryClient.clear();
-      window.location.reload();
+      void onOrgSwitch(queryClient).finally(() => window.location.reload());
     },
   });
 

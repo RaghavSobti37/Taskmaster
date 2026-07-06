@@ -7,10 +7,11 @@ const {
   mailTemplateRejectBody,
 } = require('../../../validation/schemas/mail');
 const templatesController = require('../controllers/templatesController');
+const { requireFeatureUnlock } = require('../../../middleware/requireFeatureUnlock');
 
 const emailsAccess = requirePageAccess('emails');
 
-router.use(protect, emailsAccess);
+router.use(protect, emailsAccess, requireFeatureUnlock('resend'));
 
 router.get('/templates/pending', templatesController.listPending);
 router.get('/templates', templatesController.list);

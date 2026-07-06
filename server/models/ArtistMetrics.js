@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
 
 const ArtistMetricsSchema = new mongoose.Schema({
   artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true, index: true },
@@ -85,5 +86,8 @@ const ArtistMetricsSchema = new mongoose.Schema({
     metrics: { type: mongoose.Schema.Types.Mixed }
   }]
 });
+
+ArtistMetricsSchema.index({ tenantId: 1, artistId: 1 }, { unique: true });
+ArtistMetricsSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ArtistMetrics', ArtistMetricsSchema);

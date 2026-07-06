@@ -749,7 +749,7 @@ Legacy `owner` normalizes to `admin`.
 | `/register` | `RegisterPage` |
 | `/forgot-password` | `ForgotPasswordPage` |
 | `/reset-password` | `ResetPasswordPage` |
-| `/relegends` | `OTPVerificationPage` |
+| `/relegends` | Legacy slug; redirects to `/login` |
 | `/auth/google/success` | `GoogleSuccessPage` |
 | `/oauth/meta/callback` | `MetaOAuthCallback` |
 | `/privacy` | `PrivacyPolicy` |

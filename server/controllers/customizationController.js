@@ -70,8 +70,19 @@ exports.getDashboardPreset = async (req, res, next) => {
       elements: filterDashboardElements(presetObj.elements, req.user),
     });
   } catch (error) {
+    // ponytail: missing tenant context in production should not break dashboard render
+    if (error?.message?.includes('tenantId required: missing tenant context')) {
+      logger.warn('Dashboard', 'Tenant context missing — falling back to default preset', {
+        error: error.message,
+      });
+      return res.json({
+        name: 'My Dashboard',
+        department: 'custom',
+        elements: filterDashboardElements(DEFAULT_DASHBOARD_ELEMENTS, req.user),
+      });
+    }
     logger.error('Dashboard', 'Error fetching dashboard preset', { error: error.message });
-    next(error);
+    return next(error);
   }
 };
 
@@ -351,8 +362,19 @@ exports.getShortcutPreferences = async (req, res, next) => {
     await setCache(cacheKey, payload, SHORTCUT_CACHE_TTL_SECONDS);
     res.json(payload);
   } catch (error) {
+    // ponytail: tenant bootstrap edge cases should not fail dashboard load
+    if (error?.message?.includes('tenantId required: missing tenant context')) {
+      logger.warn('Shortcuts', 'Tenant context missing — returning empty shortcut overrides', {
+        error: error.message,
+      });
+      return res.json({
+        bindings: {},
+        effectiveBindings: mergeShortcutBindings({}),
+        updatedAt: new Date(),
+      });
+    }
     logger.error('Shortcuts', 'Error fetching shortcut preferences', { error: error.message });
-    next(error);
+    return next(error);
   }
 };
 

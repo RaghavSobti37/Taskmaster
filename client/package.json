@@ -7,7 +7,7 @@
     "dev": "vite",
     "postinstall": "node scripts/generateVercelConfig.cjs",
     "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/prebuildIcons.mjs",
-    "build": "node scripts/generateVercelConfig.cjs && vite build",
+    "build": "node scripts/generateVercelConfig.cjs && vite build && node scripts/verify-production-build.mjs",
     "prevercel-build": "node scripts/generateVercelConfig.cjs",
     "vercel-build": "npm run build",
     "vercel-build:landing": "node scripts/generateVercelConfig.cjs && node scripts/generate-pwa-icons.mjs && node scripts/generate-og-preview.mjs && vite build --mode landing",

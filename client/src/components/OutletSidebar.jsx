@@ -443,6 +443,7 @@ const OutletSidebar = () => {
 
           {!showLabels && (
             <div className="flex w-full shrink-0 flex-col items-center gap-1">
+              <OrgSwitcher variant="sidebar-collapsed" className="w-full flex justify-center" />
               {!isMobile && (
                 <button
                   type="button"

@@ -14,6 +14,7 @@ const {
   isClerkIdentityWritePathEnabled,
   createClerkOrganizationInvitation,
 } = require('./clerkInviteService');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 const BYPASS = { bypassTenant: true };
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -89,20 +90,63 @@ const getMembership = async (userId, tenantId) => TenantMembership.findOne({
   status: 'active',
 }).setOptions(BYPASS).lean();
 
+const resolveBackfillRole = (user, tenant) => {
+  if (tenant?.ownerId && String(tenant.ownerId) === String(user._id)) return 'owner';
+  if (isAdminUser(user)) return 'admin';
+  return 'member';
+};
+
 const backfillMembershipFromUser = async (user) => {
   if (!user?.tenantId) return null;
-  const existing = await TenantMembership.findOne({
-    userId: user._id,
-    tenantId: user.tenantId,
-  }).setOptions(BYPASS);
+
+  const filter = { userId: user._id, tenantId: user.tenantId };
+  const existing = await TenantMembership.findOne(filter).setOptions(BYPASS);
   if (existing) return existing;
-  return TenantMembership.create({
+
+  const tenant = await Tenant.findById(user.tenantId).setOptions(BYPASS).select('ownerId');
+  const role = resolveBackfillRole(user, tenant);
+
+  // ponytail: upsert — parallel auth middleware calls must not race TenantMembership.create
+  try {
+    return await TenantMembership.findOneAndUpdate(
+      filter,
+      {
+        $setOnInsert: {
+          userId: user._id,
+          tenantId: user.tenantId,
+          role,
+          needsRoleReview: false,
+          status: 'active',
+          joinedAt: new Date(),
+        },
+      },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+    ).setOptions(BYPASS);
+  } catch (err) {
+    if (err?.code === 11000) {
+      const row = await TenantMembership.findOne(filter).setOptions(BYPASS);
+      if (row) return row;
+    }
+    throw err;
+  }
+};
+
+/** Self-heal: promote tenant.ownerId from member → owner on login. */
+const reconcileMembershipRole = async (user, tenantId) => {
+  if (!user?._id || !tenantId) return;
+  const tenant = await Tenant.findById(tenantId).setOptions(BYPASS).select('ownerId');
+  if (!tenant?.ownerId || String(tenant.ownerId) !== String(user._id)) return;
+
+  const membership = await TenantMembership.findOne({
     userId: user._id,
-    tenantId: user.tenantId,
-    role: 'member',
+    tenantId,
     status: 'active',
-    joinedAt: new Date(),
-  });
+  }).setOptions(BYPASS);
+  if (!membership || membership.role === 'owner') return;
+
+  membership.role = 'owner';
+  membership.needsRoleReview = false;
+  await membership.save();
 };
 
 const resolveInitialActiveTenantId = async (userId) => {
@@ -376,6 +420,7 @@ module.exports = {
   listActiveMemberships,
   getMembership,
   backfillMembershipFromUser,
+  reconcileMembershipRole,
   resolveInitialActiveTenantId,
   formatMembershipRow,
   createTenantForUser,

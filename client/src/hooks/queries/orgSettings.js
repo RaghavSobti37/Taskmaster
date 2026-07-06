@@ -6,7 +6,10 @@ export const orgSettingsQueryKey = (tenantId) => ['orgSettings', tenantId];
 
 const fetchOrgSettings = async (tenantId) => {
   const { data } = await axios.get(`/api/tenants/${tenantId}/settings`, { withCredentials: true });
-  return data?.tenant ?? data;
+  if (data?.permissions) {
+    return { tenant: data.tenant ?? data, permissions: data.permissions };
+  }
+  return { tenant: data?.tenant ?? data, permissions: {} };
 };
 
 export const tenantToOrgSettingsForm = (tenant = {}) => ({
@@ -62,10 +65,14 @@ export const useUpdateOrgSettings = (tenantId) => {
         buildUpdateTenantPayload(form),
         { withCredentials: true },
       );
-      return data?.tenant ?? data;
+      const tenant = data?.tenant ?? data;
+      return data?.permissions ? { tenant, permissions: data.permissions } : { tenant, permissions: {} };
     },
-    onSuccess: (tenant) => {
-      queryClient.setQueryData(orgSettingsQueryKey(tenantId), tenant);
+    onSuccess: (data) => {
+      const tenant = data?.tenant ?? data;
+      queryClient.setQueryData(orgSettingsQueryKey(tenantId), data?.permissions
+        ? { tenant, permissions: data.permissions }
+        : tenant);
       queryClient.invalidateQueries({ queryKey: ['tenantMemberships'] });
     },
   });

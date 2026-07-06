@@ -1,6 +1,7 @@
 import { isViteProxyDev } from './apiBase';
 import { isClerkLiveKey } from '../config/clerk';
 import { isStagingPreviewOnProdDb } from './stagingPreview';
+import { isLocalViteDev } from './runtimeEnv';
 
 const PROD_API_PATTERNS = [/render\.com/i, /onrender\.com/i, /tsccoreknot\.com/i];
 
@@ -9,7 +10,7 @@ const PROD_API_PATTERNS = [/render\.com/i, /onrender\.com/i, /tsccoreknot\.com/i
  * Relative /api requests (no VITE_API_URL) use vite.config.js proxy → localhost:5000.
  */
 export function warnIfDevPointsAtProduction() {
-  if (!import.meta.env.DEV) return;
+  if (!isLocalViteDev()) return;
 
   // vercel dev / local against branch preview — prod API is intentional
   if (typeof window !== 'undefined' && isStagingPreviewOnProdDb()) {
@@ -22,7 +23,7 @@ export function warnIfDevPointsAtProduction() {
     console.error(
       '[DEV GUARD] VITE_CLERK_PUBLISHABLE_KEY is pk_live_ (production). ' +
       'Clerk blocks localhost. Use pk_test_ from client/.env.development and restart vite. ' +
-      'If you used vercel dev, run npm run dev instead or unset production Clerk env vars.'
+      'If you used vercel dev, run `cd client && npm run dev` instead (vite.config forces .env.development).'
     );
   }
 

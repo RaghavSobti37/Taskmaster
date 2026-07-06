@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   getClerkDashboardUrl,
   getClerkProxyUrl,
@@ -109,8 +109,20 @@ describe('clerk config', () => {
     env.VITE_APP_URL = 'https://tsccoreknot.com';
     const wasDev = import.meta.env.DEV;
     import.meta.env.DEV = true;
+    vi.stubGlobal('window', { location: { hostname: 'localhost' } });
     expect(isLocalClerkRuntime()).toBe(true);
     expect(getClerkProxyUrl()).toBe('');
+    import.meta.env.DEV = wasDev;
+  });
+
+  it('uses proxy on production host for live keys', () => {
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_APP_URL = 'https://tsccoreknot.com';
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = true;
+    vi.stubGlobal('window', { location: { hostname: 'tsccoreknot.com' } });
+    expect(isLocalClerkRuntime()).toBe(false);
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
     import.meta.env.DEV = wasDev;
   });
 });

@@ -38,10 +38,29 @@ const sanitizePreviewViteApiUrl = () => {
   }
 }
 
+/** Vercel CLI injects Production env into `vercel dev` — committed .env.development wins locally. */
+const LOCAL_DEV_ENV_OVERRIDE_KEYS = [
+  'VITE_API_URL',
+  'VITE_CLERK_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+]
+
+const applyLocalDevEnvOverrides = (mode, env) => {
+  if (mode !== 'development') return env
+  const devFile = loadEnv('development', __dirname, '')
+  for (const key of LOCAL_DEV_ENV_OVERRIDE_KEYS) {
+    const value = String(devFile[key] || '').trim()
+    if (!value) continue
+    env[key] = value
+    process.env[key] = value
+  }
+  return env
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   sanitizePreviewViteApiUrl()
-  const env = loadEnv(mode, __dirname, '')
+  const env = applyLocalDevEnvOverrides(mode, loadEnv(mode, __dirname, ''))
   const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
   const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
   const apiUrl = (env.VITE_API_URL || '').trim()

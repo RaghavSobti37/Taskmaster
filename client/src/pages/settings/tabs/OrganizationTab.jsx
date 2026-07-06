@@ -12,6 +12,10 @@ import {
 } from '../../../hooks/queries/orgSettings';
 import { useAuth } from '../../../contexts/AuthContext';
 import { globalConfirm } from '../../../contexts/confirmContext';
+import {
+  canManageOrganizationSettings,
+  canDeleteOrganization,
+} from '@shared/orgPermissions';
 
 const fetchMemberships = async () => {
   const { data } = await axios.get('/api/tenants/memberships', { withCredentials: true });
@@ -33,16 +37,25 @@ export default function OrganizationTab() {
   const activeMembership = (membershipsData?.memberships || []).find(
     (m) => String(m.tenant?._id || m.tenant) === String(tenantId),
   );
-  const role = activeMembership?.role;
-  const canEdit = ['owner', 'admin'].includes(role);
-  const canDelete = role === 'owner';
-
   const {
-    data: tenant,
+    data: settingsData,
     isLoading: settingsLoading,
     error: settingsError,
     refetch,
   } = useOrgSettings(tenantId, Boolean(tenantId));
+
+  const tenant = settingsData?.tenant ?? settingsData;
+  const serverCanEdit = settingsData?.permissions?.canEditSettings;
+  const canEdit = serverCanEdit ?? canManageOrganizationSettings({
+    user,
+    membership: activeMembership,
+    tenant,
+  });
+  const canDelete = canDeleteOrganization({
+    user,
+    membership: activeMembership,
+    tenant,
+  });
 
   const updateMutation = useUpdateOrgSettings(tenantId);
   const offboardMutation = useOffboardOrganization();
@@ -124,7 +137,9 @@ export default function OrganizationTab() {
         <>
           {!canEdit && (
             <div className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-              Only organization owners and admins can edit these settings.
+              {activeMembership?.role
+                ? `Your organization role is "${activeMembership.role}". Only organization owners and admins can edit these settings.`
+                : 'Only organization owners and admins can edit these settings.'}
             </div>
           )}
 

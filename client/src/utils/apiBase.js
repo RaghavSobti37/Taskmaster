@@ -1,14 +1,15 @@
 import { isVercelPreviewHost, shouldUseSameOriginApi } from './displayMode';
 import { isAuthSite } from '../config/siteMode';
+import { isLocalViteDev } from './runtimeEnv';
 
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
 }
 
-/** Vite dev server always proxies /api and /socket.io to localhost:5000. */
+/** Local Vite dev only — production hosts never proxy via this path. */
 export function isViteProxyDev() {
-  return import.meta.env.DEV;
+  return isLocalViteDev();
 }
 
 /** Direct API origin when not using same-origin proxy. */
@@ -21,7 +22,7 @@ export function getDirectApiBaseUrl() {
  * Auth host always same-origin — clerk-establish/session cookies must not cross origins (CORS).
  * Vercel preview: direct staging API — Deployment Protection SSO blocks /api rewrites. */
 export function routeViaSameOriginApi() {
-  if (import.meta.env.DEV) return true;
+  if (isLocalViteDev()) return true;
   if (isAuthSite()) return true;
   if (typeof window !== 'undefined' && isVercelPreviewHost()) return false;
   if (typeof window !== 'undefined' && shouldUseSameOriginApi()) return true;

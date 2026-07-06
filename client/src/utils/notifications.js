@@ -1,5 +1,6 @@
 import { getNotificationIconUrl } from '../constants/brandIcons';
 import { isStandaloneDisplay } from './displayMode';
+import { isLocalViteDev } from './runtimeEnv';
 
 const PUSH_PREF_KEY = 'coreknot_push_enabled';
 const OS_NOTIF_DEDUPE_KEY = 'coreknot_os_notif_dedupe';
@@ -61,7 +62,7 @@ export const canUseWebPush = () => {
   if (!('serviceWorker' in navigator)) return false;
   if (!('PushManager' in window)) return false;
   if (!('Notification' in window)) return false;
-  if (import.meta.env?.DEV) return false;
+  if (isLocalViteDev()) return false;
   if (isIosDevice() && !isStandaloneDisplay()) return false;
   return true;
 };
@@ -69,7 +70,7 @@ export const canUseWebPush = () => {
 /** Human-readable blocker for Settings UI. */
 export const getPushUnsupportedReason = () => {
   if (typeof window === 'undefined') return 'Browser not supported';
-  if (import.meta.env?.DEV) return 'Push is disabled in local dev (service worker off)';
+  if (isLocalViteDev()) return 'Push is disabled in local dev (service worker off)';
   if (!('Notification' in window)) return 'This browser does not support notifications';
   if (!('serviceWorker' in navigator)) return 'Service workers are not available';
   if (!('PushManager' in window)) return 'Web Push is not supported on this browser';
@@ -176,7 +177,7 @@ export const resolveNotificationDeliveryMode = async () => {
 /** Wait for vite-plugin-pwa registration from LocalFirstRoot — no duplicate register. */
 export const waitForPushServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) return null;
-  if (import.meta.env?.DEV) return null;
+  if (isLocalViteDev()) return null;
 
   const ready = navigator.serviceWorker.ready;
   const timeout = new Promise((_, reject) => {

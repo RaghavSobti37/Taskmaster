@@ -22,6 +22,7 @@ describe('apiBase hybrid routing', () => {
   it('uses same-origin /api in dev', () => {
     vi.stubEnv('DEV', true);
     vi.stubEnv('PROD', false);
+    vi.stubGlobal('window', { location: { origin: 'http://localhost:5173', hostname: 'localhost' } });
     expect(getAxiosBaseURL()).toBeUndefined();
     expect(apiPath('/api/auth/login')).toBe('/api/auth/login');
   });
@@ -48,9 +49,21 @@ describe('apiBase hybrid routing', () => {
 
   it('uses window origin for realtime in dev (Vite proxy)', () => {
     vi.stubEnv('DEV', true);
-    vi.stubGlobal('window', { location: { origin: 'http://localhost:5173' } });
+    vi.stubGlobal('window', { location: { origin: 'http://localhost:5173', hostname: 'localhost' } });
     expect(getRealtimeOrigin()).toBe('http://localhost:5173');
     expect(isCrossOriginRealtime()).toBe(false);
+  });
+
+  it('uses production API on tsccoreknot.com even if DEV flag is true', () => {
+    vi.stubEnv('DEV', true);
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('VITE_API_URL', 'https://api.example.com');
+    vi.stubGlobal('window', {
+      location: { origin: 'https://tsccoreknot.com', hostname: 'tsccoreknot.com' },
+    });
+    vi.mocked(shouldUseSameOriginApi).mockReturnValue(false);
+    expect(getAxiosBaseURL()).toBe('https://api.example.com');
+    expect(getRealtimeOrigin()).toBe('https://api.example.com');
   });
 
   it('uses direct API on Vercel preview (Deployment Protection blocks /api proxy)', () => {

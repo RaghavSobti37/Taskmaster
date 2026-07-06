@@ -4,6 +4,7 @@
 
 import { isAuthSite, isLandingSite } from './siteMode';
 import { isVercelPreviewHost } from '../utils/displayMode';
+import { isLocalHostname, isLocalViteDev } from '../utils/runtimeEnv';
 
 const trim = (value) => String(value || '').trim();
 const trimSlash = (url) => trim(url).replace(/\/$/, '');
@@ -43,12 +44,9 @@ export function isClerkLiveKey() {
 
 /** Vite dev or localhost preview — Clerk proxy is registered for production host only. */
 export function isLocalClerkRuntime() {
-  if (import.meta.env.DEV) return true;
+  if (isLocalViteDev()) return true;
   if (import.meta.env.MODE === 'test') return false;
-  if (typeof window !== 'undefined') {
-    const host = window.location?.hostname || '';
-    if (host === 'localhost' || host === '127.0.0.1') return true;
-  }
+  if (typeof window !== 'undefined' && isLocalHostname(window.location?.hostname)) return true;
   return false;
 }
 

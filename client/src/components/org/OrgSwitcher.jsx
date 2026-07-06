@@ -30,7 +30,7 @@ const planTierLabel = (plan) => {
 function OrgAvatar({ tenant, size = 'md', className = '' }) {
   const name = tenant?.name || 'Organization';
   const logoUrl = tenant?.logoUrl;
-  const dim = size === 'sm' ? 'h-5 w-5 text-[9px]' : 'h-6 w-6 text-[10px]';
+  const dim = size === 'sm' ? 'h-5 w-5 text-[9px]' : size === 'lg' ? 'h-7 w-7 text-[11px]' : 'h-6 w-6 text-[10px]';
 
   if (logoUrl) {
     return (
@@ -49,8 +49,38 @@ function OrgAvatar({ tenant, size = 'md', className = '' }) {
   );
 }
 
+function OrgSwitcherFooterActions({ onNavigate }) {
+  const navigate = useNavigate();
+  const go = (path) => {
+    onNavigate?.();
+    navigate(path);
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)]"
+        onClick={() => go('/settings?tab=organization')}
+      >
+        <Settings size={14} className="text-[var(--color-action-primary)]" aria-hidden />
+        Organization settings
+      </button>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-[var(--color-action-primary)] hover:bg-[var(--color-bg-elevated)]"
+        onClick={() => go('/org/create')}
+      >
+        <Plus size={14} aria-hidden />
+        Create organization
+      </button>
+    </>
+  );
+}
+
 function ClerkOrgSwitcherPanel({ variant, className }) {
-  const isSidebar = variant === 'sidebar';
+  const isSidebar = variant === 'sidebar' || variant === 'sidebar-collapsed';
+  const isCollapsed = variant === 'sidebar-collapsed';
   const { orgId } = useClerkAuth();
   const { getToken, setActive } = useClerk();
   const { confirmSessionFromEstablish } = useAuth();
@@ -89,19 +119,28 @@ function ClerkOrgSwitcherPanel({ variant, className }) {
       className={`${isSidebar ? 'tm-sidebar-org tm-sidebar-org-clerk' : ''} ${className}`.trim()}
       data-org-switcher="clerk"
     >
-      <span className="tm-sidebar-org-secondary-label text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-        Switch workspace
-      </span>
+      {!isCollapsed && (
+        <span className="tm-sidebar-org-secondary-label text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+          Switch workspace
+        </span>
+      )}
       <OrganizationSwitcher
         hidePersonal
         appearance={{
           elements: {
-            organizationSwitcherTrigger: isSidebar
-              ? 'tm-sidebar-org-trigger w-full'
-              : 'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs',
+            organizationSwitcherTrigger: isCollapsed
+              ? 'tm-sidebar-org-trigger !w-auto !p-1.5 !justify-center'
+              : isSidebar
+                ? 'tm-sidebar-org-trigger w-full'
+                : 'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs',
           },
         }}
       />
+      {!isCollapsed && (
+        <div className="mt-1.5 space-y-0.5 border-t border-[var(--color-bg-border)] pt-1.5">
+          <OrgSwitcherFooterActions />
+        </div>
+      )}
     </div>
   );
 }
@@ -124,12 +163,12 @@ export default function OrgSwitcher({ variant = 'default', className = '' }) {
 }
 
 function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = false }) {
-  const isSidebar = variant === 'sidebar';
+  const isSidebar = variant === 'sidebar' || variant === 'sidebar-collapsed';
+  const isCollapsed = variant === 'sidebar-collapsed';
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { data } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['tenantMemberships'],
     queryFn: fetchMemberships,
     staleTime: 60_000,
@@ -157,22 +196,32 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
 
   const memberships = data?.memberships || [];
   const activeId = String(data?.activeTenantId || '');
-  const active = memberships.find((m) => String(m.tenant?._id || m.tenant) === activeId);
-
-  // ponytail: solo membership — no switcher (workspaces for projects live under /projects)
-  if (memberships.length <= 1) return null;
+  const active = memberships.find((m) => String(m.tenant?._id || m.tenant) === activeId)
+    || memberships[0];
 
   const orgName = active?.tenant?.name || 'Organization';
   const planLabel = planTierLabel(active?.tenant?.plan);
   const switchLabel = orgFirst ? 'Switch workspace' : 'Switch organization';
 
-  const triggerClass = isSidebar
-    ? 'tm-sidebar-org-trigger group'
-    : 'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors';
+  const menuClass = isCollapsed
+    ? 'absolute left-full top-0 z-[60] ml-1 min-w-[220px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-1 shadow-lg'
+    : isSidebar
+      ? 'tm-sidebar-org-menu'
+      : 'absolute right-0 z-50 mt-1 min-w-[220px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-1 shadow-lg';
+
+  const triggerClass = isCollapsed
+    ? 'tm-sidebar-org-trigger !w-auto !p-1.5 !justify-center'
+    : isSidebar
+      ? 'tm-sidebar-org-trigger group'
+      : 'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors';
 
   return (
-    <div ref={rootRef} className={`relative min-w-0 ${isSidebar ? 'tm-sidebar-org' : ''} ${className}`.trim()}>
-      {orgFirst && isSidebar ? (
+    <div
+      ref={rootRef}
+      className={`relative min-w-0 ${isSidebar ? 'tm-sidebar-org' : ''} ${className}`.trim()}
+      data-org-switcher="legacy"
+    >
+      {orgFirst && isSidebar && !isCollapsed ? (
         <span className="tm-sidebar-org-secondary-label mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
           Switch workspace
         </span>
@@ -185,23 +234,28 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
         aria-haspopup="listbox"
         aria-label={`${switchLabel} — ${orgName}`}
         title={orgName}
+        disabled={isLoading && !isError}
       >
-        <OrgAvatar tenant={active?.tenant} />
-        <span className={isSidebar ? 'tm-sidebar-org-trigger-label' : 'max-w-[140px] truncate'}>
-          {orgName}
-        </span>
-        {planLabel && (
-          <span className="tm-sidebar-org-plan">{planLabel}</span>
+        <OrgAvatar tenant={active?.tenant} size={isCollapsed ? 'lg' : 'md'} />
+        {!isCollapsed && (
+          <>
+            <span className={isSidebar ? 'tm-sidebar-org-trigger-label' : 'max-w-[140px] truncate'}>
+              {isLoading ? 'Loading…' : orgName}
+            </span>
+            {planLabel && (
+              <span className="tm-sidebar-org-plan">{planLabel}</span>
+            )}
+            <ChevronDown
+              size={14}
+              className={`shrink-0 text-[var(--color-action-primary)] transition-transform ${open ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </>
         )}
-        <ChevronDown
-          size={14}
-          className={`shrink-0 text-[var(--color-action-primary)] transition-transform ${open ? 'rotate-180' : ''}`}
-          aria-hidden
-        />
       </button>
       {open && (
         <div
-          className={isSidebar ? 'tm-sidebar-org-menu' : 'absolute right-0 z-50 mt-1 min-w-[220px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-1 shadow-lg'}
+          className={menuClass}
           role="listbox"
           aria-label={switchLabel}
         >
@@ -209,10 +263,10 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
             const id = String(m.tenant?._id || m.tenant);
             const name = m.tenant?.name || 'Organization';
             const tier = planTierLabel(m.tenant?.plan);
-            const selected = id === activeId;
+            const selected = id === activeId || (memberships.length === 1 && !activeId);
             return (
               <button
-                key={m.id}
+                key={m.id || id}
                 type="button"
                 role="option"
                 aria-selected={selected}
@@ -229,28 +283,12 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
               </button>
             );
           })}
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)]"
-            onClick={() => {
-              setOpen(false);
-              navigate('/settings?tab=organization');
-            }}
-          >
-            <Settings size={14} className="text-[var(--color-action-primary)]" aria-hidden />
-            Organization settings
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-[var(--color-action-primary)] hover:bg-[var(--color-bg-elevated)]"
-            onClick={() => {
-              setOpen(false);
-              navigate('/org/create');
-            }}
-          >
-            <Plus size={14} aria-hidden />
-            Create organization
-          </button>
+          {memberships.length === 0 && !isLoading && (
+            <p className="px-2.5 py-2 text-xs text-[var(--color-text-muted)]">No organizations yet</p>
+          )}
+          <div className="mt-0.5 border-t border-[var(--color-bg-border)] pt-0.5">
+            <OrgSwitcherFooterActions onNavigate={() => setOpen(false)} />
+          </div>
         </div>
       )}
     </div>

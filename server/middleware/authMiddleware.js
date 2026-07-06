@@ -10,11 +10,17 @@ const {
   listActiveMemberships,
   getMembership,
   backfillMembershipFromUser,
+  reconcileMembershipRole,
 } = require('../services/tenantMembershipService');
 const { rejectClientTenantSpoof } = require('./rejectClientTenantSpoof');
 
 const applySessionTenant = async (req, user, decoded = null) => {
-  await backfillMembershipFromUser(user);
+  try {
+    await backfillMembershipFromUser(user);
+  } catch (err) {
+    // ponytail: parallel requests can still collide on unique index during deploy transition
+    if (err?.code !== 11000) throw err;
+  }
   const memberships = await listActiveMemberships(user._id);
   let tenantId = resolveSessionTenantId(decoded, user);
   const orgFirst = require('../utils/orgFirstAuth').isOrgFirstAuthEnabled();
@@ -146,6 +152,9 @@ const optionalAuthenticate = async (req, res, next) => {
   }
   if (!user) return next();
   const session = await applySessionTenant(req, user, decoded);
+  if (session.tenantId) {
+    await reconcileMembershipRole(user, session.tenantId);
+  }
   req.user = user;
   req.tenantId = session.tenantId != null
     ? session.tenantId

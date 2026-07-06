@@ -4,6 +4,8 @@ const CLERK_SCRIPT_ORIGINS = [
   'https://www.tsccoreknot.com',
   'https://auth.tsccoreknot.com',
   'https://landing.tsccoreknot.com',
+  // Custom Clerk Frontend API (pk_live_ decodes to clerk.tsccoreknot.com)
+  'https://clerk.tsccoreknot.com',
 ].join(' ');
 
 /** Google Identity Services + OAuth popups (Clerk social sign-in). */
@@ -42,7 +44,7 @@ const buildContentSecurityPolicy = ({ isPreview = false } = {}) => {
     "font-src 'self' data:",
     "connect-src 'self' https: wss:",
     // ponytail: blob: for FinanceDocumentPreview PDF iframe (object URL from axios fetch)
-    `frame-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
+    `frame-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com https://clerk.tsccoreknot.com https://challenges.cloudflare.com ${GOOGLE_AUTH_ORIGINS}`,
     "worker-src 'self' blob:",
   ];
 

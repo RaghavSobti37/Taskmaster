@@ -1,6 +1,6 @@
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
-const { isAdminUser } = require('../utils/departmentPermissions');
+const { canManageOrganizationSettings } = require('../../shared/orgPermissions.cjs');
 const asyncHandler = require('../middleware/asyncHandler');
 const {
   listActiveMemberships,
@@ -129,7 +129,17 @@ router.get(
     assertActiveTenantAccess(req, tenantId);
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
-    res.json({ tenant: formatTenantSettings(tenant) });
+    const membership = await getMembership(req.user._id, tenantId);
+    res.json({
+      tenant: formatTenantSettings(tenant),
+      permissions: {
+        canEditSettings: canManageOrganizationSettings({
+          user: req.user,
+          membership,
+          tenant,
+        }),
+      },
+    });
   }),
 );
 
@@ -140,14 +150,13 @@ router.patch(
     const tenantId = req.params.id;
     assertActiveTenantAccess(req, tenantId);
 
-    const membership = await getMembership(req.user._id, tenantId);
-    const canEdit = membership && ['owner', 'admin'].includes(membership.role);
-    if (!canEdit && !isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Organization admin required to update settings' });
-    }
-
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: 'Organization not found' });
+
+    const membership = await getMembership(req.user._id, tenantId);
+    if (!canManageOrganizationSettings({ user: req.user, membership, tenant })) {
+      return res.status(403).json({ error: 'Organization admin required to update settings' });
+    }
 
     const { name, logo, industry, teamSize, settings } = req.body || {};
 
@@ -179,7 +188,16 @@ router.patch(
 
     tenant.updatedAt = new Date();
     await tenant.save();
-    res.json({ tenant: formatTenantSettings(tenant) });
+    res.json({
+      tenant: formatTenantSettings(tenant),
+      permissions: {
+        canEditSettings: canManageOrganizationSettings({
+          user: req.user,
+          membership,
+          tenant,
+        }),
+      },
+    });
   }),
 );
 

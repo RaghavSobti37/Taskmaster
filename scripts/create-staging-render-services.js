@@ -91,9 +91,9 @@ async function createWebService(spec) {
   return payload.service || payload;
 }
 
-async function createKeyValue(spec) {
-  const payload = await renderFetch('POST', '/services', spec);
-  return payload.service || payload;
+async function createKeyValueInstance(spec) {
+  const payload = await renderFetch('POST', '/key-value', spec);
+  return payload.keyValue || payload.redis || payload;
 }
 
 async function main() {
@@ -120,19 +120,18 @@ async function main() {
 
   if (!names.includes('taskmaster-redis-staging')) {
     console.log('Creating taskmaster-redis-staging...');
-    const svc = await createKeyValue({
-      type: 'key_value',
+    const kv = await createKeyValueInstance({
       name: 'taskmaster-redis-staging',
       ownerId: OWNER_ID,
-      serviceDetails: {
-        region,
-        plan: 'starter',
-        maxmemoryPolicy: 'noeviction',
-      },
+      plan: 'starter',
+      region,
+      maxmemoryPolicy: 'noeviction',
+      ipAllowList: [],
     });
-    created.push(svc);
-    console.log(`  ✓ ${svc.id}`);
-    console.log('  Link REDIS_URL after first deploy — run restore-staging-render-env.mjs');
+    created.push(kv);
+    redisUrl = kv.connectionString || kv.redisConnectionString || redisUrl;
+    console.log(`  ✓ ${kv.id || kv.name}`);
+    if (redisUrl) console.log('  REDIS_URL available for staging API env');
   } else {
     console.log('✓ taskmaster-redis-staging already exists');
     if (!redisUrl) {

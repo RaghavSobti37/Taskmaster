@@ -92,6 +92,22 @@ const checkExpressHealth = async (baseUrl, label, expectTier) => {
   else ok(`${label} healthy (${url})`);
 };
 
+const checkNestHealth = async (baseUrl) => {
+  if (!baseUrl || baseUrl.includes('YOUR-')) return;
+  const url = `${baseUrl.replace(/\/$/, '')}/api/health`;
+  const result = await fetchJson(url);
+  const json = result.json;
+  if (result.status !== 200) {
+    pushError(`Staging Nest unreachable (${url}) → ${result.status || result.error}`);
+    return;
+  }
+  if (!json?.ok || json.status !== 'HEALTHY') {
+    console.warn(`  ⚠ Staging Nest not healthy yet (${json?.reason || json?.status}) — API mirror OK; run npm run staging:patch-nest`);
+    return;
+  }
+  ok(`Staging Nest healthy (${url})`);
+};
+
 const checkSyncProxy = async (baseUrl) => {
   if (!baseUrl || baseUrl.includes('YOUR-')) return;
   const url = `${baseUrl.replace(/\/$/, '')}/api/v1/sync/token`;
@@ -121,9 +137,7 @@ const main = async () => {
 
   await checkExpressHealth(stagingApiUrl, 'Staging API', 'staging');
   await checkSyncProxy(stagingApiUrl);
-  if (stagingNestApiUrl) {
-    await checkExpressHealth(stagingNestApiUrl, 'Staging Nest', 'staging');
-  }
+  await checkNestHealth(stagingNestApiUrl);
 
   console.log('');
   if (errors.length) {

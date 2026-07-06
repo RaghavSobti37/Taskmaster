@@ -18,6 +18,7 @@ const { loadRenderApiKey, parseEnvFile } = require('./loadRenderApiKey.js');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const STAGING_SERVICE_NAME = 'coreknot-api-staging';
+const STAGING_REDIS_NAME = 'taskmaster-redis-staging';
 const dryRun = process.argv.includes('--dry-run');
 
 const apiKey = loadRenderApiKey();
@@ -64,6 +65,22 @@ async function listServices() {
     cursor = page?.cursor || null;
   } while (cursor);
   return services;
+}
+
+async function resolveStagingRedisUrl() {
+  try {
+    const rows = await renderFetch('GET', '/key-value?limit=50');
+    for (const row of rows || []) {
+      const kv = row.keyValue || row.redis || row;
+      if (String(kv?.name).toLowerCase() === STAGING_REDIS_NAME.toLowerCase()) {
+        if (kv.connectionString) return kv.connectionString;
+        if (kv.id) return `redis://${kv.id}:6379`;
+      }
+    }
+  } catch (err) {
+    console.warn(`Key-value lookup skipped: ${err.message}`);
+  }
+  return '';
 }
 
 async function resolveStagingServiceId() {
@@ -167,9 +184,10 @@ merged.MONGODB_URI = stagingMongoUri(
 );
 
 // Prefer staging Redis — never prod REDIS_URL from mirror
-if (process.env.REDIS_URL_STAGING?.trim()) {
-  merged.REDIS_URL = process.env.REDIS_URL_STAGING.trim();
-} else if (current.REDIS_URL?.includes('redis-staging') || current.REDIS_URL?.includes('taskmaster-redis-staging')) {
+const stagingRedis = process.env.REDIS_URL_STAGING?.trim() || await resolveStagingRedisUrl();
+if (stagingRedis) {
+  merged.REDIS_URL = stagingRedis;
+} else if (current.REDIS_URL?.includes('redis-staging') || current.REDIS_URL?.includes('taskmaster-redis-staging') || current.REDIS_URL?.includes('red-')) {
   merged.REDIS_URL = current.REDIS_URL;
 } else {
   delete merged.REDIS_URL;

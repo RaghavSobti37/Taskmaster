@@ -92,13 +92,13 @@ test('pickProxyUrl uses production API on Vercel preview', () => {
   process.env = prev;
 });
 
-test('pickProxyUrl skips retired staging host and falls back to production env', () => {
+test('pickProxyUrl accepts staging API host on preview', () => {
   const prev = { ...process.env };
   process.env.VERCEL_ENV = 'preview';
   process.env.RENDER_API_PROXY_URL = 'https://coreknot-api-staging.onrender.com';
-  process.env.VITE_API_URL = PROD_API;
+  delete process.env.VITE_API_URL;
   const { pickProxyUrl } = require('./generateVercelConfig.cjs');
-  assert.equal(pickProxyUrl(), PROD_API);
+  assert.equal(pickProxyUrl(), 'https://coreknot-api-staging.onrender.com');
   process.env = prev;
 });
 

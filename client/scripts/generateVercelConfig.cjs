@@ -25,14 +25,26 @@ const readLocalProductionApiUrl = () => {
   }
 };
 
-/** Retired staging hosts — never proxy after staging Render services removed. */
-const RETIRED_STAGING_HOSTS = new Set([
-  'coreknot-api-staging.onrender.com',
-  'coreknot-nest-staging.onrender.com',
-]);
+const DEFAULT_STAGING_API_URL = 'https://coreknot-api-staging.onrender.com';
 
-/** @deprecated staging branch uses production API — alias for local hosts file compat */
-const readLocalStagingApiUrl = () => readLocalProductionApiUrl();
+const readLocalStagingApiUrl = () => {
+  const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
+  if (!fs.existsSync(localHosts)) return DEFAULT_STAGING_API_URL;
+  try {
+    const json = JSON.parse(fs.readFileSync(localHosts, 'utf8'));
+    const url = String(
+      json.stagingApiUrl
+      || json.derived?.stagingApiUrl
+      || '',
+    ).trim().replace(/\/$/, '');
+    return url || DEFAULT_STAGING_API_URL;
+  } catch {
+    return DEFAULT_STAGING_API_URL;
+  }
+};
+
+/** Canonical staging API for Vercel preview builds (never production). */
+const CANONICAL_STAGING_API_URL = readLocalStagingApiUrl();
 
 const PROD_RENDER_API_SUFFIX = `${['taskmaster', 'jfw0'].join('-')}.onrender.com`;
 
@@ -159,8 +171,8 @@ const pickProxyUrl = () => {
   for (const url of candidates) {
     try {
       const host = new URL(url).hostname.toLowerCase();
-      if (BANNED_PROXY_HOSTS.has(host) || RETIRED_STAGING_HOSTS.has(host)) {
-        console.warn(`[generateVercelConfig] skipping retired/banned proxy host: ${host}`);
+      if (BANNED_PROXY_HOSTS.has(host)) {
+        console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
         continue;
       }
       return url;
@@ -180,8 +192,8 @@ const pickNestProxyUrl = () => {
   for (const url of candidates) {
     try {
       const host = new URL(url).hostname.toLowerCase();
-      if (BANNED_PROXY_HOSTS.has(host) || RETIRED_STAGING_HOSTS.has(host)) {
-        console.warn(`[generateVercelConfig] skipping retired/banned Nest proxy host: ${host}`);
+      if (BANNED_PROXY_HOSTS.has(host)) {
+        console.warn(`[generateVercelConfig] skipping banned Nest proxy host: ${host}`);
         continue;
       }
       return url;
@@ -458,7 +470,8 @@ module.exports = {
   pickProxyUrl,
   writeViteProductionEnv,
   isProductionRenderApiHost,
-  RETIRED_STAGING_HOSTS,
+  CANONICAL_STAGING_API_URL,
+  readLocalStagingApiUrl,
 };
 
 if (require.main === module) {

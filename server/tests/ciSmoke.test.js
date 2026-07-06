@@ -37,11 +37,13 @@ describe('CI production readiness smoke', () => {
     expect(typeof posthog.initPostHog).toBe('function');
   });
 
-  it('render.yaml defines health check', () => {
+  it('render.yaml defines health check and staging mirror', () => {
     const yaml = fs.readFileSync(path.join(repoRoot, 'render.yaml'), 'utf8');
     expect(yaml).toContain('healthCheckPath: /api/health');
     expect(yaml).toContain('CoreKnot-api');
-    expect(yaml).not.toContain('coreknot-api-staging');
+    expect(yaml).toContain('coreknot-api-staging');
+    expect(yaml).toContain('taskmaster-redis-staging');
+    expect(yaml).toContain('COREKNOT_DEPLOY_TIER');
   });
 
   it('rollback runbook exists', () => {

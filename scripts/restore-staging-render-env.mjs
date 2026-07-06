@@ -17,7 +17,7 @@ const { loadRenderApiKey, parseEnvFile } = require('./loadRenderApiKey.js');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const STAGING_ID = 'srv-d8vm9flaeets73d7l6r0';
+const STAGING_SERVICE_NAME = 'coreknot-api-staging';
 const dryRun = process.argv.includes('--dry-run');
 
 const apiKey = loadRenderApiKey();
@@ -29,12 +29,56 @@ if (!apiKey) {
 parseEnvFile(path.join(ROOT, 'server', '.env'));
 parseEnvFile(path.join(ROOT, 'server', '.env.render'));
 
-async function getEnv(serviceId) {
-  const res = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+async function renderFetch(method, route, body) {
+  const res = await fetch(`https://api.render.com/v1${route}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`GET env ${serviceId} → ${res.status}`);
-  const rows = await res.json();
+  const text = await res.text();
+  let payload = null;
+  if (text) {
+    try { payload = JSON.parse(text); } catch { payload = text; }
+  }
+  if (!res.ok) {
+    const detail = payload?.message || (typeof payload === 'string' ? payload : JSON.stringify(payload));
+    throw new Error(`${method} ${route} → ${res.status}: ${detail}`);
+  }
+  return payload;
+}
+
+async function listServices() {
+  const services = [];
+  let cursor = null;
+  do {
+    const q = new URLSearchParams({ limit: '100' });
+    if (cursor) q.set('cursor', cursor);
+    const page = await renderFetch('GET', `/services?${q}`);
+    for (const row of page || []) {
+      if (row?.service) services.push(row.service);
+    }
+    cursor = page?.cursor || null;
+  } while (cursor);
+  return services;
+}
+
+async function resolveStagingServiceId() {
+  const services = await listServices();
+  const match = services.find(
+    (s) => String(s.name).toLowerCase() === STAGING_SERVICE_NAME.toLowerCase(),
+  );
+  if (!match?.id) {
+    throw new Error(`${STAGING_SERVICE_NAME} not found — run npm run staging:create first`);
+  }
+  return match.id;
+}
+
+async function getEnv(serviceId) {
+  const rows = await renderFetch('GET', `/services/${serviceId}/env-vars`);
   return Object.fromEntries(rows.map((r) => [r.envVar.key, r.envVar.value]));
 }
 
@@ -46,20 +90,8 @@ async function putEnv(serviceId, pairs) {
     console.log(`[dry-run] Would PUT ${body.length} keys on ${serviceId}`);
     return body.length;
   }
-  const res = await fetch(`https://api.render.com/v1/services/${serviceId}/env-vars`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`PUT env ${serviceId} → ${res.status}: ${t}`);
-  }
-  return (await res.json()).length;
+  const rows = await renderFetch('PUT', `/services/${serviceId}/env-vars`, body);
+  return rows.length;
 }
 
 function stripQuotes(v) {
@@ -90,10 +122,13 @@ function stagingMongoUri(uri) {
     .replace(/\/taskmaster_local(\?|$)/i, '/taskmaster_staging$1');
 }
 
-const OMIT_ON_STAGING = new Set(['MONGODB_URI_PROD', 'REDIS_URL']);
+const OMIT_ON_STAGING = new Set(['MONGODB_URI_PROD']);
 
 const mirror = {};
 loadEnvFileInto(mirror, path.join(ROOT, 'server', '.env.render'));
+
+const STAGING_ID = await resolveStagingServiceId();
+console.log(`Resolved ${STAGING_SERVICE_NAME} → ${STAGING_ID}`);
 
 let current = {};
 try {
@@ -131,6 +166,15 @@ merged.MONGODB_URI = stagingMongoUri(
   || merged.MONGODB_URI,
 );
 
+// Prefer staging Redis — never prod REDIS_URL from mirror
+if (process.env.REDIS_URL_STAGING?.trim()) {
+  merged.REDIS_URL = process.env.REDIS_URL_STAGING.trim();
+} else if (current.REDIS_URL?.includes('redis-staging') || current.REDIS_URL?.includes('taskmaster-redis-staging')) {
+  merged.REDIS_URL = current.REDIS_URL;
+} else {
+  delete merged.REDIS_URL;
+}
+
 for (const key of OMIT_ON_STAGING) {
   delete merged[key];
 }
@@ -144,4 +188,4 @@ if (!merged.JWT_SECRET?.trim()) {
 }
 
 const count = await putEnv(STAGING_ID, merged);
-console.log(`${dryRun ? '[dry-run] ' : ''}Restored ${count} env vars on coreknot-api-staging`);
+console.log(`${dryRun ? '[dry-run] ' : ''}Restored ${count} env vars on ${STAGING_SERVICE_NAME}`);

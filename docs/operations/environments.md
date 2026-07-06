@@ -18,7 +18,7 @@ Public frontend (`FRONTEND_URL` / `CLIENT_URL`): your Vercel custom domain (e.g.
 
 | Environment | `NODE_ENV` / host | MongoDB URI var | Typical DB name |
 |-------------|-------------------|-----------------|-----------------|
-| **Vercel preview / staging branch** | `production` + `VERCEL_ENV=preview` | Production API (`productionApiUrl`) | Same as production (`MONGODB_URI_PROD`) |
+| **Vercel preview / staging branch** | `production` + `VERCEL_ENV=preview` | Staging API (`stagingApiUrl`) | `taskmaster_staging` |
 | **Local dev** | `development`, localhost | `MONGODB_URI` | `taskmaster_local` |
 | **Production API** | Render `Taskmaster` / `CoreKnot-api` | `MONGODB_URI_PROD` | `taskmaster_production` |
 
@@ -30,7 +30,7 @@ See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
 |-------------|----------------|-----|
 | **Local** | `http://localhost:5000` | Direct to Express (`client/.env.development`) |
 | **Production (Vercel)** | Your Render `SERVER_URL` value | Bypasses Vercel ~4.5MB proxy for large campaigns |
-| **Preview (Vercel)** | Same as production API — [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Staging branch uses production DB via prod API |
+| **Preview (Vercel)** | Staging API URL — [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Isolated `taskmaster_staging` DB |
 | **Unset local** | (proxy) | Vite proxies `/api` → `localhost:5000` |
 
 `client/vercel.json` proxies `/api/*` to Render — configured at deploy time, not duplicated in docs.

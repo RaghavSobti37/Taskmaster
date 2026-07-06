@@ -127,3 +127,107 @@ services:
         value: production
       - key: SUBSCRIPTION_REMINDERS_ENABLED
         value: "true"
+
+  # --- Staging mirror (empty taskmaster_staging DB; no crons) ---
+  - type: keyvalue
+    name: taskmaster-redis-staging
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: coreknot-api-staging
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: server
+    buildCommand: cd .. && bash scripts/render-build.sh api
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: staging
+    envVars:
+      - key: HUSKY
+        value: "0"
+      - key: NODE_ENV
+        value: production
+      - key: COREKNOT_DEPLOY_TIER
+        value: staging
+      - key: JSON_BODY_LIMIT
+        value: 50mb
+      - key: CORS_ALLOW_VERCEL_PREVIEWS
+        value: "true"
+      - key: LOG_LEVEL
+        value: info
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: taskmaster-redis-staging
+          type: keyvalue
+          property: connectionString
+      - key: SUPABASE_SECONDARY_ENABLED
+        value: "true"
+      - key: SUPABASE_PG_MODE
+        value: rest
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: TRACKING_BASE_URL
+        value: https://coreknot-api-staging.onrender.com
+      - key: SERVER_URL
+        value: https://coreknot-api-staging.onrender.com
+      - key: APP_BASE_URL
+        value: https://coreknot-api-staging.onrender.com
+      - key: FRONTEND_URL
+        value: https://taskmaster-sand.vercel.app
+      - key: CLIENT_URL
+        value: https://taskmaster-sand.vercel.app
+      - key: NEST_SYNC_URL
+        value: https://coreknot-nest-staging.onrender.com
+      - key: UPLOADTHING_TOKEN
+        sync: false
+      - key: UPLOADTHING_SECRET
+        sync: false
+
+  - type: web
+    name: coreknot-nest-staging
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: nestjs-server
+    buildCommand: cd .. && bash scripts/render-build.sh nest
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: staging
+    envVars:
+      - key: HUSKY
+        value: "0"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5001"
+      - key: COREKNOT_DEPLOY_TIER
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: taskmaster-redis-staging
+          type: keyvalue
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://taskmaster-sand.vercel.app

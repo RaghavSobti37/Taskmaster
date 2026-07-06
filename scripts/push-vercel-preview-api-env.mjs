@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Push production API URLs to Vercel Preview — staging branch uses production DB.
+ * Push staging API URLs to Vercel Preview — staging branch uses taskmaster_staging DB.
  *
  * Usage: node scripts/push-vercel-preview-api-env.mjs
  */
@@ -13,6 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const HOSTS_PATH = path.join(ROOT, '.cursor', 'production-hosts.local.json');
 const HOSTS_EXAMPLE = path.join(ROOT, '.cursor', 'production-hosts.local.example.json');
+const DEFAULT_STAGING_API = 'https://coreknot-api-staging.onrender.com';
 
 const VERCEL_TARGETS = [
   { name: 'taskmaster', cwd: path.join(ROOT, 'client') },
@@ -22,19 +23,18 @@ const VERCEL_TARGETS = [
 
 const PREVIEW_ENVS = ['preview', 'development'];
 
-function readProductionApiUrl() {
+function readStagingApiUrl() {
   const file = fs.existsSync(HOSTS_PATH) ? HOSTS_PATH : HOSTS_EXAMPLE;
   if (!fs.existsSync(file)) {
-    console.error('Missing production-hosts.local.json — set productionApiUrl first.');
-    process.exit(1);
+    return DEFAULT_STAGING_API;
   }
   try {
     const json = JSON.parse(fs.readFileSync(file, 'utf8'));
     const url = String(
-      json.derived?.renderApiProxyUrl || json.productionApiUrl || '',
+      json.stagingApiUrl || json.derived?.stagingApiUrl || DEFAULT_STAGING_API,
     ).trim().replace(/\/$/, '');
     if (!url || url.includes('YOUR-')) {
-      throw new Error('productionApiUrl not configured');
+      return DEFAULT_STAGING_API;
     }
     return url;
   } catch (e) {
@@ -62,16 +62,16 @@ function vercelUpsert(cwd, key, value, envs = PREVIEW_ENVS) {
   }
 }
 
-const prodApi = readProductionApiUrl();
+const stagingApi = readStagingApiUrl();
 
-console.log(`Pushing preview API env → ${prodApi} (production DB)\n`);
+console.log(`Pushing preview API env → ${stagingApi} (taskmaster_staging)\n`);
 for (const { name, cwd } of VERCEL_TARGETS) {
   if (!fs.existsSync(cwd)) {
     console.warn(`  skip ${name} (${cwd} missing)`);
     continue;
   }
-  vercelUpsert(cwd, 'VITE_API_URL', prodApi);
-  vercelUpsert(cwd, 'RENDER_API_PROXY_URL', prodApi);
+  vercelUpsert(cwd, 'VITE_API_URL', stagingApi);
+  vercelUpsert(cwd, 'RENDER_API_PROXY_URL', stagingApi);
 }
 
 console.log('\nDone. Redeploy staging branch on Vercel.\n');

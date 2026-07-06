@@ -9,7 +9,7 @@ const {
   register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
   googleAuthRedirect, googleAuthCallback, oauthEstablishSession, clerkEstablishSession, forgotPassword, resetPassword,
   listSessions, revokeSession, revokeOtherSessions, getRealtimeToken, adminRevokeAllUserSessions,
-  mfaSetup, mfaConfirm, mfaDisable,
+  mfaSetup, mfaConfirm, mfaDisable, requestAccess,
 } = require('./controllers/authController');
 const {
   registerOptions, registerVerify, loginOptions,

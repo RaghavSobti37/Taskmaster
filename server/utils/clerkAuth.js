@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
 const { ensurePlatformTenant } = require('./defaultTenant');

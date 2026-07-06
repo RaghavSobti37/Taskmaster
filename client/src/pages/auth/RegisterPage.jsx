@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/react';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+import AppBootError from '../../components/AppBootError';
+import BootScreen from '../../components/BootScreen';
 import AuthMarketingShell from '../../components/auth/AuthMarketingShell';
+import ClearSessionCookiesButton from '../../components/auth/ClearSessionCookiesButton';
 import { Button, Input } from '../../components/ui';
+import { isClerkConfigured } from '../../config/clerk';
 import { registerCopy } from '../../constants/marketingContent';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
@@ -13,10 +19,11 @@ const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [pending, setPending] = useState(false);
+  if (!isClerkConfigured()) {
+    return <RegisterPageView clerkLoaded clerkSignedIn={false} clerkSessionId={null} pathname="/register" />;
+  }
+  return <RegisterPageWithClerk />;
+}
 
 function RegisterPageWithClerk() {
   const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn, sessionId: clerkSessionId } = useClerkAuth();
@@ -42,6 +49,10 @@ function RegisterPageView({
   const location = useLocation();
   const navigatedRef = useRef(false);
   const [establishError, setEstablishError] = useState(null);
+  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [pending, setPending] = useState(false);
   const clerkReady = isClerkConfigured();
 
   const uiState = computeLoginUiState({
@@ -61,9 +72,7 @@ function RegisterPageView({
     resetNavigateGuard();
   }, []);
 
-  useEffect(() => {
-    return subscribeClerkEstablishError(setEstablishError);
-  }, []);
+  useEffect(() => subscribeClerkEstablishError(setEstablishError), []);
 
   useEffect(() => {
     if (uiState !== 'REDIRECTING') {
@@ -78,6 +87,26 @@ function RegisterPageView({
     });
     navigateOnce(navigate, target);
   }, [uiState, navigate, location.state, location.search]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setSuccess('');
+    setPending(true);
+    try {
+      const { data } = await axios.post('/api/auth/access-request', {
+        email: form.email.trim(),
+        name: form.name.trim() || undefined,
+        message: form.message.trim() || undefined,
+      });
+      setSuccess(data?.message || registerCopy.successMessage || 'Request sent.');
+      setForm({ name: '', email: '', message: '' });
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Could not send request.');
+    } finally {
+      setPending(false);
+    }
+  };
 
   if (uiState === 'BOOT_ERROR') {
     return (

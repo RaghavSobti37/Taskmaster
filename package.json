@@ -69,6 +69,7 @@
     "staging:deploy": "node scripts/deploy-staging-render.js --wait",
     "staging:deploy:loop": "node scripts/deploy-staging-render.js --loop --clear-cache",
     "staging:create": "node scripts/create-staging-render-services.js",
+    "staging:seed": "node scripts/seed-staging-minimal.mjs",
     "preview:e2e-smoke": "node scripts/run-preview-e2e-smoke.js",
     "prod:cutover-etl": "cd nestjs-server && npm run etl:prod-cutover-from-hosts",
     "datahub:compare": "node server/scripts/compareDataHubDbs.js",

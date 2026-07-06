@@ -37,12 +37,12 @@ Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise cus
 
 ## 2. Data integrity 🔴
 
-- [ ] Summary vs. detail analytics hours reconciled via single `aggregateProjectEffort` path — **NOT VERIFIED**
-- [ ] `conversionRate` snapshot on all `FinanceDocument` writes — **NOT VERIFIED**
+- [x] Summary vs. detail analytics hours reconciled via single `aggregateProjectEffort` path — evidence: `projectAnalyticsCore.test.js` summary/detail totals match
+- [ ] `conversionRate` snapshot on all `FinanceDocument` writes — **PARTIAL**: `financeController.js` uses `snapshotFxMetadata` on create/update paths; import scripts **NOT VERIFIED**
 - [ ] `budgetSource` displayed distinctly everywhere budget appears — **NOT VERIFIED**
 - [x] Assignment→completion join regression test in CI — evidence: `server/tests/projectAnalyticsCore.test.js` (`tasksCompleted 1`); `productionReadinessGates.test.js` analytics path covered via shared core
 - [x] `clientRequestId` idempotency (unique index) on `Log` writes — evidence: `Log.js` unique `{tenantId, clientRequestId}`; `logRoutes.js` returns existing; `productionReadinessGates.test.js`
-- [ ] Gamification level recalculation idempotent — **NOT VERIFIED**
+- [x] Gamification level recalculation idempotent — evidence: `gamificationService.test.js` `recalculateAllUsersFromConfig is idempotent on second run`
 - [x] Task rollback window (24h) enforced server-side — evidence: `shared/taskReviewRules.js` `ROLLBACK_WINDOW_MS`; `taskReviewRules.security.test.js` 24h denial
 - [ ] Task status transitions atomic — **NOT VERIFIED**
 
@@ -108,10 +108,10 @@ Documented in `docs/operations/environments.md` § Clerk org-first flags.
 - [ ] Org creation transaction + queued invite emails — **PARTIAL**: `tenantInviteEmailQueue.js` + worker added; E2E **NOT VERIFIED**
 - [x] Success screen → dashboard with checklist — evidence: `OrgCreateSuccessPage.jsx`, `OrgOnboardingChecklist.jsx` updates
 - [x] `profile_complete` server-side event — evidence: `onboardingListener.js` + `onboardingListener.test.js`; emitted from `userController` profile update
-- [ ] `first_project` server hook + Finance unlock — **NOT VERIFIED**
-- [ ] `applicableIf(tenant)` on onboarding steps — **PARTIAL**: `shared/orgOnboardingChecklist.js`; **NOT VERIFIED** E2E
-- [ ] Checklist returns null when complete — **NOT VERIFIED**
-- [ ] 24h snooze/dismiss — **NOT VERIFIED** after onboarding changes
+- [x] `first_project` server hook + Finance unlock — evidence: `onboardingListener.js` `handleProjectCreated`; `tenantUnlockService.js` finance unlock; `onboardingListener.test.js`
+- [x] `applicableIf(tenant)` on onboarding steps — evidence: `shared/orgOnboardingChecklist.js`; `tenantOnboardingChecklist.test.js`
+- [x] Checklist returns null when complete — evidence: `tenantRoutes.js` + `tenantOnboardingChecklist.test.js` completion hide
+- [x] 24h snooze/dismiss — evidence: `tenantOnboardingChecklist.test.js` dismiss + snooze window
 
 ## 7. Admin console 🟡
 

@@ -339,6 +339,27 @@ describe('GamificationService XP resolution', () => {
     expect(user.exp).toBe(36);
   });
 
+  test('recalculateAllUsersFromConfig is idempotent on second run', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    await GamificationConfig.create({ taskCompletion: 10, stepXp: 100 });
+    await User.create({ _id: userId, name: 'Idem User', email: 'idem-xp@test.com', exp: 0, level: 1 });
+    await XPAuditLog.create({
+      userId,
+      action: 'COMPLETE_TASK',
+      amount: 20,
+      details: { hours: 1 },
+    });
+
+    await GamificationService.recalculateAllUsersFromConfig();
+    const afterFirst = await User.findById(userId).lean();
+
+    await GamificationService.recalculateAllUsersFromConfig();
+    const afterSecond = await User.findById(userId).lean();
+
+    expect(afterSecond.exp).toBe(afterFirst.exp);
+    expect(afterSecond.level).toBe(afterFirst.level);
+  });
+
   test('computeActionXp clamps inflated hours to max per event', async () => {
     await GamificationConfig.create({ taskCompletion: 15, dailyLog: 10 });
     const config = await GamificationService.getConfig();

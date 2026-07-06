@@ -1,5 +1,6 @@
 import { isVercelPreviewHost, shouldUseSameOriginApi } from './displayMode';
-import { isAuthSite } from '../config/siteMode';
+import { isAppSite, isAuthSite } from '../config/siteMode';
+import { usesExternalAuthHost } from '../config/siteUrls';
 import { isLocalViteDev } from './runtimeEnv';
 
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
@@ -20,10 +21,13 @@ export function getDirectApiBaseUrl() {
 
 /** Dev + mobile/PWA: Vite/Vercel proxy. Desktop production: Render direct (skips Vercel edge).
  * Auth host always same-origin — clerk-establish/session cookies must not cross origins (CORS).
+ * Split deploy (auth.tsccoreknot.com): app host must proxy /api too — clerk-establish sets
+ * SameSite=Lax on .tsccoreknot.com via proxy; direct Render skips the cookie → login loop.
  * Vercel preview: direct staging API — Deployment Protection SSO blocks /api rewrites. */
 export function routeViaSameOriginApi() {
   if (isLocalViteDev()) return true;
   if (isAuthSite()) return true;
+  if (isAppSite() && usesExternalAuthHost()) return true;
   if (typeof window !== 'undefined' && isVercelPreviewHost()) return false;
   if (typeof window !== 'undefined' && shouldUseSameOriginApi()) return true;
   return false;

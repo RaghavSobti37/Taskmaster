@@ -7,6 +7,7 @@ const DEFAULT_UNLOCKS = {
   knowledgeEngine: false,
   finance: false,
   artistOs: false,
+  integrations: false,
 };
 
 const ALL_UNLOCKED = Object.fromEntries(Object.keys(DEFAULT_UNLOCKS).map((k) => [k, true]));
@@ -35,6 +36,7 @@ const evaluateUnlocks = async (tenant) => {
   if (progress.includes('first_project')) base.finance = true;
   if (progress.includes('resend_domain')) base.resend = true;
   if (progress.includes('google_connected')) base.google = true;
+  if (progress.includes('integrations_connected')) base.integrations = true;
 
   return base;
 };

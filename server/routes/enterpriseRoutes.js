@@ -10,7 +10,7 @@ const Tenant = require('../models/Tenant');
 const TenantApiKey = require('../models/TenantApiKey');
 const TenantWebhook = require('../models/TenantWebhook');
 const { createTenantApiKey } = require('../services/tenantApiKeyService');
-const { createTenantWebhook } = require('../services/webhookDispatchService');
+const { createTenantWebhook, listDeliveryLogs } = require('../services/webhookDispatchService');
 const { planAllowsFeature } = require('../../shared/planLimits');
 const { queueTenantExport, getExportJob } = require('../services/tenantExportService');
 const { issueScimBearer } = require('../services/tenantSecurityService');
@@ -283,6 +283,43 @@ router.post(
       createdBy: req.user._id,
     });
     res.status(201).json({ webhook, secret, warning: 'Store signing secret now; it will not be shown again.' });
+  }),
+);
+
+router.get(
+  '/webhooks/deliveries',
+  asyncHandler(async (req, res) => {
+    if (!assertActiveTenant(req, res)) return;
+    const tenant = await Tenant.findById(req.tenantId).select('plan');
+    if (!planAllowsFeature(tenant?.plan || 'free', 'webhooks')) {
+      return res.status(402).json({ error: 'Webhooks require enterprise plan' });
+    }
+    const logs = await listDeliveryLogs(req.tenantId, {
+      limit: req.query.limit ? Number(req.query.limit) : 50,
+      webhookId: req.query.webhookId,
+    });
+    res.json({ deliveries: logs });
+  }),
+);
+
+router.delete(
+  '/webhooks/:id',
+  asyncHandler(async (req, res) => {
+    if (!assertActiveTenant(req, res)) return;
+    const hook = await TenantWebhook.findOne({ _id: req.params.id, tenantId: req.tenantId });
+    if (!hook) return res.status(404).json({ error: 'Webhook not found' });
+    hook.active = false;
+    await hook.save();
+    await recordAuditEvent({
+      tenantId: req.tenantId,
+      actorId: req.user._id,
+      actorEmail: req.user.email,
+      action: 'webhook.deactivated',
+      resourceType: 'webhook',
+      resourceId: hook._id,
+      req,
+    });
+    res.json({ success: true });
   }),
 );
 

@@ -284,6 +284,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="settings" />}>
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/profile" element={<Navigate to="/settings?tab=profile" replace />} />
                 <Route path="/developers" element={<DevelopersPage />} />
               </Route>
               <Route path="/org/settings" element={<Navigate to="/settings?tab=organization" replace />} />

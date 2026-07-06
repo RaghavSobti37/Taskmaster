@@ -115,4 +115,15 @@ describe('tenant onboarding checklist', () => {
     expect(complete.statusCode).toBe(200);
     expect(complete.body.checklistVisible).toBe(false);
   });
+
+  it('auto-marks profile_complete on unlocks when profile is complete', async () => {
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { phone: '9876543210', dateOfBirth: new Date('1990-01-01') } },
+    );
+    const agent = await authedAgent();
+    const res = await agent.get(`/api/tenants/${tenant._id}/unlocks`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.onboardingProgress.completedSteps).toContain('profile_complete');
+  });
 });

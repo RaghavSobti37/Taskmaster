@@ -446,9 +446,31 @@ const processEmailJobInner = async ({
       return;
     }
 
-    if (useResend && resend) {
+    let sentViaGmail = false;
+    const useGmailOAuth = campaign.sendViaGmail === true || profile.providerType === 'gmail_oauth';
+    if (useGmailOAuth && resolvedTenantId) {
+      try {
+        const { sendViaGmailIntegration } = require('./gmailApiDriver');
+        const gmailResult = await sendViaGmailIntegration({
+          tenantId: resolvedTenantId,
+          to: email,
+          subject: mailSubject,
+          html: processedHtml,
+          from: profile.email,
+        });
+        if (gmailResult) {
+          messageIdStr = gmailResult.id || messageIdStr;
+          sentViaGmail = true;
+        }
+      } catch (gmailErr) {
+        logger.warn('Email Processor', 'Gmail OAuth send failed', { error: gmailErr.message });
+        if (campaign.sendViaGmail === true) throw gmailErr;
+      }
+    }
+
+    if (!sentViaGmail && useResend && resend) {
       await sendViaResend();
-    } else {
+    } else if (!sentViaGmail) {
       const mailPayload = {
         from: senderFrom,
         to: email,

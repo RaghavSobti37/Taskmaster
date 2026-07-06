@@ -197,7 +197,7 @@ function registerRoutes(app) {
   app.use('/api/campaigns', mailRoutes.campaigns);
   app.use('/api/analytics', require('../routes/analyticsRoutes'));
   app.use('/api/webhooks', require('../routes/webhookRoutes'));
-  app.use('/api/integrations', require('../domains/integrations/integrationsRoutes'));
+  app.use('/api/integrations', require('../domains/integrations-hub/integrationHubRoutes'));
   app.use('/api/office-assets', require('../routes/officeAssetRoutes'));
   app.use('/api/subscriptions', require('../routes/subscriptionRoutes'));
   app.use('/api/org-accounts', require('../routes/orgAccountRoutes'));

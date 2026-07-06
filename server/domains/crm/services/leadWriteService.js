@@ -251,6 +251,20 @@ async function runPostCreateLeadSideEffects(lead, user) {
   }
 
   try {
+    const integrationService = require('../../integrations-hub/services/integrationService');
+    const integrationSyncService = require('../../integrations-hub/services/integrationSyncService');
+    const hubspot = await integrationService.getConnectedIntegration(lead.tenantId, 'hubspot');
+    if (hubspot?.metadata?.syncOut === true) {
+      await integrationSyncService.pushLeadToHubspot(hubspot, lead);
+    }
+  } catch (err) {
+    logger.error('leadWriteService', 'hubspot push after lead create', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+
+  try {
     const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
       userId: user._id,
       lead: { _id: lead._id },
@@ -422,6 +436,24 @@ async function updateLead(user, leadId, body) {
   }
 
   broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
+
+  try {
+    const { emitTenantEvent } = require('../../../services/enterpriseWebhook');
+    emitTenantEvent(lead.tenantId, 'lead.updated', {
+      id: String(lead._id),
+      name: lead.name,
+      email: lead.email,
+      source: lead.source,
+      leadStatus: lead.leadStatus,
+      updates: Object.keys(updates),
+    });
+  } catch (err) {
+    logger.error('leadWriteService', 'webhook after lead update', {
+      leadId: lead._id,
+      error: err.message || err,
+    });
+  }
+
   return { lead };
 }
 

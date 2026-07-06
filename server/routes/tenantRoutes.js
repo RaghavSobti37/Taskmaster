@@ -20,6 +20,7 @@ const {
 } = require('../services/onboardingChecklistService');
 const { getApplicableOnboardingSteps } = require('../../shared/orgOnboardingChecklist.cjs');
 const { emitOnboardingEvent } = require('../services/onboardingEvents');
+const { handleProfileUpdated } = require('../services/onboardingListener');
 const { getTokenFromRequest } = require('../utils/authCookie');
 const { verifySessionToken } = require('../utils/authSession');
 
@@ -209,6 +210,7 @@ router.get(
     if (String(req.tenantId) !== String(tenantId)) {
       return res.status(403).json({ error: 'Not authorized for this organization' });
     }
+    await handleProfileUpdated({ user: req.user, tenantId });
     const tenant = await Tenant.findById(tenantId);
     const unlocks = await getTenantUnlocks(tenantId);
     const checklist = buildOnboardingChecklistPayload(tenant?.onboardingProgress, tenant);

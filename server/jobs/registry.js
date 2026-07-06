@@ -46,6 +46,13 @@ const CRON_JOBS = [
     schedule: '0 0 * * *',
     description: 'Knowledge Engine daily cron registration',
   },
+  {
+    id: 'integration-token-refresh',
+    module: '../workers/integrationTokenRefreshWorker',
+    init: 'initIntegrationTokenRefreshWorker',
+    schedule: '0 4 * * *',
+    description: 'Refresh expiring tenant integration OAuth tokens',
+  },
 ];
 
 const QUEUE_WORKERS = [

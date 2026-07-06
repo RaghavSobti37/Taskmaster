@@ -6,7 +6,7 @@ const BASE_ONBOARDING_CHECKLIST_STEPS = [
   {
     id: 'profile_complete',
     label: 'Complete your profile',
-    path: '/settings/profile',
+    path: '/settings?tab=profile',
     why: 'A complete profile helps teammates recognize you and unlocks account security.',
     tier: 'all',
   },
@@ -24,6 +24,13 @@ const BASE_ONBOARDING_CHECKLIST_STEPS = [
     why: 'Shared task assignment and team dashboards need at least one collaborator.',
     tier: 'all',
     hideWhenSolo: true,
+  },
+  {
+    id: 'integrations_connected',
+    label: 'Connect an app',
+    path: '/settings?tab=integrations',
+    why: 'Link Gmail, Mailchimp, or CRM tools to send mail and sync data inside CoreKnot.',
+    tier: 'all',
   },
 ];
 

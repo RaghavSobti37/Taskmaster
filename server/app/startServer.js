@@ -6,7 +6,6 @@ const logger = require('../utils/logger');
 const { shutdownPostHog } = require('../utils/posthog');
 const {
   resolveMongoUri,
-  getDbNameFromUri,
   assertSafeDbTarget,
   getMongooseConnectOptions,
 } = require('../config/database');
@@ -15,11 +14,16 @@ const { waitUntilPortFree, getListeningPids, freePort } = require('../scripts/fr
 const PORT = config.PORT;
 const LISTEN_RETRY_MS = 800;
 const LISTEN_RETRY_MAX = 25;
+const MONGO_RETRY_BASE_MS = 2_000;
+const MONGO_RETRY_MAX_DELAY_MS = 30_000;
 
 let server;
 let shuttingDown = false;
 let serverListening = false;
 let jobsBootstrapResult = null;
+let mongoHandlersRegistered = false;
+let mongoReconnectTimer = null;
+let mongoBootstrapDone = false;
 
 function logProcessCrash(label, err) {
   logger.error('process', `${label}: ${err?.message || 'Unknown'}`, {
@@ -28,59 +32,22 @@ function logProcessCrash(label, err) {
   });
 }
 
-function registerProcessHandlers() {
-  process.on('uncaughtException', (err) => {
-    logProcessCrash('uncaughtException', err);
-  });
-
-  process.on('unhandledRejection', (reason) => {
-    const err = reason instanceof Error ? reason : new Error(String(reason));
-    logProcessCrash('unhandledRejection', err);
-  });
+function refreshHealthAfterMongoConnect() {
+  try {
+    const SystemHealthService = require('../services/SystemHealthService');
+    SystemHealthService.checkDependencies().catch(() => {});
+  } catch {
+    /* ignore */
+  }
 }
 
-function connectMongo() {
-  const { dbUri, source } = resolveMongoUri();
-  assertSafeDbTarget(dbUri, { source });
+function registerMongoConnectionHandlers() {
+  if (mongoHandlersRegistered) return;
+  mongoHandlersRegistered = true;
 
-  const resolvedDbName = getDbNameFromUri(dbUri);
-
-  mongoose.connect(dbUri, getMongooseConnectOptions())
-    .then(() => {
-      // Defer index sync so first API requests after boot are not competing with syncIndexes.
-      setTimeout(() => {
-        const { ensurePerformanceIndexes } = require('../scripts/ensureIndexes');
-        ensurePerformanceIndexes().catch((err) => {
-          logger.warn('INDEX', 'Performance index sync skipped', { error: err.message });
-        });
-      }, 60_000);
-
-      const { ensureDataHubBootstrap } = require('../utils/ensureDataHubBootstrap');
-      ensureDataHubBootstrap().catch(() => {});
-
-      const { ensureDevAdminUser } = require('../utils/ensureDevAdminUser');
-      ensureDevAdminUser().catch((err) => {
-        logger.warn('AUTH', 'Dev admin bootstrap skipped', { error: err.message });
-      });
-
-      const { loadPlatformSettings } = require('../services/platformSettingsService');
-      loadPlatformSettings().catch((err) => {
-        logger.warn('PLATFORM', 'Settings bootstrap skipped', { error: err.message });
-      });
-
-      const { isSupabaseEnabled } = require('../config/supabase');
-      const { registerSupabaseMirrors } = require('../services/supabase/registerMirrors');
-      if (isSupabaseEnabled()) {
-        registerSupabaseMirrors();
-      }
-
-      const { printStartupBanner } = require('./startupBanner');
-      printStartupBanner(jobsBootstrapResult || {});
-    })
-    .catch((err) => {
-      logger.error('MongoDB', 'Initial connection failed', { error: err.message });
-      logger.info('SYSTEM', 'Server active; DB operations fail until connection established');
-    });
+  mongoose.connection.on('connected', () => {
+    refreshHealthAfterMongoConnect();
+  });
 
   mongoose.connection.on('error', (err) => {
     logger.error('MongoDB', 'Connection error', { error: err.message });
@@ -92,6 +59,92 @@ function connectMongo() {
 
   mongoose.connection.on('reconnected', () => {
     logger.info('MongoDB', 'Reconnected');
+    refreshHealthAfterMongoConnect();
+  });
+}
+
+function scheduleMongoReconnect(attempt) {
+  if (shuttingDown || mongoReconnectTimer) return;
+  const delay = Math.min(
+    MONGO_RETRY_MAX_DELAY_MS,
+    MONGO_RETRY_BASE_MS * 2 ** Math.min(attempt, 4),
+  );
+  logger.warn('MongoDB', `Reconnect scheduled in ${delay}ms`, { attempt: attempt + 1 });
+  mongoReconnectTimer = setTimeout(() => {
+    mongoReconnectTimer = null;
+    connectMongo(attempt + 1);
+  }, delay);
+  mongoReconnectTimer.unref?.();
+}
+
+function runMongoBootstrapOnce() {
+  if (mongoBootstrapDone) return;
+  mongoBootstrapDone = true;
+
+  // Defer index sync so first API requests after boot are not competing with syncIndexes.
+  setTimeout(() => {
+    const { ensurePerformanceIndexes } = require('../scripts/ensureIndexes');
+    ensurePerformanceIndexes().catch((err) => {
+      logger.warn('INDEX', 'Performance index sync skipped', { error: err.message });
+    });
+  }, 60_000);
+
+  const { ensureDataHubBootstrap } = require('../utils/ensureDataHubBootstrap');
+  ensureDataHubBootstrap().catch(() => {});
+
+  const { ensureDevAdminUser } = require('../utils/ensureDevAdminUser');
+  ensureDevAdminUser().catch((err) => {
+    logger.warn('AUTH', 'Dev admin bootstrap skipped', { error: err.message });
+  });
+
+  const { loadPlatformSettings } = require('../services/platformSettingsService');
+  loadPlatformSettings().catch((err) => {
+    logger.warn('PLATFORM', 'Settings bootstrap skipped', { error: err.message });
+  });
+
+  const { isSupabaseEnabled } = require('../config/supabase');
+  const { registerSupabaseMirrors } = require('../services/supabase/registerMirrors');
+  if (isSupabaseEnabled()) {
+    registerSupabaseMirrors();
+  }
+
+  const { printStartupBanner } = require('./startupBanner');
+  printStartupBanner(jobsBootstrapResult || {});
+}
+
+function connectMongo(attempt = 0) {
+  if (shuttingDown) return;
+  if (mongoose.connection.readyState === 1) {
+    refreshHealthAfterMongoConnect();
+    runMongoBootstrapOnce();
+    return;
+  }
+
+  registerMongoConnectionHandlers();
+
+  const { dbUri, source } = resolveMongoUri();
+  assertSafeDbTarget(dbUri, { source });
+
+  mongoose.connect(dbUri, getMongooseConnectOptions())
+    .then(() => {
+      refreshHealthAfterMongoConnect();
+      runMongoBootstrapOnce();
+    })
+    .catch((err) => {
+      logger.error('MongoDB', 'Initial connection failed', { error: err.message, attempt });
+      logger.info('SYSTEM', 'Server active; DB operations fail until connection established');
+      scheduleMongoReconnect(attempt);
+    });
+}
+
+function registerProcessHandlers() {
+  process.on('uncaughtException', (err) => {
+    logProcessCrash('uncaughtException', err);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logProcessCrash('unhandledRejection', err);
   });
 }
 
@@ -174,6 +227,11 @@ async function gracefulShutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   serverListening = false;
+
+  if (mongoReconnectTimer) {
+    clearTimeout(mongoReconnectTimer);
+    mongoReconnectTimer = null;
+  }
 
   const finish = () => process.exit(0);
   const forceExit = setTimeout(finish, 1500);

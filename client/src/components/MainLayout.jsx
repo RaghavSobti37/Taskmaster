@@ -24,23 +24,6 @@ const AttendancePromptModal = lazyWithRetry(() => import('./attendance/Attendanc
 
 function MainRouteSuspenseFallback() {
   const { pathname } = useLocation();
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7593/ingest/75bc4ee5-8ab2-4010-83b9-7267b331142a', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'c0551d' },
-      body: JSON.stringify({
-        sessionId: 'c0551d',
-        runId: 'pre-fix',
-        hypothesisId: 'C',
-        location: 'MainLayout.jsx:MainRouteSuspenseFallback',
-        message: 'route suspense skeleton shown',
-        data: { pathname },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [pathname]);
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
     return <BrandedLoadingPanel />;
   }

@@ -22,11 +22,27 @@ const normalizeToList = (to) => {
   )];
 };
 
-const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
+const dispatchEmailPayload = async ({ to, subject, html, from, cc, tenantId, preferGmail }) => {
   const senderEmail = from || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev';
   const ccList = cc ? (Array.isArray(cc) ? cc : [cc]).filter(Boolean) : [];
   const toList = normalizeToList(to);
   if (!toList.length) throw new Error('Email dispatch requires at least one recipient');
+
+  if (tenantId && preferGmail) {
+    try {
+      const { sendViaGmailIntegration } = require('./gmailApiDriver');
+      const gmailResult = await sendViaGmailIntegration({
+        tenantId,
+        to: toList,
+        subject,
+        html,
+        from: senderEmail,
+      });
+      if (gmailResult) return gmailResult;
+    } catch (err) {
+      logger.warn('mail', 'Gmail integration send failed; falling back', { error: err.message });
+    }
+  }
 
   if (resend) {
     // Primary modern production pipeline via Resend

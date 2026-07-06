@@ -7,7 +7,7 @@ import { isClerkConfigured } from '../../config/clerk';
 import { clerkAuthAppearance, clerkAuthShellClass } from '../../config/clerkAppearance';
 import { isOrgFirstAuthEnabled, loadOrgFirstAuthConfig } from '../../lib/orgFirstAuth';
 import { reestablishClerkOrgSession } from '../../lib/reestablishClerkOrgSession';
-import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
+import { resetNavigateGuard } from '../../lib/postLoginRedirect';
 import { useAuth } from '../../contexts/AuthContext';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { appUrl } from '../../config/siteUrls';
@@ -34,13 +34,33 @@ function OrgChooseFallback({ reason }) {
 function OrgChoosePageWithClerk() {
   const { isLoaded, isSignedIn, orgId } = useClerkAuth();
   const { getToken, setActive } = useClerk();
-  const { confirmSessionFromEstablish, sessionReady, user } = useAuth();
+  const { confirmSessionFromEstablish } = useAuth();
   const navigate = useNavigate();
   const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState(null);
   const [establishing, setEstablishing] = useState(false);
-  const prevOrgRef = useRef(null);
   const handledOrgRef = useRef(null);
+  const baselineOrgRef = useRef(undefined);
+
+  const commitOrgSelection = React.useCallback(async (targetOrgId) => {
+    if (!targetOrgId || establishing || handledOrgRef.current === targetOrgId) return;
+    handledOrgRef.current = targetOrgId;
+    setEstablishing(true);
+    setError(null);
+    try {
+      await reestablishClerkOrgSession({
+        getToken,
+        setActive,
+        orgId: targetOrgId,
+        confirmSessionFromEstablish,
+      });
+      navigateAfterAuth(navigate, appUrl('/dashboard'));
+    } catch (err) {
+      handledOrgRef.current = null;
+      setError(err?.message || 'Could not open workspace');
+      setEstablishing(false);
+    }
+  }, [establishing, getToken, setActive, confirmSessionFromEstablish, navigate]);
 
   useEffect(() => {
     resetNavigateGuard();
@@ -63,50 +83,14 @@ function OrgChoosePageWithClerk() {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !orgId || establishing) return;
-    if (handledOrgRef.current === orgId) return;
-
-    if (prevOrgRef.current === null) {
-      prevOrgRef.current = orgId;
-      if (sessionReady && user) {
-        navigateOnce(navigate, appUrl('/dashboard'));
-      }
+    if (baselineOrgRef.current === undefined) {
+      baselineOrgRef.current = orgId ?? '';
       return;
     }
-
-    if (orgId === prevOrgRef.current) return;
-
-    prevOrgRef.current = orgId;
-    handledOrgRef.current = orgId;
-    setEstablishing(true);
-    setError(null);
-
-    reestablishClerkOrgSession({
-      getToken,
-      setActive,
-      orgId,
-      confirmSessionFromEstablish,
-    })
-      .then(() => {
-        navigateOnce(navigate, appUrl('/dashboard'));
-        navigateAfterAuth(navigate, appUrl('/dashboard'));
-      })
-      .catch((err) => {
-        handledOrgRef.current = null;
-        setError(err?.message || 'Could not open workspace');
-        setEstablishing(false);
-      });
-  }, [
-    isLoaded,
-    isSignedIn,
-    orgId,
-    establishing,
-    sessionReady,
-    user,
-    getToken,
-    setActive,
-    confirmSessionFromEstablish,
-    navigate,
-  ]);
+    if (!orgId) return;
+    baselineOrgRef.current = orgId;
+    void commitOrgSelection(orgId);
+  }, [isLoaded, isSignedIn, orgId, establishing, commitOrgSelection]);
 
   if (!configReady || !isLoaded) {
     return <BootScreen />;
@@ -140,6 +124,15 @@ function OrgChoosePageWithClerk() {
           appearance={clerkAuthAppearance}
         />
       </div>
+      {orgId ? (
+        <button
+          type="button"
+          className="mt-6 w-full rounded-lg bg-[var(--brand-green)] px-4 py-2.5 text-sm font-semibold text-[var(--brand-teal-deep)] hover:opacity-90"
+          onClick={() => commitOrgSelection(orgId)}
+        >
+          Open workspace
+        </button>
+      ) : null}
     </AuthMarketingShell>
   );
 }

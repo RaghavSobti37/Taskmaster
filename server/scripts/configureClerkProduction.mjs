@@ -71,6 +71,12 @@ async function main() {
   await clerkFetch('PATCH', `/domains/${DOMAIN_ID}`, { proxy_url: PROXY_URL });
   console.log('  proxy_url:', PROXY_URL);
 
+  // Single-org TSC: forced org pick after sign-in races session/touch → 401 on auth host.
+  await clerkFetch('PATCH', '/instance/organization_settings', {
+    force_organization_selection: false,
+  });
+  console.log('  force_organization_selection: false');
+
   console.log('Done. Deploy auth Vercel project with CLERK_SECRET_KEY for proxy function.');
 }
 

@@ -16,7 +16,7 @@ Three database targets — **no duplicate full prod copy on one Supabase cluster
 
 | Environment | Primary store | Data scope |
 |-------------|---------------|------------|
-| **Local Express** | Mongo `taskmaster_local` | Operational sync: users, projects, tasks, workspaces — **no CRM/Data Hub** |
+| **Local Express** | Mongo `taskmaster_local` | **TSC tenant sync** (recommended): `npm run sync:prod-tenant-tsc` — one org, no Data Hub/Exly heavy data, finance metadata-only. Or operational sync (all tenants, no CRM spine). |
 | **Local NestJS** | Docker Postgres `coreknot` | Sanitized ETL tiers 1–2 from operational Mongo |
 | **Vercel preview QA** | Supabase **preview** project | Full prod ETL (temporary) |
 | **Production** | Supabase **prod** project (post-cutover) | Canonical prod data; Mongo retired last |
@@ -24,6 +24,10 @@ Three database targets — **no duplicate full prod copy on one Supabase cluster
 ## Local Express (Mongo)
 
 ```bash
+# Recommended for TSC local dev (single org, skips heavy CRM/Exly/finance files)
+npm run sync:prod-tenant-tsc
+
+# Or: all tenants’ operational data (no CRM spine)
 npm run sync:prod-to-local:operational
 npm run purge:local-crm-datahub   # if full sync was run earlier
 node server/scripts/seedE2eUsers.js
@@ -32,6 +36,7 @@ node server/scripts/seedE2eUsers.js
 `server/.env`:
 
 ```env
+PLATFORM_TENANT_SLUG=tsc
 DATA_HUB_RECONCILE_ENABLED=false
 SYNC_MODE=operational
 MAIL_USE_PROD_DB=false

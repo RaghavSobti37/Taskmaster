@@ -35,6 +35,14 @@
 | GET | `/google`, `/google/callback` | Google OAuth |
 | POST | `/oauth-establish` | Exchange OAuth ticket for cookie |
 | GET/DELETE | `/sessions` | List/revoke device sessions |
+| POST | `/clerk-establish` | Clerk SSO → CoreKnot JWT (pins org via `CLERK_ORGANIZATION_ID`) |
+
+### Clerk (2026-07-07)
+
+- Auth host (`auth.*`): `ClerkOrgActivator` **does not** call `setActive` — avoids `session/touch` 401 races.
+- `clerkEstablishToken.js`: establish succeeds even if client org-pin fails; server org from env.
+- Clerk users (`clerkId`): skip `ForcePasswordChangeGate`; `mustChangePassword` cleared on establish.
+- **Clear session cookies:** `ClearSessionCookiesButton` in `AuthLegalFooter` on auth/legal pages.
 
 ### Google OAuth cross-origin fix
 

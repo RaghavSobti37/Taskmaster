@@ -1,14 +1,28 @@
 const { Worker } = require('bullmq');
-const { createRedisClient } = require('../utils/wslRedis');
+const { createRedisClient, ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
 const { processBookedCallLogic, processArtistEnquiryLogic, processArtistPathLogic, processNewsletterLogic, processMasterclassReviewLogic } = require('../controllers/webhookController');
 
 const connection = createRedisClient();
 
+let workerInstance = null;
+let workerStartPromise = null;
 
 const initWebhookWorker = () => {
-  const worker = new Worker('WebhookQueue', async job => {
+  if (workerInstance) return workerInstance;
+  if (!isRedisReady(connection)) {
+    if (!workerStartPromise) {
+      workerStartPromise = ensureRedisReady(connection).then((ready) => {
+        workerStartPromise = null;
+        return ready ? initWebhookWorker() : null;
+      });
+    }
+    logger.debug('webhookWorker', 'Deferred - Redis not ready');
+    return null;
+  }
+
+  workerInstance = new Worker('WebhookQueue', async job => {
     logger.info('webhookWorker', `Processing job ${job.id} of type ${job.name}`);
     await runWithDefaultWebhookTenant(async () => {
       if (job.name === 'book-call') {
@@ -25,16 +39,17 @@ const initWebhookWorker = () => {
     });
   }, { connection });
 
-  worker.on('completed', job => {
+  workerInstance.on('completed', job => {
     logger.info('webhookWorker', `Job ${job.id} completed successfully`);
   });
 
-  worker.on('failed', (job, err) => {
+  workerInstance.on('failed', (job, err) => {
     logger.error('webhookWorker', `Job ${job.id} failed`, { error: err.message });
   });
-  worker.on('error', (err) => {});
+  workerInstance.on('error', () => {});
   
   logger.debug('webhookWorker', 'Webhook BullMQ worker initialized');
+  return workerInstance;
 };
 
 module.exports = { initWebhookWorker };

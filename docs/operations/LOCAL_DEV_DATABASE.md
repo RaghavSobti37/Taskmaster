@@ -73,9 +73,32 @@ In development, if the resolved URI targets a database name containing `producti
 
 Production is read-only; only `taskmaster_local` is written.
 
-### Operational sync (recommended)
+### TSC tenant sync (recommended for Shakti Collective local dev)
 
-Copies **users, projects, tasks, workspaces, departments** — skips CRM / Data Hub spine (leads, personindexes, etc.). Purges stale CRM collections from prior full syncs.
+Copies **one org** from prod (`PLATFORM_TENANT_SLUG`, default `tsc`): projects, tasks, users, workspaces, teams, notifications, org accounts, etc.
+
+**Skips heavy collections:** CRM / Data Hub spine (`tscdatas`, `persons`, `leads`, `contacts`, mail logs, …) and **Exly** (`exlybookings`, `exlyofferings`).
+
+**Finance (lite):** folder tree + document metadata only — strips `extractedText`, `fileUrl`, `fileKey`, and attachment payloads (files still live on UploadThing prod).
+
+```bash
+npm run sync:prod-tenant-tsc
+# or: node server/scripts/syncProdTenantToLocal.js --yes --slug=tsc
+```
+
+In `server/.env`:
+
+```env
+PLATFORM_TENANT_SLUG=tsc
+DATA_HUB_RECONCILE_ENABLED=false
+MAIL_USE_PROD_DB=false
+```
+
+Restart the local API after sync. Re-run after prod data changes.
+
+### Operational sync (all tenants’ operational data, no tenant filter)
+
+Copies **users, projects, tasks, workspaces, departments** for every tenant doc in prod — skips CRM / Data Hub spine. Purges stale CRM collections from prior full syncs.
 
 ```bash
 npm run sync:prod-to-local:operational

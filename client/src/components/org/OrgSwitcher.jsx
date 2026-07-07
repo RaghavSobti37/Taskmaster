@@ -9,6 +9,8 @@ import { isOrgFirstAuthEnabled } from '../../lib/orgFirstAuth';
 import { reestablishClerkOrgSession } from '../../lib/reestablishClerkOrgSession';
 import { onOrgSwitch } from '../../lib/tenantClientCache';
 import { useAuth } from '../../contexts/AuthContext';
+import { useOrgPath } from '../../hooks/useOrgPath';
+import { isOrgSlugRoutesEnabled, orgPath } from '../../lib/orgPaths';
 
 const fetchMemberships = async () => {
   const { data } = await axios.get('/api/tenants/memberships', { withCredentials: true });
@@ -52,9 +54,10 @@ function OrgAvatar({ tenant, size = 'md', className = '' }) {
 
 function OrgSwitcherFooterActions({ onNavigate }) {
   const navigate = useNavigate();
+  const resolve = useOrgPath();
   const go = (path) => {
     onNavigate?.();
-    navigate(path);
+    navigate(resolve(path));
   };
 
   return (
@@ -180,8 +183,16 @@ function LegacyOrgSwitcher({ variant = 'default', className = '', orgFirst = fal
       await axios.post('/api/tenants/select', { tenantId }, { withCredentials: true });
       return tenantId;
     },
-    onSuccess: () => {
-      void onOrgSwitch(queryClient).finally(() => window.location.reload());
+    onSuccess: async (tenantId) => {
+      const membership = memberships.find((m) => String(m.tenant?._id || m.tenant) === String(tenantId));
+      const slug = membership?.tenant?.slug;
+      await onOrgSwitch(queryClient).finally(() => {
+        if (slug && isOrgSlugRoutesEnabled()) {
+          window.location.assign(orgPath(slug, '/dashboard'));
+        } else {
+          window.location.reload();
+        }
+      });
     },
   });
 

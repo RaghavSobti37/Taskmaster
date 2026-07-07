@@ -1,7 +1,7 @@
 /**
  * Mail Template Studio — Quill setup: inline indent, swapped Enter/Shift+Enter, hard breaks.
  */
-import { Quill } from 'react-quill';
+import Quill from 'quill';
 import { buildVisualPasteHtml, sanitizePastedVisualMailHtml } from './visualEmailHtml';
 
 const INDENT_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8];

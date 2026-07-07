@@ -15,6 +15,15 @@ Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise cus
 | `npm test --prefix server -- --testPathPatterns=productionReadinessGates` | **5 passed** |
 | `npm test --prefix server -- --testPathPatterns=taskReviewRules.security\|tenantMembershipRole\|mustChangePassword` | **16 passed** |
 
+**Docs / ops verify commands (for docs-only changes):**
+
+| Command | Use |
+|---------|-----|
+| `npm run audit:exposure` | Secret/host exposure scan before commit |
+| `npm run docs:generate` | Regenerate `COREKNOT_MASTER` only after route/page inventory changes; skip for ops-only docs if it would rewrite unrelated generated docs |
+| `npm run production:readiness` | Live production readiness smoke; requires local production host config |
+| `curl -s <API_HEALTH_URL>` | Check live API health without committing host values |
+
 **Verify evidence (2026-07-06):**
 
 | Command | Result |
@@ -28,11 +37,11 @@ Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise cus
 ## 1. Foundation stability 🔴
 
 - [ ] Staging green across all 3 services (Express, NestJS, Vercel) for 48+ hours with no manual intervention — **NOT VERIFIED** (MANUAL ONLY; no 48h soak evidence)
-- [ ] Root cause of Clerk FAPI proxy middleware failure fixed and documented, not just rolled back — **NOT VERIFIED** (needs ops postmortem doc)
+- [ ] Root cause of Clerk FAPI proxy middleware failure fixed and documented, not just rolled back — **NOT VERIFIED** (needs ops postmortem doc). Stale auth-host sessions should recover by using **Clear session cookies** and then confirming `POST /api/auth/clerk-establish` returns 200 with a fresh CoreKnot cookie.
 - [ ] NestJS build-time failure fixed and documented — **PARTIAL**: `npm run build --workspace=@coreknot/nestjs-server` referenced in `environments.md` staging gate; not re-run this audit
 - [ ] `production-hosts.local.json` audited against actual Render/Vercel config — **MANUAL ONLY** (gitignored file)
 - [ ] Supabase project confirmed not paused/idle — **NOT VERIFIED** (MANUAL ONLY)
-- [ ] Redis/BullMQ confirmed linked to every queue-dependent service — **PARTIAL**: `environments.md` documents staging Redis; prod linkage **NOT VERIFIED** this pass
+- [ ] Redis/BullMQ confirmed linked to every queue-dependent service — **PARTIAL**: `environments.md` documents staging Redis; prod linkage **NOT VERIFIED** this pass. Runtime evidence to collect: no `Stream isn't writeable and enableOfflineQueue options is false` logs, `GET /api/health` reports Redis connected, Admin queue status loads, Render Key Value policy is `noeviction`, and `REDIS_URL` is present on API/worker services.
 - [x] Working staging env var set documented in `operations/environments.md` — evidence: `docs/operations/environments.md` (staging gate table 2026-07-05)
 
 ## 2. Data integrity 🔴
@@ -165,6 +174,7 @@ Documented in `docs/operations/environments.md` § Clerk org-first flags.
 - [ ] Uptime monitoring all 3 services — **MANUAL ONLY**
 - [ ] Per-tenant latency/error metrics — **NOT VERIFIED**
 - [ ] Distributed tracing — **NOT VERIFIED**
+- [ ] Resend webhook latency monitored — **PARTIAL**: `RENDER_LOGGING.md` documents `POST /api/track/webhooks/resend` slow-request filters; live latency and retry evidence **NOT VERIFIED**
 - [ ] Status page — **PARTIAL**: `GET /api/enterprise/status` stub
 - [ ] SLA tiers vs hosting plans — **NOT VERIFIED**
 - [ ] Backup restore E2E tested — **MANUAL ONLY**

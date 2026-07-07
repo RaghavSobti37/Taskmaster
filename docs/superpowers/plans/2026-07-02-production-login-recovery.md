@@ -1,6 +1,6 @@
 # Production Login Recovery Plan
 
-> **Status:** Diagnostic complete (2026-07-02). Root failure is **Clerk sign-in never completes** — `clerk-establish` is never called.
+> **Status:** Partially resolved (2026-07-07). Clerk `session/touch` 401 loop fixed (`ClerkOrgActivator` skips `setActive` on auth host; establish no longer fails on client org-pin). **Clear cookies** always in auth legal footer. If sign-in still fails, re-run diagnostics below — original root cause was identifier not reaching Clerk `sign_ins`.
 
 ## Evidence (Playwright on production)
 

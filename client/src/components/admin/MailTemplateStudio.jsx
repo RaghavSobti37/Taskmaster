@@ -1,7 +1,5 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import '../../utils/mailTemplateQuillSetup';
 import { MAIL_TEMPLATE_QUILL_KEYBOARD, attachMailTemplateClipboardSanitizer } from '../../utils/mailTemplateQuillSetup';
 import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle, Image as ImageIcon, Copy, RefreshCw, Clock, HelpCircle } from 'lucide-react';
@@ -49,6 +47,7 @@ import {
 import { blobToCroppedFile } from '../../utils/mailTemplateImageCrop';
 import { useMailTemplatePreview } from '../../hooks/useMailTemplatePreview';
 import MailTemplateImageCropModal from './MailTemplateImageCropModal';
+import QuillEditor from '../ui/QuillEditor';
 
 const PREVIEW_DEBOUNCE_MS = 450;
 const STATUS_LABELS = {
@@ -642,7 +641,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
             ) : (
               <div className="space-y-1">
                 <div className="mail-template-quill rounded-lg overflow-hidden border border-[var(--color-bg-border)] shadow-sm">
-                  <ReactQuill
+                  <QuillEditor
                     ref={(editor) => {
                       quillRef.current = editor;
                       bindQuillPasteSanitizer(editor);

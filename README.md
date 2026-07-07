@@ -79,7 +79,7 @@ npm run docs:generate
 
 - **Frontend:** Vercel serves `client/dist`. `generateVercelConfig.cjs` writes `/api` and `/socket.io` rewrites to the Render API at build time.
 - **API:** Express on Render. Session JWT in HttpOnly cookie `coreknot_token_v3` (sliding 7d idle / 30d absolute).
-- **Data:** MongoDB Atlas is the system of record. Redis backs queues and cache. NestJS handles the attendance strangler against Postgres where enabled.
+- **Data:** MongoDB Atlas is the system of record. Redis backs queues and cache. NestJS handles the attendance strangler against Postgres where enabled. Production queue health depends on a writable Render Key Value Redis URL; BullMQ startup errors such as `Stream isn't writeable and enableOfflineQueue options is false` mean the service is not connected to a writable Redis instance and should be treated as deploy/runtime drift.
 
 ### Site modes
 
@@ -117,7 +117,7 @@ Full variable matrix: [`docs/operations/environments.md`](docs/operations/enviro
 
 - Node.js ≥ 18, npm 11.x (see `packageManager` in `package.json`)
 - MongoDB reachable at `taskmaster_local` (Atlas or local)
-- Redis recommended (in-memory fallback exists for queues)
+- Redis recommended (in-memory fallback exists for some local queue paths only)
 
 ### Bootstrap
 
@@ -133,6 +133,18 @@ npm run dev                             # API :5000 + client :5173
 
 Detailed checklist: [`docs/operations/local-development.md`](docs/operations/local-development.md)  
 Database conventions: [`docs/operations/LOCAL_DEV_DATABASE.md`](docs/operations/LOCAL_DEV_DATABASE.md)
+
+### Optional: refresh local data from production
+
+```bash
+# TSC org only — skips Data Hub / Exly heavy data; finance metadata-only
+npm run sync:prod-tenant-tsc
+
+# Or operational slice (all tenants, no CRM spine)
+npm run sync:prod-to-local:operational
+```
+
+Set `PLATFORM_TENANT_SLUG=tsc` in `server/.env`. Restart API after sync. See [`docs/operations/LOCAL_DEV_DATABASE.md`](docs/operations/LOCAL_DEV_DATABASE.md).
 
 ### Optional seed
 
@@ -191,6 +203,8 @@ npm run ci
 | Crons | Render | `main` | Daily backup, subscription reminders |
 
 Deploy checklist: [`docs/operations/deployment.md`](docs/operations/deployment.md)
+
+Redis/BullMQ production rule: link `REDIS_URL` to the API service and any queue-dependent worker service from the same Render Key Value instance, keep the Redis maxmemory policy at `noeviction`, and redeploy after env changes. In-memory fallback is a local safety net, not a production operating mode.
 
 ```bash
 npm run production:readiness
@@ -304,10 +318,16 @@ Unit tests: `npm test --prefix server -- tests/documentParser.test.js`
 
 | Method | Usage |
 |--------|-------|
-| **Clerk** | Primary sign-in on production and preview |
+| **Clerk** | Primary sign-in on production and preview (`auth.tsccoreknot.com`) |
 | **Google OAuth** | Workspace linking, artist analytics |
-| **JWT cookie** | API session after Clerk establish |
+| **JWT cookie** | API session after Clerk establish (`POST /api/auth/clerk-establish`) |
 | **Closed onboarding** | `/register` submits access requests; admins provision users in Admin → Users |
+
+**Clerk on auth subdomain:** Do not call `setActive` for org switching on the auth host — server pins org via `CLERK_ORGANIZATION_ID`. If the auth host shows stale `session/touch` 401s or loops after a deploy, use **Clear session cookies** in the auth legal footer (Privacy · User Data Deletion · Clear cookies), then sign in again so `POST /api/auth/clerk-establish` can mint a fresh CoreKnot cookie.
+
+**Org URLs:** When `VITE_ORG_SLUG_ROUTES` is enabled (default), workspace routes are prefixed with tenant slug (e.g. `/tsc/dashboard`). Bootstrap: `GET /api/orgs/:slug/context`.
+
+**Platform tenant:** `PLATFORM_TENANT_SLUG=tsc` (server + Render) for single-org Shakti Collective deployments.
 
 Page access is enforced via department presets in `client/src/utils/pagePermissions.js`. Platform roles are stored in MongoDB (env bootstrap IDs are optional on first empty DB).
 
@@ -326,6 +346,8 @@ Auth detail: [`docs/auth/google-oauth.md`](docs/auth/google-oauth.md)
 | `npm run preview:vercel-env:push` | Set Vercel Preview `VITE_API_URL` → staging |
 | `npm run production:deploy -- --wait` | Production Render deploy |
 | `npm run memory:report` | Agent session changelog helper |
+| `npm run sync:prod-tenant-tsc` | TSC tenant prod → local (skips Data Hub/Exly; finance lite) |
+| `npm run sync:prod-to-local:operational` | Operational prod → local (no CRM spine) |
 | `node server/scripts/reparseFinanceOcr.js` | Finance OCR / date repair |
 
 Full catalog: [`docs/operations/SCRIPTS_RUNBOOK.md`](docs/operations/SCRIPTS_RUNBOOK.md)
@@ -398,6 +420,8 @@ POST <API_HOST>/api/webhooks/newsletter
 ```
 
 Webhook secrets and full URL map: `.cursor/production-hosts.local.example.json` → `webhooks` / `externalWebhooksToConfigure`.
+
+Resend delivery events use `POST <API_HOST>/api/track/webhooks/resend`. On Render, slow `POST /api/track/webhooks/resend` logs usually mean webhook processing is doing campaign/recipient lookup, geo enrichment, or tenant resolution inline. Confirm `RESEND_WEBHOOK_SECRET` is set, `TRACKING_BASE_URL` points to the API host, Redis is writable for queue-dependent mail paths, and no real secret values are copied into docs or logs.
 
 ---
 

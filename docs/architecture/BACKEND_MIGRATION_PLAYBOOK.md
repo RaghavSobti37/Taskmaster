@@ -260,7 +260,7 @@ During Phases 4–5, run ETL on cron (e.g. every 1 minute) so NestJS reads cross
 
 | Target | Store | Command / doc |
 | --- | --- | --- |
-| Local Express | Mongo `taskmaster_local` (operational) | `npm run sync:prod-to-local:operational` |
+| Local Express | Mongo `taskmaster_local` (TSC tenant or operational) | `npm run sync:prod-tenant-tsc` or `npm run sync:prod-to-local:operational` |
 | Local Nest | Docker Postgres | `cd nestjs-server && npm run db:setup && npm run etl:local-operational` |
 | Preview QA | Supabase **preview** project | `npm run etl:preview-full` with `DATABASE_URL` = preview |
 | Production | Supabase **prod** project | After Vercel preview pass — see cutover doc |

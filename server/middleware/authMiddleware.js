@@ -187,6 +187,7 @@ const protect = async (req, res, next) => {
     || /\/api\/tenants\/memberships\b/.test(path)
     || /\/api\/tenants\/select\b/.test(path)
     || /\/api\/tenants\/create\b/.test(path)
+    || /\/api\/orgs\/[^/]+\/context\b/.test(path)
     || /\/api\/invites\//.test(path);
   if (session.needsTenantSelection && !allowTenantSelection) {
     return res.status(409).json({

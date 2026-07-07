@@ -1,9 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, hasAnyPageAccess } from '../utils/pagePermissions';
+import { useOrgPath } from '../hooks/useOrgPath';
 
 const PageRoute = ({ page, pages, requireAll = false }) => {
   const { user } = useAuth();
+  const resolve = useOrgPath();
   let allowed = true;
 
   if (page) {
@@ -14,7 +16,7 @@ const PageRoute = ({ page, pages, requireAll = false }) => {
       : hasAnyPageAccess(user, pages);
   }
 
-  return allowed ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return allowed ? <Outlet /> : <Navigate to={resolve('/dashboard')} replace />;
 };
 
 export default PageRoute;

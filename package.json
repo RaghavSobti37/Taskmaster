@@ -48,6 +48,7 @@
     "test:e2e:core-confidence": "playwright test --config e2e/playwright.config.cjs e2e/core-confidence.spec.js",
     "sync:prod-to-local": "node server/scripts/syncProdToLocal.js --yes",
     "sync:prod-to-local:operational": "node server/scripts/syncProdToLocal.js --yes --mode=operational",
+    "sync:prod-tenant-tsc": "node server/scripts/syncProdTenantToLocal.js --yes --slug=tsc",
     "purge:local-crm-datahub": "node server/scripts/purgeLocalCrmDataHub.js --yes",
     "verify:data-env": "node server/scripts/verifyDataEnvReadiness.js",
     "local:sync-env": "node scripts/syncLocalMigrationEnv.js",
@@ -97,6 +98,8 @@
     "minimist": "^1.2.8",
     "shell-quote": "^1.8.3",
     "ws": "^8.21.0",
+    "multer": "2.2.0",
+    "quill": "2.0.2",
     "@clerk/shared": {
       "js-cookie": "^3.0.8"
     },
@@ -105,9 +108,6 @@
     },
     "uploadthing": {
       "effect": "^3.21.3"
-    },
-    "react-quill": {
-      "quill": "2.0.3"
     },
     "geoip-lite": {
       "ip-address": "^10.1.1"
@@ -121,20 +121,9 @@
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "^4.1.1"
     },
-    "@trigger.dev/core@4.5.0": {
-      "ws": "8.21.0",
-      "socket.io-client": "4.8.3",
-      "socket.io": "4.8.3",
-      "systeminformation": "^5.31.7",
-      "@opentelemetry/core": "^2.8.0",
-      "@opentelemetry/resources": "^2.8.0",
-      "@opentelemetry/sdk-trace-base": "^2.8.0",
-      "@opentelemetry/sdk-metrics": "^2.8.0",
-      "@opentelemetry/sdk-logs": "^0.219.0",
-      "@opentelemetry/sdk-trace-node": "^2.8.0",
-      "cookie": "^0.7.2",
-      "engine.io": "^6.6.6",
-      "engine.io-client": "^6.6.6"
+    "@nestjs/platform-express": {
+      ".": "^11.1.27",
+      "multer": "2.2.0"
     },
     "@sentry/node": {
       "@opentelemetry/core": "^2.8.0",

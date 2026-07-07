@@ -3,8 +3,24 @@ jest.mock('../domains/mail/services/mailDriver', () => ({
 }));
 
 jest.mock('../services/clerkOrgService', () => ({
-  syncTenantToClerkOrganization: jest.fn().mockResolvedValue({ synced: false, reason: 'not_configured' }),
+  syncTenantToClerkOrganization: jest.fn().mockImplementation(async ({ creatorClerkId } = {}) => {
+    if (!creatorClerkId) {
+      return { synced: false, reason: 'not_configured' };
+    }
+    return {
+      synced: true,
+      clerkOrganizationId: `org_mock_${Date.now()}`,
+    };
+  }),
 }));
+
+jest.mock('../utils/clerkAuth', () => {
+  const actual = jest.requireActual('../utils/clerkAuth');
+  return {
+    ...actual,
+    isClerkConfigured: jest.fn(() => false),
+  };
+});
 
 const request = require('supertest');
 const app = require('../server');
@@ -39,7 +55,15 @@ describe('tenant create wizard API', () => {
   beforeEach(() => {
     dispatchEmailPayload.mockClear();
     syncTenantToClerkOrganization.mockClear();
-    syncTenantToClerkOrganization.mockResolvedValue({ synced: false, reason: 'not_configured' });
+    syncTenantToClerkOrganization.mockImplementation(async ({ creatorClerkId } = {}) => {
+      if (!creatorClerkId) {
+        return { synced: false, reason: 'not_configured' };
+      }
+      return {
+        synced: true,
+        clerkOrganizationId: `org_mock_${Date.now()}`,
+      };
+    });
   });
 
   it('creates tenant with settings, branding, invites, and onboarding seed in one request', async () => {

@@ -1,8 +1,15 @@
+import {
+  ORG_FEATURE_KEYS,
+  ORG_FEATURE_CATALOG,
+  defaultFeatureUnlocks,
+} from '@shared/orgFeatures';
+
 export const ORG_CREATE_STEPS = [
   { id: 1, label: 'Identity' },
   { id: 2, label: 'Profile' },
-  { id: 3, label: 'Invites' },
-  { id: 4, label: 'Review' },
+  { id: 3, label: 'Features' },
+  { id: 4, label: 'Invites' },
+  { id: 5, label: 'Review' },
 ];
 
 export const INDUSTRY_OPTIONS = [
@@ -89,6 +96,7 @@ export const defaultOrgCreateForm = () => ({
   timezone: 'Asia/Kolkata',
   currency: 'INR',
   dateFormat: 'DD/MM/YYYY',
+  features: defaultFeatureUnlocks(),
   invites: [{ ...EMPTY_INVITE_ROW }],
 });
 
@@ -103,20 +111,20 @@ export function buildCreateTenantPayload(form) {
   const payload = {
     name: String(form.name).trim(),
     slug: slugifyOrgSlug(form.slug || form.name),
-    profile: {
-      industry: form.industry,
-      teamSize: form.teamSize,
-    },
+    industry: form.industry,
+    teamSize: form.teamSize,
     settings: {
       timezone: form.timezone,
       defaultCurrency: form.currency,
       dateFormat: form.dateFormat,
     },
+    featureUnlocks: form.features || defaultFeatureUnlocks(),
     invites,
   };
 
   if (form.logoUrl) {
     payload.branding = { logoUrl: form.logoUrl };
+    payload.logo = form.logoUrl;
   }
 
   return payload;

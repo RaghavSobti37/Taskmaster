@@ -1,5 +1,5 @@
 const { Queue, Worker } = require('bullmq');
-const { createRedisClient } = require('../utils/wslRedis');
+const { createRedisClient, ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const csv = require('csv-parser');
 const fs = require('fs');
 const mongoose = require('mongoose');
@@ -11,13 +11,54 @@ const { SALES_SLUG } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 
+const QUEUE_NAME = 'CsvImportQueue';
 const connection = createRedisClient();
+let bullQueue = null;
+let workerInstance = null;
+let workerStartPromise = null;
 
-const importQueue = new Queue('CsvImportQueue', { connection });
-importQueue.on('error', () => {});
+function getBullQueue() {
+  if (!bullQueue) {
+    bullQueue = new Queue(QUEUE_NAME, { connection });
+    bullQueue.on('error', () => {});
+  }
+  return bullQueue;
+}
+
+async function ensureImportQueue() {
+  if (!(await ensureRedisReady(connection))) {
+    throw new Error('Redis unavailable');
+  }
+  return getBullQueue();
+}
+
+const importQueue = new Proxy({}, {
+  get(_target, prop) {
+    if (prop === 'then') return undefined;
+    return async (...args) => {
+      const queue = await ensureImportQueue();
+      const value = queue[prop];
+      if (typeof value !== 'function') return value;
+      return value.apply(queue, args);
+    };
+  },
+});
 
 const initImportWorker = () => {
-  const worker = new Worker('CsvImportQueue', async job => {
+  if (workerInstance) return workerInstance;
+  if (!isRedisReady(connection)) {
+    if (!workerStartPromise) {
+      workerStartPromise = ensureRedisReady(connection).then((ready) => {
+        workerStartPromise = null;
+        return ready ? initImportWorker() : null;
+      });
+    }
+    logger.debug('importWorker', 'Deferred - Redis not ready');
+    return null;
+  }
+
+  getBullQueue();
+  workerInstance = new Worker(QUEUE_NAME, async job => {
     const { filePath, originalname, userId, mapping } = job.data;
     logger.info('importWorker', `Starting CSV import job ${job.id} for file ${originalname}`);
 
@@ -169,11 +210,12 @@ const initImportWorker = () => {
     }
   }, { connection });
 
-  worker.on('completed', (job, result) => logger.info('importWorker', `Job ${job.id} completed. Processed ${result} leads.`));
-  worker.on('failed', (job, err) => logger.error('importWorker', `Job ${job.id} failed: ${err.message}`));
-  worker.on('error', (err) => {});
+  workerInstance.on('completed', (job, result) => logger.info('importWorker', `Job ${job.id} completed. Processed ${result} leads.`));
+  workerInstance.on('failed', (job, err) => logger.error('importWorker', `Job ${job.id} failed: ${err.message}`));
+  workerInstance.on('error', () => {});
   
   logger.debug('importWorker', 'CSV Import worker initialized');
+  return workerInstance;
 };
 
 module.exports = { initImportWorker, importQueue };

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/primitives';
+import { orgPath } from '../../lib/orgPaths';
 
 const AUTO_REDIRECT_MS = 2500;
 
@@ -13,16 +14,21 @@ export default function OrgCreateSuccessPage() {
   const {
     orgName = 'Your organization',
     invitesSent = false,
+    slug: stateSlug,
   } = location.state || {};
+
+  const params = new URLSearchParams(location.search);
+  const slug = stateSlug || params.get('slug') || '';
 
   const goToDashboard = useCallback(() => {
     if (redirectedRef.current) return;
     redirectedRef.current = true;
-    navigate('/dashboard', {
+    const target = slug ? orgPath(slug, '/dashboard') : '/dashboard';
+    navigate(target, {
       replace: true,
       state: { fromOrgCreate: true, invitesSent: Boolean(invitesSent), orgName },
     });
-  }, [navigate, orgName, invitesSent]);
+  }, [navigate, orgName, invitesSent, slug]);
 
   useEffect(() => {
     const timer = window.setTimeout(goToDashboard, AUTO_REDIRECT_MS);

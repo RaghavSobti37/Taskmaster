@@ -18,6 +18,8 @@ const {
 } = require('../utils/financeFileProxy');
 const { parseDocument } = require('../utils/documentParser');
 const { getOcrMaxBytes, shouldRunOcr } = require('../utils/financeOcrLimits');
+const { getTenantId } = require('../utils/tenantContext');
+const { tenantIdFilter } = require('../utils/mongoId');
 
 const populateFinanceDoc = (id) =>
   FinanceDocument.findById(id)
@@ -29,12 +31,17 @@ const populateFinanceDoc = (id) =>
 const FINANCE_COLLECTION = FinanceDocument.collection.name;
 
 /** Stages: folders sort by latest child payment date; docs by metadata.date */
-const financePaymentDateSortStages = (order) => [
+const financePaymentDateSortStages = (order) => {
+  const tid = getTenantId();
+  const lookupTenantMatch = tid ? [{ $match: tenantIdFilter(tid) }] : [];
+
+  return [
   {
     $lookup: {
       from: FINANCE_COLLECTION,
       let: { folderId: '$_id' },
       pipeline: [
+        ...lookupTenantMatch,
         {
           $match: {
             $expr: {
@@ -68,6 +75,7 @@ const financePaymentDateSortStages = (order) => [
   },
   { $sort: { isFolder: -1, _sortPaymentDate: order, createdAt: order } },
 ];
+};
 
 const populateFinanceDocsByIds = async (ids) => {
   if (!ids.length) return [];

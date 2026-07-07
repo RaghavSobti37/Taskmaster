@@ -1,6 +1,7 @@
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const { canManageOrganizationSettings } = require('../../shared/orgPermissions.cjs');
+const { normalizeFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
 const asyncHandler = require('../middleware/asyncHandler');
 const {
   listActiveMemberships,
@@ -47,6 +48,7 @@ const formatTenantSettings = (tenant) => ({
   settings: tenant.settings,
   branding: tenant.branding,
   clerkOrganizationId: tenant.clerkOrganizationId || null,
+  featureUnlocks: tenant.featureUnlocks,
 });
 
 const assertActiveTenantAccess = (req, tenantId) => {
@@ -93,17 +95,22 @@ router.post(
       teamSize,
       settings,
       invites,
+      featureUnlocks,
+      branding,
     } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Organization name required' });
+
+    const logoUrl = logo || branding?.logoUrl;
 
     const tenant = await createTenantForUser(req.user._id, {
       name: String(name).trim(),
       slug,
-      logo,
+      logo: logoUrl,
       industry,
       teamSize,
       settings,
       invites,
+      featureUnlocks,
       contactEmail: req.user.email,
     });
     await selectTenant(req, res, req.user._id, tenant._id);
@@ -117,7 +124,48 @@ router.post(
         teamSize: tenant.teamSize,
         settings: tenant.settings,
         branding: tenant.branding,
+        featureUnlocks: tenant.featureUnlocks,
         onboardingProgress: tenant.onboardingProgress,
+      },
+    });
+  }),
+);
+
+router.patch(
+  '/:id/features',
+  protect,
+  asyncHandler(async (req, res) => {
+    const tenantId = req.params.id;
+    assertActiveTenantAccess(req, tenantId);
+
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) return res.status(404).json({ error: 'Organization not found' });
+
+    const membership = await getMembership(req.user._id, tenantId);
+    if (!canManageOrganizationSettings({ user: req.user, membership, tenant })) {
+      return res.status(403).json({ error: 'Organization admin required to update features' });
+    }
+
+    const { featureUnlocks } = req.body || {};
+    if (!featureUnlocks || typeof featureUnlocks !== 'object') {
+      return res.status(400).json({ error: 'featureUnlocks object required' });
+    }
+
+    tenant.featureUnlocks = normalizeFeatureUnlocks({
+      ...tenant.featureUnlocks?.toObject?.() || tenant.featureUnlocks || {},
+      ...featureUnlocks,
+    });
+    tenant.updatedAt = new Date();
+    await tenant.save();
+
+    const unlockState = await getTenantUnlockState(tenantId);
+    res.json({
+      tenant: formatTenantSettings(tenant),
+      featureUnlocks: unlockState.unlocks,
+      locks: unlockState.locks,
+      permissions: {
+        canEditSettings: true,
+        canManageFeatures: true,
       },
     });
   }),

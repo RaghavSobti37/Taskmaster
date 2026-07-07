@@ -103,7 +103,8 @@ npm run prod:cutover-etl -- --yes
 Local stays on operational Mongo + Docker Postgres — **not** preview/prod Supabase:
 
 ```bash
-npm run sync:prod-to-local:operational
+npm run sync:prod-tenant-tsc
+# or: npm run sync:prod-to-local:operational
 cd nestjs-server && npm run etl:local-operational
 ```
 

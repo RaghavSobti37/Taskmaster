@@ -24,6 +24,15 @@ Public frontend (`FRONTEND_URL` / `CLIENT_URL`): your Vercel custom domain (e.g.
 
 See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
 
+## Platform tenant (single-org deploy)
+
+| Variable | Where | Value |
+|----------|-------|-------|
+| `PLATFORM_TENANT_SLUG` | Render prod API, `server/.env` | `tsc` (The Shakti Collective) |
+| `VITE_ORG_SLUG_ROUTES` | Client (optional) | Omit or `true` — `false` disables `/:orgSlug/*` prefix |
+
+Tenant maintenance: `node server/scripts/consolidatePlatformTenant.js`, `restorePlatformTenantSetup.js`. Local data refresh: `npm run sync:prod-tenant-tsc`.
+
 ## Client API routing
 
 | Environment | `VITE_API_URL` | Why |

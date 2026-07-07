@@ -6,6 +6,11 @@ import { isAppSite, isAuthSite, isLandingSite } from './config/siteMode';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import FeatureUnlockRoute from './components/org/FeatureUnlockRoute';
+import OrgSlugLayout from './components/org/OrgSlugLayout';
+import LegacyOrgPathRedirect from './components/org/LegacyOrgPathRedirect';
+import OrgNavigate from './components/org/OrgNavigate';
+import { orgPathFromUser, isOrgSlugRoutesEnabled } from './lib/orgPaths';
+import { useOrgPath } from './hooks/useOrgPath';
 import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootError from './components/AppBootError';
 import BootScreen from './components/BootScreen';
@@ -115,18 +120,26 @@ const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 const LegacyWorkspaceRedirect = () => {
   const { name } = useParams();
-  return <Navigate to={`/workspaces/${encodeURIComponent(name || '')}`} replace />;
+  const resolve = useOrgPath();
+  return <Navigate to={resolve(`/workspaces/${encodeURIComponent(name || '')}`)} replace />;
 };
 
 const LegacyArtistAnalyticsRedirect = () => {
   const { id, platform } = useParams();
+  const resolve = useOrgPath();
   const isPreview = window.location.pathname.startsWith('/preview/artist/');
-  const base = isPreview ? `/preview/artist/${id}` : `/artists/${id}`;
+  const base = isPreview ? `/preview/artist/${id}` : resolve(`/artists/${id}`);
   const target = platform
     ? `${base}?tab=analytics&platform=${encodeURIComponent(platform)}`
     : `${base}?tab=analytics`;
   return <Navigate to={target} replace />;
 };
+
+function AppCatchAllRedirect() {
+  const { user } = useAuth();
+  const target = user ? orgPathFromUser(user, '/dashboard') : '/landing';
+  return <Navigate to={target} replace />;
+}
 
 function AppRootRedirectInner({ clerkLoaded, clerkSignedIn }) {
   const { user, loading, bootError, retryBoot } = useAuth();
@@ -147,7 +160,7 @@ function AppRootRedirectInner({ clerkLoaded, clerkSignedIn }) {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={orgPathFromUser(user, '/dashboard')} replace />;
 
   if (usesExternalLandingHost()) {
     return <ExternalLandingRedirect />;
@@ -265,182 +278,211 @@ function App() {
                 </ArtistMembershipRoute>
               )}
             />
+            <Route path="/:orgSlug" element={<OrgSlugLayout />}>
             <Route element={<MainLayout />}>
               <Route element={<PageRoute page="dashboard" />}>
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
               </Route>
-              <Route path="/upgrade" element={<Navigate to="/settings?tab=organization" replace />} />
+              <Route path="upgrade" element={<OrgNavigate to="/settings?tab=organization" replace />} />
               <Route element={<PageRoute page="projects" />}>
-                <Route path="/projects" element={<ProjectsView />} />
-                <Route path="/projects/new" element={<ProjectCreate />} />
-                <Route path="/workspaces/:name" element={<WorkspaceSettings />} />
-                <Route path="/projects/workspaces/:name" element={<LegacyWorkspaceRedirect />} />
-                <Route path="/projects/:id/analytics" element={<ProjectAnalyticsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetail />} />
+                <Route path="projects" element={<ProjectsView />} />
+                <Route path="projects/new" element={<ProjectCreate />} />
+                <Route path="workspaces/:name" element={<WorkspaceSettings />} />
+                <Route path="projects/workspaces/:name" element={<LegacyWorkspaceRedirect />} />
+                <Route path="projects/:id/analytics" element={<ProjectAnalyticsPage />} />
+                <Route path="projects/:id" element={<ProjectDetail />} />
               </Route>
               <Route element={<PageRoute page="calendar" />}>
-                <Route path="/calendar" element={<CalendarView />} />
+                <Route path="calendar" element={<CalendarView />} />
               </Route>
               <Route element={<PageRoute page="settings" />}>
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/settings/profile" element={<Navigate to="/settings?tab=profile" replace />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="settings/profile" element={<OrgNavigate to="/settings?tab=profile" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_developers" />}>
-                <Route path="/developers" element={<DevelopersPage />} />
+                <Route path="developers" element={<DevelopersPage />} />
               </Route>
-              <Route path="/org/settings" element={<Navigate to="/settings?tab=organization" replace />} />
-              <Route path="/data-hub" element={<Navigate to="/admin" replace />} />
+              <Route path="org/settings" element={<OrgNavigate to="/settings?tab=organization" replace />} />
+              <Route path="data-hub" element={<OrgNavigate to="/admin" replace />} />
 
               <Route element={<PageRoute page="logs" />}>
-                <Route path="/logs" element={<DailyLogPage />} />
+                <Route path="logs" element={<DailyLogPage />} />
               </Route>
               <Route element={<PageRoute page="attendance" />}>
-                <Route path="/attendance" element={<AttendancePage />} />
-                <Route path="/attendance/all" element={<AttendancePage />} />
+                <Route path="attendance" element={<AttendancePage />} />
+                <Route path="attendance/all" element={<AttendancePage />} />
               </Route>
               <Route element={<PageRoute page="schedule" />}>
-                <Route path="/schedule" element={<SchedulePage />} />
+                <Route path="schedule" element={<SchedulePage />} />
               </Route>
               <Route element={<PageRoute page="inbox" />}>
-                <Route path="/inbox" element={<InboxPage />} />
+                <Route path="inbox" element={<InboxPage />} />
               </Route>
-              <Route path="/chat" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/chat/*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="chat" element={<OrgNavigate to="/dashboard" replace />} />
+              <Route path="chat/*" element={<OrgNavigate to="/dashboard" replace />} />
               <Route element={<PageRoute page="todo" />}>
-                <Route path="/todo" element={<TodoPage />} />
+                <Route path="todo" element={<TodoPage />} />
               </Route>
               <Route element={<PageRoute page="notes" />}>
-                <Route path="/notes" element={<NotesPage />} />
-                <Route path="/notes/new" element={<NotesPage />} />
-                <Route path="/notes/:id" element={<NoteEditorPage />} />
+                <Route path="notes" element={<NotesPage />} />
+                <Route path="notes/new" element={<NotesPage />} />
+                <Route path="notes/:id" element={<NoteEditorPage />} />
               </Route>
               <Route element={<PageRoute page="admin_data" />}>
-                <Route path="/components" element={<ComponentsShowcase />} />
+                <Route path="components" element={<ComponentsShowcase />} />
               </Route>
-              <Route path="/management/equipment" element={<Navigate to="/office?tab=equipment" replace />} />
-              <Route path="/management/contacts" element={<Navigate to="/office?tab=contacts" replace />} />
-              <Route path="/office/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
-              <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
+              <Route path="management/equipment" element={<OrgNavigate to="/office?tab=equipment" replace />} />
+              <Route path="management/contacts" element={<OrgNavigate to="/office?tab=contacts" replace />} />
+              <Route path="office/subscriptions" element={<OrgNavigate to="/office?tab=subscriptions" replace />} />
+              <Route path="management/attendance" element={<OrgNavigate to="/attendance" replace />} />
               <Route element={<PageRoute pages={['leads', 'followups', 'bookings']} />}>
-                <Route path="/crm" element={<CrmHub />} />
+                <Route path="crm" element={<CrmHub />} />
               </Route>
               <Route element={<PageRoute pages={['equipment', 'contacts', 'subscriptions']} />}>
-                <Route path="/office" element={<OfficeHub />} />
+                <Route path="office" element={<OfficeHub />} />
               </Route>
               <Route element={<PageRoute pages={['finance', 'announcements', 'org_documents', 'artists']} />}>
-                <Route path="/management" element={<ManagementHub />} />
+                <Route path="management" element={<ManagementHub />} />
               </Route>
               <Route element={<PageRoute pages={['admin_users', 'admin_teams', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics', 'admin_roles']} />}>
-                <Route path="/admin/console" element={<AdminConsole />} />
+                <Route path="admin/console" element={<AdminConsole />} />
               </Route>
-              <Route path="/leads" element={<Navigate to="/crm?tab=leads" replace />} />
-              <Route path="/followups" element={<Navigate to="/crm?tab=followups" replace />} />
-              <Route path="/bookings" element={<Navigate to="/crm?tab=bookings" replace />} />
-              <Route path="/equipment" element={<Navigate to="/office?tab=equipment" replace />} />
-              <Route path="/contacts" element={<Navigate to="/office?tab=contacts" replace />} />
-              <Route path="/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
-              <Route path="/finance" element={<Navigate to="/management?tab=finance" replace />} />
-              <Route path="/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
-              <Route path="/documents" element={<Navigate to="/management?tab=documents" replace />} />
-              <Route path="/management/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
-              <Route path="/artists" element={<Navigate to="/management?tab=artists" replace />} />
+              <Route path="leads" element={<OrgNavigate to="/crm?tab=leads" replace />} />
+              <Route path="followups" element={<OrgNavigate to="/crm?tab=followups" replace />} />
+              <Route path="bookings" element={<OrgNavigate to="/crm?tab=bookings" replace />} />
+              <Route path="equipment" element={<OrgNavigate to="/office?tab=equipment" replace />} />
+              <Route path="contacts" element={<OrgNavigate to="/office?tab=contacts" replace />} />
+              <Route path="subscriptions" element={<OrgNavigate to="/office?tab=subscriptions" replace />} />
+              <Route path="finance" element={<OrgNavigate to="/management?tab=finance" replace />} />
+              <Route path="announcements" element={<OrgNavigate to="/management?tab=announcements" replace />} />
+              <Route path="documents" element={<OrgNavigate to="/management?tab=documents" replace />} />
+              <Route path="management/announcements" element={<OrgNavigate to="/management?tab=announcements" replace />} />
+              <Route path="artists" element={<OrgNavigate to="/management?tab=artists" replace />} />
 
               <Route element={<PageRoute page="assets" />}>
                 <Route element={<AssetsHubLayout />}>
-                  <Route path="/assets" element={<AssetsPage />} />
+                  <Route path="assets" element={<AssetsPage />} />
                   <Route element={<ArtistOrAdminRoute />}>
-                    <Route path="/assets/accounts" element={<OrgAccountsPage />} />
+                    <Route path="assets/accounts" element={<OrgAccountsPage />} />
                   </Route>
                 </Route>
               </Route>
               <Route element={<PageRoute page="office_assets" />}>
-                <Route path="/office-assets" element={<OfficeAssetsPage />} />
+                <Route path="office-assets" element={<OfficeAssetsPage />} />
               </Route>
               <Route element={<PageRoute page="features" />}>
-                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="features" element={<FeaturesPage />} />
               </Route>
               <Route element={<PageRoute page="workflows" />}>
-                <Route path="/workflows" element={<WorkflowCanvas />} />
+                <Route path="workflows" element={<WorkflowCanvas />} />
               </Route>
 
               <Route element={<PageRoute pages={['admin_data', 'admin_artist_path']} />}>
-                <Route path="/admin/artist-path" element={<ArtistPathPage />} />
+                <Route path="admin/artist-path" element={<ArtistPathPage />} />
               </Route>
               <Route element={<PageRoute page="admin_data" />}>
-                <Route path="/admin" element={<AdminCRM />} />
-                <Route path="/admin/control" element={<AdminPanel />} />
-                <Route path="/admin/qa" element={<QATestingPage />} />
-                <Route path="/admin/media-list" element={<MediaListPage />} />
-                <Route path="/admin/lead-audits" element={<LeadAuditsPage />} />
-                <Route path="/admin/security-audit" element={<Navigate to="/admin/console" replace />} />
-                <Route path="/admin/crm-stats" element={<CrmStatsPage />} />
-                <Route path="/admin/audits" element={<Navigate to="/admin/lead-audits" replace />} />
+                <Route path="admin" element={<AdminCRM />} />
+                <Route path="admin/control" element={<AdminPanel />} />
+                <Route path="admin/qa" element={<QATestingPage />} />
+                <Route path="admin/media-list" element={<MediaListPage />} />
+                <Route path="admin/lead-audits" element={<LeadAuditsPage />} />
+                <Route path="admin/security-audit" element={<OrgNavigate to="/admin/console" replace />} />
+                <Route path="admin/crm-stats" element={<CrmStatsPage />} />
+                <Route path="admin/audits" element={<OrgNavigate to="/admin/lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
-                <Route path="/admin/tenant-sso" element={<AdminTenantSsoPage />} />
-                <Route path="/admin/audit-log" element={<Navigate to="/admin/console" replace />} />
+                <Route path="admin/users" element={<AdminUsers />} />
+                <Route path="admin/platform-settings" element={<AdminPlatformSettings />} />
+                <Route path="admin/tenant-sso" element={<AdminTenantSsoPage />} />
+                <Route path="admin/audit-log" element={<OrgNavigate to="/admin/console" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_teams" />}>
-                <Route path="/admin/teams" element={<AdminTeamsPage />} />
+                <Route path="admin/teams" element={<AdminTeamsPage />} />
               </Route>
               <Route element={<PageRoute page="admin_roles" />}>
-                <Route path="/admin/roles" element={<AdminRolesPage />} />
+                <Route path="admin/roles" element={<AdminRolesPage />} />
               </Route>
               <Route element={<PageRoute page="admin_exly" />}>
-                <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
+                <Route path="admin/exly-campaigns" element={<ExlyCampaignsPage />} />
               </Route>
               <Route element={<PageRoute page="admin_scripts" />}>
-                <Route path="/admin/scripts" element={<AdminScriptsPage />} />
+                <Route path="admin/scripts" element={<AdminScriptsPage />} />
               </Route>
               <Route element={<PageRoute page="admin_gamification" />}>
-                <Route path="/admin/gamification" element={<AdminGamification />} />
+                <Route path="admin/gamification" element={<AdminGamification />} />
               </Route>
               <Route element={<PageRoute page="admin_ops_hub" />}>
-                <Route path="/admin/ops-hub" element={<OpsHubPage />} />
+                <Route path="admin/ops-hub" element={<OpsHubPage />} />
               </Route>
               <Route element={<PageRoute pages={['admin_knowledge_engine', 'admin_data']} />}>
                 <Route element={<FeatureUnlockRoute featureKey="knowledgeEngine" />}>
-                  <Route path="/admin/knowledge-engine" element={<KnowledgeEnginePage />} />
+                  <Route path="admin/knowledge-engine" element={<KnowledgeEnginePage />} />
                 </Route>
               </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
-                <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
+                <Route path="admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
               <Route element={<PageRoute page="emails" />}>
                 <Route element={<FeatureUnlockRoute featureKey="resend" />}>
-                  <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
+                  <Route path="campaign/:campaignId" element={<CampaignDetails />} />
                   <Route element={<EmailHubLayout />}>
-                    <Route path="/emails" element={<EmailsOverviewPage />} />
-                    <Route path="/emails/campaigns" element={<EmailsCampaignsPage />} />
-                    <Route path="/emails/templates" element={<EmailsTemplatesPage />} />
-                    <Route path="/emails/profiles" element={<EmailsProfilesPage />} />
-                    <Route path="/emails/streams" element={<EmailsStreamsPage />} />
-                    <Route path="/emails/analytics" element={<EmailsAnalyticsPage />} />
-                    <Route path="/emails/newsletter" element={<NewsletterPage />} />
-                    <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
-                    <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
+                    <Route path="emails" element={<EmailsOverviewPage />} />
+                    <Route path="emails/campaigns" element={<EmailsCampaignsPage />} />
+                    <Route path="emails/templates" element={<EmailsTemplatesPage />} />
+                    <Route path="emails/profiles" element={<EmailsProfilesPage />} />
+                    <Route path="emails/streams" element={<EmailsStreamsPage />} />
+                    <Route path="emails/analytics" element={<EmailsAnalyticsPage />} />
+                    <Route path="emails/newsletter" element={<NewsletterPage />} />
+                    <Route path="emails/newsletter/curate" element={<NewsletterCuratePage />} />
+                    <Route path="emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
                   </Route>
-                  <Route path="/emails/create" element={<CreateCampaignPage />} />
+                  <Route path="emails/create" element={<CreateCampaignPage />} />
                 </Route>
               </Route>
-              <Route path="/workspace/emails" element={<Navigate to="/emails" replace />} />
-              <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
+              <Route path="workspace/emails" element={<OrgNavigate to="/emails" replace />} />
+              <Route path="workspace/emails/create" element={<OrgNavigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
                 <Route element={<FeatureUnlockRoute featureKey="artistOs" />}>
-                  <Route path="/artists/portfolio" element={<PortfolioDashboard />} />
-                  <Route path="/artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
-                  <Route path="/artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
-                  <Route path="/artists/:id/*" element={<ArtistDetail />} />
+                  <Route path="artists/portfolio" element={<PortfolioDashboard />} />
+                  <Route path="artists/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
+                  <Route path="artists/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
+                  <Route path="artists/:id/*" element={<ArtistDetail />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />
             </Route>
+            </Route>
+
+            {isOrgSlugRoutesEnabled() && (
+              <>
+                <Route path="/dashboard/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/projects/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/calendar/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/settings/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/logs/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/attendance/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/schedule/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/inbox/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/todo/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/notes/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/crm/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/office/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/management/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/admin/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/assets/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/office-assets/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/features/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/workflows/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/developers/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/emails/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/campaign/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/upgrade" element={<LegacyOrgPathRedirect />} />
+              </>
+            )}
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<AppCatchAllRedirect />} />
             </>
           )}
         </Routes>

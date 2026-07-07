@@ -25,6 +25,22 @@ Filter tips:
 - Errors: search `level":"error"` or use Render’s level filter when JSON level is present.
 - Slow requests: search tag `perf` or message `Slow request`.
 - Boot diagnostics: search tag `BOOT` (emitted once at startup when `LOG_LEVEL` allows `info`).
+- Redis/BullMQ: search `enableOfflineQueue`, `Stream isn't writeable`, `Redis connection lost`, `Failed to add job to BullMQ`, or queue names such as `WebhookQueue` and `CampaignEmailQueue`.
+- Resend webhook latency: search `POST /api/track/webhooks/resend`, then pair the `traceId` with nearby `resendWebhook`, `Slow request`, Redis, and Mongo messages.
+- Clerk stale sessions: search `session/touch`, `clerk-establish`, `ClerkOrgActivator`, and `401`; stale auth-host sessions should recover through the footer **Clear session cookies** action.
+
+## Incident filters
+
+Use these searches for the current production failure modes:
+
+| Symptom | Search text | First checks |
+|---------|-------------|--------------|
+| BullMQ/ioredis write failure | `Stream isn't writeable and enableOfflineQueue options is false` | `REDIS_URL` present on Render service, Key Value linked, `noeviction`, redeploy after env change |
+| Queue fallback | `Redis connection lost. Switching to memory queue.` | Treat as production incident; memory fallback is local-only operating posture |
+| Slow Resend webhook | `POST /api/track/webhooks/resend` + `Slow request` | Trace campaign lookup, tenant resolution, geo enrichment, webhook retries |
+| Clerk auth loop | `session/touch` + `401` | Clear stale cookies on auth host, then verify `POST /api/auth/clerk-establish` succeeds |
+
+Keep real service IDs, hostnames, and secrets in gitignored local files or the Render dashboard. Docs and tickets should use placeholders unless access is restricted and explicitly approved.
 
 ## Render MCP (`list_logs`)
 

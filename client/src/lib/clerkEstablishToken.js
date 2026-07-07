@@ -7,8 +7,9 @@ export async function fetchClerkEstablishToken({
   setActive,
   pinnedOrgId,
   activeOrgId,
+  clientOrgScope = true,
 }) {
-  if (pinnedOrgId && activeOrgId !== pinnedOrgId) {
+  if (clientOrgScope && pinnedOrgId && activeOrgId !== pinnedOrgId) {
     try {
       await setActive({ organization: pinnedOrgId });
     } catch {
@@ -17,11 +18,24 @@ export async function fetchClerkEstablishToken({
   }
 
   let token = null;
-  if (pinnedOrgId) {
-    token = await getToken({ organizationId: pinnedOrgId });
-  }
-  if (!token) {
-    token = await getToken();
+  try {
+    if (clientOrgScope && pinnedOrgId) {
+      token = await getToken({ organizationId: pinnedOrgId });
+    }
+    if (!token) {
+      token = await getToken();
+    }
+  } catch (err) {
+    const status = err?.status || err?.response?.status;
+    return {
+      ok: false,
+      retryable: status !== 401 && status !== 403,
+      error: {
+        status,
+        message: err?.message || 'Clerk session token could not be read.',
+      },
+      code: status === 401 || status === 403 ? 'clerk-session-stale' : 'clerk-token-error',
+    };
   }
 
   if (!token) {

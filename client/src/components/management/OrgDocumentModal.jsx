@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Link2, Upload } from 'lucide-react';
+import { Link2, Loader2, Upload } from 'lucide-react';
 import { ORG_DOCUMENT_CATEGORIES } from '@shared/orgDocumentCategories';
 import { NexusModal, ModalFooter } from '../ui/modals';
 import { Button, Input } from '../ui/primitives';
@@ -31,6 +31,7 @@ export default function OrgDocumentModal({
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -51,6 +52,7 @@ export default function OrgDocumentModal({
     );
     setSelectedFile(null);
     setUploadProgress(0);
+    setIsSubmitting(false);
     setError('');
   }, [editingDoc]);
 
@@ -96,6 +98,7 @@ export default function OrgDocumentModal({
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       if (isEdit) {
         await onSaveLink({
@@ -141,8 +144,12 @@ export default function OrgDocumentModal({
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'Save failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const busy = isSubmitting || isSaving;
 
   return (
     <NexusModal
@@ -153,7 +160,7 @@ export default function OrgDocumentModal({
       showFooter={false}
       footer={(
         <ModalFooter>
-          <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={isSaving}>
+          <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button
@@ -161,9 +168,16 @@ export default function OrgDocumentModal({
             form="org-document-form"
             size="sm"
             variant="success"
-            disabled={!canSubmit || isSaving}
+            disabled={!canSubmit || busy}
           >
-            {isSaving ? 'Saving…' : isEdit ? 'Save changes' : 'Add document'}
+            {busy ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin" />
+                {isEdit ? 'Saving…' : uploadProgress > 0 && uploadProgress < 100 ? `Uploading ${uploadProgress}%…` : 'Adding…'}
+              </span>
+            ) : (
+              isEdit ? 'Save changes' : 'Add document'
+            )}
           </Button>
         </ModalFooter>
       )}

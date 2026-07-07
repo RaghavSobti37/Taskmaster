@@ -110,26 +110,28 @@ export default function ModuleSubnav({
       className={`tm-module-subnav flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between ${className}`}
       aria-label={ariaLabel}
     >
-      {(title || TitleIcon) && (
-        <div className="flex items-center gap-2 min-w-0 shrink-0">
-          {TitleIcon && <TitleIcon size={16} className="shrink-0 text-[var(--color-action-primary)]" aria-hidden />}
-          {title && (
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-primary)] truncate">
-              {title}
-            </h2>
-          )}
+      <div className="flex flex-col gap-2 min-w-0 lg:flex-row lg:items-center lg:gap-3 lg:flex-1 lg:min-w-0">
+        {(title || TitleIcon) && (
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
+            {TitleIcon && <TitleIcon size={16} className="shrink-0 text-[var(--color-action-primary)]" aria-hidden />}
+            {title && (
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-primary)] truncate">
+                {title}
+              </h2>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            ref={barRef}
+            className={`tm-sliding-tabs relative flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--color-bg-secondary)]/60 overflow-x-auto ${tabsFitContent ? 'w-fit max-w-full' : 'w-full lg:w-auto'}`}
+          >
+            <span ref={pillRef} className="tm-sliding-tabs-pill" aria-hidden />
+            {items.map((item) => (mode === 'route' ? renderRouteItem(item) : renderButtonItem(item)))}
+          </div>
         </div>
-      )}
-      <div className="flex items-center gap-2 min-w-0 flex-1 lg:justify-end">
-        <div
-          ref={barRef}
-          className={`tm-sliding-tabs relative flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--color-bg-secondary)]/60 overflow-x-auto ${tabsFitContent ? 'w-fit max-w-full' : 'w-full lg:w-auto'}`}
-        >
-          <span ref={pillRef} className="tm-sliding-tabs-pill" aria-hidden />
-          {items.map((item) => (mode === 'route' ? renderRouteItem(item) : renderButtonItem(item)))}
-        </div>
-        {renderAction(action)}
       </div>
+      {renderAction(action)}
     </nav>
   );
 }

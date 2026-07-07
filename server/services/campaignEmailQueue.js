@@ -1,5 +1,5 @@
 const { Queue } = require('bullmq');
-const { createRedisClient } = require('../utils/wslRedis');
+const { createRedisClient, ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 
 const QUEUE_NAME = 'CampaignEmailQueue';
@@ -21,7 +21,7 @@ if (!isTestEnv) {
 
 const isCampaignEmailQueueAvailable = () => {
   if (!queue || !connection) return false;
-  return connection.status === 'ready';
+  return isRedisReady(connection);
 };
 
 /** BullMQ custom job ids must not contain ":" */
@@ -38,7 +38,10 @@ const buildJobOpts = (jobData) => ({
 
 const enqueueCampaignEmailJobs = async (jobDataList = []) => {
   if (!jobDataList.length) return { queued: 0, via: 'none' };
-  if (!queue) return { queued: 0, via: 'unavailable' };
+  if (queue && connection && !isRedisReady(connection)) {
+    await ensureRedisReady(connection);
+  }
+  if (!isCampaignEmailQueueAvailable()) return { queued: 0, via: 'unavailable' };
 
   const bulk = jobDataList.map((jobData) => ({
     name: 'send',

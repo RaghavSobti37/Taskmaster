@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/primitives';
 import OrgCreateProgress from './create/OrgCreateProgress';
 import StepIdentity from './create/steps/StepIdentity';
 import StepProfile from './create/steps/StepProfile';
+import StepFeatures from './create/steps/StepFeatures';
 import StepInvites from './create/steps/StepInvites';
 import StepReview from './create/steps/StepReview';
 import {
@@ -30,6 +31,9 @@ function validateStep(step, form) {
     if (!form.dateFormat) return 'Select a date format';
   }
   if (step === 3) {
+    return '';
+  }
+  if (step === 4) {
     const rows = form.invites || [];
     for (const row of rows) {
       const email = String(row.email || '').trim();
@@ -56,7 +60,7 @@ export default function CreateOrganizationPage() {
       return;
     }
     setFieldError('');
-    setStep((s) => Math.min(4, s + 1));
+    setStep((s) => Math.min(5, s + 1));
   };
 
   const goBack = () => {
@@ -68,11 +72,11 @@ export default function CreateOrganizationPage() {
   const skipInvites = () => {
     setForm((prev) => ({ ...prev, invites: [{ email: '', role: '' }] }));
     setFieldError('');
-    setStep(4);
+    setStep(5);
   };
 
   const handleCreate = async () => {
-    const err = validateStep(3, form) || validateStep(2, form) || validateStep(1, form);
+    const err = validateStep(4, form) || validateStep(2, form) || validateStep(1, form);
     if (err) {
       setSubmitError(err);
       return;
@@ -116,9 +120,10 @@ export default function CreateOrganizationPage() {
             <StepIdentity form={form} setForm={setForm} fieldError={fieldError} setFieldError={setFieldError} />
           )}
           {step === 2 && <StepProfile form={form} setForm={setForm} fieldError={fieldError} />}
-          {step === 3 && <StepInvites form={form} setForm={setForm} fieldError={fieldError} />}
-          {step === 4 && <StepReview form={form} />}
-          {submitError && step === 4 && <p className="mt-4 text-xs text-rose-500">{submitError}</p>}
+          {step === 3 && <StepFeatures form={form} setForm={setForm} />}
+          {step === 4 && <StepInvites form={form} setForm={setForm} fieldError={fieldError} />}
+          {step === 5 && <StepReview form={form} />}
+          {submitError && step === 5 && <p className="mt-4 text-xs text-rose-500">{submitError}</p>}
         </main>
 
         <footer className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -130,12 +135,12 @@ export default function CreateOrganizationPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {step === 3 && (
+            {step === 4 && (
               <Button type="button" variant="secondary" onClick={skipInvites} disabled={loading}>
                 Skip for now
               </Button>
             )}
-            {step < 4 ? (
+            {step < 5 ? (
               <Button type="button" onClick={goNext}>
                 Continue
               </Button>

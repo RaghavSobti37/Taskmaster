@@ -4,6 +4,18 @@ Session deltas appended by `/git-push`, `memory-sync`, and agent ship workflows.
 
 ---
 
+## 2026-07-07 — TSC platform tenant, org slug routes, prod→local sync, Clerk auth fixes
+
+- **What:** Single platform org **The Shakti Collective** (`slug: tsc`, id `6a14c0d1d2ce3fb936553e35`). Org-scoped URL prefix `/:orgSlug/*` behind `VITE_ORG_SLUG_ROUTES` (default on); `GET /api/orgs/:slug/context`, `OrgContext`, `orgPaths.js`, feature catalog `shared/orgFeatures.cjs`, create-org wizard + `PATCH /api/tenants/:id/features`. Consolidation script removes other tenants; `PLATFORM_TENANT_SLUG=tsc` on local + Render prod API.
+- **Prod → local (TSC):** `npm run sync:prod-tenant-tsc` (`syncProdTenantToLocal.js`) — tenant-filtered copy; skips CRM/Data Hub + Exly heavy collections; finance = folders + metadata only (no `extractedText` / file URLs). Verified: 31 projects, 395 tasks, 12 users.
+- **Auth:** Clerk `session/touch` 401 loop fixed — `ClerkOrgActivator` skips `setActive` on auth host; `clerkEstablishToken` tolerates `setActive` failure (server pins org via `CLERK_ORGANIZATION_ID`). **Clear cookies** always in auth legal footer (`AuthLegalFooter` + `ClearSessionCookiesButton` `variant="footer"`).
+- **Dashboard UX:** Removed amber `ProfileCompletionAlerts` from `MainLayout` (keep dashboard **Get started** = `OrgOnboardingChecklist`). Clerk users skip `ForcePasswordChangeGate`; `mustChangePassword` cleared on clerk-establish + `restorePlatformTenantSetup.js`.
+- **Scripts:** `consolidatePlatformTenant.js`, `restorePlatformTenantSetup.js`, `syncProdTenantToLocal.js`; `server/config/syncCollections.js` — `TENANT_SYNC_SKIP`, `slimFinanceDocument`.
+- **Docs:** `LOCAL_DEV_DATABASE.md`, `SCRIPTS_RUNBOOK.md`, `DATA_ENV_TOPOLOGY.md`, `README.md`, `environments.md`, `COREKNOT_MASTER.md`, `MASTER.md`, `VERSION_HISTORY.md`, `prod-data-sync` skill.
+- **Deploy:** `038740c9` auth footer → `coreknot-auth`; `977274a7` dashboard/auth fixes → taskmaster API. Restart local API after tenant sync.
+
+---
+
 ## 2026-07-06 - Code/docs/config/contract mismatch reconciliation
 
 - **What:** Reconciled the extended mismatch audit across client routes, API contracts, generated docs, OpenAPI, server debug code, and NestJS sync routing. Legacy `/relegends` now redirects to `/login`; deleted the stale OTP page that called missing `/api/otp/*`; `/developers` now uses `admin_developers`; `/data-hub` redirects to `/admin`; Nest sync token route now resolves at `/api/v1/sync/token`; mail streams stay GET-only; orphan attendance/update and CSV importer contracts were cleaned up.

@@ -1,7 +1,7 @@
 # CoreKnot Memory Index
 
 > **Start here.** Self-contained project memory for agents and developers.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-06
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** `1.0.7` · **Last updated:** 2026-07-07
 
 **Every agent chat:** read this file → [recent-changes](changelog/recent-changes.md) → [session-patterns](changelog/session-patterns.md) → [MEMORY_PROTOCOL](MEMORY_PROTOCOL.md)
 

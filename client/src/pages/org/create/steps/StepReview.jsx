@@ -1,5 +1,9 @@
 import React from 'react';
 import {
+  ORG_FEATURE_KEYS,
+  ORG_FEATURE_CATALOG,
+} from '@shared/orgFeatures';
+import {
   CURRENCY_OPTIONS,
   INDUSTRY_OPTIONS,
   TEAM_SIZE_OPTIONS,
@@ -8,7 +12,6 @@ import {
   labelForOption,
   orgInitials,
 } from '../../../../constants/orgCreateOptions';
-
 function ReviewRow({ label, children }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
@@ -20,6 +23,7 @@ function ReviewRow({ label, children }) {
 
 export default function StepReview({ form }) {
   const filledInvites = (form.invites || []).filter((r) => String(r.email || '').trim());
+  const enabledFeatures = ORG_FEATURE_KEYS.filter((key) => form.features?.[key]);
 
   return (
     <div className="space-y-6">
@@ -49,8 +53,12 @@ export default function StepReview({ form }) {
           <ReviewRow label="Timezone">{labelForOption(TIMEZONE_OPTIONS, form.timezone)}</ReviewRow>
           <ReviewRow label="Currency">{labelForOption(CURRENCY_OPTIONS, form.currency)}</ReviewRow>
           <ReviewRow label="Date format">{labelForOption(TENANT_DATE_FORMAT_OPTIONS, form.dateFormat)}</ReviewRow>
-          <ReviewRow label="Invites">
-            {filledInvites.length === 0
+          <ReviewRow label="Features">
+            {enabledFeatures.length === 0
+              ? 'Core only'
+              : enabledFeatures.map((key) => ORG_FEATURE_CATALOG[key].label).join(', ')}
+          </ReviewRow>
+          <ReviewRow label="Invites">            {filledInvites.length === 0
               ? 'None — you can invite later'
               : `${filledInvites.length} teammate${filledInvites.length === 1 ? '' : 's'}`}
           </ReviewRow>

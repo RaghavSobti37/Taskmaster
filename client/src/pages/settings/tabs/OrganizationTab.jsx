@@ -5,6 +5,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Button, PageSkeleton, QueryErrorBanner, getQueryErrorMessage } from '../../../components/ui';
 import OrgSettingsForm from '../../../components/org/OrgSettingsForm';
+import OrgFeatureToggles from '../../../components/org/OrgFeatureToggles';
+import { useOrgOptional } from '../../../contexts/OrgContext';
+import { orgPathFromUser } from '../../../lib/orgPaths';
 import {
   useOrgSettings,
   useUpdateOrgSettings,
@@ -24,6 +27,7 @@ const fetchMemberships = async () => {
 
 export default function OrganizationTab() {
   const { user } = useAuth();
+  const org = useOrgOptional();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -33,7 +37,7 @@ export default function OrganizationTab() {
     staleTime: 60_000,
   });
 
-  const tenantId = membershipsData?.activeTenantId || user?.activeTenantId || user?.tenantId;
+  const tenantId = org?.activeTenantId || membershipsData?.activeTenantId || user?.activeTenantId || user?.tenantId;
   const activeMembership = (membershipsData?.memberships || []).find(
     (m) => String(m.tenant?._id || m.tenant) === String(tenantId),
   );
@@ -82,7 +86,7 @@ export default function OrganizationTab() {
           { tenantId: others[0].tenant?._id || others[0].tenant },
           { withCredentials: true },
         );
-        window.location.href = '/dashboard';
+        window.location.href = orgPathFromUser({ ...user, activeTenantId: others[0].tenant?._id || others[0].tenant, activeTenantSlug: others[0].tenant?.slug }, '/dashboard');
       } else {
         window.location.href = '/org/pick';
       }
@@ -153,6 +157,12 @@ export default function OrganizationTab() {
               }}
             />
           </div>
+
+          <OrgFeatureToggles
+            tenantId={tenantId}
+            canEdit={canEdit}
+            initialUnlocks={org?.featureUnlocks || tenant?.featureUnlocks || {}}
+          />
 
           {canDelete && (
             <section className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-6 space-y-4">

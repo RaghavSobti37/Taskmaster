@@ -57,7 +57,8 @@ node scripts/generate-master-doc.mjs
 | Topic | Document |
 | --- | --- |
 | Local dev | [`operations/local-development.md`](./operations/local-development.md) |
-| Local Mongo | [`operations/LOCAL_DEV_DATABASE.md`](./operations/LOCAL_DEV_DATABASE.md) |
+| Local Mongo | [`operations/LOCAL_DEV_DATABASE.md`](./operations/LOCAL_DEV_DATABASE.md) — includes **`npm run sync:prod-tenant-tsc`** |
+| Data topology | [`operations/DATA_ENV_TOPOLOGY.md`](./operations/DATA_ENV_TOPOLOGY.md) |
 | Deploy env | [`operations/deployment.md`](./operations/deployment.md) |
 | Environment matrix | [`operations/environments.md`](./operations/environments.md) |
 | Staging | [`operations/STAGING_SETUP.md`](./operations/STAGING_SETUP.md) |

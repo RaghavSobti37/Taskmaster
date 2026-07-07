@@ -45,4 +45,38 @@ const createRedisClient = (overrides = {}) => {
   return client;
 };
 
-module.exports = { getRedisUrl, createRedisClient };
+const isRedisReady = (client) => client?.status === 'ready';
+const REDIS_CONNECTING_STATUSES = new Set(['connecting', 'connect', 'reconnecting']);
+
+async function ensureRedisReady(client) {
+  if (isRedisReady(client)) return true;
+  if (!client) return false;
+
+  try {
+    if (REDIS_CONNECTING_STATUSES.has(client.status)) {
+      await new Promise((resolve, reject) => {
+        const cleanup = () => {
+          client.removeListener('ready', onReady);
+          client.removeListener('error', onError);
+        };
+        const onReady = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (err) => {
+          cleanup();
+          reject(err);
+        };
+        client.once('ready', onReady);
+        client.once('error', onError);
+      });
+    } else {
+      await client.connect();
+    }
+    return isRedisReady(client);
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { getRedisUrl, createRedisClient, isRedisReady, ensureRedisReady };

@@ -177,6 +177,19 @@ export const FEATURE_UNLOCK_BY_PATH = {
   '/artists': 'artistOs',
 };
 
-export function getNavFeatureLock() {
+export function getNavFeatureLock(path, unlockState = null) {
+  const base = (path || '').split('?')[0];
+  const featureKey = FEATURE_UNLOCK_BY_PATH[base];
+  if (!featureKey) return null;
+
+  const unlocks = unlockState?.unlocks;
+  const locks = unlockState?.locks;
+  if (unlocks && unlocks[featureKey] === false) {
+    return locks?.[featureKey] || {
+      featureKey,
+      reason: 'disabled',
+      message: 'This feature is not enabled for your organization.',
+    };
+  }
   return null;
 }

@@ -78,4 +78,40 @@ describe('fetchClerkEstablishToken', () => {
     expect(setActive).toHaveBeenCalledWith({ organization: 'org_bad' });
     expect(result).toEqual({ ok: true, token: 'jwt_user' });
   });
+
+  it('skips client org activation and org-scoped token when org scope is disabled', async () => {
+    const setActive = vi.fn();
+    const getToken = vi.fn(async (opts) => (opts?.organizationId ? 'jwt_org' : 'jwt_user'));
+
+    const result = await fetchClerkEstablishToken({
+      getToken,
+      setActive,
+      pinnedOrgId: 'org_server_pinned',
+      activeOrgId: null,
+      clientOrgScope: false,
+    });
+
+    expect(setActive).not.toHaveBeenCalled();
+    expect(getToken).toHaveBeenCalledWith();
+    expect(result).toEqual({ ok: true, token: 'jwt_user' });
+  });
+
+  it('marks Clerk token 401s as non-retryable so callers can clear stale sessions', async () => {
+    const error = new Error('Unauthorized');
+    error.status = 401;
+    const getToken = vi.fn(async () => {
+      throw error;
+    });
+
+    const result = await fetchClerkEstablishToken({
+      getToken,
+      setActive: vi.fn(),
+      pinnedOrgId: '',
+      activeOrgId: null,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.retryable).toBe(false);
+    expect(result.error.status).toBe(401);
+  });
 });

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { getTenantId } = require('./tenantContext');
+const { allFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
 
 let cachedDefaultTenantId = null;
 
@@ -54,7 +55,17 @@ async function ensurePlatformTenant() {
       name: 'Default Tenant',
       contactEmail: (process.env.ADMIN_EMAIL || 'helloworld@theshakticollective').trim(),
       status: 'active',
+      featureUnlocks: allFeatureUnlocks(),
     });
+  } else {
+    const unlocks = allFeatureUnlocks();
+    const current = tenant.featureUnlocks?.toObject?.() || tenant.featureUnlocks || {};
+    const needsUnlockRepair = Object.entries(unlocks).some(([key, value]) => current[key] !== value);
+    if (needsUnlockRepair) {
+      tenant.featureUnlocks = unlocks;
+      tenant.markModified('featureUnlocks');
+      await tenant.save();
+    }
   }
   cachedDefaultTenantId = tenant._id;
   return cachedDefaultTenantId;

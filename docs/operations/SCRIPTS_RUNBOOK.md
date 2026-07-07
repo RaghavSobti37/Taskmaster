@@ -11,6 +11,9 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `preflight` | `preflightEnv.js` | 🟢 | Env check before dev |
 | `test` | Jest | 🟢 | CI gate |
 | `sync-db` | `syncProdToLocal.js --yes` | 🔴 | Pull prod → local DB (replaces local) |
+| `sync:prod-tenant-tsc` | `syncProdTenantToLocal.js --yes --slug=tsc` | 🔴 | TSC tenant only; skips Data Hub/Exly; finance metadata-only |
+| `sync:prod-to-local` | `syncProdToLocal.js --yes` | 🔴 | Full prod → local (all collections) |
+| `sync:prod-to-local:operational` | `syncProdToLocal.js --yes --mode=operational` | 🔴 | Operational collections only (no CRM spine) |
 | `backup:daily` | `runDailyBackup.js` | 🟡 | GridFS backup (also Render cron) |
 | `repair:lead-phones` | `repairCorruptPhones.js` | 🟡 | Idempotent phone repair |
 | `repair:phones:prod` | same `--prod` | 🔴 | Production repair |
@@ -73,6 +76,9 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `auditLeadPhones.js` / `scanCorruptPhones.js` | 🟢 | Read-only phone audit |
 | `normalizePersonData.js` | 🟡/🔴 | Person normalization |
 | `syncProdToLocal.js` | 🔴 | DB sync (`npm run sync-db`) — replaces all local collections |
+| `syncProdTenantToLocal.js` | 🔴 | Tenant-scoped prod → local (`npm run sync:prod-tenant-tsc`); skips Data Hub/Exly; finance lite |
+| `consolidatePlatformTenant.js` | 🔴 | Keep one tenant, rename slug, cascade-delete others (`--new-slug` / `--keep-slug`; `--prod --yes`) |
+| `restorePlatformTenantSetup.js` | 🟡/🔴 | Re-enable all `featureUnlocks` + clear `mustChangePassword` for Clerk users on platform tenant |
 | `syncDataHubToProd.js` / `compareDataHubDbs.js` | 🔴 | Data Hub prod sync |
 | `syncFinanceToProd.js` | 🔴 | Finance → prod |
 | `sync-workspaces-to-prod.js` | 🔴 | Workspaces → prod |

@@ -37,7 +37,12 @@ Stop: `npm run db:down` (add `-v` to `docker compose down` to drop data volume).
 
 ### Operational ETL from local Mongo (tier 1 + 2)
 
-After Express local DB is sanitized (`npm run sync:prod-to-local:operational` from repo root):
+After Express local DB is sanitized (from repo root):
+
+```powershell
+npm run sync:prod-tenant-tsc
+# or: npm run sync:prod-to-local:operational
+```
 
 ```powershell
 cd nestjs-server

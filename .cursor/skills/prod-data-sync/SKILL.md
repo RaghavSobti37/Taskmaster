@@ -18,28 +18,44 @@ description: >-
 
 ## Read first
 
-- `docs/DATA_ENV_TOPOLOGY.md`
-- `docs/LOCAL_DEV_DATABASE.md`
-- `docs/PRODUCTION_MIGRATION.md`
+- `docs/operations/DATA_ENV_TOPOLOGY.md`
+- `docs/operations/LOCAL_DEV_DATABASE.md`
+- `docs/operations/SCRIPTS_RUNBOOK.md`
+- `server/config/syncCollections.js`
 - `server/scripts/` — existing migration patterns
 
 ## Patterns
 
 | Task | Approach |
 |------|----------|
-| Prod → local | Export script → sanitize PII if sharing → import to local Mongo |
+| **Prod → local (TSC, recommended)** | `npm run sync:prod-tenant-tsc` — one org (`PLATFORM_TENANT_SLUG=tsc`); skips Data Hub/Exly; finance metadata-only |
+| Prod → local (operational) | `npm run sync:prod-to-local:operational` — all tenants; no CRM spine |
+| Prod → local (full) | `npm run sync:prod-to-local` — all collections (heavy; includes CRM) |
 | Local → prod | User confirms → idempotent upsert, not blind delete+insert |
 | Mass push | Single orchestrated script with progress log; not manual one-by-one in chat |
 | Campaign replace | Target collection + MailEvent linkage; verify counts after |
+| Single-tenant cleanup | `consolidatePlatformTenant.js` then `restorePlatformTenantSetup.js` |
+
+## TSC tenant sync details
+
+Script: `server/scripts/syncProdTenantToLocal.js`
+
+- **Read-only** on prod (`secondaryPreferred`)
+- **Writes** only `taskmaster_local` (name must contain `local` unless `SYNC_ALLOW_NON_LOCAL_TARGET=1`)
+- **Skipped collections:** `TENANT_SYNC_SKIP` in `syncCollections.js` (CRM/Data Hub + `exlyofferings`)
+- **Finance:** copies rows but strips `extractedText`, file URLs/keys, attachments
+- **After:** restart local API; keep `MAIL_USE_PROD_DB=false`
 
 ## Anti-patterns (user has hit these)
 
 - One-by-one chat pushes — too slow; write script
 - Replacing prod without backup snapshot
 - Batching that hides failures — log each row result
+- Full sync when user only needs TSC operational data — use tenant sync instead
 
 ## Verify after sync
 
-- Row counts per collection
-- Sample spot-check (campaign recipients, leads tenantId)
-- App smoke: login, one list page, one write path
+- Row counts: projects, tasks, users vs prod for same `tenantId`
+- Skipped collections empty locally (`tscdatas`, `exlybookings`, `leads`, …)
+- Finance sample: metadata present, `fileUrl` empty, no `extractedText`
+- App smoke: login, dashboard, one project list

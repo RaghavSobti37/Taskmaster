@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { onOrgSwitch } from '../../lib/tenantClientCache';
+import { orgPath, isOrgSlugRoutesEnabled, orgPathFromUser } from '../../lib/orgPaths';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/primitives';
 import {
   clerkOrgSelectionUrl,
@@ -18,6 +20,7 @@ const fetchMemberships = async () => {
 export default function OrgPickerPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [configReady, setConfigReady] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['tenantMemberships'], queryFn: fetchMemberships });
 
@@ -32,24 +35,31 @@ export default function OrgPickerPage() {
     }
   }, [configReady]);
 
+  const memberships = data?.memberships || [];
+
   const selectMutation = useMutation({
     mutationFn: async (tenantId) => {
       await axios.post('/api/tenants/select', { tenantId }, { withCredentials: true });
+      return tenantId;
     },
-    onSuccess: async () => {
+    onSuccess: async (tenantId) => {
+      const membership = memberships.find((m) => String(m.tenant?._id || m.tenant) === String(tenantId));
+      const slug = membership?.tenant?.slug;
       await onOrgSwitch(queryClient);
-      window.location.assign('/dashboard');
+      if (slug && isOrgSlugRoutesEnabled()) {
+        window.location.assign(orgPath(slug, '/dashboard'));
+      } else {
+        window.location.assign('/dashboard');
+      }
     },
   });
-
-  const memberships = data?.memberships || [];
 
   if (!configReady || isOrgFirstAuthEnabled()) {
     return null;
   }
 
   if (!isLoading && memberships.length <= 1) {
-    navigate('/dashboard', { replace: true });
+    navigate(orgPathFromUser(user, '/dashboard'), { replace: true });
     return null;
   }
 

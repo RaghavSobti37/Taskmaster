@@ -62,3 +62,11 @@ User-facing **DD/MM/YYYY** — `client/src/utils/dateDisplay.js`. Storage/API st
 ```bash
 node ../../../../.cursor/healing-loop/run-loop.mjs --root ./coreknot/Taskmaster --agent-continue
 ```
+
+## Local prod data (TSC)
+
+```bash
+npm run sync:prod-tenant-tsc   # from coreknot/Taskmaster — skips Data Hub/Exly; finance lite
+```
+
+See `docs/operations/LOCAL_DEV_DATABASE.md`.

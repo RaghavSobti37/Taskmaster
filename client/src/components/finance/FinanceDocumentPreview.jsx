@@ -13,6 +13,7 @@ import {
  */
 export default function FinanceDocumentPreview({
   doc,
+  previewPath: previewPathOverride,
   className = '',
   imgClassName = '',
   iframeClassName = '',
@@ -22,7 +23,7 @@ export default function FinanceDocumentPreview({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const previewPath = financeFilePreviewUrl(doc);
+  const previewPath = previewPathOverride || financeFilePreviewUrl(doc);
   const isPdf = isFinancePdf(doc);
   const isImage = isFinanceImage(doc);
 

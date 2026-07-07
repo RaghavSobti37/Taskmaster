@@ -129,6 +129,7 @@ function ClerkSessionBridgeInner() {
           setActive,
           pinnedOrgId,
           activeOrgId: orgId,
+          clientOrgScope: !isAuthSite(),
         });
         if (cancelled) return;
 

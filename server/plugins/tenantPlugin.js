@@ -23,12 +23,24 @@ module.exports = function tenantPlugin(schema, options) {
         this.tenantId = tenantId;
       } else if (process.env.NODE_ENV !== 'production') {
         const Tenant = require('../models/Tenant');
+        const { allFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
         let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' }).setOptions({ bypassTenant: true });
         if (!defaultTenant) {
           defaultTenant = await Tenant.create({
             name: 'Default Tenant',
             contactEmail: 'helloworld@theshakticollective',
+            status: 'active',
+            featureUnlocks: allFeatureUnlocks(),
           });
+        } else {
+          const unlocks = allFeatureUnlocks();
+          const current = defaultTenant.featureUnlocks?.toObject?.() || defaultTenant.featureUnlocks || {};
+          const needsUnlockRepair = Object.entries(unlocks).some(([key, value]) => current[key] !== value);
+          if (needsUnlockRepair) {
+            defaultTenant.featureUnlocks = unlocks;
+            defaultTenant.markModified('featureUnlocks');
+            await defaultTenant.save();
+          }
         }
         this.tenantId = defaultTenant._id;
       } else {
@@ -63,10 +75,32 @@ module.exports = function tenantPlugin(schema, options) {
     'count',
     'countDocuments',
     'deleteMany',
-    'deleteOne'
+    'deleteOne',
+    'distinct',
   ];
 
   queryMethods.forEach((method) => {
     schema.pre(method, injectTenantId);
+  });
+
+  // aggregate() bypasses query middleware — prepend tenant $match to pipeline
+  schema.pre('aggregate', function injectTenantAggregate() {
+    if (this.options && this.options.bypassTenant) {
+      return;
+    }
+
+    const tenantId = (this.options && this.options.tenantId) || getTenantId();
+    if (!tenantId) return;
+
+    const pipeline = this.pipeline();
+    const tenantMatch = { $match: tenantIdFilter(tenantId) };
+    const first = pipeline[0];
+    if (first && first.$match && first.$match.$or && tenantIdFilter(tenantId).$or) {
+      pipeline[0] = {
+        $match: { $and: [tenantIdFilter(tenantId), first.$match] },
+      };
+    } else {
+      pipeline.unshift(tenantMatch);
+    }
   });
 };

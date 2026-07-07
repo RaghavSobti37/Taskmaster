@@ -8,6 +8,25 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-07-07] v1.0.7 patch — Org slug routes, TSC tenant sync, Clerk auth fixes
+
+#### Multi-org & routing
+- **Org slug URLs:** `/:orgSlug/*` workspace routes (`OrgSlugLayout`, `orgPaths.js`); bootstrap `GET /api/orgs/:slug/context`.
+- **Feature unlocks:** `shared/orgFeatures.cjs`; create-org wizard + `PATCH /api/tenants/:id/features`.
+- **Platform tenant:** Shakti Collective `slug: tsc`; `PLATFORM_TENANT_SLUG=tsc` on server/Render.
+
+#### Local data
+- **`npm run sync:prod-tenant-tsc`:** Prod → local for TSC only; skips Data Hub/Exly heavy data; finance folders + metadata (no file/OCR payloads).
+
+#### Authentication
+- **Clerk 401 loop:** No `setActive` on auth subdomain; establish tolerates client org-pin failure.
+- **Clear cookies:** Always in auth legal footer row.
+- **Dashboard:** Single onboarding checklist (`OrgOnboardingChecklist`); Clerk users skip forced password change modal.
+
+**Ops:** Restart local API after tenant sync. See [`LOCAL_DEV_DATABASE.md`](operations/LOCAL_DEV_DATABASE.md).
+
+---
+
 ### [2026-06-06] v1.0.7 — Unified device-agnostic login (current)
 
 #### Authentication

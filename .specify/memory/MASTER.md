@@ -3,7 +3,7 @@
 > **Purpose:** Complete reference — API surface, env vars, business rules.  
 > **Page-level catalog (every route + hooks + APIs):** [`docs/reference/COREKNOT_MASTER.md`](../../docs/reference/COREKNOT_MASTER.md)  
 > **Navigable memory:** [`INDEX.md`](INDEX.md)  
-> **Product:** CoreKnot · **Version:** `1.0.7` · **Last compiled:** 2026-07-02
+> **Product:** CoreKnot · **Version:** `1.0.7` · **Last compiled:** 2026-07-07
 
 ---
 
@@ -456,7 +456,16 @@ Campaign HTML + base64 attachments can exceed Vercel's ~4.5MB proxy limit. Uploa
 - **All devices** use same-origin `/api` via Vercel/Vite proxy
 - `displayMode.js` — `shouldUseSameOriginApi()` true for mobile browsers + PWA
 - `AuthContext` — 6 retries on `/me` for Safari cookie races
-- Login page **Clear session cookies** always visible
+- Login page **Clear session cookies** always visible (`ClearSessionCookiesButton` in auth legal footer)
+
+### Clerk establish (2026-07-07)
+
+| Item | Detail |
+| --- | --- |
+| **Flow** | Clerk sign-in on auth host → `POST /api/auth/clerk-establish` → `coreknot_token_v3` |
+| **Org pin** | Server uses `CLERK_ORGANIZATION_ID`; `ClerkOrgActivator` skips `setActive` on auth subdomain |
+| **Password gate** | Clerk users skip `ForcePasswordChangeGate`; `mustChangePassword` cleared on establish |
+| **409 tenant pick** | Multi-membership → `/org/pick` or `/:orgSlug/...` when slug routes enabled |
 
 ### Session IP (`sessionRequestMeta.js`)
 
@@ -514,10 +523,37 @@ Legacy `owner` normalizes to `admin`.
 
 ## 11. Multi-Tenancy
 
-- **Tenant model** — each org has a tenant document
+- **Tenant model** — each org has a tenant document (`slug`, `featureUnlocks`, `onboardingProgress`)
+- **Platform tenant** — `PLATFORM_TENANT_SLUG=tsc` (Shakti Collective); prod id `6a14c0d1d2ce3fb936553e35`
 - **tenantPlugin** (`server/plugins/tenantPlugin.js`) — auto-injects `tenantId` on queries
 - **bypassTenant** — used for cross-tenant public data (calendar musical days, mail events for tracking)
 - Users scoped to their tenant on all protected routes
+
+### Org slug routing (2026-07-07)
+
+| Piece | Location |
+| --- | --- |
+| **Flag** | `VITE_ORG_SLUG_ROUTES` (client; default on unless `false`) |
+| **URLs** | `/:orgSlug/dashboard`, `/:orgSlug/projects`, … — legacy paths redirect |
+| **Bootstrap** | `GET /api/orgs/:slug/context` — tenant, features, membership |
+| **Client** | `OrgSlugLayout`, `OrgContext`, `client/src/lib/orgPaths.js` |
+| **Features** | `shared/orgFeatures.cjs`; create wizard + `PATCH /api/tenants/:id/features` |
+| **Session** | JWT `activeTenantId`; `/me` includes `activeTenantSlug` |
+
+### Prod → local (TSC)
+
+```bash
+npm run sync:prod-tenant-tsc
+```
+
+Skips CRM/Data Hub + Exly; finance metadata-only. See `server/scripts/syncProdTenantToLocal.js`, `server/config/syncCollections.js`.
+
+### Tenant maintenance scripts
+
+| Script | Purpose |
+| --- | --- |
+| `consolidatePlatformTenant.js` | Keep one tenant, rename slug, delete others |
+| `restorePlatformTenantSetup.js` | Enable all `featureUnlocks`; clear Clerk `mustChangePassword` |
 
 ---
 
@@ -1255,6 +1291,8 @@ npm run supabase:migrate --prefix server
 | Script | Purpose |
 | --- | --- |
 | `sync-db` | `syncProdToLocal.js --yes` |
+| `sync:prod-tenant-tsc` | `syncProdTenantToLocal.js` — TSC tenant; skips Data Hub/Exly; finance lite |
+| `sync:prod-to-local:operational` | Operational prod → local (no CRM spine) |
 | `backup:daily` | Production DB backup |
 | `repair:lead-phones` | Fix corrupt phone suffixes |
 | `qa:audit` / `qa:cleanup` | QA data audit and purge |
@@ -1457,6 +1495,14 @@ npm run preflight         # Before dev
 - Login gated on `/api/auth/me`
 - `/socket.io` Vercel rewrite
 - Local dev always uses Vite proxy
+
+### 2026-07-07 — Platform tenant + org slug routes + TSC sync
+
+- Single TSC tenant (`slug: tsc`); `/:orgSlug/*` workspace routes; feature unlock catalog + admin toggles
+- `npm run sync:prod-tenant-tsc` for local dev data (skips Data Hub/Exly heavy collections; finance lite)
+- Clerk auth host 401 fix; clear cookies in legal footer; dashboard onboarding checklist only (amber profile alerts removed from shell)
+
+See [changelog/recent-changes.md](changelog/recent-changes.md) for full delta.
 
 ### v1.0.4–v1.0.6 highlights
 

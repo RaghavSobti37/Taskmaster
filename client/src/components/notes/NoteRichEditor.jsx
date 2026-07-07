@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import QuillEditor from '../ui/QuillEditor';
 
 const DESKTOP_TOOLBAR = [
   [{ header: [1, 2, 3, false] }],
@@ -72,7 +71,7 @@ export default function NoteRichEditor({
     <div
       className={`note-rich-editor flex flex-col min-h-0 flex-1 ${isMobile ? 'note-rich-editor--mobile' : ''} ${compact ? 'note-rich-editor--compact' : ''}`}
     >
-      <ReactQuill
+      <QuillEditor
         ref={quillRef}
         theme="snow"
         value={value}

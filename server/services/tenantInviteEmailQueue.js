@@ -1,5 +1,5 @@
 const { Queue } = require('bullmq');
-const { createRedisClient } = require('../utils/wslRedis');
+const { createRedisClient, ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 
 const QUEUE_NAME = 'TenantInviteEmailQueue';
@@ -60,13 +60,16 @@ const processTenantInviteEmail = async (jobData) => {
 
 const isTenantInviteEmailQueueAvailable = () => {
   if (!queue || !connection) return false;
-  return connection.status === 'ready';
+  return isRedisReady(connection);
 };
 
 const enqueueTenantInviteEmails = async (jobDataList = []) => {
   if (!jobDataList.length) return { queued: 0, via: 'none' };
+  if (queue && connection && !isRedisReady(connection)) {
+    await ensureRedisReady(connection);
+  }
 
-  if (!queue) {
+  if (!isTenantInviteEmailQueueAvailable()) {
     for (const jobData of jobDataList) {
       // ponytail: inline when Redis/BullMQ unavailable (local dev + tests)
       // eslint-disable-next-line no-await-in-loop

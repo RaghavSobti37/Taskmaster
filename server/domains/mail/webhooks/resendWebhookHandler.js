@@ -5,6 +5,7 @@ const MailEvent = require('../models/MailEvent');
 const Lead = require('../../../models/Lead');
 const { updateEmailTags } = require('../../../services/mailService');
 const { resolveCampaignTenantId } = require('../../../utils/resolveCampaignTenantId');
+const { runWithWorkerTenant } = require('../../../utils/workerTenantContext');
 const {
   isValidDisplayCity,
   isEmailImageProxy,
@@ -54,8 +55,23 @@ async function saveCampaignDoc(camp, cleanEmail) {
   await camp.save();
 }
 
-/** updateEmailTags uses doc.save(); webhook has no ALS tenant — Lead tags via bypass, PersonHub best-effort */
-async function safeUpdateEmailTags(cleanEmail, tag, status) {
+function scheduleUpdateEmailTags(cleanEmail, tag, status, tenantId) {
+  if (!tenantId) {
+    console.warn(`[Resend Webhook] PersonHub tag sync skipped for ${cleanEmail}: tenantId required`);
+    return;
+  }
+
+  setImmediate(async () => {
+    try {
+      await runWithWorkerTenant(String(tenantId), () => updateEmailTags(cleanEmail, tag, status));
+    } catch (err) {
+      console.warn(`[Resend Webhook] PersonHub tag sync skipped for ${cleanEmail}:`, err.message);
+    }
+  });
+}
+
+/** Keep webhook response path lean; full mail/Data Hub sync runs with resolved ALS tenant. */
+async function safeUpdateEmailTags(cleanEmail, tag, status, tenantId) {
   const update = {
     $set: {
       'metadata.lastEmailAction': tag,
@@ -64,12 +80,7 @@ async function safeUpdateEmailTags(cleanEmail, tag, status) {
   };
   if (tag) update.$addToSet = { tags: tag };
   await Lead.updateMany({ email: cleanEmail }, update).setOptions(WEBHOOK_BYPASS);
-
-  try {
-    await updateEmailTags(cleanEmail, tag, status);
-  } catch (err) {
-    console.warn(`[Resend Webhook] PersonHub tag sync skipped for ${cleanEmail}:`, err.message);
-  }
+  scheduleUpdateEmailTags(cleanEmail, tag, status, tenantId);
 }
 
 async function lookupCampaignByTag(campaignTag, recipientTag) {
@@ -287,7 +298,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced', status: 'inactive' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Bounce',
@@ -335,7 +346,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'active', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Open',
@@ -393,7 +404,7 @@ async function handleTrackResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'engaged', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Click',
@@ -608,7 +619,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced', status: 'inactive' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+      await safeUpdateEmailTags(cleanEmail, 'Invalid', 'Invalid', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Bounce',
@@ -666,7 +677,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'active', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Open',
@@ -727,7 +738,7 @@ async function handleApiResendWebhook(req, res) {
         { email: cleanEmail },
         { $set: { status: 'engaged', emailStatus: 'Active' } },
       ).setOptions(WEBHOOK_BYPASS);
-      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active');
+      await safeUpdateEmailTags(cleanEmail, 'Active', 'Active', mailEventTenantId);
 
       await createResendMailEvent({
         eventType: 'Click',
@@ -772,4 +783,8 @@ async function handleApiResendWebhook(req, res) {
 module.exports = {
   handleTrackResendWebhook,
   handleApiResendWebhook,
+  __private: {
+    safeUpdateEmailTags,
+    scheduleUpdateEmailTags,
+  },
 };

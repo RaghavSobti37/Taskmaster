@@ -149,6 +149,7 @@ function registerRoutes(app) {
   app.use('/api/qa', require('../routes/qaRoutes'));
   app.use('/api/customization', require('../routes/customizationRoutes'));
   app.use('/api/tenants', require('../routes/tenantRoutes'));
+  app.use('/api/orgs', require('../routes/orgRoutes'));
   app.use('/api/invites', require('../routes/inviteRoutes'));
 
   // --- Webhooks & tracking (public, rate-limited) ---

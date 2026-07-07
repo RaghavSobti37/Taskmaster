@@ -21,6 +21,22 @@ Set on the **CoreKnot API** web service (not Vercel):
 | `FRONTEND_URL` / `CLIENT_URL` | Your Vercel/custom frontend URL (e.g. `https://tsccoreknot.com`) |
 | Google, Meta, SMTP, Resend, etc. | As in `.env.render.example` |
 
+### Redis / BullMQ runtime
+
+Production requires a writable Redis connection. Render should inject `REDIS_URL` from the linked Key Value service into the CoreKnot API service and any queue-dependent worker service. Keep the Redis instance policy at `noeviction`; BullMQ can fail under eviction policies even when the URL is otherwise valid.
+
+Treat these log lines as Redis runtime drift, not as a harmless fallback:
+
+```text
+Stream isn't writeable and enableOfflineQueue options is false
+Failed to add job to BullMQ
+Redis connection lost. Switching to memory queue.
+```
+
+Local development can fall back to memory or synchronous handling for some jobs. Production should not run that way because queue state, retries, and cross-instance behavior are not durable. After changing Redis env or Render service links, redeploy the affected service and verify `GET /api/health` plus the Admin queue status endpoint.
+
+Queue-dependent areas include TSC webhooks, mail/campaign dispatch, invite email jobs, Knowledge Engine jobs, gamification, CSV/import jobs, and Supabase/domain sync workers.
+
 **Platform role user IDs** are managed in the app: **Admin → Users → Platform roles** (saved in MongoDB). Env `ROOT_ADMIN_USER_IDS` etc. are optional bootstrap only on first empty DB.
 
 ## Vercel frontend — `RENDER_API_PROXY_URL`
@@ -40,6 +56,26 @@ npm run vercel-build
 That writes `vercel.json` rewrites so `/api/*` proxies to your Render API. The URL is not stored in git.
 
 Preview/local dev does not need this — Vite proxies `/api` to `localhost:5000`.
+
+## Resend tracking webhook runtime
+
+Resend webhook events are handled on the API host at:
+
+```text
+POST <API_HOST>/api/track/webhooks/resend
+```
+
+Required Render API env:
+
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_WEBHOOK_SECRET` | Svix verification for Resend webhook payloads |
+| `TRACKING_BASE_URL` | API-origin base URL used for open/click tracking links |
+| `RESEND_API_KEY` | Outbound Resend API sends |
+
+If Render logs show slow `POST /api/track/webhooks/resend` requests, inspect the request trace before changing code. The handler can do signature verification, campaign/recipient lookup, tenant resolution, dedupe checks, geo enrichment for open/click events, and campaign stat writes. Slow logs are actionable when they coincide with elevated webhook latency, repeated retries from Resend, or Redis errors in adjacent mail queue paths.
+
+Do not paste real webhook secrets or production host values into docs, commits, tickets, or shared logs. Use placeholders here and keep real URLs in gitignored `.cursor/production-hosts.local.json`.
 
 ## Quick map
 

@@ -9,13 +9,15 @@ const { establishSession } = require('../utils/authSession');
 const { registerSession, decodeToken } = require('../utils/sessionRegistry');
 const { assertSeatAvailable } = require('./planEnforcementService');
 const { enqueueTenantInviteEmails } = require('./tenantInviteEmailQueue');
-const { syncTenantToClerkOrganization } = require('./clerkOrgService');
+const { syncTenantToClerkOrganization, deleteClerkOrganization } = require('./clerkOrgService');
 const { bootstrapTenant } = require('./tenantBootstrapService');
 const {
   isClerkIdentityWritePathEnabled,
   createClerkOrganizationInvitation,
 } = require('./clerkInviteService');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { isClerkConfigured } = require('../utils/clerkAuth');
+const { normalizeFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
 
 const BYPASS = { bypassTenant: true };
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -190,11 +192,19 @@ const createTenantForUser = async (userId, payload = {}) => {
     teamSize,
     settings = {},
     invites = [],
+    featureUnlocks: requestedFeatureUnlocks,
   } = payload;
 
   const user = await User.findById(userId).setOptions(BYPASS);
   if (!user) throw new Error('User not found');
   if (!name || !String(name).trim()) throw new Error('Organization name required');
+
+  if (isClerkConfigured() && !user.clerkId) {
+    const err = new Error('Clerk account required to create an organization. Sign in with Clerk first.');
+    err.status = 400;
+    err.code = 'CLERK_USER_REQUIRED';
+    throw err;
+  }
 
   const trimmedName = String(name).trim();
   let slug = requestedSlug ? slugify(requestedSlug) : slugify(trimmedName);
@@ -227,12 +237,23 @@ const createTenantForUser = async (userId, payload = {}) => {
     industry: industry ? String(industry).trim() : undefined,
     teamSize: teamSize ? String(teamSize).trim() : undefined,
     settings: tenantSettings,
+    featureUnlocks: normalizeFeatureUnlocks(requestedFeatureUnlocks),
     branding: logo ? { logoUrl: String(logo).trim() } : undefined,
     onboardingProgress: {
       completedSteps,
       dismissedChecklist: false,
       checklistSnoozedUntil: null,
     },
+  };
+
+  const rollbackTenantCreate = async (tenantId, clerkOrganizationId) => {
+    if (clerkOrganizationId) {
+      await deleteClerkOrganization(clerkOrganizationId);
+    }
+    if (!tenantId) return;
+    await TenantInvite.deleteMany({ tenantId }).setOptions(BYPASS);
+    await TenantMembership.deleteMany({ tenantId }).setOptions(BYPASS);
+    await Tenant.deleteOne({ _id: tenantId }).setOptions(BYPASS);
   };
 
   const { tenant, inviteRows } = await withOptionalTransaction(async (session) => {
@@ -292,13 +313,30 @@ const createTenantForUser = async (userId, payload = {}) => {
     creatorClerkId: user.clerkId,
     creatorUserId: user._id,
   });
-  if (clerkSync.synced && clerkSync.clerkOrganizationId) {
+
+  if (isClerkConfigured() && user.clerkId) {
+    if (!clerkSync.synced || !clerkSync.clerkOrganizationId) {
+      await rollbackTenantCreate(tenant._id, null);
+      const err = new Error(clerkSync.reason || 'Failed to create organization in Clerk');
+      err.status = 502;
+      err.code = 'CLERK_SYNC_FAILED';
+      throw err;
+    }
+    tenant.clerkOrganizationId = clerkSync.clerkOrganizationId;
+    tenant.updatedAt = new Date();
+    await tenant.save();
+  } else if (clerkSync.synced && clerkSync.clerkOrganizationId) {
     tenant.clerkOrganizationId = clerkSync.clerkOrganizationId;
     tenant.updatedAt = new Date();
     await tenant.save();
   }
 
-  await bootstrapTenant(tenant._id, { creatorUserId: user._id });
+  try {
+    await bootstrapTenant(tenant._id, { creatorUserId: user._id });
+  } catch (bootstrapErr) {
+    await rollbackTenantCreate(tenant._id, tenant.clerkOrganizationId);
+    throw bootstrapErr;
+  }
 
   return tenant;
 };

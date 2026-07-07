@@ -21,6 +21,7 @@ React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Frame
 | Context | Purpose |
 | --- | --- |
 | `AuthContext` | Session, heartbeat, logout epoch, mobile retries |
+| `OrgContext` | Org bootstrap (`/api/orgs/:slug/context`), feature unlocks |
 | `ThemeContext` | Light/dark mode |
 | `SidebarContext` | Sidebar collapse state |
 | `ToastContext` | react-hot-toast wrapper |
@@ -46,6 +47,18 @@ React 18 · Vite 5 · Tailwind v4 · TanStack Query 5 · React Router 6 · Frame
 | `auth` | `auth.tsccoreknot.com` | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/google/success`, legal; `/relegends` redirects to `/login` |
 
 URL helpers: `client/src/config/siteUrls.js` — `landingUrl()`, `authUrl()`, `appUrl()`, `resolveAppNavigationTarget()`.
+
+### Org slug routes (`VITE_ORG_SLUG_ROUTES`, default on)
+
+When enabled, protected workspace routes nest under `/:orgSlug/*` (e.g. `/tsc/dashboard`). `OrgSlugLayout` loads `OrgContext` from `GET /api/orgs/:slug/context`. Helpers: `client/src/lib/orgPaths.js` (`orgPath`, `orgPathFromUser`, `stripOrgPrefix`). Legacy flat paths redirect via `LegacyOrgPathRedirect`.
+
+| Path | Page |
+| --- | --- |
+| `/:orgSlug/dashboard` | Dashboard + `OrgOnboardingChecklist` |
+| `/:orgSlug/projects`, … | Same hubs as flat routes, org-prefixed |
+| `/org/pick`, `/org/create` | Multi-org picker / create wizard (no slug prefix) |
+
+Platform tenant slug: `tsc` (`PLATFORM_TENANT_SLUG` on server).
 
 ### Public (no auth) — auth subdomain or legacy same-host
 

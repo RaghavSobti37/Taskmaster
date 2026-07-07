@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { FileText, Link2, Plus, ExternalLink, Download, Pencil, Trash2 } from 'lucide-react';
 import { ORG_DOCUMENT_CATEGORIES } from '@shared/orgDocumentCategories';
 import ListPageLayout from '../../components/ui/ListPageLayout';
@@ -8,27 +9,22 @@ import { Button, Badge, DataTable } from '../../components/ui/primitives';
 import { IconButton } from '../../components/ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import OrgDocumentModal from '../../components/management/OrgDocumentModal';
+import OrgDocumentWorkspacePanel from '../../components/management/OrgDocumentWorkspacePanel';
 import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { formatDisplayDate } from '../../utils/dateDisplay';
 import { useConfirm } from '../../contexts/confirmContext';
+import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
+import {
+  buildOrgEditForm,
+  cloneOrgEditForm,
+  orgEditPayload,
+} from '../../utils/orgDocumentEditForm';
 import {
   useOrgDocuments,
   useCreateOrgDocument,
   useUpdateOrgDocument,
   useDeleteOrgDocument,
 } from '../../hooks/useTaskmasterQueries';
-
-const openExternalUrl = (url) => {
-  const trimmed = String(url || '').trim();
-  if (!trimmed) return;
-  const href = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
-  window.open(href, '_blank', 'noopener,noreferrer');
-};
-
-const openFileDocument = (doc) => {
-  if (!doc?._id) return;
-  window.open(`/api/org-documents/${doc._id}/file`, '_blank', 'noopener,noreferrer');
-};
 
 export default function DocumentsPage() {
   const { confirm } = useConfirm();
@@ -37,6 +33,9 @@ export default function DocumentsPage() {
   const [tagFilter, setTagFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editBaseline, setEditBaseline] = useState(null);
 
   const apiFilters = useMemo(() => {
     const params = {};
@@ -59,6 +58,17 @@ export default function DocumentsPage() {
   const updateDoc = useUpdateOrgDocument();
   const deleteDoc = useDeleteOrgDocument();
 
+  useEffect(() => {
+    if (!selectedDoc) {
+      setEditForm(null);
+      setEditBaseline(null);
+      return;
+    }
+    const form = buildOrgEditForm(selectedDoc);
+    setEditForm(form);
+    setEditBaseline(cloneOrgEditForm(form));
+  }, [selectedDoc?._id]);
+
   const allTags = useMemo(() => {
     const tags = new Set();
     documents.forEach((doc) => (doc.tags || []).forEach((t) => tags.add(t)));
@@ -70,6 +80,9 @@ export default function DocumentsPage() {
     files: documents.filter((d) => d.sourceType === 'file').length,
     links: documents.filter((d) => d.sourceType === 'link').length,
   }), [documents]);
+
+  const hasEdits = !!selectedDoc && !!editForm && !!editBaseline
+    && !stableJsonEqual(editForm, editBaseline);
 
   const filterFields = useMemo(() => [
     {
@@ -108,9 +121,8 @@ export default function DocumentsPage() {
     setModalOpen(true);
   };
 
-  const openEdit = (doc) => {
-    setEditingDoc(doc);
-    setModalOpen(true);
+  const openDoc = (doc) => {
+    setSelectedDoc(doc);
   };
 
   const handleDelete = async (doc) => {
@@ -121,13 +133,63 @@ export default function DocumentsPage() {
       variant: 'danger',
     });
     if (!ok) return;
-    deleteDoc.mutate(doc._id);
+    deleteDoc.mutate(doc._id, {
+      onSuccess: () => {
+        if (selectedDoc?._id === doc._id) setSelectedDoc(null);
+      },
+    });
   };
 
-  const handleOpen = (doc) => {
-    if (doc.sourceType === 'link') openExternalUrl(doc.externalUrl);
-    else openFileDocument(doc);
-  };
+  const handleSaveEdits = useCallback(async () => {
+    if (!selectedDoc || !editForm) return false;
+    try {
+      const res = await updateDoc.mutateAsync({
+        id: selectedDoc._id,
+        ...orgEditPayload(editForm),
+      });
+      const updated = res?.data?.data;
+      if (updated) setSelectedDoc(updated);
+      setEditBaseline(cloneOrgEditForm(editForm));
+      return true;
+    } catch {
+      return false;
+    }
+  }, [selectedDoc, editForm, updateDoc]);
+
+  const handleRevertEdits = useCallback(() => {
+    if (editBaseline) setEditForm(cloneOrgEditForm(editBaseline));
+  }, [editBaseline]);
+
+  const handleClosePanel = useCallback(async () => {
+    if (hasEdits) {
+      const choice = await confirm({
+        title: 'Unsaved changes',
+        message: 'Save changes before closing? Use Revert to discard edits.',
+        confirmLabel: 'Save & close',
+        cancelLabel: 'Keep editing',
+        type: 'warning',
+      });
+      if (!choice) return;
+      const saved = await handleSaveEdits();
+      if (!saved) return;
+    }
+    setSelectedDoc(null);
+  }, [hasEdits, confirm, handleSaveEdits]);
+
+  const handlePanelDelete = useCallback(async () => {
+    if (!selectedDoc) return;
+    await handleDelete(selectedDoc);
+  }, [selectedDoc, handleDelete]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape' || !selectedDoc) return;
+      e.preventDefault();
+      handleClosePanel();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedDoc, handleClosePanel]);
 
   const columns = useMemo(() => [
     {
@@ -185,11 +247,18 @@ export default function DocumentsPage() {
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <IconButton
             label={row.sourceType === 'link' ? 'Open link' : 'Download'}
-            onClick={() => handleOpen(row)}
+            onClick={() => {
+              if (row.sourceType === 'link') {
+                const href = row.externalUrl?.startsWith('http') ? row.externalUrl : `https://${row.externalUrl}`;
+                window.open(href, '_blank', 'noopener,noreferrer');
+              } else {
+                window.open(`/api/org-documents/${row._id}/file`, '_blank', 'noopener,noreferrer');
+              }
+            }}
           >
             {row.sourceType === 'link' ? <ExternalLink size={14} /> : <Download size={14} />}
           </IconButton>
-          <IconButton label="Edit" onClick={() => openEdit(row)}>
+          <IconButton label="Edit" onClick={() => openDoc(row)}>
             <Pencil size={14} />
           </IconButton>
           <IconButton label="Delete" onClick={() => handleDelete(row)}>
@@ -198,7 +267,7 @@ export default function DocumentsPage() {
         </div>
       ),
     },
-  ], []);
+  ], [handleDelete]);
 
   const isSaving = createDoc.isPending || updateDoc.isPending;
 
@@ -267,7 +336,7 @@ export default function DocumentsPage() {
         <DataTable
           columns={columns}
           data={documents}
-          onRowClick={handleOpen}
+          onRowClick={openDoc}
           getRowId={(row) => row._id}
           emptyTitle="No documents yet"
           emptyDescription="Add important org files or links for ops and admin."
@@ -283,13 +352,33 @@ export default function DocumentsPage() {
           if (payload.id) {
             await updateDoc.mutateAsync(payload);
           } else {
-            await createDoc.mutateAsync(payload);
+            const res = await createDoc.mutateAsync(payload);
+            const created = res?.data?.data;
+            if (created) setSelectedDoc(created);
           }
         }}
         onSaveFile={async (payload) => {
-          await createDoc.mutateAsync(payload);
+          const res = await createDoc.mutateAsync(payload);
+          const created = res?.data?.data;
+          if (created) setSelectedDoc(created);
         }}
       />
+
+      <AnimatePresence>
+        {selectedDoc && editForm && (
+          <OrgDocumentWorkspacePanel
+            doc={selectedDoc}
+            editForm={editForm}
+            hasEdits={hasEdits}
+            isSaving={updateDoc.isPending}
+            onClose={handleClosePanel}
+            onRevert={handleRevertEdits}
+            onSave={handleSaveEdits}
+            onDelete={handlePanelDelete}
+            onEditChange={(patch) => setEditForm((prev) => ({ ...prev, ...patch }))}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

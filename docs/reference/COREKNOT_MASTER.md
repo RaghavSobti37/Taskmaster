@@ -116,6 +116,10 @@ Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab
 
 **Isolation model:** Extend existing `Tenant` (no separate Organization collection). All tenant-scoped documents keep `tenantId` via `tenantPlugin`.
 
+**Platform tenant (Shakti Collective):** `slug: tsc`, Mongo id `6a14c0d1d2ce3fb936553e35`. Set `PLATFORM_TENANT_SLUG=tsc` on server (local + Render prod).
+
+**Org slug URLs (2026-07-07):** When `VITE_ORG_SLUG_ROUTES` is enabled (default), workspace routes live under `/:orgSlug/...` (e.g. `/tsc/dashboard`). `OrgSlugLayout` loads `GET /api/orgs/:slug/context`. Legacy flat paths redirect via `LegacyOrgPathRedirect`. Helpers: `client/src/lib/orgPaths.js`, `OrgContext`.
+
 | Model | File | Purpose |
 | --- | --- | --- |
 | `Tenant` | `server/models/Tenant.js` | Org record: `plan`, `ownerId`, `settings`, `featureUnlocks`, `onboardingProgress` |
@@ -153,6 +157,8 @@ Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab
 | `POST` | `/api/tenants/select` | Switch org; re-issue JWT |
 | `POST` | `/api/tenants/create` | Create tenant + owner membership |
 | `GET` | `/api/tenants/:id/unlocks` | `featureUnlocks` for nav gating |
+| `PATCH` | `/api/tenants/:id/features` | Admin toggle org feature unlocks |
+| `GET` | `/api/orgs/:slug/context` | Bootstrap tenant + features + membership for slug routes |
 | `PATCH` | `/api/tenants/:id/onboarding` | Checklist steps / dismiss |
 | `POST` | `/api/tenants/:id/invites` | Send invite (tenant owner/admin) |
 | `GET` | `/api/invites/:token` | Validate pending invite |
@@ -169,7 +175,9 @@ Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab
 
 Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organizations).
 
-**Feature unlocks** (`Tenant.featureUnlocks`): `resend`, `google`, `meta`, `knowledgeEngine`, `finance`, `artistOs`. Client: `navPageAccess.getNavFeatureLock()` + locked `EmptyState` props.
+**Feature unlocks** (`Tenant.featureUnlocks`): catalog in `shared/orgFeatures.cjs` (e.g. `resend`, `google`, `meta`, `knowledgeEngine`, `finance`, `artistOs`, `dataHub`, `exly`). Client: `navPageAccess.getNavFeatureLock()` + locked `EmptyState` props. Create-org wizard persists unlocks; org settings admin can PATCH.
+
+**Local prod sync (TSC):** `npm run sync:prod-tenant-tsc` — tenant-filtered; skips Data Hub/Exly heavy collections; finance metadata-only. See `docs/operations/LOCAL_DEV_DATABASE.md`.
 
 **Credentials at rest:** `server/utils/credentialEncryption.js` (AES-256-GCM when `CREDENTIAL_ENCRYPTION_KEY` set).
 

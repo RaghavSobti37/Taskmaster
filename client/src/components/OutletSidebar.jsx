@@ -34,6 +34,7 @@ import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
 import { useTenantUnlocks } from '../hooks/useTenantUnlocks';
+import { useOrgPath } from '../hooks/useOrgPath';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
@@ -247,6 +248,7 @@ const OutletSidebar = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const resolveOrgPath = useOrgPath();
   const { getFeatureLock } = useTenantUnlocks();
   const asideRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -338,16 +340,18 @@ const OutletSidebar = () => {
     .map((page) => {
       const config = PAGE_CONFIG[page.path];
       const navCounts = getNavCountsForPath(page.path, statusCounts);
-      const navPath = page.path === '/management'
-        ? getManagementHubPath(user, hasPageAccess)
-        : page.path;
+      const navPath = resolveOrgPath(
+        page.path === '/management'
+          ? getManagementHubPath(user, hasPageAccess)
+          : page.path,
+      );
       const featureLock = getFeatureLock(page.path);
       return (
         <NavItem
           key={page.path}
           to={navPath}
           featureLock={featureLock}
-          onLockedClick={(lock, navTo) => navigate(lock?.navPath || navTo || '/dashboard')}
+          onLockedClick={(lock, navTo) => navigate(lock?.navPath || navTo || resolveOrgPath('/dashboard'))}
           icon={config.icon}
           label={page.label || config.label}
           iconTone={NAV_ICON_TONES[page.path]}
@@ -500,7 +504,7 @@ const OutletSidebar = () => {
           {!(!showLabels && !isMobile) && (
             <div className="flex gap-1.5 w-full">
               <NavLink
-                to="/settings"
+                to={resolveOrgPath('/settings')}
                 onClick={isMobile ? closeMobileSidebar : undefined}
                 aria-label="Settings"
                 data-tour="sidebar-settings"
@@ -527,7 +531,7 @@ const OutletSidebar = () => {
           {(!showLabels && !isMobile) && (
             <div className="flex flex-col gap-1.5 w-full">
               <NavLink
-                to="/settings"
+                to={resolveOrgPath('/settings')}
                 aria-label="Settings"
                 data-tour="sidebar-settings"
                 title="Settings"
@@ -548,7 +552,7 @@ const OutletSidebar = () => {
           )}
 
           <NavLink
-            to="/settings"
+            to={resolveOrgPath('/settings')}
             onClick={isMobile ? closeMobileSidebar : undefined}
             data-tour="sidebar-profile"
             className="w-full text-left group cursor-pointer block"

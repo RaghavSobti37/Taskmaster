@@ -1,5 +1,6 @@
 const { Worker } = require('bullmq');
 const logger = require('../utils/logger');
+const { ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const { runWithWorkerTenant } = require('../utils/workerTenantContext');
 const { maxPerSecond } = require('../utils/resendSendGate');
 const {
@@ -7,10 +8,25 @@ const {
   getCampaignEmailConnection,
 } = require('../services/campaignEmailQueue');
 
+let workerInstance = null;
+let workerStartPromise = null;
+
 const initCampaignEmailWorker = () => {
+  if (workerInstance) return workerInstance;
   const connection = getCampaignEmailConnection();
   if (!connection) {
     logger.debug('campaignEmailWorker', 'Skipped — Redis/BullMQ not configured');
+    return null;
+  }
+
+  if (!isRedisReady(connection)) {
+    if (!workerStartPromise) {
+      workerStartPromise = ensureRedisReady(connection).then((ready) => {
+        workerStartPromise = null;
+        return ready ? initCampaignEmailWorker() : null;
+      });
+    }
+    logger.debug('campaignEmailWorker', 'Deferred - Redis not ready');
     return null;
   }
 
@@ -20,7 +36,7 @@ const initCampaignEmailWorker = () => {
   const concurrency = Math.min(configuredConcurrency, rateLimit);
   const limiterDurationMs = Math.ceil(1000 / rateLimit);
 
-  const worker = new Worker(
+  workerInstance = new Worker(
     QUEUE_NAME,
     async (job) => {
       const { processEmailJob } = require('../domains/mail/services/emailProcessor');
@@ -38,7 +54,7 @@ const initCampaignEmailWorker = () => {
     },
   );
 
-  worker.on('failed', (job, err) => {
+  workerInstance.on('failed', (job, err) => {
     logger.error('campaignEmailWorker', `Job ${job?.id} failed`, {
       email: job?.data?.email,
       campaignId: job?.data?.campaignId,
@@ -47,13 +63,13 @@ const initCampaignEmailWorker = () => {
     });
   });
 
-  worker.on('error', () => {});
+  workerInstance.on('error', () => {});
 
   logger.info(
     'campaignEmailWorker',
     `Started (concurrency=${concurrency}, pacing=1 per ${limiterDurationMs}ms, ~${rateLimit}/s)`,
   );
-  return worker;
+  return workerInstance;
 };
 
 module.exports = { initCampaignEmailWorker };

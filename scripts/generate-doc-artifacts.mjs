@@ -148,7 +148,7 @@ function buildRouteAccessMatrix() {
 }
 
 function walk(dir, out = []) {
-  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) walk(full, out);
     else out.push(full);
@@ -189,6 +189,10 @@ function buildHookEndpointMap() {
       }
     }
     if (usedIn.length) {
+      usedIn.sort((a, b) => a.file.localeCompare(b.file));
+      for (const entry of usedIn) {
+        entry.endpoints.sort();
+      }
       out[hookName] = {
         files: usedIn,
         endpoints: [...new Set(usedIn.flatMap((f) => f.endpoints))].sort(),

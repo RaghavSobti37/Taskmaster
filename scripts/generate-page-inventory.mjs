@@ -12,7 +12,7 @@ const root = path.join(__dirname, '..');
 const pagesDir = path.join(root, 'client/src/pages');
 
 function walk(dir, files = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, files);
     else if (/\.(jsx|js|tsx|ts)$/.test(e.name)) files.push(p);

@@ -3,11 +3,13 @@ const { isUnlockAllMode, getTenantUnlocks } = require('../services/tenantUnlockS
 const FEATURE_ROUTE_MAP = {
   resend: ['resend', 'emails'],
   finance: ['finance'],
-  knowledgeEngine: ['knowledgeEngine', 'knowledge_engine'],
   artistOs: ['artistOs', 'artists'],
   google: ['google'],
   meta: ['meta'],
   integrations: ['integrations'],
+  opsHub: ['opsHub'],
+  dataHub: ['dataHub'],
+  enterpriseApi: ['enterpriseApi'],
 };
 
 const requireFeatureUnlock = (featureKey) => async (req, res, next) => {

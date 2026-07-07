@@ -26,6 +26,10 @@ services:
         value: production
       - key: COREKNOT_DEPLOY_TIER
         value: production
+      - key: PLATFORM_TENANT_SLUG
+        value: tsc
+      - key: WEBHOOK_TENANT_ID
+        sync: false
       - key: JSON_BODY_LIMIT
         value: 50mb
       # Explicit prod-preview mode: PR previews may hit this API unless VITE_API_URL points to staging.
@@ -154,6 +158,10 @@ services:
         value: production
       - key: COREKNOT_DEPLOY_TIER
         value: staging
+      - key: PLATFORM_TENANT_SLUG
+        value: tsc
+      - key: WEBHOOK_TENANT_ID
+        sync: false
       - key: JSON_BODY_LIMIT
         value: 50mb
       - key: CORS_ALLOW_VERCEL_PREVIEWS

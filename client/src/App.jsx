@@ -109,7 +109,6 @@ const AdminTenantSsoPage = lazyWithRetry(() => import('./pages/admin/AdminTenant
 const DevelopersPage = lazyWithRetry(() => import('./pages/settings/DevelopersPage'));
 const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
-const KnowledgeEnginePage = lazyWithRetry(() => import('./pages/admin/KnowledgeEnginePage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
@@ -133,6 +132,16 @@ const LegacyArtistAnalyticsRedirect = () => {
     ? `${base}?tab=analytics&platform=${encodeURIComponent(platform)}`
     : `${base}?tab=analytics`;
   return <Navigate to={target} replace />;
+};
+
+const LegacyTasksCreateRedirect = () => {
+  const { scope } = useParams();
+  const { user } = useAuth();
+  const normalized = String(scope || '').trim().toLowerCase();
+  if (normalized) {
+    return <Navigate to={`/${encodeURIComponent(normalized)}/todo`} replace />;
+  }
+  return <Navigate to={orgPathFromUser(user, '/todo')} replace />;
 };
 
 function AppCatchAllRedirect() {
@@ -256,6 +265,8 @@ function App() {
             marketingAuthRoutes
           )}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
+          <Route path="/tasks/create" element={<LegacyTasksCreateRedirect />} />
+          <Route path="/tasks/:scope/create" element={<LegacyTasksCreateRedirect />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
@@ -322,6 +333,9 @@ function App() {
               <Route path="chat/*" element={<OrgNavigate to="/dashboard" replace />} />
               <Route element={<PageRoute page="todo" />}>
                 <Route path="todo" element={<TodoPage />} />
+                <Route path="tasks" element={<OrgNavigate to="/todo" replace />} />
+                <Route path="tasks/create" element={<OrgNavigate to="/todo" replace />} />
+                <Route path="tasks/:scope/create" element={<OrgNavigate to="/todo" replace />} />
               </Route>
               <Route element={<PageRoute page="notes" />}>
                 <Route path="notes" element={<NotesPage />} />
@@ -414,11 +428,6 @@ function App() {
               <Route element={<PageRoute page="admin_ops_hub" />}>
                 <Route path="admin/ops-hub" element={<OpsHubPage />} />
               </Route>
-              <Route element={<PageRoute pages={['admin_knowledge_engine', 'admin_data']} />}>
-                <Route element={<FeatureUnlockRoute featureKey="knowledgeEngine" />}>
-                  <Route path="admin/knowledge-engine" element={<KnowledgeEnginePage />} />
-                </Route>
-              </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
@@ -465,6 +474,7 @@ function App() {
                 <Route path="/schedule/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/inbox/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/todo/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/tasks/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/notes/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/crm/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/office/*" element={<LegacyOrgPathRedirect />} />

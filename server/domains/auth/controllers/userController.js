@@ -18,6 +18,7 @@ const {
   provisionClerkUserForCoreKnotUser,
   syncClerkUserPassword,
 } = require('../../../utils/clerkUserProvisioning');
+const { isE2eTestUser } = require('../../../utils/e2eTestUsers');
 
 async function validateDepartmentAssignment(departmentId, requester) {
   if (departmentId === null || departmentId === '' || departmentId === undefined) {
@@ -149,7 +150,7 @@ exports.updateProfile = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (name) user.name = name;
-    if (avatar) user.avatar = avatar;
+    if (avatar !== undefined) user.avatar = String(avatar || '').trim();
     if (phone) user.phone = phone;
     if (teams) user.teams = teams;
     if (dateOfBirth !== undefined) {
@@ -348,7 +349,7 @@ exports.createUserAdmin = async (req, res) => {
       mustChangePassword: true,
     });
 
-    if (isClerkConfigured()) {
+    if (isClerkConfigured() && !isE2eTestUser(emailLower)) {
       try {
         const { clerkUserId } = await provisionClerkUserForCoreKnotUser({
           email: emailLower,
@@ -401,6 +402,7 @@ exports.updateUserAdmin = async (req, res) => {
       teams,
       dateOfBirth,
       newPassword,
+      forcePasswordChange,
       pagePermissions,
       suspended,
       suspensionReason,
@@ -458,14 +460,19 @@ exports.updateUserAdmin = async (req, res) => {
       const passwordError = validatePasswordStrength(normalizedNewPassword);
       if (passwordError) return res.status(400).json({ error: passwordError });
       targetUser.password = normalizedNewPassword;
-      targetUser.mustChangePassword = false;
-      targetUser.passwordChangedAt = new Date();
+      if (forcePasswordChange === true) {
+        targetUser.mustChangePassword = true;
+        targetUser.passwordChangedAt = null;
+      } else {
+        targetUser.mustChangePassword = false;
+        targetUser.passwordChangedAt = new Date();
+      }
       adminPasswordPlain = normalizedNewPassword;
     }
 
     await targetUser.save();
 
-    if (adminPasswordPlain && targetUser.clerkId) {
+    if (adminPasswordPlain && targetUser.clerkId && !isE2eTestUser(targetUser.email)) {
       try {
         await syncClerkUserPassword(targetUser.clerkId, adminPasswordPlain);
       } catch (clerkErr) {

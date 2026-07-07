@@ -33,6 +33,10 @@ const STATUS_ALIASES = {
   overdue: 'error',
   rose: 'error',
   failed: 'error',
+  unsubscribed: 'neutral',
+  pending: 'advisory',
+  bounced: 'error',
+  invalid: 'error',
 };
 
 export function resolveStatusRole(statusOrVariant) {

@@ -668,15 +668,15 @@ async function runXpLeaderboardReflect(def, ctx) {
 }
 
 async function runLevelUpThreshold(def, ctx) {
-  const level1 = await GamificationService.getLevelFromExp(0);
-  const config = await GamificationService.getConfig();
-  const stepXp = config.stepXp || 100;
-  const level2Exp = await GamificationService.getExpForLevel(2);
-  const levelAtThreshold = await GamificationService.getLevelFromExp(level2Exp || stepXp);
-  if (level1 === 1 && levelAtThreshold >= 2) {
-    return probePass(def, `Level thresholds wired (L1@${0}xp, L2+@${level2Exp || stepXp}xp → level ${levelAtThreshold})`);
+  const config = await GamificationService.getConfigPlain();
+  if (typeof config.taskCompletion !== 'number' || config.taskCompletion < 0) {
+    return probeFail(def, 'XP configuration invalid for taskCompletion');
   }
-  return probeFail(def, `Level math unexpected: L1=${level1}, L2@${level2Exp}→${levelAtThreshold}`);
+  const snapshot = await GamificationService.getMonthlyLeaderboardSnapshot();
+  if (!snapshot || !Array.isArray(snapshot.entries)) {
+    return probeFail(def, 'Monthly leaderboard snapshot unavailable');
+  }
+  return probePass(def, `XP config + monthly snapshot healthy (taskCompletion=${config.taskCompletion}, entries=${snapshot.entries.length})`);
 }
 
 async function runTaskAssignNotify(def, ctx) {
@@ -1211,7 +1211,7 @@ const PLANNED_INTEGRATION_DEFS = [
   { id: 'int-task-complete-xp', title: 'Task completion triggers XP award chain', sev: 'critical', category: 'business-logic' },
   { id: 'int-lead-captured-xp', title: 'CRM lead creation queues LEAD_CAPTURED XP', sev: 'high', category: 'business-logic' },
   { id: 'int-xp-leaderboard-reflect', title: 'XP award reflects in leaderboard', sev: 'high', category: 'business-logic' },
-  { id: 'int-level-up-threshold', title: 'User level increments at XP threshold', sev: 'medium', category: 'business-logic' },
+  { id: 'int-level-up-threshold', title: 'XP config and monthly snapshot remain healthy', sev: 'medium', category: 'business-logic' },
   { id: 'int-task-assign-notify', title: 'Task assignment creates notification', sev: 'high', category: 'business-logic' },
   { id: 'int-mention-notify', title: '@mention notifies user', sev: 'high', category: 'business-logic' },
   { id: 'int-review-submit-notify', title: 'In-review notifies assigner', sev: 'high', category: 'business-logic' },

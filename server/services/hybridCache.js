@@ -51,6 +51,10 @@ async function bustAttendanceCacheForUser(userId) {
   await bustCacheByPrefix(prefix);
 }
 
+async function bustAllAttendanceCache() {
+  await bustPattern(fillKey(REDIS_CACHE_KEYS.ATTENDANCE_STATS, { userId: '*', rangeKey: '*' }));
+}
+
 async function bustTaskCountsForTenant(tenantId) {
   if (!tenantId) return;
   await bustPattern(fillKey(REDIS_CACHE_KEYS.TASK_LIST_COUNTS, { tenantId, userId: '*', scopeKey: '*' }));
@@ -74,6 +78,7 @@ module.exports = {
   getTaskListCountsCache,
   setTaskListCountsCache,
   bustAttendanceCacheForUser,
+  bustAllAttendanceCache,
   bustTaskCountsForTenant,
   bustCacheForDomainEvent,
 };

@@ -16,10 +16,16 @@ router.use(webhookRateLimit);
 
 const { handleApiResendWebhook } = require('../domains/mail/webhooks/resendWebhookHandler');
 const { handleClerkWebhook } = require('../domains/auth/webhooks/clerkWebhookHandler');
+const {
+  handleAisensyWebhookVerify,
+  handleAisensyWebhook,
+} = require('../domains/whatsapp/webhooks/aisensyWebhookHandler');
 
 router.post('/book-call', requireBookCallAuth, webhookIdempotency, handleBookedCall);
 // ponytail: Clerk uses ClerkSyncEvent idempotency — skip generic svix-id middleware
 router.post('/clerk', handleClerkWebhook);
+router.get('/aisensy', handleAisensyWebhookVerify);
+router.post('/aisensy', handleAisensyWebhook);
 
 router.use(webhookIdempotency);
 router.post('/artist-path', handleArtistPath);

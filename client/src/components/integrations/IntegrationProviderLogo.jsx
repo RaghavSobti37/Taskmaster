@@ -45,6 +45,12 @@ const BRAND_SVGS = {
       <path stroke="#0F9D58" strokeWidth=".8" d="M9 11h6M9 13.5h6M9 16h4" />
     </svg>
   ),
+  aisensy: (
+    <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
+      <rect width="24" height="24" rx="6" fill="#25D366" />
+      <path fill="#fff" d="M12 5.5c-3.6 0-6.5 2.7-6.5 6 0 1.1.3 2.1.8 3L5 18.5l3.8-1.1c.9.5 1.9.8 3.2.8 3.6 0 6.5-2.7 6.5-6s-2.9-6-6.5-6zm0 10.5c-.9 0-1.8-.2-2.5-.6l-.2-.1-2 .6.6-1.9-.1-.2c-.5-.7-.8-1.6-.8-2.5 0-2.5 2.2-4.5 5-4.5s5 2 5 4.5-2.2 4.5-5 4.5z" />
+    </svg>
+  ),
   salesforce: (
     <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
       <rect width="24" height="24" rx="6" fill="#00A1E0" />
@@ -80,6 +86,7 @@ const TILE_BG = {
   mailchimp: 'bg-[#FFE01B]',
   hubspot: 'bg-[#FF7A59]',
   google_sheets: 'bg-[#0F9D58]',
+  aisensy: 'bg-[#25D366]',
   salesforce: 'bg-[#00A1E0]',
   slack: 'bg-[#4A154B]',
   webhook_in: 'bg-violet-600/20 border border-violet-500/30',

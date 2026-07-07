@@ -1,20 +1,42 @@
 # Integration Hub
 
-Per-tenant **Connected Apps** — OAuth and API-key connectors for email, marketing, CRM, and custom webhooks.
+Per-tenant **Connected Apps** — OAuth and API-key connectors for email, data import, WhatsApp, and server intake.
+
+> **In-depth guide:** [`CONNECTED_APPS_AND_INTAKE.md`](./CONNECTED_APPS_AND_INTAKE.md)
+
+## Supported providers
+
+| Provider | Category | Purpose |
+|----------|----------|---------|
+| Gmail | Email | Send campaigns via OAuth |
+| Resend | Email | Tenant API key for outbound mail |
+| Google Sheets | Data | Import rows into CRM leads |
+| AiSensy | WhatsApp | Send campaigns + delivery webhooks → Data Hub |
+| Inbound Webhook | Intake | HMAC-signed server POST → CRM |
+
+Registry: `server/config/integrationProviders.config.js`
+
+Non-essential providers were removed from the registry in July 2026 — only the five above ship in UI.
+
+## UI & API
+
+| Surface | Path |
+|---------|------|
+| Settings tab | `/:orgSlug/settings?tab=integrations` |
+| REST API | `/api/integrations/*` |
+| Domain code | `server/domains/integrations-hub/` |
+| Model | `TenantIntegration` (encrypted credentials, tenant-scoped) |
 
 ## Architecture
 
-- Registry: `server/config/integrationProviders.config.js`
-- Domain: `server/domains/integrations-hub/`
-- Model: `TenantIntegration` (encrypted credentials, tenant-scoped)
-- API: `/api/integrations/*`
+- Connect / disconnect / settings per provider
+- `IntegrationDetailDrawer` — Google Sheets worksheet mapping + sync
+- `mailDriver` prefers Gmail OAuth, else tenant Resend key, else platform `RESEND_API_KEY`
+- Inbound webhook: provision URL + HMAC secret (one-time display on connect)
 
-## Adding a provider
+## Website Forms (browser embed)
 
-1. Add entry to `integrationProviders.config.js` (`id`, `category`, `authType`, `capabilities`, `planMin`).
-2. Create `adapters/<provider>Adapter.js` with `handleCallback` / `handleApiKeyConnect`, `healthCheck`, optional `syncContacts`.
-3. Register in `adapters/adapterRegistry.js`.
-4. If CRM/marketing ingest: add inlet key in `shared/dataInlets.js` and route through `PersonIdentityService`.
+See [`WEBSITE_FORMS.md`](./WEBSITE_FORMS.md) — publishable-key embed for marketing sites. Developers UI: `/:orgSlug/developers`.
 
 ## Inbound webhook payload
 
@@ -37,11 +59,20 @@ See `TENANT_WEBHOOK_EVENTS` in provider config. Configure in **Settings → Deve
 | Provider | Variables |
 |----------|-----------|
 | Gmail / Google Sheets | `INTEGRATIONS_GOOGLE_CLIENT_ID`, `INTEGRATIONS_GOOGLE_CLIENT_SECRET` (fallback: `GOOGLE_CLIENT_ID`) |
-| Mailchimp | `MAILCHIMP_CLIENT_ID`, `MAILCHIMP_CLIENT_SECRET` |
-| HubSpot | `HUBSPOT_CLIENT_ID`, `HUBSPOT_CLIENT_SECRET` |
-| Salesforce | `SALESFORCE_CLIENT_ID`, `SALESFORCE_CLIENT_SECRET` |
-| Slack | `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` |
 
 ## Campaign Gmail OAuth
 
 Set `campaign.sendViaGmail: true` or `EmailProfile.providerType: 'gmail_oauth'` to send via connected Gmail integration.
+
+## Local dev demo data
+
+```bash
+npm run seed:local-integrations-demo
+```
+
+See [`../operations/LOCAL_DEV_DEMO_DATA.md`](../operations/LOCAL_DEV_DEMO_DATA.md).
+
+## Related
+
+- [`AISENSY.md`](./AISENSY.md) — WhatsApp operator setup
+- [`../operations/KNOWLEDGE_ENGINE_REMOVAL.md`](../operations/KNOWLEDGE_ENGINE_REMOVAL.md) — KE bridge removed

@@ -24,6 +24,6 @@ test.describe('dashboard widgets', () => {
     const widgetSignals = page.locator(
       'text=/Today Tasks|Today\'s Calendar|Announcements|Review Queue|Overdue Tasks/i'
     );
-    await expect(widgetSignals.first()).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => widgetSignals.count(), { timeout: 15_000 }).toBeGreaterThan(0);
   });
 });

@@ -101,12 +101,11 @@ const seedDepartments = async () => {
   const { getTenantId } = require('../utils/tenantContext');
   let tenantId = getTenantId();
   if (!tenantId) {
-    if (process.env.NODE_ENV === 'test') {
-      const { ensurePlatformTenant } = require('../utils/defaultTenant');
-      tenantId = await ensurePlatformTenant();
-    } else {
+    if (process.env.NODE_ENV === 'production') {
       throw new Error('tenantId required to seed departments');
     }
+    const { resolveDefaultTenantId } = require('../utils/defaultTenant');
+    tenantId = await resolveDefaultTenantId();
   }
   return seedDepartmentsForTenant(tenantId);
 };

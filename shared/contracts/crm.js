@@ -1,5 +1,9 @@
 const { z } = require('zod');
 
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 const isSafeLeadValue = (value) => {
   if (value === null || value === undefined) return true;
   if (Array.isArray(value)) {
@@ -9,7 +13,7 @@ const isSafeLeadValue = (value) => {
   return t === 'string' || t === 'number' || t === 'boolean';
 };
 
-const leadBody = z.record(z.unknown()).refine(
+const leadBody = z.record(z.string(), z.unknown()).refine(
   (body) => Object.values(body).every(isSafeLeadValue),
   { message: 'Invalid input format' },
 );

@@ -102,17 +102,12 @@ export function getUserPagePermissions(user) {
 export function hasPageAccess(user, pageKey) {
   if (!pageKey) return true;
   if (!user) return false;
-  // Mail hub + campaign detail + profile settings: any authenticated user
-  if ((pageKey === 'emails' || pageKey === 'campaigns' || pageKey === 'settings') && user) return true;
+  // Profile settings remain available to any authenticated user.
+  if (pageKey === 'settings' && user) return true;
   if (pageKey === 'admin_artist_path') {
     if (isDepartmentAdmin(user?.departmentId)) return true;
     const perms = getUserPagePermissions(user);
     return perms.includes('admin_artist_path') || perms.includes('admin_data');
-  }
-  if (pageKey === 'admin_knowledge_engine') {
-    if (isDepartmentAdmin(user?.departmentId)) return true;
-    const perms = getUserPagePermissions(user);
-    return perms.includes('admin_knowledge_engine') || perms.includes('admin_data');
   }
   if (pageKey === 'admin_ops_hub') {
     if (isDepartmentAdmin(user?.departmentId)) return true;

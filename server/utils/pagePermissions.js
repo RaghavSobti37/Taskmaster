@@ -95,7 +95,6 @@ const PAGE_GROUPS = [
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
       { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },
       { key: 'admin_project_analytics', label: 'Project Analytics', path: '/admin/project-analytics' },
-      { key: 'admin_knowledge_engine', label: 'Knowledge Engine', path: '/admin/knowledge-engine' },
       { key: 'admin_developers', label: 'Developers', path: '/developers' },
       { key: 'campaigns', label: 'Campaign Details', path: '/campaign' },
     ],

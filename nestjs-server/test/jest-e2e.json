@@ -9,7 +9,7 @@
     "^express$": "<rootDir>/../node_modules/express"
   },
   "transform": {
-    "^.+\\.ts$": "ts-jest"
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.e2e.json" }]
   },
   "transformIgnorePatterns": ["/node_modules/", "/shared/contracts/"]
 }

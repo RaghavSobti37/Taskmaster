@@ -245,6 +245,24 @@ export function normalizeDashboardElements(elements, permissionPreset) {
     byId.get('render-logs').visible = true;
   }
 
+  // Restore analytics section for admin presets if legacy/saved layouts hid every analytics widget.
+  if (permissionPreset === 'admin') {
+    const hasVisibleAnalytics = [...byId.values()].some(
+      (el) => (el.visible !== false) && getWidgetSection(el.componentId) === 'analytics'
+    );
+    if (!hasVisibleAnalytics) {
+      ['pipeline-summary', 'campaign-metrics', 'dept-stats', 'team-activity'].forEach((componentId) => {
+        if (!byId.has(componentId)) return;
+        const current = byId.get(componentId);
+        byId.set(componentId, {
+          ...current,
+          section: 'analytics',
+          visible: true,
+        });
+      });
+    }
+  }
+
   return [...byId.values()].sort((a, b) => a.order - b.order);
 }
 

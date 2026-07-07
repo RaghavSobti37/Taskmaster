@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Code2, Key, Webhook, FileJson, ExternalLink, Copy, Trash2, Activity,
+  Code2, Key, Webhook, FileJson, ExternalLink, Copy, Trash2, Activity, Globe,
 } from 'lucide-react';
 import {
   ListPageLayout,
@@ -13,6 +13,7 @@ import {
 } from '../../components/ui';
 import axios from 'axios';
 import { useWebhookDeliveries } from '../../hooks/queries/integrations';
+import WebsiteFormsPanel from '../../components/forms/WebsiteFormsPanel';
 
 const WEBHOOK_EVENTS = [
   'lead.created',
@@ -192,9 +193,31 @@ const DevelopersPage = () => {
         ) : null}
 
         <SectionCard
+          icon={Globe}
+          title="Website Forms"
+          description="Embed contact forms on any site — publishable keys only (safe in the browser)."
+        >
+          <WebsiteFormsPanel apiOrigin={typeof window !== 'undefined' ? window.location.origin : ''} />
+        </SectionCard>
+
+        <SectionCard
+          icon={Webhook}
+          title="Inbound webhook"
+          description="Server-side POST with HMAC secret — Zapier, Make, or your backend."
+        >
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            Create an inbound webhook under{' '}
+            <Link to="/settings?tab=integrations" className="text-[var(--color-action-primary)] hover:underline">
+              Connected Apps → Inbound Webhook
+            </Link>
+            . Never put the webhook secret in frontend code.
+          </p>
+        </SectionCard>
+
+        <SectionCard
           icon={Key}
-          title="API keys"
-          description="Authenticate server-to-server requests with Bearer tokens."
+          title="Public API keys"
+          description="Server-to-server CRM intake with Bearer ck_live_* tokens."
         >
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input

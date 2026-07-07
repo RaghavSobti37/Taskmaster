@@ -267,6 +267,22 @@ const AttendancePage = () => {
 
   const resolveStatus = (entry, date) => resolveAttendanceStatus(entry, date);
 
+  const teamSummary = useMemo(() => {
+    const summary = { present: 0, halfDay: 0, leave: 0, noInput: 0 };
+    if (!showTeamOverview || !canEdit || visibleUsers.length === 0) return summary;
+    visibleUsers.forEach((userRow) => {
+      dateColumns.forEach(({ date }) => {
+        const entry = getEntryForCell(userRow, date);
+        const status = resolveStatus(entry, date);
+        if (status === 'present') summary.present += 1;
+        else if (status === 'halfDay') summary.halfDay += 1;
+        else if (status === 'leave') summary.leave += 1;
+        else if (status !== 'holiday') summary.noInput += 1;
+      });
+    });
+    return summary;
+  }, [showTeamOverview, canEdit, visibleUsers, dateColumns, rowMap, approvedLeaves, resolveStatus]);
+
   const statusDot = (status, entry) => {
     if (entry?.inTimeRecord?.isApproved || entry?.outTimeRecord?.isApproved) return 'bg-blue-500';
     if (status === 'holiday') return 'bg-[var(--color-pastel-violet-text)]';
@@ -481,6 +497,28 @@ const AttendancePage = () => {
           </div>
 
           <AttendanceStatusLegend />
+          <p className="text-[10px] font-semibold text-[var(--color-text-muted)] -mt-2">
+            Blue lock and blue ring mean approved and locked records.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="rounded-[var(--radius-atomic)] border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Present</p>
+              <p className="text-base font-black text-[var(--color-text-primary)]">{teamSummary.present}</p>
+            </div>
+            <div className="rounded-[var(--radius-atomic)] border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Half-day</p>
+              <p className="text-base font-black text-[var(--color-text-primary)]">{teamSummary.halfDay}</p>
+            </div>
+            <div className="rounded-[var(--radius-atomic)] border border-[var(--color-pastel-rose-text)]/30 bg-[var(--color-pastel-rose-bg)] px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-pastel-rose-text)]">Leave</p>
+              <p className="text-base font-black text-[var(--color-text-primary)]">{teamSummary.leave}</p>
+            </div>
+            <div className="rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">No input</p>
+              <p className="text-base font-black text-[var(--color-text-primary)]">{teamSummary.noInput}</p>
+            </div>
+          </div>
 
           {leaveRequests.length > 0 && (
             <div className="rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] divide-y divide-[var(--color-bg-border)]">

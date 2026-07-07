@@ -53,11 +53,7 @@ router.get('/missions', protect, async (req, res) => {
 router.get('/progress', protect, async (req, res) => {
   try {
     const user = req.user;
-    const config = await GamificationService.getConfig();
-    const plain = config?.toObject ? config.toObject() : config;
-    const stepXp = plain.stepXp || 100;
-    const currentLevelExp = await GamificationService.getExpForLevel(user.level || 1);
-    const nextLevelExp = await GamificationService.getExpForLevel((user.level || 1) + 1);
+    const plain = await GamificationService.getConfigPlain();
 
     const XPAuditLog = require('../models/XPAuditLog');
     const adjustedLogCount = await XPAuditLog.countDocuments({
@@ -69,11 +65,7 @@ router.get('/progress', protect, async (req, res) => {
     });
 
     res.json({
-      level: user.level || 1,
       exp: user.exp || 0,
-      stepXp,
-      currentLevelExp,
-      nextLevelExp,
       lastRecalculatedAt: plain.lastRecalculatedAt || null,
       hasAdjustedHistory: adjustedLogCount > 0,
     });
@@ -117,23 +109,24 @@ router.get('/history', protect, async (req, res) => {
 
 router.get('/leaderboard', protect, async (req, res) => {
   try {
-    const User = require('../models/User');
     const XPAuditLog = require('../models/XPAuditLog');
     const GamificationConfig = require('../models/GamificationConfig');
-    const monthly = await GamificationService.getMonthlyLeaderboard();
+    const monthStartInput = req.query.monthStartKey || undefined;
+    const monthlySnapshot = await GamificationService.getMonthlyLeaderboardSnapshot(monthStartInput);
+    await GamificationService.backfillPreviousMonthSnapshot();
     const config = await GamificationService.getConfigPlain();
     const configDoc = await GamificationConfig.findOne()
       .select('lastRecalculatedAt lastRecalcWeeklyPrior')
       .lean();
     const lastRecalculatedAt = configDoc?.lastRecalculatedAt || null;
     const monthlyPriorSnapshot = configDoc?.lastRecalcWeeklyPrior || null;
+    const currentEntries = monthlySnapshot.entries || [];
+    const tenantUserIds = currentEntries.map((entry) => entry.userId);
 
-    const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
-    const tenantUserIds = allUsers.map((u) => u._id);
-
+    const { monthStart, monthEnd } = getCurrentMonthRange(monthlySnapshot.monthStartKey);
     const monthLogs = await XPAuditLog.find({
       userId: { $in: tenantUserIds },
-      createdAt: { $gte: monthly.monthStart, $lte: monthly.monthEnd },
+      createdAt: { $gte: monthStart, $lte: monthEnd },
     })
       .select('userId action amount details previousAmount recalculatedAt recalcReason')
       .lean();
@@ -145,40 +138,14 @@ router.get('/leaderboard', protect, async (req, res) => {
       lastRecalculatedAt
     );
 
-    const monthlyXpByUserId = new Map(
-      monthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
-    );
-
     const prevMonth = getPreviousMonthRange();
-    const lastMonthMonthly = await GamificationService.getMonthlyLeaderboard(null, prevMonth.monthStartKey);
-    const lastMonthXpByUserId = new Map(
-      lastMonthMonthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
-    );
+    const lastMonthMonthly = await GamificationService.getMonthlyLeaderboardSnapshot(prevMonth.monthStartKey);
     const lastMonthRankByUserId = new Map(
-      [...allUsers]
-        .map((user) => ({
-          _id: user._id,
-          name: user.name,
-          monthlyXp: lastMonthXpByUserId.get(String(user._id)) || 0,
-        }))
-        .sort((a, b) => {
-          if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
-          return (a.name || '').localeCompare(b.name || '');
-        })
-        .map((user, index) => [String(user._id), index + 1])
+      (lastMonthMonthly.entries || []).map((row) => [String(row.userId), Number(row.rank) || 0])
     );
 
-    const top = allUsers
-      .map((user) => ({
-        ...user,
-        monthlyXp: monthlyXpByUserId.get(String(user._id)) || 0,
-      }))
-      .sort((a, b) => {
-        if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
-        return (a.name || '').localeCompare(b.name || '');
-      })
-      .map((user, index) => {
-        const userKey = String(user._id);
+    const top = currentEntries.map((user) => {
+        const userKey = String(user.userId);
         const meta = recalcMetaByUser.get(userKey);
         const snapshotPrior = monthlyPriorSnapshot?.[userKey];
         const useSnapshot = lastRecalculatedAt && monthlyPriorSnapshot && snapshotPrior !== undefined;
@@ -195,13 +162,11 @@ router.get('/leaderboard', protect, async (req, res) => {
             : meta && (monthlyXpDelta !== 0 || (meta.changes?.length ?? 0) > 0))
         );
         return {
-          rank: index + 1,
-          monthlyXp: user.monthlyXp,
-          _id: user._id,
+          rank: user.rank,
+          monthlyXp: Number(user.monthlyXp) || 0,
+          _id: user.userId,
           name: user.name,
           avatar: user.avatar,
-          exp: user.exp,
-          level: user.level,
           lastMonthRank: lastMonthRankByUserId.get(userKey),
           monthlyXpPrior: hasRecalcDelta ? monthlyXpPrior : undefined,
           monthlyXpDelta: hasRecalcDelta ? monthlyXpDelta : undefined,
@@ -212,12 +177,12 @@ router.get('/leaderboard', protect, async (req, res) => {
       });
 
     logger.debug('Gamification', 'Leaderboard fetch', {
-      monthStart: monthly.monthStartKey,
-      monthEnd: monthly.monthEndKey,
-      logCount: monthly.logCount,
-      storedSum: monthly.storedSum,
-      resolvedSum: monthly.resolvedSum,
-      configTaskCompletion: monthly.configRates?.taskCompletion,
+      monthStart: monthlySnapshot.monthStartKey,
+      monthEnd: monthlySnapshot.monthEndKey,
+      logCount: monthlySnapshot.logCount,
+      storedSum: monthlySnapshot.storedSum,
+      resolvedSum: monthlySnapshot.resolvedSum,
+      configTaskCompletion: config.taskCompletion,
       top3: top.slice(0, 3).map((entry) => ({
         userId: entry._id,
         name: entry.name,
@@ -230,15 +195,25 @@ router.get('/leaderboard', protect, async (req, res) => {
     res.json({
       entries: top,
       meta: {
-        monthStartKey: monthly.monthStartKey,
-        monthEndKey: monthly.monthEndKey,
+        monthStartKey: monthlySnapshot.monthStartKey,
+        monthEndKey: monthlySnapshot.monthEndKey,
         lastRecalculatedAt,
-        logCount: monthly.logCount,
-        configRates: monthly.configRates,
+        logCount: monthlySnapshot.logCount,
+        configRates: config,
         lastMonthStartKey: prevMonth.monthStartKey,
         lastMonthEndKey: prevMonth.monthEndKey,
       },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/leaderboard/history', protect, async (req, res) => {
+  try {
+    const limit = Math.min(24, Math.max(1, Number(req.query.limit) || 12));
+    const history = await GamificationService.listMonthlyLeaderboardHistory(limit);
+    res.json({ history });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -254,7 +229,8 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
     const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
     const config = await GamificationService.getConfigPlain();
-    const { monthStart, monthEnd, monthStartKey, monthEndKey } = getCurrentMonthRange();
+    const monthStartInput = req.query.monthStartKey || undefined;
+    const { monthStart, monthEnd, monthStartKey, monthEndKey } = getCurrentMonthRange(monthStartInput);
 
     const logs = await XPAuditLog.find({
       userId,
@@ -264,7 +240,7 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
       .lean();
 
     const backfillMaps = await GamificationService.fetchHoursBackfillMaps(logs);
-    const user = await User.findById(userId, 'name avatar level xp').lean();
+    const user = await User.findById(userId, 'name avatar').lean();
     const dedupedLogs = GamificationService.dedupeXpAuditLogsForTotals(logs);
 
     const groupedBreakdown = GamificationService.buildWeeklyGroupedBreakdown(

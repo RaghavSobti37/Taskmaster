@@ -1,0 +1,197 @@
+{
+  "generatedAt": "2026-07-07",
+  "modules": [
+    {
+      "file": "shared/artistAnalyticsSheetMappings.js",
+      "exports": [
+        "detectAnalyticsSheetTemplate"
+      ]
+    },
+    {
+      "file": "shared/attendanceExcludedUsers.js",
+      "exports": [
+        "ATTENDANCE_EXCLUDED_EMAILS",
+        "ATTENDANCE_EXCLUDED_EMAIL_PATTERNS",
+        "ATTENDANCE_EXCLUDED_NAME_PATTERN",
+        "ATTENDANCE_LEGACY_NAME_PATTERN",
+        "isAttendanceExcluded",
+        "isExcludedEmail"
+      ]
+    },
+    {
+      "file": "shared/attendanceMetrics.js",
+      "exports": [
+        "LUNCH_BREAK_MINUTES",
+        "UNLOGGED_THRESHOLD_MINUTES",
+        "buildAttendanceMetrics",
+        "computeExpectedLogMinutes",
+        "computeUnloggedMinutes",
+        "filterLogsForDateKey",
+        "getWorkedMinutesFromTimes",
+        "parseClockToMinutes",
+        "readLogTimeSpentMinutes",
+        "sumDailyLogMinutes"
+      ]
+    },
+    {
+      "file": "shared/attendanceRosterVisibility.js",
+      "exports": [
+        "ROSTER_LOOKBACK_DAYS",
+        "VIEW_MODES",
+        "buildVirtualLeaveEntry",
+        "filterAttendanceRosterUsers",
+        "getLastActivityDate",
+        "hasAttendanceActivity",
+        "isDateOnApprovedLeave",
+        "isUserVisibleInRoster",
+        "leaveOverlapsRange"
+      ]
+    },
+    {
+      "file": "shared/emailStreams.cjs",
+      "exports": [
+        "DEFAULT_EMAIL_STREAMS",
+        "ROOT_DOMAIN"
+      ]
+    },
+    {
+      "file": "shared/financeProjectMatcher.js",
+      "exports": [
+        "GENERAL_NAME_CANDIDATES",
+        "MATCH_THRESHOLD",
+        "NON_EXPENSE_CATEGORIES",
+        "buildDocSearchText",
+        "buildProjectMatchers",
+        "isGeneralProjectName",
+        "isTrackableSpendCategory",
+        "matchFinanceDocToProject",
+        "resolveFinanceCategory",
+        "resolveGeneralProject",
+        "scoreProjectMatch"
+      ]
+    },
+    {
+      "file": "shared/financeReferenceCatalog.js",
+      "exports": [
+        "PROJECT_CODES",
+        "WORKSPACE_CODES",
+        "formatReferenceNumber",
+        "normalizeKey",
+        "parseReferenceSequence",
+        "resolveProjectReferencePrefix",
+        "resolveWorkspaceCode"
+      ]
+    },
+    {
+      "file": "shared/gamificationRules.js",
+      "exports": [
+        "ACTION_CONFIG_KEY",
+        "ACTION_LABELS",
+        "DAILY_LOG_OVERTIME_THRESHOLD_HOURS",
+        "DAILY_MISSIONS",
+        "DEFAULT_DAILY_CAPS",
+        "DEFAULT_XP",
+        "FAIRNESS_PRINCIPLES",
+        "LEGACY_ACTION_ALIASES",
+        "MAX_XP_HOURS_PER_EVENT",
+        "NO_XP_ACTIONS",
+        "RECALC_HISTORY_ACTIONS",
+        "ROLE_PATHS",
+        "SELF_ASSIGN_TASK_XP_MULTIPLIER",
+        "TIME_BASED_XP_ACTIONS",
+        "WEEKLY_MISSIONS",
+        "XP_RULE_ROWS",
+        "clampXpHours",
+        "computeManualDailyLogXp",
+        "computeTimeBasedXp",
+        "isTimeBasedXpAction",
+        "normalizeGamificationAction",
+        "resolveManualDailyLogOvertimeRate"
+      ]
+    },
+    {
+      "file": "shared/orgPermissions.cjs",
+      "exports": [
+        "canDeleteOrganization",
+        "canManageBilling",
+        "canManageOrganizationSettings",
+        "isDepartmentAdmin"
+      ]
+    },
+    {
+      "file": "shared/orgPermissions.js",
+      "exports": [
+        "canDeleteOrganization",
+        "canManageBilling",
+        "canManageOrganizationSettings",
+        "isDepartmentAdmin"
+      ]
+    },
+    {
+      "file": "shared/projectAnalyticsCore.cjs",
+      "exports": [
+        "TASK_LOG_TYPES",
+        "aggregateProjectEffort",
+        "buildAnalyticsContext",
+        "buildEffortSummaryRow",
+        "dedupeDailyLogs",
+        "isTaskCompletionLog",
+        "logDetailType",
+        "logHours",
+        "logMatchesProject",
+        "partitionLogsByProject",
+        "resolveLogProjectId",
+        "resolveLogUserId",
+        "taskActiveInRange",
+        "taskCompletedInRange"
+      ]
+    },
+    {
+      "file": "shared/projectFinanceRollup.js",
+      "exports": [
+        "BUDGET_CATEGORIES",
+        "EXPENSE_CATEGORIES",
+        "FX_TO_INR",
+        "KNOWN_CURRENCIES",
+        "REVENUE_CATEGORIES",
+        "SPEND_TRACK_CATEGORIES",
+        "budgetStatusTone",
+        "convertToBaseInr",
+        "docAmount",
+        "docCurrency",
+        "docEffectiveDate",
+        "financeDocAnalyticsStatus",
+        "inDateRange",
+        "mapFinanceDocForAnalytics",
+        "rollupFinanceByProject",
+        "roundMoney",
+        "snapshotFxMetadata"
+      ]
+    },
+    {
+      "file": "shared/taskReviewRules.js",
+      "exports": [
+        "REVIEW_DEFAULT_HOURS",
+        "REVIEW_LOG_LABEL",
+        "ROLLBACK_WINDOW_MS",
+        "assignmentAssignerId",
+        "assignmentUserId",
+        "canUserApproveOrRollback",
+        "canUserApproveReview",
+        "canUserRollbackTask",
+        "filterReviewQueueTasks",
+        "getAssignmentForUser",
+        "getDelegatedAssignments",
+        "getReviewQueueAssignmentFilter",
+        "isAssignerOnlyReviewer",
+        "isDelegatedAssignment",
+        "isSelfWorkOnlyTask",
+        "mergeAssigneeIdsWithCreator",
+        "needsReviewOnComplete",
+        "normalizeAssigneeIds",
+        "normalizeId",
+        "requiresReviewForUser"
+      ]
+    }
+  ]
+}

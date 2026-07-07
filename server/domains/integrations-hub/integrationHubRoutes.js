@@ -29,6 +29,5 @@ router.post('/connections/:id/disconnect', ctrl.disconnect);
 router.post('/connections/:id/health', ctrl.health);
 router.post('/connections/:id/sync', ctrl.sync);
 router.patch('/connections/:id/metadata', ctrl.patchMetadata);
-router.get('/knowledge-engine/bridge', ctrl.listKeBridge);
 
 module.exports = router;

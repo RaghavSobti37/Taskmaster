@@ -1,6 +1,6 @@
 # Production Login Recovery Plan
 
-> **Status:** Partially resolved (2026-07-07). Clerk `session/touch` 401 loop fixed (`ClerkOrgActivator` skips `setActive` on auth host; establish no longer fails on client org-pin). **Clear cookies** always in auth legal footer. If sign-in still fails, re-run diagnostics below — original root cause was identifier not reaching Clerk `sign_ins`.
+> **Status:** Clerk `force_organization_selection` disabled in production (2026-07-07). `session/touch` 401 loop fixed. Client adds `ClerkStaleSessionRecovery` for stale sessions. **Clear cookies** in auth footer if still stuck.
 
 ## Evidence (Playwright on production)
 
@@ -50,12 +50,12 @@ Browser MCP (`browse`) unavailable on this machine (`ENOENT`); diagnostics run v
 
 ## Root causes (prioritized)
 
-### P0 — Clerk identifier not submitted
+### P0 — Clerk identifier not submitted (legacy; may still apply)
 
 - `sign_ins` returns `needs_identifier` while email is in the input.
 - Password field may be visible but `tabindex="-1"` / not active until identifier step completes.
-- **Cookie banner** (`z-[200]` fixed bottom) may intercept Continue clicks.
-- Clerk dashboard: `force_organization_selection: true` may add hidden org step.
+- **Cookie banner** hidden on auth host (`isAuthSite()`).
+- ~~Clerk dashboard: `force_organization_selection: true` may add hidden org step.~~ **Fixed:** `force_organization_selection: false` via `PATCH /instance/organization_settings`.
 
 ### P1 — Downstream never reached (not the current blocker)
 

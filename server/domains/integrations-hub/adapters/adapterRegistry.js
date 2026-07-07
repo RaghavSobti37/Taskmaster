@@ -7,6 +7,7 @@ const googleSheetsAdapter = require('./googleSheetsAdapter');
 const salesforceAdapter = require('./salesforceAdapter');
 const brevoAdapter = require('./brevoAdapter');
 const slackAdapter = require('./slackAdapter');
+const aisensyAdapter = require('./aisensyAdapter');
 
 const ADAPTERS = {
   gmail: gmailAdapter,
@@ -18,6 +19,7 @@ const ADAPTERS = {
   salesforce: salesforceAdapter,
   brevo: brevoAdapter,
   slack: slackAdapter,
+  aisensy: aisensyAdapter,
 };
 
 function getAdapter(providerId) {

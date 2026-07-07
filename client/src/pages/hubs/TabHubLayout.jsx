@@ -6,16 +6,23 @@ import { HUB_CONFIG } from '../../utils/navbarConfig';
 import { HUB_NAV_META, withHubTabIcons, HUB_TAB_FEATURE_KEYS } from '../../utils/hubSubnavConfig';
 import HubPageLayout from '../../components/ui/HubPageLayout';
 import ModuleSubnav from '../../components/ui/ModuleSubnav';
+import { useTenantUnlocks } from '../../hooks/useTenantUnlocks';
 
 export default function TabHubLayout({ hubPath, panels }) {
   const { user } = useAuth();
+  const { isFeatureUnlocked } = useTenantUnlocks();
   const [searchParams, setSearchParams] = useSearchParams();
   const hub = HUB_CONFIG[hubPath];
   const shell = HUB_NAV_META[hubPath];
 
   const visibleTabs = useMemo(
-    () => (hub?.tabs || []).filter((tab) => hasPageAccess(user, tab.key)),
-    [hub, user]
+    () => (hub?.tabs || []).filter((tab) => {
+      if (!hasPageAccess(user, tab.key)) return false;
+      const featureKey = HUB_TAB_FEATURE_KEYS[tab.id];
+      if (!featureKey) return true;
+      return isFeatureUnlocked(featureKey);
+    }),
+    [hub, user, isFeatureUnlocked]
   );
 
   const tabParam = searchParams.get('tab');

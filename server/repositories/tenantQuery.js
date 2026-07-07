@@ -19,7 +19,10 @@ function withTenantFilter(filter = {}, { bypass = false, tenantId } = {}) {
   if (bypass) return { ...filter };
   const tid = tenantId || getTenantId();
   if (!tid) return { ...filter };
-  return { ...filter, ...tenantIdFilter(tid) };
+  const tenantMatch = tenantIdFilter(tid);
+  if (!filter || Object.keys(filter).length === 0) return tenantMatch;
+  if (filter.$and) return { $and: [...filter.$and, tenantMatch] };
+  return { $and: [filter, tenantMatch] };
 }
 
 function applyToQuery(query, options = {}) {

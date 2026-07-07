@@ -7,7 +7,7 @@ const tenantIntegrationSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['email', 'marketing', 'crm', 'analytics', 'custom'],
+      enum: ['email', 'marketing', 'crm', 'analytics', 'custom', 'data', 'intake', 'messaging'],
     },
     label: { type: String, trim: true },
     status: {

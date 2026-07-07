@@ -5,6 +5,7 @@ const {
   distinctEmails,
 } = require('../../mail/services/mailEventQueryService');
 const ContactService = require('../../../services/ContactService');
+const { listOutcomesForPerson } = require('../../../services/aisensyCampaignSyncService');
 
 async function reconcileMailEngagement(email, { primaryName, phone, contact: initialContact }) {
   if (!email) return initialContact;
@@ -20,10 +21,15 @@ async function reconcileMailEngagement(email, { primaryName, phone, contact: ini
 }
 
 async function loadMailSection(contact) {
-  const events = contact.email
-    ? await findByEmail(contact.email)
-    : [];
-  return { section: 'mail', mail: { events } };
+  const [events, whatsappCampaigns] = await Promise.all([
+    contact.email ? findByEmail(contact.email) : [],
+    listOutcomesForPerson({
+      personIndexId: contact._id || contact.personId,
+      phone: contact.phone,
+      email: contact.email,
+    }),
+  ]);
+  return { section: 'mail', mail: { events, whatsappCampaigns } };
 }
 
 function appendMailTimeline(mailEvents) {

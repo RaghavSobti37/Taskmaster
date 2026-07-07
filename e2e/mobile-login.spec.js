@@ -2,6 +2,10 @@
 import { test, expect, devices } from '@playwright/test';
 import { loginAsTestUser, logout } from './helpers/auth.js';
 import { hasAuthCreds } from './helpers/creds.js';
+import { mockPublicAuthApi } from './helpers/publicApiMock.js';
+import { clerkLoginSurface } from './helpers/orgPaths.js';
+
+const loginSurface = clerkLoginSurface;
 
 test.use({
   ...devices['Desktop Chrome'],
@@ -22,16 +26,15 @@ test.describe('mobile login', () => {
 
     await logout(page);
     await page.goto('/login');
-    await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
+    await expect(loginSurface(page).first()).toBeVisible();
 
     await loginAsTestUser(page);
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test('login page shows credential fields on mobile viewport', async ({ page }) => {
+    await mockPublicAuthApi(page);
     await page.goto('/login');
-    await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
-    await expect(page.locator('input[autocomplete="current-password"]')).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+    await expect(loginSurface(page).first()).toBeVisible();
   });
 });

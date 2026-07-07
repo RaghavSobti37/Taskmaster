@@ -28,8 +28,10 @@ const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
 
 const HOURS_WORKED_INFO =
   'Hours between your check-in and check-out for this day.';
+const LOGGED_TIME_INFO =
+  'Total time captured in Daily Logs for this attendance day.';
 const NOT_LOGGED_INFO =
-  'Time you still need to log: (check-in to check-out, minus 1 hour lunch) minus all Daily Logs for this day (manual entries, task completions, and reviews). Shown when 30 minutes or more remain. Log the gap to earn the attendance day bonus.';
+  'Time you still need to log: (check-in to check-out, minus 1 hour lunch) minus all Daily Logs for this day (manual entries, task completions, and reviews). Log the gap to earn the attendance day bonus.';
 
 const LOCKED_FIELD_CLASS =
   'disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-[var(--color-bg-secondary)] focus:ring-0';
@@ -299,14 +301,16 @@ const UnifiedTimeCard = ({
   const showIdentity = !hideTitleRow && (title || subTitle);
   const showOvertime = entry?.overtimeMinutes > 0;
   const workedMinutes = hasIn && hasOut ? getWorkedMinutesFromEntry(entry) : 0;
+  const loggedMinutes = hasIn && hasOut ? (loggedMinutesLive ?? 0) : 0;
   const unloggedMinutes = hasIn && hasOut
     ? getUnloggedMinutesFromEntry(entry, {
         loggedMinutesOverride: loggedMinutesLive ?? undefined,
       })
     : 0;
-  const showHoursWorked = workedMinutes > 0;
-  const showNotLogged = unloggedMinutes >= UNLOGGED_THRESHOLD_MINUTES;
-  const showBadges = showOvertime || showHoursWorked || showNotLogged;
+  const showHoursWorked = isSelfMode ? hasIn && hasOut : workedMinutes > 0;
+  const showLoggedTime = isSelfMode && hasIn && hasOut;
+  const showNotLogged = isSelfMode ? hasIn && hasOut : unloggedMinutes >= UNLOGGED_THRESHOLD_MINUTES;
+  const showBadges = showOvertime || showHoursWorked || showLoggedTime || showNotLogged;
   const showMetaSection = showIdentity || showBadges;
   const showHygieneMeter = showIdentity && hasIn && hasOut;
 
@@ -362,13 +366,26 @@ const UnifiedTimeCard = ({
                       </button>
                     </span>
                   )}
+                  {showLoggedTime && (
+                    <span className={workedPillClass}>
+                      Logged: {formatMinuteGap(loggedMinutes)}
+                      <button
+                        type="button"
+                        title={LOGGED_TIME_INFO}
+                        aria-label={LOGGED_TIME_INFO}
+                        className="inline-flex items-center -mr-0.5 opacity-75 hover:opacity-100 transition-opacity"
+                      >
+                        <Info size={12} strokeWidth={2.5} />
+                      </button>
+                    </span>
+                  )}
                   {showNotLogged && (
                     <span
                       className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-semibold tabular-nums`}
                       role="status"
                       aria-live="assertive"
                     >
-                      Action Required: {formatMinuteGap(unloggedMinutes)} Not Logged
+                      {isSelfMode ? 'Unlogged' : 'Action Required'}: {formatMinuteGap(unloggedMinutes)} Not Logged
                       <button
                         type="button"
                         title={NOT_LOGGED_INFO}
@@ -414,7 +431,7 @@ const UnifiedTimeCard = ({
                 <p className="tm-widget-label mb-0 normal-case tracking-[0.08em] text-emerald-600 dark:text-emerald-400 truncate">Time In</p>
                 {hasIn && (
                   <Badge variant="success" className="ml-auto shrink-0 !text-[9px] !py-0.5 !px-1.5 normal-case tracking-normal font-semibold">
-                    {inAppr ? 'Locked' : 'Marked in'}
+                    {inAppr ? 'Locked (approved)' : 'Marked in'}
                   </Badge>
                 )}
               </div>
@@ -472,7 +489,7 @@ const UnifiedTimeCard = ({
                 <p className="tm-widget-label mb-0 normal-case tracking-[0.08em] text-[var(--color-action-primary)] truncate">Time Out</p>
                 {hasOut && (
                   <Badge variant="success" className="ml-auto shrink-0 !text-[9px] !py-0.5 !px-1.5 normal-case tracking-normal font-semibold">
-                    {outAppr ? 'Locked' : 'Marked out'}
+                    {outAppr ? 'Locked (approved)' : 'Marked out'}
                   </Badge>
                 )}
               </div>
@@ -536,7 +553,7 @@ const UnifiedTimeCard = ({
                 <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">MORNING CHECK-IN DATA</p>
                 {inAppr && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
-                    <Lock size={12} /> Locked
+                    <Lock size={12} /> Locked (approved)
                   </span>
                 )}
               </div>
@@ -589,7 +606,7 @@ const UnifiedTimeCard = ({
                 <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">EVENING CHECK-OUT DATA</p>
                 {outAppr && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
-                    <Lock size={12} /> Locked
+                    <Lock size={12} /> Locked (approved)
                   </span>
                 )}
               </div>

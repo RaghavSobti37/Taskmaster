@@ -40,13 +40,6 @@ const CRON_JOBS = [
     description: 'Mirror Mongo changes to Supabase',
   },
   {
-    id: 'knowledge-engine-scheduler',
-    module: '../workers/knowledgeEngineScheduler',
-    init: 'initKnowledgeEngineScheduler',
-    schedule: '0 0 * * *',
-    description: 'Knowledge Engine daily cron registration',
-  },
-  {
     id: 'integration-token-refresh',
     module: '../workers/integrationTokenRefreshWorker',
     init: 'initIntegrationTokenRefreshWorker',
@@ -97,13 +90,6 @@ const QUEUE_WORKERS = [
     init: 'initTenantInviteEmailWorker',
     queue: 'TenantInviteEmailQueue',
     description: 'Org-create wizard invite emails (BullMQ)',
-  },
-  {
-    id: 'knowledge-engine',
-    module: '../workers/knowledgeEngineWorker',
-    init: 'initKnowledgeEngineWorker',
-    queue: 'knowledge-engine',
-    description: 'TSC Knowledge Engine content pipeline (BullMQ)',
   },
 ];
 

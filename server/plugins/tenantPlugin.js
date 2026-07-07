@@ -21,7 +21,13 @@ module.exports = function tenantPlugin(schema, options) {
       const tenantId = getTenantId();
       if (tenantId) {
         this.tenantId = tenantId;
-      } else if (process.env.NODE_ENV !== 'production') {
+      } else if (
+        process.env.NODE_ENV !== 'production'
+        && (
+          process.env.NODE_ENV === 'test'
+          || String(process.env.ALLOW_DEFAULT_TENANT_FALLBACK || '').trim().toLowerCase() === 'true'
+        )
+      ) {
         const Tenant = require('../models/Tenant');
         const { allFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
         let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' }).setOptions({ bypassTenant: true });
@@ -49,16 +55,29 @@ module.exports = function tenantPlugin(schema, options) {
     }
   });
 
-  // Helper to inject tenantId into query filter
+  // ponytail: merge tenant via $and — mongoose .where(tenant $or) overwrites an existing filter $or
+  const mergeTenantIntoQuery = (query, tenantId) => {
+    const tenantMatch = tenantIdFilter(tenantId);
+    const current = query.getFilter();
+    if (!current || Object.keys(current).length === 0) {
+      query.setQuery(tenantMatch);
+      return;
+    }
+    if (current.$and) {
+      query.setQuery({ $and: [...current.$and, tenantMatch] });
+      return;
+    }
+    query.setQuery({ $and: [current, tenantMatch] });
+  };
+
   const injectTenantId = function () {
-    // Check if query options explicitly bypass tenant scoping
     if (this.options && this.options.bypassTenant) {
       return;
     }
 
     const tenantId = (this.options && this.options.tenantId) || getTenantId();
     if (tenantId) {
-      this.where(tenantIdFilter(tenantId));
+      mergeTenantIntoQuery(this, tenantId);
     }
   };
 

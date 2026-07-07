@@ -6,7 +6,7 @@ import { isAuthSite } from '../../config/siteMode';
 import { isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 
 /**
- * Pins active Clerk organization for single-org deployments (e.g. The Shakti Collective).
+ * Pins active Clerk organization only when no org is selected (single-org fallback).
  */
 export default function ClerkOrgActivator() {
   if (!isClerkConfigured()) return null;
@@ -25,7 +25,7 @@ function ClerkOrgActivatorInner() {
     // ponytail: auth host — ClerkSessionBridge owns setActive during clerk-establish
     if (isAuthSite()) return;
     if (isClerkSignInSubflowPath(signInPath)) return;
-    if (orgId === pinnedOrgId) return;
+    if (orgId) return;
     setActive({ organization: pinnedOrgId }).catch(() => {
       // ClerkSessionBridge surfaces org-pin failures during clerk-establish
     });

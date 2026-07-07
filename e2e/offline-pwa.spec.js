@@ -1,44 +1,43 @@
 import { test, expect } from '@playwright/test';
 
-const activateServiceWorker = async (page) => {
-  await page.evaluate(async () => {
-    const reg = await navigator.serviceWorker.getRegistration();
-    if (reg?.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-  });
+// Vite dev server does not register the production service worker.
+const pwaReady = process.env.E2E_PWA_BUILD === '1';
+
+const waitForServiceWorker = async (page) => {
   await expect.poll(async () => page.evaluate(async () => {
     const reg = await navigator.serviceWorker.getRegistration();
-    return reg?.active?.state === 'activated';
-  })).toBe(true);
+    return Boolean(reg?.installing || reg?.waiting || reg?.active);
+  }), { timeout: 30_000 }).toBe(true);
 };
 
+const hasPrecachedAssets = async (page) =>
+  page.evaluate(async () => {
+    const cacheNames = await caches.keys();
+    for (const name of cacheNames) {
+      const cache = await caches.open(name);
+      const keys = await cache.keys();
+      if (keys.length > 0) return true;
+    }
+    return false;
+  });
+
 test.describe('PWA resiliency @public', () => {
+  test.beforeEach(() => {
+    test.skip(!pwaReady, 'Set E2E_PWA_BUILD=1 with preview build — vite dev has no SW');
+  });
+
   test('registers service worker on load', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
-
-    await expect.poll(async () => page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.getRegistration();
-      return Boolean(reg?.installing || reg?.waiting || reg?.active);
-    })).toBe(true);
+    await waitForServiceWorker(page);
   });
 
   test('precaches shell assets for offline resilience', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await activateServiceWorker(page);
+    await page.waitForLoadState('domcontentloaded');
+    await waitForServiceWorker(page);
 
-    const precached = await page.evaluate(async () => {
-      const cacheNames = await caches.keys();
-      for (const name of cacheNames) {
-        const cache = await caches.open(name);
-        const keys = await cache.keys();
-        if (keys.length > 0) return true;
-      }
-      return false;
-    });
-
-    expect(precached).toBe(true);
+    // ponytail: workbox precache runs during install — no need to force activation
+    await expect.poll(() => hasPrecachedAssets(page), { timeout: 30_000 }).toBe(true);
   });
 });

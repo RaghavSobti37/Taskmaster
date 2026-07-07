@@ -5,6 +5,7 @@ import { subscribeToChannel } from '../../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../../utils/projectUtils';
 import { normalizeWorkspaceKey } from '../../utils/workspaceColors';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
+import useTenantQueryKey from '../useTenantQueryKey';
 
 const fetchProjects = async () => {
   const { data } = await axios.get('/api/projects');
@@ -22,8 +23,9 @@ const fetchWorkspaceByName = async (name) => {
 };
 
 export const useWorkspace = (name, enabled = true) => {
+  const queryKey = useTenantQueryKey('workspaces', normalizeWorkspaceKey(name));
   return useQuery({
-    queryKey: ['workspaces', normalizeWorkspaceKey(name)],
+    queryKey,
     queryFn: () => fetchWorkspaceByName(name),
     enabled: enabled && !!name,
     staleTime: 1000 * 60 * 2,
@@ -38,19 +40,23 @@ const fetchProjectById = async (id) => {
 
 export const useProjects = (enabled = true) => {
   const queryClient = useQueryClient();
+  const projectsKey = useTenantQueryKey('projects');
+  const workspacesKey = useTenantQueryKey('workspaces');
+  const analyticsSummaryKey = useTenantQueryKey('projects', 'analytics-summary');
+  const dashboardSummaryKey = useTenantQueryKey('dashboard', 'summary');
   useEffect(() => {
     if (!enabled) return undefined;
     return subscribeToChannel('projects', 'project_change', () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      queryClient.invalidateQueries({ queryKey: projectsKey });
+      queryClient.invalidateQueries({ queryKey: workspacesKey });
+      queryClient.invalidateQueries({ queryKey: dashboardSummaryKey });
+      queryClient.invalidateQueries({ queryKey: analyticsSummaryKey });
       invalidateStatusCounts(queryClient);
     });
-  }, [queryClient]);
+  }, [queryClient, enabled, projectsKey, workspacesKey, dashboardSummaryKey, analyticsSummaryKey]);
 
   return useQuery({
-    queryKey: ['projects'],
+    queryKey: projectsKey,
     queryFn: fetchProjects,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
@@ -60,8 +66,9 @@ export const useProjects = (enabled = true) => {
 };
 
 export const useWorkspaces = (enabled = true) => {
+  const queryKey = useTenantQueryKey('workspaces');
   return useQuery({
-    queryKey: ['workspaces'],
+    queryKey,
     queryFn: fetchWorkspaces,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
@@ -71,8 +78,9 @@ export const useWorkspaces = (enabled = true) => {
 };
 
 export const useProject = (id) => {
+  const queryKey = useTenantQueryKey('projects', id);
   return useQuery({
-    queryKey: ['projects', id],
+    queryKey,
     queryFn: () => fetchProjectById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
@@ -81,8 +89,9 @@ export const useProject = (id) => {
 
 export const useProjectAnalytics = (projectId, queryParams, queryEnabled = true) => {
   const { timeframe, startDate, endDate } = queryParams || {};
+  const queryKey = useTenantQueryKey('projects', projectId, 'analytics', timeframe, startDate, endDate);
   return useQuery({
-    queryKey: ['projects', projectId, 'analytics', timeframe, startDate, endDate],
+    queryKey,
     queryFn: async () =>
       (await axios.get(`/api/projects/${projectId}/analytics`, { params: queryParams })).data,
     enabled: !!projectId && queryEnabled,
@@ -93,8 +102,9 @@ export const useProjectAnalytics = (projectId, queryParams, queryEnabled = true)
 
 export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) => {
   const { timeframe, startDate, endDate } = queryParams || {};
+  const queryKey = useTenantQueryKey('projects', 'analytics-summary', timeframe, startDate, endDate);
   return useQuery({
-    queryKey: ['projects', 'analytics-summary', timeframe, startDate, endDate],
+    queryKey,
     queryFn: async () =>
       (await axios.get('/api/projects/analytics-summary', { params: queryParams })).data,
     enabled: queryEnabled,

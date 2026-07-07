@@ -12,6 +12,7 @@ const BookedCall = require('../models/BookedCall');
 const NewsletterSubscriber = require('../models/NewsletterSubscriber');
 const ArtistPathResponse = require('../models/ArtistPathResponse');
 const PersonIdentityService = require('./PersonIdentityService');
+const { getTenantId } = require('../utils/tenantContext');
 
 const INLET_FLAG_MAP = {
   lead: 'inCRM',
@@ -37,6 +38,11 @@ const FOLDER_TO_HUB_KEY = {
   booked_calls: 'booked_call',
   enquiries: 'enquiry',
   mail: 'mail',
+  havells_registered: 'havells_registered',
+  havells_selected: 'havells_selected',
+  havells_attended_delhi: 'havells_attended_delhi',
+  havells_attended_indore: 'havells_attended_indore',
+  havells_attended_dumka: 'havells_attended_dumka',
 };
 
 function inletKeysFromPersonIndex(idx) {
@@ -70,6 +76,7 @@ function applyPersonIndexFlags(flags, idx) {
   if (idx.inArtistPath) flags.inArtistPath = true;
   if (idx.inArtistCrm) flags.inArtistCrm = true;
   if (idx.inCommunity) flags.inCommunity = true;
+  if (idx.imlPriority) flags.imlPriority = true;
   return flags;
 }
 
@@ -92,6 +99,25 @@ function pickBestArtistPathResponse(responses = []) {
   })[0];
 }
 
+async function clearHubIdentityConflicts({ tenantId, personId, email, phone }) {
+  if (!tenantId) return;
+  const personOid = new mongoose.Types.ObjectId(personId);
+  const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+  const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+  if (normalizedEmail) {
+    await PersonHubView.collection.updateMany(
+      { tenantId, email: normalizedEmail, personId: { $ne: personOid } },
+      { $unset: { email: '' } }
+    );
+  }
+  if (normalizedPhone) {
+    await PersonHubView.collection.updateMany(
+      { tenantId, phone: normalizedPhone, personId: { $ne: personOid } },
+      { $unset: { phone: '' } }
+    );
+  }
+}
+
 function resolveHubDisplayName(person, latestArtistPath) {
   const fromAnswers = latestArtistPath?.answers?.name;
   if (fromAnswers && !isLikelyEssayName(fromAnswers)) return fromAnswers;
@@ -112,6 +138,7 @@ class PersonHubBuilder {
     if (!personId) return null;
     const person = await Person.findById(personId).lean();
     if (!person) return null;
+    const tenantId = getTenantId() || person.tenantId;
 
     const [identifiers, comms, links, artistPathResponses] = await Promise.all([
       PersonIdentifier.find({ personId }).lean(),
@@ -119,6 +146,11 @@ class PersonHubBuilder {
       PersonSourceLink.find({ personId }).lean(),
       ArtistPathResponse.find({ personId }).setOptions({ bypassTenant: true }).lean(),
     ]);
+    const imlPriority = links.some((link) => {
+      if (link.sourceType !== 'exly_booking') return false;
+      const text = `${link.summary?.offeringTitle || ''} ${link.summary?.offering || ''}`;
+      return /\biml\b|i\.?m\.?l/i.test(String(text));
+    });
 
     const artistPathCount = artistPathResponses.length;
     const latestArtistPath = pickBestArtistPathResponse(artistPathResponses);
@@ -143,7 +175,11 @@ class PersonHubBuilder {
       || '';
 
     if (email) {
-      const emailOwner = await PersonHubView.findOne({ email, personId: { $ne: personId } })
+      const emailOwner = await PersonHubView.findOne({
+        email,
+        personId: { $ne: personId },
+        ...(tenantId ? { tenantId } : {}),
+      })
         .setOptions({ bypassTenant: true })
         .select('personId')
         .lean();
@@ -188,6 +224,7 @@ class PersonHubBuilder {
         || latestArtistPath?.answers?.artistType
         || undefined,
       artistPathResponseCount: artistPathCount,
+      imlPriority: imlPriority || Boolean(legacyIndex?.imlPriority),
       ...flags,
     };
     if (email) hubDoc.email = email;
@@ -196,13 +233,22 @@ class PersonHubBuilder {
     const payload = { ...hubDoc, updatedAt: new Date() };
     if (!email) delete payload.email;
     if (!phone) delete payload.phone;
+    if (tenantId) payload.tenantId = tenantId;
+
+    await clearHubIdentityConflicts({ tenantId, personId, email, phone });
+
+    const updateOp = {
+      $set: payload,
+      $setOnInsert: { createdAt: new Date() },
+    };
+    const unsetFields = {};
+    if (!email) unsetFields.email = '';
+    if (!phone) unsetFields.phone = '';
+    if (Object.keys(unsetFields).length) updateOp.$unset = unsetFields;
 
     await PersonHubView.collection.updateOne(
       { personId: new mongoose.Types.ObjectId(personId) },
-      {
-        $set: payload,
-        $setOnInsert: { createdAt: new Date() },
-      },
+      updateOp,
       { upsert: true }
     );
 
@@ -224,10 +270,13 @@ class PersonHubBuilder {
     return { processed, total };
   }
 
-  async rebuildFromPersonIndex({ embedded = false } = {}) {
-    const indices = await PersonIndex.find({}).lean();
+  async rebuildFromPersonIndex({ embedded = false, batchSize = 200, onProgress, filter = null } = {}) {
+    const query = filter && typeof filter === 'object' ? filter : {};
     let count = 0;
-    for (const row of indices) {
+    let processed = 0;
+    const cursor = PersonIndex.find(query).lean().cursor();
+    for await (const row of cursor) {
+      processed += 1;
       const resolved = await PersonIdentityService.resolvePerson({
         name: row.name,
         email: row.email,
@@ -235,10 +284,153 @@ class PersonHubBuilder {
         city: row.city,
       }, { source: 'personindex_migration' });
       if (!resolved) continue;
-      count++;
+      count += 1;
       await this.rebuildPerson(resolved.personId);
+      if (onProgress && processed % batchSize === 0) {
+        onProgress(`rebuilt ${count}/${processed} indexed rows`);
+      }
     }
-    return { migrated: count };
+    return { migrated: count, processed };
+  }
+
+  async _syncPersonIndexRow(row) {
+    const inletKeys = inletKeysFromPersonIndex(row);
+    if (!inletKeys.length) return { status: 'skipped' };
+
+    const identityClauses = [];
+    if (row.email) identityClauses.push({ email: row.email });
+    if (row.phone) identityClauses.push({ phone: row.phone });
+
+    let existing = null;
+    if (identityClauses.length) {
+      existing = await PersonHubView.findOne({ $or: identityClauses })
+        .setOptions({ bypassTenant: true })
+        .select('personId inletKeys email phone')
+        .lean();
+    }
+
+    let personId = existing?.personId || null;
+    if (!personId) {
+      let resolved = null;
+      try {
+        resolved = await PersonIdentityService.resolvePerson({
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          city: row.city,
+        }, { source: 'personindex_inlet_sync' });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+      }
+      if (!resolved?.personId && row.email) {
+        const emailMatch = await PersonIdentifier.findOne({
+          type: 'email',
+          valueNormalized: String(row.email).trim().toLowerCase(),
+        }).setOptions({ bypassTenant: true }).lean();
+        if (emailMatch?.personId) resolved = { personId: emailMatch.personId };
+      }
+      if (!resolved?.personId && row.phone) {
+        const phoneMatch = await PersonIdentifier.findOne({
+          type: 'phone',
+          valueNormalized: row.phone,
+        }).setOptions({ bypassTenant: true }).lean();
+        if (phoneMatch?.personId) resolved = { personId: phoneMatch.personId };
+      }
+      personId = resolved?.personId || null;
+    }
+
+    if (!personId) return { status: 'unmatched' };
+
+    if (!existing) {
+      existing = await PersonHubView.findOne({ personId })
+        .setOptions({ bypassTenant: true })
+        .select('inletKeys email phone')
+        .lean();
+    }
+
+    const mergedKeys = [...new Set([...(existing?.inletKeys || []), ...inletKeys])];
+    const flags = applyPersonIndexFlags({}, row);
+    const tenantId = getTenantId() || row.tenantId;
+    const tenantOid = tenantId ? new mongoose.Types.ObjectId(tenantId) : null;
+    const payload = {
+      personId,
+      name: row.name || 'Unknown',
+      city: row.city,
+      inletKeys: mergedKeys,
+      inletCount: mergedKeys.length,
+      isMultiInlet: mergedKeys.length >= 2,
+      emailStatus: row.emailStatus || 'Pending',
+      unsubscribed: row.unsubscribed ?? false,
+      lastActivityAt: row.lastActivityAt || row.updatedAt || new Date(),
+      firstSeenAt: row.createdAt || new Date(),
+      ...flags,
+      updatedAt: new Date(),
+    };
+    if (row.email) {
+      payload.email = row.email;
+    } else if (existing?.email) {
+      payload.email = existing.email;
+    } else {
+      payload.email = `__no_email__${String(personId)}@personhub.local`;
+    }
+    if (row.phone) payload.phone = row.phone;
+    else if (existing?.phone) payload.phone = existing.phone;
+    if (tenantOid) payload.tenantId = tenantOid;
+
+    const updateOp = {
+      $set: payload,
+      $setOnInsert: { createdAt: new Date() },
+    };
+
+    const result = await PersonHubView.collection.updateOne(
+      { personId: new mongoose.Types.ObjectId(personId) },
+      updateOp,
+      { upsert: true }
+    );
+
+    if (result.upsertedCount) return { status: 'created' };
+    if (mergedKeys.length !== (existing?.inletKeys || []).length) return { status: 'updated' };
+    return { status: 'unchanged' };
+  }
+
+  /**
+   * Lighter sync: merge PersonIndex inlet keys onto hub rows via personId (no identity conflict pass).
+   */
+  async syncInletKeysFromPersonIndex({ batchSize = 200, onProgress, filter = null } = {}) {
+    const query = filter && typeof filter === 'object' ? filter : {};
+    let matched = 0;
+    let updated = 0;
+    let created = 0;
+    let processed = 0;
+    let skipped = 0;
+
+    const cursor = PersonIndex.find(query).lean().cursor();
+    for await (const row of cursor) {
+      processed += 1;
+      try {
+        const outcome = await this._syncPersonIndexRow(row);
+        if (outcome.status === 'created') {
+          matched += 1;
+          created += 1;
+        } else if (outcome.status === 'updated') {
+          matched += 1;
+          updated += 1;
+        } else if (outcome.status === 'unchanged') {
+          matched += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        skipped += 1;
+      }
+
+      if (onProgress && processed % batchSize === 0) {
+        onProgress(`synced ${processed} rows (${matched} matched)`);
+      }
+    }
+
+    return { processed, matched, updated, created, skipped };
   }
 }
 

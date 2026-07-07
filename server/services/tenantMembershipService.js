@@ -99,6 +99,43 @@ const resolveBackfillRole = (user, tenant) => {
   return 'member';
 };
 
+const ensureMembershipForTenant = async (userId, tenantId, { role } = {}) => {
+  if (!userId || !tenantId) return null;
+
+  const filter = { userId, tenantId };
+  const existing = await TenantMembership.findOne(filter).setOptions(BYPASS);
+  if (existing) return existing;
+
+  const [tenant, user] = await Promise.all([
+    Tenant.findById(tenantId).setOptions(BYPASS).select('ownerId'),
+    User.findById(userId).setOptions(BYPASS),
+  ]);
+  const resolvedRole = role || resolveBackfillRole(user, tenant);
+
+  try {
+    return await TenantMembership.findOneAndUpdate(
+      filter,
+      {
+        $setOnInsert: {
+          userId,
+          tenantId,
+          role: resolvedRole,
+          needsRoleReview: false,
+          status: 'active',
+          joinedAt: new Date(),
+        },
+      },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+    ).setOptions(BYPASS);
+  } catch (err) {
+    if (err?.code === 11000) {
+      const row = await TenantMembership.findOne(filter).setOptions(BYPASS);
+      if (row) return row;
+    }
+    throw err;
+  }
+};
+
 const backfillMembershipFromUser = async (user) => {
   if (!user?.tenantId) return null;
 
@@ -461,6 +498,7 @@ module.exports = {
   listActiveMemberships,
   getMembership,
   backfillMembershipFromUser,
+  ensureMembershipForTenant,
   reconcileMembershipRole,
   resolveInitialActiveTenantId,
   formatMembershipRow,

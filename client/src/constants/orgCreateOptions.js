@@ -76,6 +76,16 @@ export const slugifyOrgSlug = (value) => String(value || '')
   .replace(/^-+|-+$/g, '')
   .slice(0, 48);
 
+export const initialsOrgSlug = (name) => {
+  const parts = String(name || '')
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const initials = parts.map((part) => part[0]).join('');
+  return slugifyOrgSlug(initials).slice(0, 16);
+};
+
 export const orgInitials = (name) => {
   const parts = String(name || 'Organization').trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();

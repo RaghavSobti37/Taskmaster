@@ -4,7 +4,12 @@
 > Admin Console & Dynamic Onboarding improvements. Organized as gates — each section should be
 > substantially checked off before the next is load-bearing for real customer traffic.
 >
-> **Last audited:** 2026-07-06 (org-first Clerk Sprints A–E + automated verify pass)
+> **Last audited:** 2026-07-08 (production-readiness stabilization pass)
+>
+> Current dated audit: [`PRODUCTION_READINESS_AUDIT_2026-07-08.md`](./PRODUCTION_READINESS_AUDIT_2026-07-08.md).
+> Do not mark CoreKnot production-ready until the open blockers in that audit are closed:
+> `docs:check`, authenticated core-confidence e2e, preview Clerk env hardening, heal-loop model credentials/fallback,
+> and stable local API startup for e2e.
 
 Legend: 🔴 blocking for any public traffic · 🟡 blocking for enterprise customers · ⚪ polish/nice-to-have
 
@@ -190,13 +195,6 @@ Documented in `docs/operations/environments.md` § Clerk org-first flags.
 - [ ] No deprecated `CenteredModal` — **NOT VERIFIED**
 - [ ] Keyboard shortcut badges — **NOT VERIFIED**
 - [ ] Shortcut remap conflict detection — **NOT VERIFIED**
-
-## 14. Knowledge Engine / content pipeline (Shakti Collective) ⚪
-
-- [ ] PageLoadGuard/EmptyState on KE tabs — **NOT VERIFIED**
-- [ ] Job triggers via BullMQ — **NOT VERIFIED**
-- [ ] KE OAuth tokens encrypted — **NOT VERIFIED**
-- [ ] Human review gate before publish — **NOT VERIFIED**
 
 ## 15. Legal & compliance 🔴
 

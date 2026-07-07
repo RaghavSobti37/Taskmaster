@@ -44,7 +44,7 @@ exports.connect = asyncHandler(async (req, res) => {
   }
 
   if (apiKey) {
-    const connection = await integrationService.connectWithApiKey({
+    const result = await integrationService.connectWithApiKey({
       tenantId: req.tenantId,
       provider,
       apiKey,
@@ -52,7 +52,10 @@ exports.connect = asyncHandler(async (req, res) => {
       req,
       label,
     });
-    return res.status(201).json({ connection });
+    if (result.connection) {
+      return res.status(201).json(result);
+    }
+    return res.status(201).json({ connection: result });
   }
 
   const { authUrl, state } = await integrationService.initiateOAuth({
@@ -139,12 +142,6 @@ exports.inboundWebhook = asyncHandler(async (req, res) => {
     payload: req.body,
   });
   res.json(result);
-});
-
-exports.listKeBridge = asyncHandler(async (req, res) => {
-  const { listKnowledgeEngineConnections } = require('../services/knowledgeEngineBridge');
-  const rows = await listKnowledgeEngineConnections(req.tenantId);
-  res.json({ connections: rows });
 });
 
 exports.oauthReadiness = getOAuthReadiness;

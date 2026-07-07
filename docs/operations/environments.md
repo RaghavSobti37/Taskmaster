@@ -64,9 +64,20 @@ VITE_API_URL=<same-as-SERVER_URL>
 
 ```env
 BOOK_CALL_WEBHOOK_SECRET=<shared-secret>
+ARTIST_ENQUIRY_WEBHOOK_SECRET=<shared-secret>
 TASKMASTER_WEBHOOK_URL=<SERVER_URL>/api/webhooks/book-call
 TASKMASTER_ARTIST_ENQUIRY_WEBHOOK_URL=<SERVER_URL>/api/webhooks/artist-enquiry
 ```
+
+**API (Render) — tenant for inbound webhooks** (no auth context on website forms):
+
+```env
+PLATFORM_TENANT_SLUG=tsc
+# Optional explicit override (prod TSC id: 6a14c0d1d2ce3fb936553e35)
+WEBHOOK_TENANT_ID=
+```
+
+`resolveDefaultTenantId()` uses `WEBHOOK_TENANT_ID` / `DEFAULT_TENANT_ID` first, then looks up tenant by `PLATFORM_TENANT_SLUG`. Required in production for book-a-call, artist enquiry, artist path, newsletter, and masterclass review webhooks.
 
 ## Staging gate (verified 2026-07-05)
 

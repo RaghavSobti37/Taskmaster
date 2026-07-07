@@ -1,6 +1,6 @@
 /**
  * Resolve Clerk session JWT for clerk-establish after sign-in (incl. client-trust OTP).
- * Pins org when configured; retries when Clerk session is not ready yet.
+ * Active Clerk org wins; pinned env is fallback only when no org is selected.
  */
 export async function fetchClerkEstablishToken({
   getToken,
@@ -9,18 +9,20 @@ export async function fetchClerkEstablishToken({
   activeOrgId,
   clientOrgScope = true,
 }) {
-  if (clientOrgScope && pinnedOrgId && activeOrgId !== pinnedOrgId) {
+  const targetOrgId = String(activeOrgId || pinnedOrgId || '').trim();
+
+  if (clientOrgScope && targetOrgId && activeOrgId !== targetOrgId) {
     try {
-      await setActive({ organization: pinnedOrgId });
+      await setActive({ organization: targetOrgId });
     } catch {
-      // ponytail: server pins org via CLERK_ORGANIZATION_ID — still try session JWT below
+      // ponytail: establish still tries org-scoped JWT below
     }
   }
 
   let token = null;
   try {
-    if (clientOrgScope && pinnedOrgId) {
-      token = await getToken({ organizationId: pinnedOrgId });
+    if (clientOrgScope && targetOrgId) {
+      token = await getToken({ organizationId: targetOrgId });
     }
     if (!token) {
       token = await getToken();
@@ -46,5 +48,5 @@ export async function fetchClerkEstablishToken({
     };
   }
 
-  return { ok: true, token };
+  return { ok: true, token, organizationId: clientOrgScope ? (targetOrgId || null) : null };
 }

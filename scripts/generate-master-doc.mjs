@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateDocArtifacts } from './generate-doc-artifacts.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
@@ -17,6 +18,7 @@ const PAGE_PERMISSIONS = fs.readFileSync(
   path.join(root, 'client/src/utils/pagePermissions.js'),
   'utf8',
 );
+const ARTIFACTS = generateDocArtifacts();
 
 const DOMAIN_ORDER = [
   { id: 'auth', label: 'Authentication & legal', match: (f) => /pages\/(auth|legal)\//.test(f) || f.includes('LandingPage') || f.includes('Unsubscribe') },
@@ -68,6 +70,16 @@ function formatPage(p) {
   }
   if (p.hooks?.length) {
     lines.push(`| **Hooks** | ${p.hooks.map((h) => `\`${h}\``).join(', ')} |`);
+    const networkHooks = p.hooks
+      .filter((hook) => ARTIFACTS.hookEndpoint.hooks?.[hook]?.network)
+      .map((hook) => {
+        const endpoints = ARTIFACTS.hookEndpoint.hooks[hook].endpoints || [];
+        const sample = endpoints.slice(0, 3).join(', ') || 'no literal /api path';
+        return `\`${hook}\` → ${sample}`;
+      });
+    if (networkHooks.length) {
+      lines.push(`| **Data hooks** | ${networkHooks.join(' · ')} |`);
+    }
   }
   if (p.components?.length) {
     lines.push(`| **Key components** | ${p.components.map((c) => `\`${c}\``).join(', ')} |`);
@@ -101,7 +113,7 @@ const header = `# CoreKnot — Master Reference
 | Audience | Start here |
 | --- | --- |
 | **New engineer** | [Platform overview](#1-platform-overview) → your domain in [Page catalog](#3-page-catalog-by-domain) |
-| **AI agent** | Full file + [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) + locked zones in [\`operations/conventions.md\`](../.specify/memory/operations/conventions.md) |
+| **AI agent** | Full file + [\`memory/obsidian/INDEX.md\`](../../../../memory/obsidian/INDEX.md) (canonical) + [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) (compat) |
 | **Ops / deploy** | [\`operations/deployment.md\`](../operations/deployment.md) + [\`operations/environments.md\`](../operations/environments.md) |
 
 **Live inventory:** Regenerate with \`node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs\`.
@@ -158,6 +170,13 @@ Request → ProtectedRoute (session) → MainLayout → PageRoute (page key) →
 | \`ArtistOrAdminRoute\` | \`components/ArtistOrAdminRoute.jsx\` | Org accounts under \`/assets/accounts\` |
 | \`ArtistMembershipRoute\` | \`components/ArtistMembershipRoute.jsx\` | Artist workspace membership |
 
+### Naming convention (Org vs Tenant)
+
+- **Organization/Org** is the public UX term (routes, components, labels).
+- **Tenant** is internal persistence + API namespace terminology.
+- Org-facing UX intentionally talks to \`/api/tenants/*\`.
+- Platform-admin tenant controls are separate under \`/api/admin/tenants/*\`.
+
 ### Page permission keys
 
 Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.js\`:
@@ -202,6 +221,10 @@ Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.
 | \`/terms\`, \`/privacy\` | public legal |
 
 Legacy redirects: \`/leads\` → \`/crm?tab=leads\`, \`/finance\` → \`/management?tab=finance\`, \`/data-hub\` → \`/admin\`, etc.
+
+Full merged routing table (path + page key + tab + redirect + feature lock): [\`docs/.generated/route-access-matrix.json\`](../.generated/route-access-matrix.json)
+
+Preset matrix source of truth: [\`docs/.generated/preset-page-matrix.json\`](../.generated/preset-page-matrix.json)
 
 ### Multi-org & tenant session
 
@@ -260,7 +283,7 @@ Legacy redirects: \`/leads\` → \`/crm?tab=leads\`, \`/finance\` → \`/managem
 
 Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organizations).
 
-**Feature unlocks** (\`Tenant.featureUnlocks\`): \`resend\`, \`google\`, \`meta\`, \`knowledgeEngine\`, \`finance\`, \`artistOs\`. Client: \`navPageAccess.getNavFeatureLock()\` + locked \`EmptyState\` props.
+**Feature unlocks** default to disabled on new organizations and are enabled per organization on request. Canonical matrix: [\`docs/.generated/feature-unlock-matrix.json\`](../.generated/feature-unlock-matrix.json). Client lock resolution: \`navPageAccess.getNavFeatureLock()\` + locked \`EmptyState\` props.
 
 **Credentials at rest:** \`server/utils/credentialEncryption.js\` (AES-256-GCM when \`CREDENTIAL_ENCRYPTION_KEY\` set).
 
@@ -314,7 +337,6 @@ Standalone admin routes (same permission model):
 
 | Route | Page | API prefix |
 | --- | --- | --- |
-| \`/admin/knowledge-engine\` | \`KnowledgeEnginePage\` | \`/api/knowledge-engine\` |
 | \`/admin/security-audit\` | \`SecurityAuditPage\` | \`/api/admin/security-audit\` |
 | \`/admin/tenant-sso\` | \`AdminTenantSsoPage\` | \`/api/admin/tenants\` |
 
@@ -356,7 +378,6 @@ Express mounts route modules from \`server/routes/\` (see \`server/server.js\` f
 | Data Hub | \`dataHubRoutes.js\` | \`/api/data-hub\` |
 | Mail / campaigns | \`mailRoutes.js\`, \`campaignRoutes.js\`, \`domains/mail/routes/streamsRouter.js\` | \`/api/mail\`, \`/api/campaigns\`, \`/api/mail/streams\` |
 | Integrations | \`domains/integrations/integrationsRoutes.js\` | \`/api/integrations\` |
-| Knowledge Engine | \`knowledgeEngineRoutes.js\` | \`/api/knowledge-engine\` |
 | Tenant SSO (admin) | \`tenantAdminRoutes.js\` | \`/api/admin/tenants\` |
 | Security audit (admin) | \`securityAuditRoutes.js\` | \`/api/admin/security-audit\` |
 | Finance | \`financeRoutes.js\` | \`/api/finance\` |
@@ -393,6 +414,8 @@ Full endpoint listing: \`.specify/memory/backend/express.md\` and \`.specify/mem
 | Gamification | XP on task completion; weekly leaderboard IST Monday reset; idempotent recalc via audit trail | \`shared/gamificationRules.js\`, \`server/services/gamificationService.js\` |
 | Credentials | OAuth/Resend tokens encrypted at rest when \`CREDENTIAL_ENCRYPTION_KEY\` set | \`server/utils/credentialEncryption.js\` |
 
+Shared rule module inventory (generated): [\`docs/.generated/shared-rules-inventory.json\`](../.generated/shared-rules-inventory.json)
+
 ---
 
 ## 7. Locked zones
@@ -404,6 +427,8 @@ Full endpoint listing: \`.specify/memory/backend/express.md\` and \`.specify/mem
 | Production hosts | \`.cursor/production-hosts.local.json\` (gitignored) |
 | Legacy APIs | [\`LEGACY_FREEZE.md\`](../architecture/LEGACY_FREEZE.md) |
 
+Enforcement: locked-zone checks run in local tests + CI. Any override requires explicit env opt-in and rationale.
+
 ---
 
 ## 8. Documentation map
@@ -411,7 +436,8 @@ Full endpoint listing: \`.specify/memory/backend/express.md\` and \`.specify/mem
 | Path | Purpose |
 | --- | --- |
 | [\`DOCUMENTATION_INDEX.md\`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
-| [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) | Agent memory hub |
+| [\`memory/obsidian/INDEX.md\`](../../../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
+| [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) | Compatibility mirror (deprecated) |
 | [\`reference/COREKNOT_MASTER.md\`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
 | [\`operations/\`](../operations/) | Deploy, startup, scripts, environments, [\`PUBLIC_LAUNCH_BETA.md\`](../operations/PUBLIC_LAUNCH_BETA.md) |
 | [\`architecture/\`](../architecture/) | System design, data, security, debt |

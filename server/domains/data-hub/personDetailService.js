@@ -18,7 +18,7 @@ const {
 } = require('./queryHelpers');
 const { loadFragmentedSources } = require('./syncService');
 const { SECTION_LOADERS } = require('./processors');
-const { buildTimeline } = require('./processors/timelineBuilder');
+const { listOutcomesForPerson } = require('../../services/aisensyCampaignSyncService');
 const { filterEnquiriesForContact } = require('./processors/enquiryMatch');
 const {
   crmInletProcessor,
@@ -139,10 +139,15 @@ async function getPerson360(contactId) {
   const { outsourced, bookedCalls: bookedCallRecords, newsletter } = fragmented;
   const filteredEnquiries = filterEnquiriesForContact(enquiryTasks, contact);
 
-  const [crmSection, exlySection, bookedSection] = await Promise.all([
+  const [crmSection, exlySection, bookedSection, whatsappOutcomes] = await Promise.all([
     crmInletProcessor.loadCrmSection(match),
     exlyInletProcessor.loadExlySection(match),
     bookedCallsInletProcessor.loadBookedCallsSection(match),
+    listOutcomesForPerson({
+      personIndexId: contact._id || contact.personId,
+      phone: contact.phone,
+      email: contact.email,
+    }),
   ]);
 
   const timeline = buildTimeline({
@@ -179,7 +184,7 @@ async function getPerson360(contactId) {
     newsletter: { rows: newsletter },
     bookedCalls: bookedSection.bookedCalls,
     enquiries: filteredEnquiries.map((t) => ({ ...t, parsed: parseEnquiryDescription(t.description) })),
-    mail: { events: mailEvents },
+    mail: { events: mailEvents, whatsappCampaigns: whatsappOutcomes },
     timeline,
   };
 }

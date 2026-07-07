@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '../../../../components/ui/primitives';
 import OrgLogoPicker from '../OrgLogoPicker';
-import { slugifyOrgSlug } from '../../../../constants/orgCreateOptions';
+import { initialsOrgSlug, slugifyOrgSlug } from '../../../../constants/orgCreateOptions';
 
 export default function StepIdentity({ form, setForm, fieldError, setFieldError }) {
   const onNameChange = (e) => {
@@ -9,7 +9,7 @@ export default function StepIdentity({ form, setForm, fieldError, setFieldError 
     setForm((prev) => ({
       ...prev,
       name,
-      slug: prev.slugManual ? prev.slug : slugifyOrgSlug(name),
+      slug: prev.slugManual ? prev.slug : (initialsOrgSlug(name) || slugifyOrgSlug(name)),
     }));
     setFieldError('');
   };

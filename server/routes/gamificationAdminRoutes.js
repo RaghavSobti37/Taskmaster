@@ -25,7 +25,6 @@ const ALLOWED_CONFIG_FIELDS = [
   'leaveApplied',
   'commentCreation',
   'dailyMissionBaseReward',
-  'stepXp',
   'baseXp',
 ];
 
@@ -102,9 +101,9 @@ router.put('/config', protect, gamificationAccess, validateBody(gamificationConf
       if (auditSync.updatedLogs > 0) {
         parts.push(`updated ${auditSync.updatedLogs} audit log entries`);
       }
-      parts.push(`refreshed XP/levels for all ${totalUsers} tenant users`);
+      parts.push(`refreshed XP for all ${totalUsers} tenant users`);
       if (updatedUsers > 0) {
-        parts.push(`${updatedUsers} had total XP or level changes`);
+        parts.push(`${updatedUsers} had total XP changes`);
       }
       message = parts.join('; ');
     }
@@ -152,7 +151,6 @@ router.get('/config/:field', protect, gamificationAccess, async (req, res) => {
 
 router.post('/recalculate-all-levels', protect, gamificationAccess, async (req, res) => {
   try {
-    const config = await GamificationService.getConfig();
     const {
       totalUsers,
       updatedUsers,
@@ -190,12 +188,12 @@ router.post('/recalculate-all-levels', protect, gamificationAccess, async (req, 
       if (auditSync.updatedLogs > 0) {
         parts.push(`updated ${auditSync.updatedLogs} audit log amounts`);
       }
-      parts.push(`refreshed XP/levels for all ${totalUsers} tenant users`);
+      parts.push(`refreshed XP for all ${totalUsers} tenant users`);
       if (updatedUsers > 0) {
-        parts.push(`${updatedUsers} had total XP or level changes`);
+        parts.push(`${updatedUsers} had total XP changes`);
       }
       parts.push('leaderboard and progress history refreshed for all clients');
-      message = `Recalculated using current config (stepXp: ${config.stepXp}) — ${parts.join('; ')}.`;
+      message = `Recalculated using current config — ${parts.join('; ')}.`;
     }
 
     res.json({
@@ -209,12 +207,10 @@ router.post('/recalculate-all-levels', protect, gamificationAccess, async (req, 
       recalculatedAt,
       reviewExploitRepair,
       configRates: effectiveRates,
-      stepXp: config.stepXp,
       weeklyPreview: weeklyPreview?.entries?.map(([userId, weeklyXp]) => ({ userId, weeklyXp })),
       changes: changes.map((c) => ({
         userId: c.userId,
         exp: { from: c.prevExp, to: c.newExp },
-        level: { from: c.prevLevel, to: c.newLevel },
       })),
     });
   } catch (err) {

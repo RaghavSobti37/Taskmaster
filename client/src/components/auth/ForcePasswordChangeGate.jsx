@@ -19,7 +19,7 @@ export default function ForcePasswordChangeGate() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (!user?.mustChangePassword) return null;
+  if (!user?.mustChangePassword || user?.clerkId) return null;
   if (isProfileSettingsPath(location.pathname, location.search)) return null;
 
   return (

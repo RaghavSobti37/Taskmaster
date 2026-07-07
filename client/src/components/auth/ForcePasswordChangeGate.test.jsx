@@ -53,4 +53,13 @@ describe('ForcePasswordChangeGate', () => {
 
     expect(screen.queryByText('Password change required')).not.toBeInTheDocument();
   });
+
+  it('is hidden for Clerk users even when mustChangePassword is true', () => {
+    mockUseAuth.mockReturnValue({
+      user: { mustChangePassword: true, clerkId: 'user_clerk_abc' },
+    });
+    renderGate('/dashboard');
+
+    expect(screen.queryByText('Password change required')).not.toBeInTheDocument();
+  });
 });

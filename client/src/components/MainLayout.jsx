@@ -16,6 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
 import OnboardingTour from './onboarding/OnboardingTour';
+import { stripOrgPrefix } from '../lib/orgPaths';
+import { useActiveOrgSlug } from '../hooks/useOrgPath';
 import { createLazyWithRetry } from '../utils/lazyWithRetry';
 
 const lazyWithRetry = createLazyWithRetry;
@@ -24,7 +26,9 @@ const AttendancePromptModal = lazyWithRetry(() => import('./attendance/Attendanc
 
 function MainRouteSuspenseFallback() {
   const { pathname } = useLocation();
-  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+  const orgSlug = useActiveOrgSlug();
+  const appPath = stripOrgPrefix(pathname, orgSlug);
+  if (appPath === '/dashboard' || appPath.startsWith('/dashboard/')) {
     return <BrandedLoadingPanel />;
   }
   return <RouteContentSkeleton />;
@@ -35,7 +39,6 @@ const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
 const CookieConsentBanner = lazyWithRetry(() => import('./legal/CookieConsentBanner'));
 const NotificationBridge = lazyWithRetry(() => import('./NotificationBridge'));
 const MobileAppShell = lazyWithRetry(() => import('./mobile/MobileAppShell'));
-const ProfileCompletionAlerts = lazyWithRetry(() => import('./ProfileCompletionAlerts'));
 const ForcePasswordChangeGate = lazyWithRetry(() => import('./auth/ForcePasswordChangeGate'));
 const FlashHighlightListener = lazyWithRetry(() => import('./ui/FlashHighlight'));
 const KeyboardShortcutsOverlay = lazyWithRetry(() => import('./KeyboardShortcutsOverlay'));
@@ -111,7 +114,6 @@ const MainLayout = () => {
         >
           <div className="w-full lg:min-h-0">
             <Suspense fallback={null}>
-              <ProfileCompletionAlerts />
               <ForcePasswordChangeGate />
             </Suspense>
             <MobileRouteGuard>

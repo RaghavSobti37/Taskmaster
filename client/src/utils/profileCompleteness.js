@@ -35,7 +35,7 @@ export const getProfileCompletionIssues = (user) => {
     });
   }
 
-  if (user.mustChangePassword) {
+  if (user.mustChangePassword && !user.clerkId) {
     issues.push({
       id: 'password',
       message: 'Change your default password. Contact Raghav if you need help.',

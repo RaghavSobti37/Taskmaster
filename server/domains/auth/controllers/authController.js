@@ -93,6 +93,15 @@ const formatAuthUser = (populated) => attachProfileCompletion(
   populated.toObject ? populated.toObject() : populated
 );
 
+const attachActiveTenantFields = async (payload, activeTenantId) => {
+  const { resolveActiveTenantSlug } = require('../../../services/orgContextService');
+  payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
+  payload.activeTenantSlug = activeTenantId
+    ? await resolveActiveTenantSlug(activeTenantId)
+    : null;
+  return payload;
+};
+
 const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTenantId } = {}) => {
   const { assertLoginAllowed } = require('../../../services/tenantSecurityService');
   try {
@@ -127,6 +136,15 @@ const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTen
     identifyServerUser(userObj);
     capturePostHogEvent(req, 'user_logged_in', { method: authMethod, source: 'server' });
   }
+
+  if (authMethod === 'clerk' && populated.clerkId && populated.mustChangePassword) {
+    populated.mustChangePassword = false;
+    await User.updateOne(
+      { _id: populated._id },
+      { $set: { mustChangePassword: false } },
+    ).setOptions({ bypassTenant: true });
+  }
+
   const payload = formatAuthUser(populated);
   payload.memberships = memberships.map((m) => ({
     id: String(m._id),
@@ -136,7 +154,7 @@ const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTen
       : { _id: m.tenantId },
   }));
   payload.needsTenantSelection = needsTenantSelection;
-  payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
+  await attachActiveTenantFields(payload, activeTenantId);
   return res.json(payload);
 };
 
@@ -416,7 +434,7 @@ exports.getMe = async (req, res) => {
     }
     const payload = attachProfileCompletion(req.user);
     payload.memberships = memberships.map(formatMembershipRow);
-    payload.activeTenantId = activeTenantId ? String(activeTenantId) : null;
+    await attachActiveTenantFields(payload, activeTenantId);
     const orgFirst = require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled();
     payload.needsTenantSelection = orgFirst
       ? memberships.length > 0 && !activeTenantId
@@ -458,9 +476,21 @@ exports.getSession = async (req, res) => {
       const { DEPARTMENT_POPULATE } = require('../../../utils/authUserLookup');
       await req.user.populate('departmentId', DEPARTMENT_POPULATE);
     }
+    let activeTenantId = req.tenantId || null;
+    try {
+      const token = getTokenFromRequest(req);
+      if (token) {
+        const decoded = verifySessionToken(token);
+        activeTenantId = decoded.activeTenantId || activeTenantId;
+      }
+    } catch {
+      /* ignore */
+    }
+    const payload = attachProfileCompletion(req.user);
+    await attachActiveTenantFields(payload, activeTenantId);
     return res.json({
       authenticated: true,
-      user: attachProfileCompletion(req.user),
+      user: payload,
     });
   } catch (error) {
     logger.error('authController', 'getSession failed', { error: error.message || error });

@@ -14,7 +14,7 @@ const isDobMissing = (dateOfBirth) => {
   return Number.isNaN(d.getTime());
 };
 
-const needsPasswordChange = (user) => Boolean(user?.mustChangePassword);
+const needsPasswordChange = (user) => Boolean(user?.mustChangePassword) && !user?.clerkId;
 
 /** Google OAuth-only accounts with no saved password may set one without the OAuth seed. */
 const canSetPasswordWithoutCurrent = (user) => {

@@ -10,6 +10,7 @@ const ROUTE_ALLOWLIST = new Set([
   'attendanceRoutes.js',
   'departmentRoutes.js', // GET /public — resolve tenant by slug before tenant context
   'publicApiRoutes.js', // public API lookups before tenant context
+  'publicFormRoutes.js', // public website form embed — resolve tenant by form key
 ]);
 
 const SERVICE_ALLOWLIST = new Set([

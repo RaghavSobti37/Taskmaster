@@ -29,7 +29,6 @@ const MODEL_LOADERS = [
 const MAIL_EVENT_SCRIPT_INDEXES = [
   { key: { email: 1, timestamp: -1 }, name: 'perf_email_timestamp' },
   { key: { tenantId: 1, timestamp: -1 }, name: 'perf_tenant_timestamp', sparse: true },
-  { key: { eventType: 1, timestamp: 1, senderProfileId: 1 }, name: 'perf_event_timestamp_profile' },
 ];
 
 async function indexExists(collection, name) {

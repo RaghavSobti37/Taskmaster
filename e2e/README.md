@@ -60,6 +60,20 @@ npm run test:e2e:auth-setup
 npm run test:e2e:explore
 ```
 
+## Seeded local users and auth mode
+
+For repeatable local e2e, seed fixture users into the local tenant database:
+
+```powershell
+node server/scripts/seedE2eUsers.js
+```
+
+The seeder resolves the default/platform tenant, runs with tenant context, and writes `.agents/e2e-users.json` for local browser tests. Seeded users use the `e2e-*@test.coreknot.local` email pattern and the default password from `shared/defaultPassword.js`.
+
+`e2e/helpers/auth.js` uses API-session login for seeded `@test.coreknot.local` users. Set `E2E_AUTH_MODE=api` to force that mode. Supplying real `E2E_EMAIL` / `E2E_PASSWORD` still exercises the normal Clerk browser path.
+
+For stable local authenticated e2e, keep one API process on `http://127.0.0.1:5000` and one client process on `http://localhost:5173`. Avoid running multiple nodemon/dev-server chains against the same ports during a test pass.
+
 ## npm scripts
 
 | Script | What |
@@ -76,6 +90,13 @@ npm run test:e2e:explore
 Default config serves built client on `http://127.0.0.1:4173` via `vite preview`. No change needed for existing `*.spec.js` tests.
 
 **Core confidence** (`.github/workflows/ci.yml` job `e2e-core-confidence`): needs local API on `:5000`, seeded `e2e-*@test.coreknot.local` users, and `E2E_PASSWORD` secret (defaults to `1Million#` in spec). Dev login rate limit is skipped only for those seeded emails when `NODE_ENV !== production`.
+
+Known 2026-07-08 follow-ups:
+
+- `npm run test:e2e:core-confidence` is not yet fully green.
+- Protected-route login still needs to return to the original guarded path instead of landing on `/tsc/dashboard`.
+- Password-gate and Artist OS specs need clean rerun evidence after the auth and route-gate fixes.
+- Preview e2e should fail fast when Clerk env is missing instead of surfacing "Clerk is not configured" in the browser.
 
 ## File map
 

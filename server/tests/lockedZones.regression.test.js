@@ -11,6 +11,11 @@ describe('locked zones regression', () => {
     expect(content.length).toBeGreaterThan(50);
   });
 
+  it('locked zone guard script exists', () => {
+    const script = path.join(__dirname, '..', '..', 'scripts', 'check-locked-zones.mjs');
+    expect(fs.existsSync(script)).toBe(true);
+  });
+
   it('resend webhook handler exports remain stable', () => {
     const handler = require('../domains/mail/webhooks/resendWebhookHandler');
     expect(typeof handler.handleApiResendWebhook).toBe('function');

@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { MoreVertical, Database, RefreshCw } from 'lucide-react';
+import { MoreVertical, Database, RefreshCw, Layers } from 'lucide-react';
 import { Button } from '../ui';
 import DataHubTscImport from './DataHubTscImport';
+import DataHubCampaignImport from './DataHubCampaignImport';
 
 export default function DataHubOpsMenu({
   syncLabel,
   onBackup,
   onIncrementalSync,
   onFullReconcile,
+  onRebuildHub,
   onImported,
   backupPending,
   reconcilePending,
+  rebuildHubPending,
   reconcileEnabled,
 }) {
   const [open, setOpen] = useState(false);
@@ -53,14 +56,28 @@ export default function DataHubOpsMenu({
               {backupPending ? 'Backing up…' : 'DB Backup'}
             </Button>
             <div className="w-full" onClick={close}>
+              <DataHubCampaignImport onImported={onImported} compact className="w-full justify-start" />
+            </div>
+            <div className="w-full" onClick={close}>
               <DataHubTscImport onImported={onImported} compact className="w-full justify-start" />
             </div>
             <Button
               variant="secondary"
               size="sm"
               className="w-full justify-start !px-2.5"
+              onClick={() => { onRebuildHub?.(); close(); }}
+              disabled={rebuildHubPending || reconcilePending}
+              title="Sync PersonHubView inlet keys from PersonIndex (after Havells import)"
+            >
+              <Layers size={14} className={rebuildHubPending ? 'animate-pulse' : ''} />
+              {rebuildHubPending ? 'Syncing hub…' : 'Sync hub view'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full justify-start !px-2.5"
               onClick={() => { onIncrementalSync(); close(); }}
-              disabled={!reconcileEnabled || reconcilePending}
+              disabled={!reconcileEnabled || reconcilePending || rebuildHubPending}
               title={reconcileEnabled ? 'Pull new/changed records from all inlets' : 'Disabled in local dev'}
             >
               <RefreshCw size={14} className={reconcilePending ? 'animate-spin' : ''} />
@@ -71,7 +88,7 @@ export default function DataHubOpsMenu({
               size="sm"
               className="w-full justify-start !px-2.5"
               onClick={() => { onFullReconcile(); close(); }}
-              disabled={!reconcileEnabled || reconcilePending}
+              disabled={!reconcileEnabled || reconcilePending || rebuildHubPending}
               title={reconcileEnabled ? 'Full re-merge from all inlets' : 'Disabled in local dev'}
             >
               Full re-merge

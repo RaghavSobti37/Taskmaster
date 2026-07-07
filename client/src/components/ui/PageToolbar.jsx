@@ -51,9 +51,16 @@ export default function PageToolbar({
   onFilterClear,
   toolbarFill = false,
   filtersInPanel = false,
+  filterOpen: controlledFilterOpen,
+  onFilterOpenChange,
+  filterPanelMode = 'overlay',
+  filterApplyLabel = 'Apply',
+  onFilterApply,
 }) {
   const isMobile = useIsMobile();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [internalFilterOpen, setInternalFilterOpen] = useState(false);
+  const sheetOpen = controlledFilterOpen ?? internalFilterOpen;
+  const setSheetOpen = onFilterOpenChange ?? setInternalFilterOpen;
   const [actionsOpen, setActionsOpen] = useState(false);
 
   const usesConfigPanel = Array.isArray(filterFields) && filterFields.length > 0;
@@ -89,16 +96,21 @@ export default function PageToolbar({
     <FilterToolbarButton activeCount={activeFilterCount} onClick={() => setSheetOpen(true)} />
   ) : null;
 
-  const panel = usesConfigPanel ? (
+  const isPushDesktop = filterPanelMode === 'push' && !isMobile;
+  const handleFilterApply = onFilterApply || (() => setSheetOpen(false));
+
+  const panel = usesConfigPanel && !isPushDesktop ? (
     <SelectionFilterPanel
       open={sheetOpen}
       onClose={() => setSheetOpen(false)}
       title={filterSheetTitle}
       fields={filterFields}
-      onApply={() => setSheetOpen(false)}
+      onApply={handleFilterApply}
       onClear={onFilterClear}
+      applyLabel={filterApplyLabel}
+      layout={filterPanelMode}
     />
-  ) : hasLegacyFilters ? (
+  ) : hasLegacyFilters && !isPushDesktop ? (
     <MobileFilterSheet
       open={sheetOpen}
       onClose={() => setSheetOpen(false)}

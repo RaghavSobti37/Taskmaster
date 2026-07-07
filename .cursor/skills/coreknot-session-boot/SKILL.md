@@ -14,10 +14,11 @@ description: >-
 
 Read with Read tool — do not skip:
 
-1. `.specify/memory/INDEX.md`
-2. `.specify/memory/changelog/recent-changes.md` — newest 3 blocks minimum
-3. `.specify/memory/changelog/session-patterns.md`
-4. `.specify/memory/MEMORY_PROTOCOL.md` — if first time or memory workflow unclear
+1. `memory/obsidian/INDEX.md` (canonical; TSC Platform `memory/obsidian/`)
+2. `memory/obsidian/RecentChanges.md` — newest 3 blocks minimum
+3. `memory/obsidian/ReportExploration.md` — before report/architecture edits
+4. `memory/obsidian/LockedZones.md`
+5. `.specify/memory/INDEX.md` — compatibility stub only
 
 Optional:
 
@@ -27,10 +28,10 @@ npm run memory:report
 
 ## Phase 1 — Conventions + task context
 
-5. `.specify/memory/operations/conventions.md` — locked zones, audits
-6. `.cursor/production-hosts.local.json` — if hosts/env involved (never guess URLs)
-7. Component memory from [git-push/memory-map.md](../git-push/memory-map.md) for your slice
-8. Task doc from `docs/DOCUMENTATION_INDEX.md` or `docs/reference/COREKNOT_MASTER.md`
+6. `.specify/memory/operations/conventions.md` — locked zones, audits (legacy detail)
+7. `.cursor/production-hosts.local.json` — if hosts/env involved (never guess URLs)
+8. Component memory from [git-push/memory-map.md](../git-push/memory-map.md) for your slice
+9. Task doc from `docs/DOCUMENTATION_INDEX.md` or `docs/reference/COREKNOT_MASTER.md`
 
 ## Phase 2 — Locked zones (if touching)
 

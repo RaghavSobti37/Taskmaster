@@ -3,7 +3,7 @@ const PersonIdentityService = require('../../../services/PersonIdentityService')
 const { getAdapter } = require('../adapters/adapterRegistry');
 const { unpackCredentials } = require('./integrationCredentialService');
 const { emitTenantEvent } = require('../../../services/enterpriseWebhook');
-const { createLead } = require('../../crm/services/leadWriteService');
+const { createLead, createLeadFromForm } = require('../../crm/services/leadWriteService');
 const User = require('../../../models/User');
 const TenantIntegration = require('../models/TenantIntegration');
 const logger = require('../../../utils/logger');
@@ -133,6 +133,87 @@ async function pushLeadToHubspot(integrationDoc, lead) {
   });
 }
 
+async function syncGoogleSheets(integrationDoc) {
+  const adapter = getAdapter('google_sheets');
+  const credentials = unpackCredentials(integrationDoc.credentialsEncrypted);
+  const spreadsheetId = adapter.parseSpreadsheetId(integrationDoc.metadata?.spreadsheetId)
+    || adapter.parseSpreadsheetId(integrationDoc.metadata?.spreadsheetUrl);
+  const sheetName = integrationDoc.metadata?.sheetName || 'Sheet1';
+  const columnMap = integrationDoc.metadata?.columnMap || {};
+
+  if (!spreadsheetId) {
+    return { processed: 0, message: 'Configure spreadsheet ID in integration settings' };
+  }
+
+  const systemUser = await User.findOne({ tenantId: integrationDoc.tenantId })
+    .setOptions({ bypassTenant: true })
+    .sort({ createdAt: 1 });
+  if (!systemUser) {
+    return { processed: 0, message: 'No tenant user for CRM import' };
+  }
+
+  const rows = await adapter.readRows(
+    credentials,
+    spreadsheetId,
+    `'${String(sheetName).replace(/'/g, "''")}'!A:Z`,
+  );
+  if (!rows.length) {
+    return { processed: 0, message: 'Sheet is empty' };
+  }
+
+  const headers = rows[0].map((h) => String(h || '').trim().toLowerCase());
+  const resolveCol = (key) => {
+    const mapped = columnMap[key];
+    if (mapped) {
+      const letter = String(mapped).toUpperCase();
+      const idx = letter.charCodeAt(0) - 65;
+      if (idx >= 0 && idx < 26) return idx;
+      const headerIdx = headers.indexOf(String(mapped).toLowerCase());
+      if (headerIdx >= 0) return headerIdx;
+    }
+    const defaults = { name: 'name', email: 'email', phone: 'phone' };
+    const headerIdx = headers.indexOf(defaults[key]);
+    return headerIdx >= 0 ? headerIdx : -1;
+  };
+
+  const nameIdx = resolveCol('name');
+  const emailIdx = resolveCol('email');
+  const phoneIdx = resolveCol('phone');
+
+  let processed = 0;
+  for (let i = 1; i < rows.length && processed < 2000; i += 1) {
+    const row = rows[i] || [];
+    const email = emailIdx >= 0 ? String(row[emailIdx] || '').trim() : '';
+    const phone = phoneIdx >= 0 ? String(row[phoneIdx] || '').trim() : '';
+    const name = nameIdx >= 0 ? String(row[nameIdx] || '').trim() : '';
+    if (!email && !phone) continue;
+
+    await createLeadFromForm(systemUser, {
+      name: name || email || phone || 'Sheet Contact',
+      email: email || undefined,
+      phone: phone || undefined,
+      source: 'Google Sheets',
+      leadStatus: 'New',
+      crmType: 'standard',
+    });
+    processed += 1;
+  }
+
+  integrationDoc.lastSyncAt = new Date();
+  integrationDoc.metadata = {
+    ...integrationDoc.metadata,
+    spreadsheetId,
+    sheetName,
+    lastSyncCount: processed,
+  };
+  await integrationDoc.save();
+  emitTenantEvent(integrationDoc.tenantId, 'integration.sync.completed', {
+    provider: 'google_sheets',
+    recordsProcessed: processed,
+  });
+  return { processed, spreadsheetId, sheetName };
+}
+
 async function runSync({ integrationId, tenantId }) {
   const doc = await TenantIntegration.findOne({ _id: integrationId, tenantId, status: 'connected' })
     .select('+credentialsEncrypted')
@@ -144,6 +225,7 @@ async function runSync({ integrationId, tenantId }) {
   }
   if (doc.provider === 'mailchimp') return syncMailchimp(doc);
   if (doc.provider === 'hubspot') return syncHubspot(doc);
+  if (doc.provider === 'google_sheets') return syncGoogleSheets(doc);
   const err = new Error(`Sync not supported for ${doc.provider}`);
   err.status = 400;
   throw err;
@@ -152,6 +234,7 @@ async function runSync({ integrationId, tenantId }) {
 module.exports = {
   syncMailchimp,
   syncHubspot,
+  syncGoogleSheets,
   pushLeadToHubspot,
   runSync,
 };

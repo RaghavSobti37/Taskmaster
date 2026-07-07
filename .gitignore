@@ -13,7 +13,11 @@ server/data/*.csv
 .cursor/cloudflare-api.local.env
 .cursor/git-promotion.json
 .cursor/multiagent/*-ledger.json
+.cursor/agent_memory.json
+.cursor/loop-engineering/*-ledger.json
+.cursor/healing-loop/artifacts/
 .local/
+.data/
 !.env.example
 !.env.*.example
 server/.env

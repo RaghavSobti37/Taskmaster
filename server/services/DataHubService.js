@@ -15,6 +15,7 @@ const {
   getSyncState: fetchSyncState,
 } = require('../domains/data-hub/syncService');
 const { repairDuplicateInlets } = require('../domains/data-hub/repairService');
+const PersonHubBuilder = require('./PersonHubBuilder');
 
 class DataHubService {
   async reconcilePerson(email, phone) {
@@ -75,6 +76,25 @@ class DataHubService {
   clearFolderCache() {
     clearFolderCacheState();
     resetHubModelCache();
+  }
+
+  async rebuildPersonHubFromIndex({ mode = 'sync', filter = null } = {}) {
+    if (mode === 'full') {
+      try {
+        const result = await PersonHubBuilder.rebuildFromPersonIndex({ embedded: true, filter });
+        this.clearFolderCache();
+        return { mode: 'full', ...result };
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        const syncResult = await PersonHubBuilder.syncInletKeysFromPersonIndex({ filter });
+        this.clearFolderCache();
+        return { mode: 'inlet_sync', fallbackReason: error.message, ...syncResult };
+      }
+    }
+
+    const syncResult = await PersonHubBuilder.syncInletKeysFromPersonIndex({ filter });
+    this.clearFolderCache();
+    return { mode: 'inlet_sync', ...syncResult };
   }
 }
 

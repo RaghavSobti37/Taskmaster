@@ -3,7 +3,10 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Target } from 'lucide-react';
 import { Button, Input } from '../ui';
-import { getCrmDigestSegmentForProject, CRM_DIGEST_PLAN_OPTIONS } from '@shared/crmDigestProjects';
+import {
+  getCrmDigestSegmentForProject,
+  CRM_DIGEST_PLAN_OPTIONS,
+} from '../../utils/crmDigestProjectsClient';
 
 function buildDraft(crmDigest = {}) {
   return {

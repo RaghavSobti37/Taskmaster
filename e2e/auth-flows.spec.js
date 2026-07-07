@@ -31,7 +31,7 @@ test.describe('authenticated flows', () => {
     const titleInput = page.getByPlaceholder('Note title');
     await titleInput.fill(`E2E unsaved ${Date.now()}`);
     await expect(page.getByText(/careful — you have unsaved changes/i)).toBeVisible();
-    await page.getByRole('button', { name: /^cancel$/i }).click();
+    await page.getByRole('button', { name: /^(cancel|discard)$/i }).click();
     await expect(titleInput).toHaveValue('');
   });
 

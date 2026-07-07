@@ -12,7 +12,7 @@ const root = path.join(__dirname, '..');
 const pagesDir = path.join(root, 'client/src/pages');
 
 function walk(dir, files = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, files);
     else if (/\.(jsx|js|tsx|ts)$/.test(e.name)) files.push(p);
@@ -95,7 +95,6 @@ const ROUTE_MAP = {
   'pages/admin/AdminGamification.jsx': ['/admin/gamification'],
   'pages/admin/OpsHubPage.jsx': ['/admin/ops-hub'],
   'pages/admin/AdminProjectAnalyticsPage.jsx': ['/admin/project-analytics'],
-  'pages/admin/KnowledgeEnginePage.jsx': ['/admin/knowledge-engine'],
   'pages/admin/SecurityAuditPage.jsx': ['/admin/security-audit'],
   'pages/admin/AdminTenantSsoPage.jsx': ['/admin/tenant-sso'],
   'pages/admin/DataHubPage.jsx': ['(AdminCRM tab)'],

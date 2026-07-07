@@ -23,7 +23,7 @@ Static audit covering code, docs, config, and API contracts for `coreknot/Taskma
 | Area | Reason |
 | --- | --- |
 | Workflow canvas backend | Product stub remains outside this reconciliation. |
-| Knowledge Engine placeholder ranks | Requires product/data decision, not a contract mismatch-only patch. |
+| Knowledge Engine placeholder ranks | **Resolved:** KE removed from CoreKnot 2026-07-07 — see `docs/operations/KNOWLEDGE_ENGINE_REMOVAL.md`. |
 | Artist integrations marked coming soon | Tests currently encode 501/stub behavior; feature build is separate. |
 | Tenant security remaining work | Tracked in `docs/architecture/TENANT_SECURITY_PHASE.md` and production readiness docs. |
 | Public enterprise sales docs (DPA/SOC2 stubs) | Tracked as enterprise readiness follow-up. |

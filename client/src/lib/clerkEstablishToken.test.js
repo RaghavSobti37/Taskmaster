@@ -13,7 +13,7 @@ describe('fetchClerkEstablishToken', () => {
       activeOrgId: null,
     });
 
-    expect(result).toEqual({ ok: true, token: 'jwt_session' });
+    expect(result).toEqual({ ok: true, token: 'jwt_session', organizationId: null });
     expect(setActive).not.toHaveBeenCalled();
     expect(getToken).toHaveBeenCalledWith();
   });
@@ -30,7 +30,23 @@ describe('fetchClerkEstablishToken', () => {
     });
 
     expect(setActive).toHaveBeenCalledWith({ organization: 'org_abc' });
-    expect(result).toEqual({ ok: true, token: 'jwt_org' });
+    expect(result).toEqual({ ok: true, token: 'jwt_org', organizationId: 'org_abc' });
+  });
+
+  it('prefers active org over pinned env for org-scoped token', async () => {
+    const getToken = vi.fn(async (opts) => (opts?.organizationId === 'org_active' ? 'jwt_active' : null));
+    const setActive = vi.fn();
+
+    const result = await fetchClerkEstablishToken({
+      getToken,
+      setActive,
+      pinnedOrgId: 'org_pinned',
+      activeOrgId: 'org_active',
+    });
+
+    expect(setActive).not.toHaveBeenCalled();
+    expect(getToken).toHaveBeenCalledWith({ organizationId: 'org_active' });
+    expect(result).toEqual({ ok: true, token: 'jwt_active', organizationId: 'org_active' });
   });
 
   it('falls back to user token when org-scoped token is unavailable', async () => {
@@ -44,7 +60,7 @@ describe('fetchClerkEstablishToken', () => {
       activeOrgId: 'org_abc',
     });
 
-    expect(result).toEqual({ ok: true, token: 'jwt_user' });
+    expect(result).toEqual({ ok: true, token: 'jwt_user', organizationId: 'org_abc' });
     expect(setActive).not.toHaveBeenCalled();
   });
 
@@ -76,7 +92,7 @@ describe('fetchClerkEstablishToken', () => {
     });
 
     expect(setActive).toHaveBeenCalledWith({ organization: 'org_bad' });
-    expect(result).toEqual({ ok: true, token: 'jwt_user' });
+    expect(result).toEqual({ ok: true, token: 'jwt_user', organizationId: 'org_bad' });
   });
 
   it('skips client org activation and org-scoped token when org scope is disabled', async () => {
@@ -93,7 +109,7 @@ describe('fetchClerkEstablishToken', () => {
 
     expect(setActive).not.toHaveBeenCalled();
     expect(getToken).toHaveBeenCalledWith();
-    expect(result).toEqual({ ok: true, token: 'jwt_user' });
+    expect(result).toEqual({ ok: true, token: 'jwt_user', organizationId: null });
   });
 
   it('marks Clerk token 401s as non-retryable so callers can clear stale sessions', async () => {

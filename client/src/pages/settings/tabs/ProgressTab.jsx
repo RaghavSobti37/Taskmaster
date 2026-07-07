@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Target, Activity, RefreshCw } from 'lucide-react';
+import { Activity, RefreshCw } from 'lucide-react';
 import { Badge, Button, Spinner } from '../../../components/ui';
 import { formatDisplayDateTime } from '../../../utils/dateDisplay';
 import {
@@ -7,7 +7,6 @@ import {
   useGamificationHistory,
   useGamificationMissions,
 } from '../../../hooks/useTaskmasterQueries';
-import { motion } from 'framer-motion';
 
 const formatTimestamp = (value) => formatDisplayDateTime(value);
 
@@ -19,15 +18,8 @@ export default function ProgressTab() {
   const { data: historyData, isLoading: historyLoading } = useGamificationHistory(page, limit, true);
   const { data: missions = [], isLoading: missionsLoading } = useGamificationMissions(true);
 
-  const level = progress?.level || 1;
   const exp = progress?.exp || 0;
-  const currentLevelExp = progress?.currentLevelExp ?? 0;
-  const nextLevelExp = progress?.nextLevelExp ?? currentLevelExp + (progress?.stepXp || 100);
-  const progressPercent = useMemo(() => {
-    const span = nextLevelExp - currentLevelExp;
-    if (span <= 0) return 0;
-    return Math.min(100, Math.max(0, ((exp - currentLevelExp) / span) * 100));
-  }, [exp, currentLevelExp, nextLevelExp]);
+  const totalXp = useMemo(() => Number(exp) || 0, [exp]);
 
   const logsList = historyData?.logs || [];
   const totalLogs = historyData?.total || 0;
@@ -40,7 +32,7 @@ export default function ProgressTab() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Progress & XP</h1>
         </div>
-        <Badge variant="warning" className="px-3 py-1.5 text-sm tabular-nums">Level {level}</Badge>
+        <Badge variant="warning" className="px-3 py-1.5 text-sm tabular-nums">Total XP {totalXp}</Badge>
       </div>
 
       {showRecalcNotice && (
@@ -59,56 +51,28 @@ export default function ProgressTab() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-8 border-b border-[var(--color-bg-border)]">
-        <div className="md:col-span-2 flex flex-col justify-center">
-          <div className="mb-5">
-            <h3 className="tm-widget-label">Current Journey</h3>
-            <div className="mt-1.5 text-xs tm-data-meta">
-              {progressLoading ? (
-                <div className="mt-1.5 flex justify-start"><Spinner size="sm" /></div>
-              ) : (
-                `You are ${progressPercent.toFixed(1)}% through Level ${level}`
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest shrink-0 tabular-nums">
-                Lvl {level}
-              </span>
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest shrink-0 tabular-nums">
-                Lvl {level + 1}
-              </span>
-            </div>
-
-            <div className="w-full h-4 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden border border-[var(--color-bg-border)] relative">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 1.5, ease: 'easeOut' }}
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-400 to-amber-600"
-              />
-            </div>
-
-            <p className="pt-1 text-[10px] font-bold text-[var(--color-text-muted)] text-center uppercase tracking-widest tabular-nums">
-              {exp} / {nextLevelExp} XP
-            </p>
-          </div>
+        <div className="md:col-span-2 flex flex-col justify-center gap-2">
+          <h3 className="tm-widget-label">XP Summary</h3>
+          {progressLoading ? (
+            <div className="mt-1.5 flex justify-start"><Spinner size="sm" /></div>
+          ) : (
+            <>
+              <p className="text-3xl font-black text-amber-500 tabular-nums">{totalXp} XP</p>
+              <p className="text-xs tm-data-meta">XP updates from task completion, logs, and mission rewards.</p>
+            </>
+          )}
         </div>
 
         <div className="flex flex-col items-center justify-center text-center space-y-3 py-4 border border-amber-500/20 rounded-[var(--radius-atomic)] bg-gradient-to-br from-amber-500/10 to-transparent">
-          <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
-            <Target size={28} className="text-amber-500" />
-          </div>
-          <h3 className="text-lg font-black text-[var(--color-text-primary)]">Keep going!</h3>
-          <p className="text-xs text-[var(--color-text-secondary)]">Complete tasks, log time, and finish daily missions to rank up.</p>
+          <h3 className="text-lg font-black text-[var(--color-text-primary)]">Monthly standings</h3>
+          <p className="text-xs text-[var(--color-text-secondary)]">Leaderboard rank is based on XP earned during the selected month.</p>
         </div>
       </div>
 
       <section className="pb-8 border-b border-[var(--color-bg-border)]">
         <div className="pb-4 border-b border-[var(--color-bg-border)]">
           <h3 className="tm-widget-label flex items-center gap-2">
-            <Target size={14} className="text-emerald-500" /> Daily Missions
+            <Activity size={14} className="text-emerald-500" /> Daily Missions
           </h3>
         </div>
         <div className="divide-y divide-[var(--color-bg-border)]">

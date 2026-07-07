@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import ChartSurface from './ChartSurface';
+import HorizontalBarList from './HorizontalBarList';
 import { BklitCategoryBarChart, BklitBreakdownBars, ChartEmptyState } from '../charts/bklitInsightsCharts';
 
 const DataMiniChart = React.memo(function DataMiniChart({
@@ -9,6 +10,7 @@ const DataMiniChart = React.memo(function DataMiniChart({
   height = 112,
   className = '',
   loading = false,
+  emptyLabel = 'No data yet',
 }) {
   const series = useMemo(
     () => (data || []).filter((d) => d && Number(d.value) > 0),
@@ -23,7 +25,7 @@ const DataMiniChart = React.memo(function DataMiniChart({
         <ChartEmptyState
           height={height}
           aspectRatio={false}
-          label="No location data yet — opens and clicks from real devices will populate city geo."
+          label={emptyLabel}
         />
       </ChartSurface>
     );
@@ -31,9 +33,11 @@ const DataMiniChart = React.memo(function DataMiniChart({
 
   return (
     <ChartSurface title={title} className={shellClass} height={height}>
-      {type === 'donut' ? (
+      {type === 'horizontalBar' ? (
+        <HorizontalBarList items={series} className="pt-0.5" />
+      ) : type === 'donut' ? (
         <BklitBreakdownBars
-          emptyLabel="No location data yet"
+          emptyLabel={emptyLabel}
           fillHeight
           height={height}
           items={series}
@@ -42,7 +46,7 @@ const DataMiniChart = React.memo(function DataMiniChart({
         />
       ) : (
         <BklitCategoryBarChart
-          emptyLabel="No location data yet"
+          emptyLabel={emptyLabel}
           fill="var(--color-action-primary)"
           fillHeight
           height={height}

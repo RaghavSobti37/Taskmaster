@@ -24,6 +24,11 @@ const SOURCE_TYPE_MAP = {
   mailer: 'mail',
   enquiries: 'enquiry',
   enquiry: 'enquiry',
+  havells_registered: 'havells_registered',
+  havells_selected: 'havells_selected',
+  havells_attended_delhi: 'havells_attended_delhi',
+  havells_attended_indore: 'havells_attended_indore',
+  havells_attended_dumka: 'havells_attended_dumka',
 };
 
 class PersonIdentityService {

@@ -7,7 +7,7 @@ const args = process.argv.slice(2).filter((arg) => arg !== '--run');
 
 const result = spawnSync(
   process.execPath,
-  ['--experimental-vm-modules', jestBin, ...args],
+  ['--max-old-space-size=8192', '--experimental-vm-modules', jestBin, ...args],
   { stdio: 'inherit', cwd: path.join(__dirname, '..') },
 );
 

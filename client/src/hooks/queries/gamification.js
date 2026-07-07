@@ -6,18 +6,29 @@ const normalizeLeaderboardResponse = (raw) => {
   return { entries: raw?.entries || [], meta: raw?.meta || null };
 };
 
-export const useLeaderboard = (enabled = true) => useQuery({
-  queryKey: ['gamification', 'leaderboard'],
-  queryFn: async () => normalizeLeaderboardResponse((await axios.get('/api/gamification/leaderboard')).data),
+export const useLeaderboard = (monthStartKey, enabled = true) => useQuery({
+  queryKey: ['gamification', 'leaderboard', monthStartKey || 'current'],
+  queryFn: async () =>
+    normalizeLeaderboardResponse(
+      (await axios.get('/api/gamification/leaderboard', { params: monthStartKey ? { monthStartKey } : {} })).data
+    ),
   enabled,
   staleTime: 1000 * 60,
 });
 
-export const useLeaderboardBreakdown = (userId, enabled = true) => useQuery({
-  queryKey: ['gamification', 'leaderboard', 'breakdown', userId],
-  queryFn: async () => (await axios.get(`/api/gamification/leaderboard/${userId}/breakdown`)).data,
+export const useLeaderboardBreakdown = (userId, monthStartKey, enabled = true) => useQuery({
+  queryKey: ['gamification', 'leaderboard', 'breakdown', userId, monthStartKey || 'current'],
+  queryFn: async () =>
+    (await axios.get(`/api/gamification/leaderboard/${userId}/breakdown`, { params: monthStartKey ? { monthStartKey } : {} })).data,
   enabled: enabled && !!userId,
   staleTime: 1000 * 30,
+});
+
+export const useLeaderboardHistory = (limit = 12, enabled = true) => useQuery({
+  queryKey: ['gamification', 'leaderboard', 'history', limit],
+  queryFn: async () => (await axios.get('/api/gamification/leaderboard/history', { params: { limit } })).data,
+  enabled,
+  staleTime: 1000 * 60,
 });
 
 export const useGamificationProgress = (enabled = true) => useQuery({

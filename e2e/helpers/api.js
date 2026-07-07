@@ -131,7 +131,21 @@ export async function trySeededPasswordGateUser(api, email, password) {
 }
 
 /**
- * Idempotent password-gate fixture: reuse seeded user or recreate via dept-admin API.
+ * @param {import('@playwright/test').APIRequestContext} api
+ * @param {string} userId
+ * @param {string} tempPassword
+ */
+export async function resetPasswordGateUser(api, userId, tempPassword) {
+  const res = await api.put(`${getApiBase()}/api/users/${userId}`, {
+    data: { newPassword: tempPassword, forcePasswordChange: true },
+  });
+  if (!res.ok()) {
+    const body = await res.text();
+    throw new Error(`resetPasswordGateUser failed (${res.status()}): ${body}`);
+  }
+}
+
+/**
  * Avoids hammering production E2E_EMAIL; prefers seedE2eUsers pw-gate account when ready.
  * @param {import('@playwright/test').APIRequestContext} [existingApi]
  * @returns {Promise<{ email: string, password: string, userId: string | null }>}
@@ -160,7 +174,8 @@ export async function ensurePasswordGateUser(existingApi) {
 
     const existingId = await findUserIdByEmail(api, gateEmail);
     if (existingId) {
-      await deleteUserById(api, existingId);
+      await resetPasswordGateUser(api, existingId, gateTempPassword);
+      return { email: gateEmail, password: gateTempPassword, userId: existingId };
     }
 
     return await createPasswordGateUser(api, { email: gateEmail });

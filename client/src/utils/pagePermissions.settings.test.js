@@ -15,4 +15,14 @@ describe('hasPageAccess — settings', () => {
   it('denies settings when user is missing', () => {
     expect(hasPageAccess(null, 'settings')).toBe(false);
   });
+
+  it('does not grant emails access unless explicitly permitted', () => {
+    const user = {
+      _id: 'u1',
+      pagePermissions: ['dashboard', 'todo'],
+      departmentId: { slug: 'sales', permissionPreset: 'sales' },
+    };
+
+    expect(hasPageAccess(user, 'emails')).toBe(false);
+  });
 });

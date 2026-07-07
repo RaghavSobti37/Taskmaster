@@ -40,7 +40,17 @@ const { assertEstablishAllowed } = require('../utils/establishAccess');
 const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
 const asyncHandler = require('../../../middleware/asyncHandler');
 
-const blockLegacyAuth = (res) => {
+const isDevE2ePasswordLogin = (req) =>
+  process.env.NODE_ENV !== 'production'
+  && req?.method === 'POST'
+  && isE2eTestUser(req.body?.email);
+
+const blockLegacyAuth = (reqOrRes, maybeRes) => {
+  const req = maybeRes ? reqOrRes : null;
+  const res = maybeRes || reqOrRes;
+  if (isDevE2ePasswordLogin(req)) {
+    return false;
+  }
   if (isClerkProductionAuth()) {
     respondClerkOnlyAuth(res);
     return true;
@@ -112,9 +122,13 @@ const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTen
 
   const {
     backfillMembershipFromUser,
+    ensureMembershipForTenant,
     listActiveMemberships,
     resolveInitialActiveTenantId,
   } = require('../../../services/tenantMembershipService');
+  if (clerkActiveTenantId) {
+    await ensureMembershipForTenant(populated._id, clerkActiveTenantId);
+  }
   await backfillMembershipFromUser(populated);
   const memberships = await listActiveMemberships(populated._id);
   const orgFirst = require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled();
@@ -186,7 +200,7 @@ const resolveSignupDepartment = async (departmentId) => {
 };
 
 exports.register = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(null, res)) return;
   try {
     const { name, email, password, gender, departmentId } = req.body;
 
@@ -255,7 +269,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(req, res)) return;
   try {
     const { email, password } = req.body;
 
@@ -341,7 +355,7 @@ exports.login = async (req, res) => {
 };
 
 exports.googleLogin = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(null, res)) return;
   try {
     const { tokenId } = req.body;
     const ticket = await oauth2Client.verifyIdToken({
@@ -687,7 +701,7 @@ exports.googleAuthCallback = async (req, res) => {
 };
 
 exports.oauthEstablishSession = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(null, res)) return;
   try {
     const { ticket } = req.body;
     if (typeof ticket !== 'string' || !ticket.trim()) {
@@ -990,7 +1004,7 @@ exports.requestAccess = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(null, res)) return;
   try {
     const { email } = req.body;
 
@@ -1044,7 +1058,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-  if (blockLegacyAuth(res)) return;
+  if (blockLegacyAuth(null, res)) return;
   try {
     const { token, newPassword, confirmPassword } = req.body;
 

@@ -27,7 +27,6 @@ const gamificationConfigSchema = new mongoose.Schema(
     commentCreation: { type: Number, default: 0 },
 
     dailyMissionBaseReward: { type: Number, default: DEFAULT_XP.dailyMissionBaseReward },
-    stepXp: { type: Number, default: DEFAULT_XP.stepXp },
     baseXp: { type: Number, default: DEFAULT_XP.baseXp },
 
     updatedAt: { type: Date, default: Date.now },

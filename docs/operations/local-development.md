@@ -129,6 +129,17 @@ This command creates sample users and demo data.
 /docs     — Project memory and architecture notes
 ```
 
+## Demo Connected Apps + Website Forms
+
+When Settings → Connected Apps or Developers looks empty without a prod sync:
+
+```bash
+npm run seed:local-integrations-demo
+node server/scripts/verifyLocalDevDemoSeed.js
+```
+
+Full runbook: [LOCAL_DEV_DEMO_DATA.md](./LOCAL_DEV_DEMO_DATA.md).
+
 ## Troubleshooting
 
 | Problem | Fix |

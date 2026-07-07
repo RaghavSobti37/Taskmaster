@@ -2,6 +2,7 @@ const { escapeRegExp } = require('../person/identity');
 const { buildDataHubExcludeFilter } = require('../../services/qa/qaTestData');
 const {
   DATA_INLETS,
+  INLET_KEYS,
   isBookedCallSource,
   dedupeInletEntries,
 } = require('../../../shared/dataInlets');
@@ -163,7 +164,35 @@ const buildFolderQuery = (folder, extra = {}) => {
     case 'loyal':
       q.isMultiInlet = true;
       break;
+    case 'event_artist':
+      q.$or = [
+        { inCRM: true },
+        { inArtistPath: true },
+        { inArtistCrm: true },
+        { inBookedCalls: true },
+        { inEnquiries: true },
+      ];
+      break;
+    case 'media':
+      q.$or = [
+        { inMailer: true },
+        { 'inlets.key': { $in: ['mailchimp', 'hubspot', 'media_pr', 'media_journalist', 'media_influencer'] } },
+        { inletKeys: { $in: ['mail', 'mailchimp', 'hubspot', 'media_pr', 'media_journalist', 'media_influencer'] } },
+      ];
+      break;
+    case 'academy_students':
+      q.$or = [
+        { 'inlets.key': 'academy_students' },
+        { inletKeys: 'academy_students' },
+      ];
+      break;
     default:
+      if (INLET_KEYS.includes(folder)) {
+        q.$or = [
+          { 'inlets.key': folder },
+          { inletKeys: folder },
+        ];
+      }
       break;
   }
   q.$and = q.$and || [];

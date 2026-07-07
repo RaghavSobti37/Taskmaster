@@ -1,8 +1,10 @@
 const Team = require('../models/Team');
 const { getCache, setCache, deleteCache } = require('../services/cacheService');
 
-const TEAMS_CACHE_KEY = 'teams:list:v1';
+const TEAMS_CACHE_KEY_PREFIX = 'teams:list:v1';
 const TEAMS_CACHE_TTL_SECONDS = 300;
+
+const teamsCacheKey = (tenantId) => `${TEAMS_CACHE_KEY_PREFIX}:${tenantId || 'none'}`;
 
 const DEFAULT_TEAMS = [
   { name: 'EDITING', color: '#ef4444' },
@@ -36,18 +38,20 @@ const ensureDefaultTeams = async () => {
   defaultsEnsured = true;
 };
 
-const invalidateTeamsCache = () => deleteCache(TEAMS_CACHE_KEY);
+const invalidateTeamsCache = (tenantId) => deleteCache(teamsCacheKey(tenantId));
 
 exports.getTeams = async (req, res) => {
   try {
-    const cached = await getCache(TEAMS_CACHE_KEY);
+    const tenantId = String(req.tenantId || req.user?.activeTenantId || req.user?.tenantId || '');
+    const cacheKey = teamsCacheKey(tenantId);
+    const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
     }
 
     await ensureDefaultTeams();
     const teams = await Team.find().sort({ name: 1 }).lean();
-    await setCache(TEAMS_CACHE_KEY, teams, TEAMS_CACHE_TTL_SECONDS);
+    await setCache(cacheKey, teams, TEAMS_CACHE_TTL_SECONDS);
     res.json(teams);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -63,7 +67,7 @@ exports.createTeam = async (req, res) => {
       color,
       createdBy: req.user._id,
     });
-    await invalidateTeamsCache();
+    await invalidateTeamsCache(req.tenantId || req.user?.activeTenantId || req.user?.tenantId);
     res.status(201).json(team);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -73,7 +77,7 @@ exports.createTeam = async (req, res) => {
 exports.deleteTeam = async (req, res) => {
   try {
     await Team.findByIdAndDelete(req.params.id);
-    await invalidateTeamsCache();
+    await invalidateTeamsCache(req.tenantId || req.user?.activeTenantId || req.user?.tenantId);
     res.json({ message: 'Team decommissioned' });
   } catch (err) {
     res.status(500).json({ error: err.message });

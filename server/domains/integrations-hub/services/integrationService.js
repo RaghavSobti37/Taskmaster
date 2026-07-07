@@ -15,7 +15,6 @@ const webhookInAdapter = require('../adapters/webhookInAdapter');
 
 async function markIntegrationsOnboardingStep(tenantId) {
   try {
-    const Tenant = require('../../../models/Tenant');
     const tenant = await Tenant.findById(tenantId).setOptions({ bypassTenant: true });
     if (!tenant) return;
     tenant.onboardingProgress = tenant.onboardingProgress || { completedSteps: [] };
@@ -28,6 +27,34 @@ async function markIntegrationsOnboardingStep(tenantId) {
   } catch {
     // non-blocking
   }
+}
+
+function resolvePlanLock(plan, providerConfig) {
+  if (providerConfig.planMin === 'enterprise' && plan !== 'enterprise') {
+    return { locked: true, reason: 'Enterprise plan required' };
+  }
+  if (providerConfig.planMin === 'pro' && !['pro', 'enterprise'].includes(plan)) {
+    return { locked: true, reason: 'Pro plan or higher required' };
+  }
+  if (providerConfig.featureUnlock && !planAllowsFeature(plan, providerConfig.featureUnlock)) {
+    return { locked: true, reason: `${providerConfig.featureUnlock} feature not on your plan` };
+  }
+  return { locked: false, reason: null };
+}
+
+function resolveServerOAuthReady(providerConfig) {
+  if (providerConfig.authType !== 'oauth2') {
+    return { ready: true, message: null };
+  }
+  const adapter = getAdapter(providerConfig.id);
+  const { clientId } = adapter?.getClientCreds?.() || {};
+  if (!clientId) {
+    return {
+      ready: false,
+      message: 'Google OAuth is not configured on this server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).',
+    };
+  }
+  return { ready: true, message: null };
 }
 
 function serializeConnection(doc) {
@@ -76,16 +103,29 @@ async function assertPlanForProvider(tenantId, providerConfig) {
 }
 
 async function listProvidersWithStatus(tenantId) {
+  const tenant = await Tenant.findById(tenantId).select('plan').setOptions({ bypassTenant: true });
+  const plan = tenant?.plan || 'free';
   const connections = await TenantIntegration.find({ tenantId })
     .setOptions({ bypassTenant: true })
     .lean();
   const byProvider = new Map(connections.map((c) => [c.provider, c]));
   return INTEGRATION_PROVIDERS.map((p) => {
     const conn = byProvider.get(p.id);
+    const planLock = resolvePlanLock(plan, p);
+    const oauth = resolveServerOAuthReady(p);
+    const canConnect = !planLock.locked && oauth.ready;
+    let connectBlockReason = null;
+    if (planLock.locked) connectBlockReason = planLock.reason;
+    else if (!oauth.ready) connectBlockReason = oauth.message;
     return {
       ...p,
       connection: conn ? serializeConnection(conn) : null,
       connected: conn?.status === 'connected',
+      planLocked: planLock.locked,
+      planLockReason: planLock.reason,
+      serverOAuthReady: oauth.ready,
+      canConnect,
+      connectBlockReason,
     };
   });
 }
@@ -225,12 +265,30 @@ async function connectWithApiKey({ tenantId, provider, apiKey, userId, req, labe
     throw err;
   }
   const credentials = await adapter.handleApiKeyConnect({ apiKey });
+  let metadata = {};
+  let setup = null;
+  if (provider === 'aisensy') {
+    const Tenant = require('../../../models/Tenant');
+    const { webhookUrl } = require('./aisensyIntegrationService');
+    const tenant = await Tenant.findById(tenantId).select('slug').setOptions({ bypassTenant: true });
+    metadata = {
+      webhookUrl: webhookUrl(),
+      defaultCampaign: '',
+      tenantSlug: tenant?.slug,
+    };
+    setup = {
+      webhookUrl: metadata.webhookUrl,
+      webhookVerifyToken: credentials.webhookVerifyToken,
+      webhookSecret: credentials.webhookSecret,
+    };
+  }
   const doc = await saveConnection({
     tenantId,
     providerConfig,
     credentials,
     userId,
     label,
+    metadata,
     externalAccountId: credentials.accountId,
   });
   await recordAuditEvent({
@@ -243,7 +301,10 @@ async function connectWithApiKey({ tenantId, provider, apiKey, userId, req, labe
     req,
   });
   await markIntegrationsOnboardingStep(tenantId);
-  return serializeConnection(doc);
+  if (setup) {
+    return { connection: serializeConnection(doc), ...setup };
+  }
+  return { connection: serializeConnection(doc) };
 }
 
 async function provisionWebhookIn({ tenantId, userId, req, label }) {
@@ -259,7 +320,7 @@ async function provisionWebhookIn({ tenantId, userId, req, label }) {
     _id: integrationId,
     tenantId,
     provider: 'webhook_in',
-    category: 'custom',
+    category: providerConfig.category,
     label: label || 'Inbound Webhook',
     status: 'connected',
     authType: 'webhook_secret',

@@ -127,7 +127,14 @@ const resolveRequestUser = async (req) => {
     if (await isTokenRevoked(decoded)) return { user: null };
     if (isAbsoluteSessionExpired(decoded)) return { user: null };
 
-    const user = await loadAuthUser(decoded.id);
+    let user = await loadAuthUser(decoded.id);
+    if (user) {
+      const { reconcilePlatformUserDepartment } = require('../utils/reconcilePlatformUserDepartment');
+      const healed = await reconcilePlatformUserDepartment(user);
+      if (healed.changed) {
+        user = await loadAuthUser(decoded.id);
+      }
+    }
     const isPageViewTelemetry = String(req.headers['x-telemetry'] || '').toLowerCase() === 'page-view';
     if (user && decoded.jti && !isPageViewTelemetry) {
       const { touchSession } = require('../utils/sessionRegistry');

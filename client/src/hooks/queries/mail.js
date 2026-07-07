@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
+import useTenantQueryKey from '../useTenantQueryKey';
 
 export const useMailStats = (enabled = true, options = {}) => {
   const timeframe = options.timeframe;
+  const queryKey = useTenantQueryKey('mail', 'stats', timeframe ?? 'all');
   return useQuery({
-    queryKey: ['mail', 'stats', timeframe ?? 'all'],
+    queryKey,
     queryFn: async () => {
       const params = timeframe ? { timeframe } : {};
       return (await axios.get('/api/mail/stats', { params })).data;
@@ -16,29 +18,40 @@ export const useMailStats = (enabled = true, options = {}) => {
   });
 };
 
-export const useMailCampaigns = (enabled = true) => useQuery({
-  queryKey: ['mail', 'campaigns'],
+export const useMailCampaigns = (enabled = true) => {
+  const queryKey = useTenantQueryKey('mail', 'campaigns');
+  return useQuery({
+    queryKey,
   queryFn: async () => (await axios.get('/api/campaigns')).data,
   enabled,
   staleTime: 1000 * 60 * 2,
-});
+  });
+};
 
-export const useCampaignDetails = (id) => useQuery({
-  queryKey: ['campaign', id],
+export const useCampaignDetails = (id) => {
+  const queryKey = useTenantQueryKey('campaign', id);
+  return useQuery({
+    queryKey,
   queryFn: async () => (await axios.get(`/api/campaigns/${id}`)).data,
   enabled: !!id,
   staleTime: 1000 * 30,
-});
+  });
+};
 
-export const useCampaignAnalytics = (id, { enabled = true } = {}) => useQuery({
-  queryKey: ['campaign', id, 'analytics'],
+export const useCampaignAnalytics = (id, { enabled = true } = {}) => {
+  const queryKey = useTenantQueryKey('campaign', id, 'analytics');
+  return useQuery({
+    queryKey,
   queryFn: async () => (await axios.get(`/api/campaigns/${id}/analytics`)).data,
   enabled: !!id && enabled,
   staleTime: 1000 * 60,
-});
+  });
+};
 
-export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false, enabled = true } = {}) => useQuery({
-  queryKey: ['campaign', id, 'recipients', page, limit, status, hideInvalid],
+export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false, enabled = true } = {}) => {
+  const queryKey = useTenantQueryKey('campaign', id, 'recipients', page, limit, status, hideInvalid);
+  return useQuery({
+    queryKey,
   queryFn: async () => {
     const params = new URLSearchParams({
       page: String(page),
@@ -52,30 +65,40 @@ export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all'
   enabled: !!id && enabled,
   staleTime: 1000 * 15,
   placeholderData: keepPreviousData,
-});
+  });
+};
 
-export const useCumulativeAnalytics = (enabled = true) => useQuery({
-  queryKey: ['analytics', 'cumulative'],
+export const useCumulativeAnalytics = (enabled = true) => {
+  const queryKey = useTenantQueryKey('analytics', 'cumulative');
+  return useQuery({
+    queryKey,
   queryFn: async () => (await axios.get('/api/analytics/cumulative')).data,
   enabled,
   staleTime: 1000 * 60,
-});
+  });
+};
 
-export const useMailProfiles = (enabled = true) => useQuery({
-  queryKey: ['mail', 'profiles'],
+export const useMailProfiles = (enabled = true) => {
+  const queryKey = useTenantQueryKey('mail', 'profiles');
+  return useQuery({
+    queryKey,
   queryFn: async () => (await axios.get('/api/mail/profiles')).data,
   enabled,
   staleTime: 1000 * 60 * 10,
-});
+  });
+};
 
-export const useLocationLeads = (location, enabled = false) => useQuery({
-  queryKey: ['leads', 'location', location],
+export const useLocationLeads = (location, enabled = false) => {
+  const queryKey = useTenantQueryKey('leads', 'location', location);
+  return useQuery({
+    queryKey,
   queryFn: async () => {
     const { data } = await axios.get('/api/analytics/location-leads', { params: { location } });
     return data?.data ?? data;
   },
   enabled: enabled && !!location,
-});
+  });
+};
 
 export const useCreateMailProfile = () => {
   const queryClient = useQueryClient();

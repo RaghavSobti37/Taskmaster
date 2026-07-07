@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // ponytail: forks + capped workers avoid flaky "reading 'config'" worker crashes on Windows
+    pool: 'forks',
+    maxWorkers: process.env.CI ? 2 : 4,
     include: ['src/**/*.test.{js,jsx}'],
     coverage: {
       provider: 'v8',

@@ -28,6 +28,7 @@ const { applyCrmScopeToQuery, shouldRestrictCrmMutationsToOwn } = require('../..
 const auditService = require('./auditService');
 const { getTenantId } = require('../../../utils/tenantContext');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
+const User = require('../../../models/User');
 
 const TENANT_SAFE_LOOKUP = bypassOptions('crm_lead_duplicate_check');
 
@@ -173,6 +174,7 @@ async function sendFirstCallNotifications(lead) {
       [leadName, courseTitle, paymentLink],
       null,
       lead.name,
+      { tenantId: lead.tenantId },
     );
     logger.info('leadWriteService', 'WhatsApp sent after first call', { phone: lead.phone });
   }
@@ -327,6 +329,66 @@ async function createLead(user, body) {
   return { lead, status: 201 };
 }
 
+/** Website form intake — upsert by email/phone; relaxed phone requirement when email present. */
+async function createLeadFromForm(user, body, { defaultSource, defaultLeadStatus, defaultCrmType } = {}) {
+  const leadData = {
+    ...pick(body, ALLOWED_LEAD_FIELDS),
+    createdBy: user._id,
+    source: body.source || defaultSource || 'Website Form',
+    leadStatus: body.leadStatus || defaultLeadStatus || 'New',
+    crmType: body.crmType || defaultCrmType || CRM_TYPES.SALES,
+  };
+
+  const validation = validateLeadInput(leadData, {
+    requireName: true,
+    requirePhone: !leadData.email,
+  });
+  if (validation) return validation;
+
+  const existing = await findExistingLeadIdentityConflict(leadData, user);
+  if (existing) {
+    const updates = pick(leadData, ALLOWED_LEAD_FIELDS);
+    delete updates.crmType;
+    if (body.message) {
+      updates.remarks = String(body.message).trim();
+    }
+    return updateLead(user, existing._id, updates);
+  }
+
+  if (!leadData.assignedRepId) {
+    leadData.assignedRepId = await assignLeadToRep();
+  }
+
+  if (body.message && !leadData.remarks) {
+    leadData.remarks = String(body.message).trim();
+  }
+
+  const PersonIdentityService = require('../../../services/PersonIdentityService');
+  const resolved = await PersonIdentityService.resolvePerson(
+    { name: leadData.name, email: leadData.email, phone: leadData.phone, city: leadData.city },
+    { source: 'website_form' },
+  );
+  if (resolved?.personId) {
+    leadData.personId = resolved.personId;
+  }
+
+  let lead;
+  try {
+    lead = await Lead.create(leadData);
+  } catch (err) {
+    if (err?.code === 11000) {
+      const dup = await findExistingLeadIdentityConflict(leadData, user);
+      if (dup) {
+        return updateLead(user, dup._id, pick(leadData, ALLOWED_LEAD_FIELDS));
+      }
+      return { error: 'A lead with this phone or email already exists', status: 409 };
+    }
+    throw err;
+  }
+  await runPostCreateLeadSideEffects(lead, user);
+  return { lead, status: 201, created: true };
+}
+
 async function updateLead(user, leadId, body) {
   const bodyKeys = Object.keys(body || {});
   const disallowed = bodyKeys.filter((k) => !ALLOWED_LEAD_FIELDS.includes(k));
@@ -462,16 +524,31 @@ async function deleteLead(user, leadId, queryParams = {}) {
     return { error: 'Invalid lead id', status: 400 };
   }
 
+  const requester = user?._id
+    ? await User.findById(user._id)
+      .select('departmentId pagePermissions')
+      .populate('departmentId', 'name slug permissionPreset pagePermissions')
+      .lean()
+    : user;
+  const effectiveUser = requester ? { ...user, ...requester, _id: user._id } : user;
+  const restrictToOwnLeads = shouldRestrictCrmMutationsToOwn(effectiveUser);
   const query = { _id: new mongoose.Types.ObjectId(leadId) };
-  applyCrmScopeToQuery(query, user, queryParams, {
-    restrictToOwnLeads: shouldRestrictCrmMutationsToOwn(user),
-  });
+  applyCrmScopeToQuery(query, effectiveUser, queryParams);
 
   const lead = await Lead.findOne(query).lean();
   if (!lead) return { error: 'Lead not found', status: 404 };
 
+  if (restrictToOwnLeads && String(lead.assignedRepId || '') !== String(effectiveUser._id || '')) {
+    return { error: 'Lead not found', status: 404 };
+  }
+
   await auditService.logLeadDeletion(lead, user._id);
-  await Lead.findOneAndDelete({ _id: lead._id });
+  const deleteQuery = { _id: lead._id };
+  if (restrictToOwnLeads) {
+    deleteQuery.assignedRepId = effectiveUser._id;
+  }
+  const deleted = await Lead.findOneAndDelete(deleteQuery);
+  if (!deleted) return { error: 'Lead not found', status: 404 };
   return { message: `Lead "${lead.name}" permanently deleted.` };
 }
 
@@ -534,6 +611,7 @@ async function cleanupTestData() {
 module.exports = {
   ALLOWED_EMI_FIELDS,
   createLead,
+  createLeadFromForm,
   updateLead,
   deleteLead,
   addNote,

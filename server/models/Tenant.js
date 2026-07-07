@@ -24,10 +24,12 @@ const tenantSchema = new mongoose.Schema({
     resend: { type: Boolean, default: false },
     google: { type: Boolean, default: false },
     meta: { type: Boolean, default: false },
-    knowledgeEngine: { type: Boolean, default: false },
     finance: { type: Boolean, default: false },
     artistOs: { type: Boolean, default: false },
     integrations: { type: Boolean, default: false },
+    opsHub: { type: Boolean, default: false },
+    dataHub: { type: Boolean, default: false },
+    enterpriseApi: { type: Boolean, default: false },
   },
   onboardingProgress: {
     dismissedChecklist: { type: Boolean, default: false },

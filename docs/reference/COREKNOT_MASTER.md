@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-06
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-07
 
 ---
 
@@ -10,7 +10,7 @@
 | Audience | Start here |
 | --- | --- |
 | **New engineer** | [Platform overview](#1-platform-overview) → your domain in [Page catalog](#3-page-catalog-by-domain) |
-| **AI agent** | Full file + [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) + locked zones in [`operations/conventions.md`](../.specify/memory/operations/conventions.md) |
+| **AI agent** | Full file + [`memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) (canonical) + [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) (compat) |
 | **Ops / deploy** | [`operations/deployment.md`](../operations/deployment.md) + [`operations/environments.md`](../operations/environments.md) |
 
 **Live inventory:** Regenerate with `node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs`.
@@ -67,6 +67,13 @@ Request → ProtectedRoute (session) → MainLayout → PageRoute (page key) →
 | `ArtistOrAdminRoute` | `components/ArtistOrAdminRoute.jsx` | Org accounts under `/assets/accounts` |
 | `ArtistMembershipRoute` | `components/ArtistMembershipRoute.jsx` | Artist workspace membership |
 
+### Naming convention (Org vs Tenant)
+
+- **Organization/Org** is the public UX term (routes, components, labels).
+- **Tenant** is internal persistence + API namespace terminology.
+- Org-facing UX intentionally talks to `/api/tenants/*`.
+- Platform-admin tenant controls are separate under `/api/admin/tenants/*`.
+
 ### Page permission keys
 
 Resolved via `getUserPagePermissions()` in `client/src/utils/pagePermissions.js`:
@@ -112,13 +119,13 @@ Resolved via `getUserPagePermissions()` in `client/src/utils/pagePermissions.js`
 
 Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab=finance`, `/data-hub` → `/admin`, etc.
 
+Full merged routing table (path + page key + tab + redirect + feature lock): [`docs/.generated/route-access-matrix.json`](../.generated/route-access-matrix.json)
+
+Preset matrix source of truth: [`docs/.generated/preset-page-matrix.json`](../.generated/preset-page-matrix.json)
+
 ### Multi-org & tenant session
 
 **Isolation model:** Extend existing `Tenant` (no separate Organization collection). All tenant-scoped documents keep `tenantId` via `tenantPlugin`.
-
-**Platform tenant (Shakti Collective):** `slug: tsc`, Mongo id `6a14c0d1d2ce3fb936553e35`. Set `PLATFORM_TENANT_SLUG=tsc` on server (local + Render prod).
-
-**Org slug URLs (2026-07-07):** When `VITE_ORG_SLUG_ROUTES` is enabled (default), workspace routes live under `/:orgSlug/...` (e.g. `/tsc/dashboard`). `OrgSlugLayout` loads `GET /api/orgs/:slug/context`. Legacy flat paths redirect via `LegacyOrgPathRedirect`. Helpers: `client/src/lib/orgPaths.js`, `OrgContext`.
 
 | Model | File | Purpose |
 | --- | --- | --- |
@@ -157,8 +164,6 @@ Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab
 | `POST` | `/api/tenants/select` | Switch org; re-issue JWT |
 | `POST` | `/api/tenants/create` | Create tenant + owner membership |
 | `GET` | `/api/tenants/:id/unlocks` | `featureUnlocks` for nav gating |
-| `PATCH` | `/api/tenants/:id/features` | Admin toggle org feature unlocks |
-| `GET` | `/api/orgs/:slug/context` | Bootstrap tenant + features + membership for slug routes |
 | `PATCH` | `/api/tenants/:id/onboarding` | Checklist steps / dismiss |
 | `POST` | `/api/tenants/:id/invites` | Send invite (tenant owner/admin) |
 | `GET` | `/api/invites/:token` | Validate pending invite |
@@ -175,9 +180,7 @@ Legacy redirects: `/leads` → `/crm?tab=leads`, `/finance` → `/management?tab
 
 Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organizations).
 
-**Feature unlocks** (`Tenant.featureUnlocks`): catalog in `shared/orgFeatures.cjs` (e.g. `resend`, `google`, `meta`, `knowledgeEngine`, `finance`, `artistOs`, `dataHub`, `exly`). Client: `navPageAccess.getNavFeatureLock()` + locked `EmptyState` props. Create-org wizard persists unlocks; org settings admin can PATCH.
-
-**Local prod sync (TSC):** `npm run sync:prod-tenant-tsc` — tenant-filtered; skips Data Hub/Exly heavy collections; finance metadata-only. See `docs/operations/LOCAL_DEV_DATABASE.md`.
+**Feature unlocks** default to disabled on new organizations and are enabled per organization on request. Canonical matrix: [`docs/.generated/feature-unlock-matrix.json`](../.generated/feature-unlock-matrix.json). Client lock resolution: `navPageAccess.getNavFeatureLock()` + locked `EmptyState` props.
 
 **Credentials at rest:** `server/utils/credentialEncryption.js` (AES-256-GCM when `CREDENTIAL_ENCRYPTION_KEY` set).
 
@@ -187,7 +190,7 @@ Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organ
 
 ## 3. Page catalog by domain
 
-_Total page files: 142. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 140. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -220,6 +223,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 165 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useRef`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignInBlock`, `InstallGuideModal` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -243,6 +247,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 142 |
 | **Hooks** | `useAuth`, `useCallback`, `useClerk`, `useClerkAuth`, `useEffect`, `useNavigate`, `useQueryClient`, `useRef`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerk` → /api/auth/clerk-establish, /api/tenants/memberships, /api/tenants/select · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AuthMarketingShell`, `BootScreen` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -254,6 +259,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 187 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useNavigate`, `useRef`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton` |
 
 **API endpoints:**
@@ -276,6 +282,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 377 |
 | **Hooks** | `useAuth` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 | **Key components** | `BootScreen`, `BrandLogo`, `LandingDashboardPreview`, `WithClerkWhenConfigured` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -320,6 +327,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 178 |
 | **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
+| **Data hooks** | `usePublicEmailStreams` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 **API endpoints:**
 
@@ -335,6 +343,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 206 |
 | **Hooks** | `useNavigate`, `usePortfolioSummary` |
+| **Data hooks** | `usePortfolioSummary` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/calendar/CalendarView.jsx`
@@ -345,6 +354,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `CalendarView` |
 | **Lines** | 505 |
 | **Hooks** | `useAuth`, `useCalendarEvents`, `useCallback`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useState`, `useStatusCounts`, `useToast` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCalendarEvents` → /api/calendar, /api/calendar/${id}, /api/calendar/seed-music-content · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `CalendarEntryModal` |
 
 **API endpoints:**
@@ -358,6 +368,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `Dashboard` |
 | **Lines** | 361 |
 | **Hooks** | `useAttendance`, `useAttendanceCheck`, `useAuth`, `useDashboardPreset`, `useDashboardSummary`, `useDashboardTaskActions`, `useDashboardTasks`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useProjects`, `useReviewTasks`, `useState`, `useUndoAttendanceCheck`, `useUserDirectory`, `useWorkspaces` |
+| **Data hooks** | `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDashboardPreset` → /api/customization/dashboard/preset, /api/dashboard/attendance-overview?timeframe=${timeframe}, /api/dashboard/dept-stats?timeframe=${timeframe} · `useDashboardSummary` → /api/customization/dashboard/preset, /api/dashboard/attendance-overview?timeframe=${timeframe}, /api/dashboard/dept-stats?timeframe=${timeframe} · `useDashboardTaskActions` → /api/tasks/${taskId} · `useDashboardTasks` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useUndoAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `BrandedLoadingPanel`, `DashboardTierLayout`, `OrgOnboardingChecklist` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -369,6 +380,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `InboxPage` |
 | **Lines** | 316 |
 | **Hooks** | `useAuth`, `useCallback`, `useClearAllNotifications`, `useConfirm`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMarkAllNotificationsRead`, `useMarkNotificationRead`, `useMemo`, `useNavigate`, `useNotifications`, `useState`, `useStatusCounts` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClearAllNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMarkAllNotificationsRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useMarkNotificationRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts |
 | **Key components** | `CountBadge`, `DataListRow`, `EmptyState`, `ListPageLayout`, `PageLoadGuard`, `PageSkeleton`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -380,6 +392,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 300 |
 | **Hooks** | `useAuth`, `useCallback`, `useDeleteNote`, `useEffect`, `useIsMobile`, `useMemo`, `useNavigate`, `useNote`, `useParams`, `useRef`, `useState`, `useToast`, `useUnsavedChanges`, `useUpdateNote` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDeleteNote` → /api/notes, /api/notes/${id}, /api/pinboard · `useIsMobile` → /api/customization/dashboard/preset · `useNote` → /api/notes, /api/notes/${id}, /api/pinboard · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateNote` → /api/notes, /api/notes/${id}, /api/pinboard |
 | **Key components** | `NoteRichEditor`, `SaveNoteDialog` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -391,6 +404,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 236 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useMemo`, `useNavigate`, `useState`, `useUserNotes` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useUserNotes` → /api/notes, /api/notes/${id}, /api/pinboard |
 | **Key components** | `NoteComposer`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -402,6 +416,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `DailyLogPage` |
 | **Lines** | 688 |
 | **Hooks** | `useActivityGrid`, `useAttendance`, `useAuth`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useDeleteLog`, `useEffect`, `useLogs`, `useMemo`, `useNavigate`, `useProjects`, `useSearchParams`, `useState`, `useSystemToast`, `useTasks`, `useUpdateLog`, `useUserDirectory`, `useWorkspaces` |
+| **Data hooks** | `useActivityGrid` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useLogs` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${taskId} · `useUpdateLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `DailyLogActivityCalendar`, `DailyLogEntryModal`, `DailyLogTimeline`, `DataOverviewSection` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -413,6 +428,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `WorkflowCanvas` |
 | **Lines** | 146 |
 | **Hooks** | `useCallback`, `useEdgesState`, `useNodesState`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 | **Key components** | `QueryErrorBanner` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -425,6 +441,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 199 |
 | **Named exports** | `MAX_SCHEDULE_DAYS` |
 | **Hooks** | `useAuth`, `useDashboardTaskActions`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjects`, `useQueryClient`, `useSchedule`, `useState`, `useStatusCounts`, `useUserDirectory`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDashboardTaskActions` → /api/tasks/${taskId} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSchedule` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `EmptyState`, `ListPageLayout`, `ScheduleDayViewControl`, `ScheduleGrid`, `ScheduleMobileList`, `ScheduleSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -436,6 +453,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 976 |
 | **Hooks** | `useAuth`, `useDashboardPreset`, `useEffect`, `useIsMobile`, `useMemo`, `useNavigate`, `useQueryClient`, `useRef`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDashboardPreset` → /api/customization/dashboard/preset, /api/dashboard/attendance-overview?timeframe=${timeframe}, /api/dashboard/dept-stats?timeframe=${timeframe} · `useIsMobile` → /api/customization/dashboard/preset · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 
 **API endpoints:**
 
@@ -448,6 +466,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `TodoPage` |
 | **Lines** | 768 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjects`, `useQueryClient`, `useState`, `useSystemToast`, `useTaskCategoryOptions`, `useTodoTasks`, `useUserDirectory`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTaskCategoryOptions` → /api/departments/task-types, /api/tasks/${task?._id} · `useTodoTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${task?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `CompletedTaskRollbackButton`, `FlashHighlightListener`, `ListCard`, `ListPageLayout`, `MentionTitle`, `PageLoadGuard`, `PageSkeleton`, `SearchInput`, `TaskMentionBadge`, `VirtualTaskList` |
 
 **API endpoints:**
@@ -464,6 +483,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ProjectAnalyticsPage` |
 | **Lines** | 55 |
 | **Hooks** | `useNavigate`, `useParams`, `useProject`, `useProjectReportRangeState` |
+| **Data hooks** | `useProject` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member |
 | **Key components** | `ProjectAnalyticsContent`, `ProjectReportRangeControls` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -475,6 +495,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ProjectCreate` |
 | **Lines** | 281 |
 | **Hooks** | `useCallback`, `useEffect`, `useNavigate`, `useQueryClient`, `useRef`, `useSearchParams`, `useState`, `useToast` |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `NexusDropdown`, `RoleOptionBoxes`, `WorkspaceSelect` |
 
 **API endpoints:**
@@ -490,6 +511,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ProjectDetail` |
 | **Lines** | 576 |
 | **Hooks** | `useAuth`, `useCallback`, `useDeferredQueryEnabled`, `useDeleteTask`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useParams`, `useProject`, `useProjectHoursSummary`, `useProjectTasks`, `useQueryClient`, `useReviewTasks`, `useSchedule`, `useState`, `useSystemToast`, `useUpdateTask`, `useUserDirectory`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTask` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useProject` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useProjectHoursSummary` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useProjectTasks` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useSchedule` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useUpdateTask` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `ProjectAssets`, `ProjectFinance`, `ProjectGoalsPanel`, `ProjectGoalsStrip`, `ProjectKanban`, `ProjectList`, `ProjectSettingsModal`, `ProjectTeam`, `ScheduleGrid`, `ScheduleSkeleton`, `TaskCompletionModal`, `TaskCreateModal`, `TaskDetailModal` |
 
 **API endpoints:**
@@ -505,6 +527,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ProjectsView` |
 | **Lines** | 1406 |
 | **Hooks** | `useAuth`, `useCallback`, `useConfirm`, `useDashboardTasks`, `useDeferredQueryEnabled`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useProjects`, `useQueryClient`, `useRef`, `useReviewTasks`, `useState`, `useToast`, `useUpdateProject`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDashboardTasks` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateProject` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `WorkspaceColorPicker`, `WorkspaceSelect` |
 
 **API endpoints:**
@@ -521,6 +544,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `WorkspaceSettings` |
 | **Lines** | 469 |
 | **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useNavigate`, `useParams`, `useQueryClient`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 | **Key components** | `NexusDropdown`, `QueryErrorSlot`, `RoleOptionBoxes`, `WorkspaceColorPicker`, `WorkspaceGoalsPanel` |
 
 **API endpoints:**
@@ -538,6 +562,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 135 |
 | **Hooks** | `useAuth`, `useDebounce`, `useLiveLeads`, `useMemo`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -559,6 +584,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 816 |
 | **Hooks** | `useAuth`, `useCRMConfig`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUpdateLead` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `LeadLockIndicator`, `PhoneNumberFields` |
 
 **API endpoints:**
@@ -574,6 +600,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 1311 |
 | **Hooks** | `useArtistImportSheets`, `useArtistReps`, `useAuth`, `useCRMConfig`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateLead`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useLeadDetail`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useRef`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUnsavedChanges`, `useUpdateLead` |
+| **Data hooks** | `useArtistImportSheets` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useArtistReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeadDetail` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `ArtistCrmImportPanel`, `LeadArtistJourneySection`, `LeadLockIndicator`, `LeadRowActions`, `PhoneNumberFields` |
 
 **API endpoints:**
@@ -591,6 +618,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 31 |
 | **Hooks** | `useAuth` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 
@@ -613,6 +641,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ContactsPage` |
 | **Lines** | 287 |
 | **Hooks** | `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 | **Key components** | `ContactMobileRow`, `ListPageLayout`, `ListPageSkeleton`, `SearchInput` |
 
 **API endpoints:**
@@ -627,6 +656,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `EquipmentPage` |
 | **Lines** | 358 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useState`, `useUnsavedChanges`, `useUserDirectory` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `EquipmentMobileRow`, `ListPageLayout`, `ListPageSkeleton`, `SearchInput`, `StatusBadge` |
 
 **API endpoints:**
@@ -641,6 +671,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `OfficeAssetsPage` |
 | **Lines** | 665 |
 | **Hooks** | `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useState`, `useUnsavedChanges`, `useUserDirectory` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `ContactMobileRow`, `EquipmentMobileRow` |
 
 **API endpoints:**
@@ -659,6 +690,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `SubscriptionsPage` |
 | **Lines** | 536 |
 | **Hooks** | `useConfirm`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useRef`, `useState`, `useUnsavedChanges`, `useUsdInrRate` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUsdInrRate` → /api/exly/config, /api/exly/dashboard-stats, /api/exly/offerings |
 | **Key components** | `MemberSelect`, `SubscriptionMobileRow`, `UsdInrAmountFields` |
 
 **API endpoints:**
@@ -677,6 +709,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 333 |
 | **Hooks** | `useArtists`, `useCallback`, `useCreateArtist`, `useMemo`, `useNavigate`, `useState`, `useSyncArtistStats` |
+| **Data hooks** | `useArtists` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useCreateArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncArtistStats` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/finance/FinancePage.jsx`
@@ -687,6 +720,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `FinancePage` |
 | **Lines** | 1314 |
 | **Hooks** | `useAuth`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useSearchParams`, `useState`, `useUsdInrRate`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useUsdInrRate` → /api/exly/config, /api/exly/dashboard-stats, /api/exly/offerings · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `FinanceDocumentPreview`, `NeedsAttentionAccordion`, `UploadDocumentModal`, `UsdInrAmountFields` |
 
 **API endpoints:**
@@ -719,6 +753,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AnnouncementsPage` |
 | **Lines** | 251 |
 | **Hooks** | `useAnnouncementTargets`, `useAnnouncements`, `useCallback`, `useConfirm`, `useCreateAnnouncement`, `useDeferredQueryEnabled`, `useDeleteAnnouncement`, `useMemo`, `useState` |
+| **Data hooks** | `useAnnouncementTargets` → /api/announcements, /api/announcements/${id}, /api/announcements/targets · `useAnnouncements` → /api/announcements, /api/announcements/${id}, /api/announcements/targets · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateAnnouncement` → /api/announcements, /api/announcements/${id}, /api/announcements/targets · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteAnnouncement` → /api/announcements, /api/announcements/${id}, /api/announcements/targets |
 | **Key components** | `WorkspaceProjectFields` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -728,8 +763,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /attendance, /attendance/all |
 | **Default export** | `AttendancePage` |
-| **Lines** | 744 |
+| **Lines** | 782 |
 | **Hooks** | `useApproveAttendance`, `useApproveLeaveRequest`, `useAttendance`, `useAttendanceCheck`, `useAttendanceRosterUsers`, `useAuth`, `useDeferredQueryEnabled`, `useEffect`, `useLeaveRequests`, `useLocation`, `useMemo`, `useNavigate`, `useRejectLeaveRequest`, `useResetAttendance`, `useState`, `useSystemToast`, `useUndoAttendanceCheck`, `useUnsavedChanges`, `useUpsertAttendance` |
+| **Data hooks** | `useApproveAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useApproveLeaveRequest` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendanceRosterUsers` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeaveRequests` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useRejectLeaveRequest` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useResetAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useUndoAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpsertAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check |
 | **Key components** | `AttendanceStatusLegend`, `MonthlyAttendanceGrid`, `SelfMonthlyAttendanceCalendar`, `TeamAttendanceMobileList`, `UnifiedTimeCard` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -744,6 +780,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 853 |
 | **Hooks** | `useCallback`, `useCampaignAnalytics`, `useCampaignDetails`, `useCampaignRecipients`, `useEffect`, `useLocation`, `useMailProfiles`, `useMemo`, `useNavigate`, `useParams`, `useResendCampaign`, `useResendFilteredCampaign`, `useState`, `useStopCampaign`, `useToast` |
+| **Data hooks** | `useCampaignAnalytics` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useCampaignDetails` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useCampaignRecipients` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useResendCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useResendFilteredCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useStopCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `RegisteredLocationBarChart`, `ResendFromEmailPicker` |
 
 **API endpoints:**
@@ -766,6 +803,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 59 |
 | **Hooks** | `useCumulativeAnalytics`, `useDeferredQueryEnabled`, `useMailStats`, `useState` |
+| **Data hooks** | `useCumulativeAnalytics` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
 | **Key components** | `MailCumulativeAnalyticsPanel`, `MailLocationLeadsModal`, `MailStatsSummary` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -777,6 +815,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 50 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMailProfiles`, `useNavigate`, `useScanBounces`, `useToast` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useScanBounces` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `MailCampaignList` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -788,6 +827,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 115 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMailCampaigns`, `useMailStats`, `useNavigate` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailCampaigns` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
 | **Key components** | `MailCampaignList`, `MailStatsSummary` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -799,6 +839,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 32 |
 | **Hooks** | `useMailProfiles` |
+| **Data hooks** | `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
 | **Key components** | `MailProfilesPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -810,6 +851,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 33 |
 | **Hooks** | `useEmailStreams` |
+| **Data hooks** | `useEmailStreams` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/emails/EmailsTemplatesPage.jsx`
@@ -842,6 +884,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `NewsletterCuratePage` |
 | **Lines** | 62 |
 | **Hooks** | `useAuth`, `useCurrentNewsletterIssue`, `useNavigate`, `useNewsletterCategories`, `useNewsletterIssue`, `useSearchParams` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 | **Key components** | `NewsletterCuratorPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -853,6 +896,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `NewsletterPage` |
 | **Lines** | 123 |
 | **Hooks** | `useAuth`, `useCurrentNewsletterIssue`, `useNavigate`, `useNewsletterCategories` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories |
 | **Key components** | `NewsletterLinkForm`, `NewsletterWeekBoard` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -864,6 +908,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `NewsletterSendPage` |
 | **Lines** | 63 |
 | **Hooks** | `useAuth`, `useNavigate`, `useNewsletterIssue`, `useParams` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories |
 | **Key components** | `NewsletterSendWizard` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -878,6 +923,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 326 |
 | **Hooks** | `useArtistDashboard`, `useConfirm`, `useNavigate`, `useParams`, `useState` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} |
 | **Key components** | `ArtistEditDrawer`, `ArtistShareModal`, `ClaimWorkspaceBanner` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -889,6 +935,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 112 |
 | **Hooks** | `useEffect`, `useMemo`, `useSearchParams` |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 | **Key components** | `ArtistProductHint`, `PageSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -900,6 +947,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 311 |
 | **Hooks** | `useEffect`, `useMemo`, `useMutation`, `useParams`, `usePublicArtist`, `useQuery`, `useState` |
+| **Data hooks** | `usePublicArtist` → /api/artists/public/${slug}, /api/artists/public/${slug}/inquiry |
 | **Key components** | `BrandLogo` |
 
 **API endpoints:**
@@ -924,6 +972,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 328 |
 | **Hooks** | `useArtistAnalytics`, `useArtistOsScores`, `useCallback`, `useEffect`, `useMemo`, `useSearchParams`, `useState`, `useTimeRange` |
+| **Data hooks** | `useArtistAnalytics` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistCalendarTab.jsx`
@@ -934,6 +983,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 113 |
 | **Hooks** | `useArtistOsCalendar`, `useCreateArtistCalendarEvent`, `useState` |
+| **Data hooks** | `useArtistOsCalendar` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistCalendarEvent` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistCommandCenter.jsx`
@@ -953,6 +1003,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 96 |
 | **Hooks** | `useAuth` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistContentTab.jsx`
@@ -963,6 +1014,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 188 |
 | **Hooks** | `useArtistOsAssets`, `useCreateArtistAsset`, `useDeleteArtistAsset`, `useMemo`, `useState`, `useUpdateArtistAsset` |
+| **Data hooks** | `useArtistOsAssets` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useDeleteArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistContractsTab.jsx`
@@ -973,6 +1025,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 57 |
 | **Hooks** | `useArtistOsContracts`, `useCreateArtistContract`, `useState` |
+| **Data hooks** | `useArtistOsContracts` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistContract` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistDocumentsTab.jsx`
@@ -984,6 +1037,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 69 |
 | **Named exports** | `getArtistDocumentsDescription` |
 | **Hooks** | `useArtistOsDocuments`, `useSearchParams` |
+| **Data hooks** | `useArtistOsDocuments` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistDocumentsTab.test.js`
@@ -1012,6 +1066,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 136 |
 | **Hooks** | `useArtistOsFinance`, `useCreateArtistFinanceEntry`, `useState` |
+| **Data hooks** | `useArtistOsFinance` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistFinanceEntry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistGigsTab.jsx`
@@ -1022,6 +1077,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 100 |
 | **Hooks** | `useArtistOsGigs`, `useCreateArtistGig`, `useState`, `useUpdateArtistGig` |
+| **Data hooks** | `useArtistOsGigs` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistGig` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistGig` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistInquiriesTab.jsx`
@@ -1032,6 +1088,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 131 |
 | **Hooks** | `useArtistOsInquiries`, `useCreateArtistInquiry`, `useState`, `useUpdateArtistInquiry` |
+| **Data hooks** | `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistInquiry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistInquiry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/ArtistNotesTab.jsx`
@@ -1042,6 +1099,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 42 |
 | **Hooks** | `useArtistOsNotes`, `useCreateArtistNote`, `useState` |
+| **Data hooks** | `useArtistOsNotes` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistNote` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/os/artistOsConstants.js`
@@ -1080,6 +1138,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 471 |
 | **Hooks** | `useArtistOsCalendar`, `useArtistOsContent`, `useArtistOsGigs`, `useArtistOsInquiries`, `useArtistOsOverview`, `useArtistOsScores`, `useArtistOsTimeline`, `useConnectionHealth`, `useConnectionHub`, `useMemo`, `useSyncPlatformConnection` |
+| **Data hooks** | `useArtistOsCalendar` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsContent` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsGigs` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsOverview` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsTimeline` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useConnectionHealth` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useConnectionHub` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncPlatformConnection` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistBookingsTab.jsx`
@@ -1090,6 +1149,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 64 |
 | **Hooks** | `useArtistOsInquiries`, `useMemo`, `useState` |
+| **Data hooks** | `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistMembershipAccept.jsx`
@@ -1100,6 +1160,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 139 |
 | **Hooks** | `useAcceptArtistMembership`, `useEffect`, `useNavigate`, `useParams`, `useRef`, `useSearchParams`, `useState` |
+| **Data hooks** | `useAcceptArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistReleasesTab.jsx`
@@ -1110,6 +1171,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 225 |
 | **Hooks** | `useArtistOsReleases`, `useCreateArtistRelease`, `useDeleteArtistRelease`, `useState`, `useUpdateArtistRelease` |
+| **Data hooks** | `useArtistOsReleases` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useDeleteArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistTeamTab.jsx`
@@ -1120,6 +1182,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 150 |
 | **Hooks** | `useArtistMemberships`, `useInviteArtistMembership`, `useRemoveArtistMembership`, `useState`, `useUpdateArtistMembership` |
+| **Data hooks** | `useArtistMemberships` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useInviteArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useRemoveArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useUpdateArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/artistWorkspaceConstants.js`
@@ -1140,6 +1203,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 109 |
 | **Hooks** | `useArtistDashboard`, `useArtistMembership`, `useAuth`, `useMemo`, `useParams`, `useState` |
+| **Data hooks** | `useArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistWorkspaceLayout.jsx`
@@ -1150,6 +1214,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 155 |
 | **Hooks** | `useEffect`, `useMemo`, `useSearchParams` |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/ArtistWorkspaceNoAccess.jsx`
@@ -1169,6 +1234,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 151 |
 | **Hooks** | `useArtist`, `useArtistMembership`, `useAuth`, `useMemo`, `useParams`, `useSearchParams`, `useState` |
+| **Data hooks** | `useArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/artists/workspace/tabs/ArtistWorkspaceHome.jsx`
@@ -1188,6 +1254,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 95 |
 | **Hooks** | `useEffect`, `useState`, `useUpdateArtist` |
+| **Data hooks** | `useUpdateArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 
@@ -1201,6 +1268,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 35 |
 | **Hooks** | `useAuth` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/assets/AssetsPage.jsx`
@@ -1211,6 +1279,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AssetsPage` |
 | **Lines** | 871 |
 | **Hooks** | `useAssets`, `useAuth`, `useCallback`, `useCreateAsset`, `useDeferredQueryEnabled`, `useDeleteAsset`, `useEffect`, `useGoogleAccounts`, `useMemo`, `useProjects`, `useQueryClient`, `useSearchParams`, `useState`, `useUnlinkGoogleAccount`, `useUnsavedChanges`, `useUpdateAsset`, `useWorkspaces` |
+| **Data hooks** | `useAssets` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useGoogleAccounts` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useUnlinkGoogleAccount` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `MentionTextarea`, `ProjectMultiSelect` |
 
 **API endpoints:**
@@ -1226,6 +1295,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `OrgAccountsPage` |
 | **Lines** | 768 |
 | **Hooks** | `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useState`, `useToast`, `useUnsavedChanges` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 | **Key components** | `MemberSelect`, `ProjectMultiSelect` |
 
 **API endpoints:**
@@ -1264,8 +1334,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/gamification |
 | **Default export** | `AdminGamification` |
-| **Lines** | 369 |
+| **Lines** | 368 |
 | **Hooks** | `useCallback`, `useConfirm`, `useEffect`, `useMemo`, `useQueryClient`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 
 **API endpoints:**
 
@@ -1280,6 +1351,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminPanel` |
 | **Lines** | 483 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateTeam`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteTeam`, `useDeleteUser`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useSearchParams`, `useState`, `useTeams`, `useToast`, `useUpdateUser`, `useUserDirectory` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useTeams` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminUserGridCard`, `ClerkDashboardUsersButton`, `MonthlyReportPanel`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1291,6 +1363,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminPlatformSettings` |
 | **Lines** | 161 |
 | **Hooks** | `useCallback`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useState`, `useToast`, `useUserDirectory` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `PlatformSettingsUserField`, `QueryErrorSlot` |
 
 **API endpoints:**
@@ -1304,6 +1377,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminProjectAnalyticsPage` |
 | **Lines** | 446 |
 | **Hooks** | `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjectReportRangeState`, `useProjects`, `useProjectsAnalyticsSummary`, `useRef`, `useSearchParams`, `useState` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useProjectsAnalyticsSummary` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 | **Key components** | `ProjectAnalyticsContent`, `ProjectAnalyticsKpiGrid`, `ProjectReportRangeControls` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1315,6 +1389,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminRolesPage` |
 | **Lines** | 120 |
 | **Hooks** | `useAdminRoles`, `useMemo` |
+| **Data hooks** | `useAdminRoles` → /api/admin/roles, /api/admin/roles/${id} |
 | **Key components** | `OrgRolesPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1326,6 +1401,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminScriptsPage` |
 | **Lines** | 273 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMemo`, `useQuery`, `useState` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings |
 | **Key components** | `RelativeTimestamp` |
 
 **API endpoints:**
@@ -1341,6 +1417,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminTeamsPage` |
 | **Lines** | 168 |
 | **Hooks** | `useCallback`, `useDepartments`, `useMemo`, `useState`, `useUpdateUser`, `useUserDirectory` |
+| **Data hooks** | `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminBulkActionBar`, `DepartmentsPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1352,6 +1429,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 114 |
 | **Hooks** | `useCallback`, `useEffect`, `useState`, `useToast` |
+| **Data hooks** | `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `QueryErrorSlot` |
 
 **API endpoints:**
@@ -1366,6 +1444,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminUsers` |
 | **Lines** | 565 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateUser`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteUser`, `useDepartments`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useState`, `useUpdateUser`, `useUserDirectory` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminBulkActionBar`, `AdminUserGridCard`, `ClerkDashboardUsersButton`, `CreateUserModal`, `MonthlyReportPanel`, `PagePermissionsEditor`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1377,21 +1456,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 110 |
 | **Hooks** | `useArtistPathPeople`, `useArtistPathSync`, `useDebounce`, `useState`, `useToast` |
+| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `ArtistPathCardGrid`, `ArtistProductHint`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AuditLogPage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | _embedded tab / child route_ |
-| **Default export** | `AuditLogPage` |
-| **Lines** | 66 |
-| **Hooks** | `useEffect`, `useState` |
-
-**API endpoints:**
-
-- `/api/enterprise/audit`
 #### `client/src/pages/admin/CrmStatsPage.jsx`
 
 | Field | Value |
@@ -1400,6 +1468,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 438 |
 | **Hooks** | `useAuth`, `useCrmStats`, `useCrmStatsTrends`, `useMemo`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCrmStats` → /api/admin/crm-stats, /api/admin/crm-stats/trends · `useCrmStatsTrends` → /api/admin/crm-stats, /api/admin/crm-stats/trends |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/DataHubPage.jsx`
@@ -1408,9 +1477,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 531 |
+| **Lines** | 715 |
 | **Named exports** | `DataHubContent` |
-| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
+| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1425,17 +1495,6 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ExlyDataContent`, `MasterclassFunnelPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/KnowledgeEnginePage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | /admin/knowledge-engine |
-| **Default export** | `function` |
-| **Lines** | 401 |
-| **Hooks** | `useApproveKnowledgeArticle`, `useCreateDistribution`, `useCreateKnowledgeArticle`, `useEffect`, `useGenerateBrief`, `useHook`, `useKnowledgeAnalytics`, `useKnowledgeArticles`, `useKnowledgeBriefs`, `useKnowledgeChunks`, `useKnowledgeConnections`, `useKnowledgeDashboard`, `useKnowledgeDistribution`, `useKnowledgeJobTrigger`, `useKnowledgeOpportunities`, `useKnowledgeSettings`, `useKnowledgeSources`, `useMediumPrep`, `useMemo`, `usePublishKnowledgeArticle`, `useRunArticlePipeline`, `useSearchParams`, `useSetMediumUrl`, `useState`, `useToast`, `useUpdateKnowledgeSettings` |
-| **Key components** | `AdminConsoleBackButton`, `PageHeader`, `SearchInput` |
-
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/LeadAuditsPage.jsx`
 
 | Field | Value |
@@ -1444,6 +1503,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `LeadAuditsPage` |
 | **Lines** | 69 |
 | **Hooks** | `useAuth`, `useConfirm`, `useLeadAudits`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useLeadAudits` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `LeadAuditsContent` |
 
 **API endpoints:**
@@ -1457,6 +1517,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `MediaListPage` |
 | **Lines** | 283 |
 | **Hooks** | `useCallback`, `useDeferredQueryEnabled`, `useMemo`, `useQuery`, `useState` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings |
 | **Key components** | `ListPageLayout`, `PageSkeleton`, `SearchInput` |
 
 **API endpoints:**
@@ -1471,6 +1532,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 305 |
 | **Hooks** | `useAuth`, `useCreateOpsEntity`, `useDebounce`, `useEffect`, `useMemo`, `useOpsHubAnalytics`, `useOpsHubEntities`, `useOpsHubEntity`, `useOpsHubTaxonomy`, `useOpsHubWeekly`, `useSearchParams`, `useState`, `useToast` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateOpsEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useOpsHubAnalytics` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntities` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubTaxonomy` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubWeekly` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `OpsEntityDetail`, `OpsHubAnalyticsPanel`, `OpsMondayBoard`, `PageToolbar`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1482,6 +1544,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `QATestingPage` |
 | **Lines** | 1324 |
 | **Hooks** | `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useProjects`, `useQAProgress`, `useQuery`, `useQueryClient`, `useState`, `useSystemToast` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useQAProgress` → /api/crm/leads/cleanup-test-data, /api/qa/cancel/${testRunId}, /api/qa/history · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data |
 
 **API endpoints:**
 
@@ -1495,19 +1558,6 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/qa/resolve/${testRunId}/${testCaseId}`
 - `/api/qa/results/${latestRunId}`
 - `/api/qa/start`
-#### `client/src/pages/admin/SecurityAuditPage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | /admin/security-audit |
-| **Default export** | `function` |
-| **Lines** | 83 |
-| **Hooks** | `useMemo`, `useQuery`, `useState` |
-| **Key components** | `QueryErrorSlot` |
-
-**API endpoints:**
-
-- `/api/admin/security-audit`
 #### `client/src/pages/hubs/AdminConsole.jsx`
 
 | Field | Value |
@@ -1516,6 +1566,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 344 |
 | **Hooks** | `useAdminConsoleSummary`, `useAuth`, `useCallback`, `useMemo`, `useNavigate`, `useState`, `useTenantUnlocks` |
+| **Data hooks** | `useAdminConsoleSummary` → /api/admin/console/summary · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
 | **Key components** | `DataListRow`, `DataOverviewSection`, `PageHeader` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1528,8 +1579,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /developers |
 | **Default export** | `DevelopersPage` |
-| **Lines** | 375 |
+| **Lines** | 398 |
 | **Hooks** | `useEffect`, `useState`, `useWebhookDeliveries` |
+| **Data hooks** | `useWebhookDeliveries` → /api/enterprise/api-keys, /api/enterprise/usage, /api/enterprise/webhooks |
+| **Key components** | `WebsiteFormsPanel` |
 
 **API endpoints:**
 
@@ -1546,6 +1599,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `SettingsPage` |
 | **Lines** | 185 |
 | **Hooks** | `useAuth`, `useEffect`, `useNavigate`, `useSearchParams`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 | **Key components** | `PageSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1557,6 +1611,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 81 |
 | **Hooks** | `useAttendance`, `useAuth` |
+| **Data hooks** | `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/settings/tabs/IntegrationsTab.jsx`
@@ -1565,8 +1620,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 153 |
+| **Lines** | 193 |
 | **Hooks** | `useConnectIntegration`, `useDisconnectIntegration`, `useIntegrationHealth`, `useIntegrationProviders`, `useIntegrationSync`, `useMemo`, `usePatchIntegrationMetadata`, `useSearchParams`, `useState` |
+| **Data hooks** | `useConnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useDisconnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationHealth` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationProviders` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationSync` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `usePatchIntegrationMetadata` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/settings/tabs/InvoiceTab.jsx`
@@ -1577,6 +1633,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 410 |
 | **Hooks** | `useEffect`, `useMemo`, `useMyReimbursements`, `useProjects`, `useQueryClient`, `useRef`, `useState`, `useWorkspaces` |
+| **Data hooks** | `useMyReimbursements` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 
 **API endpoints:**
 
@@ -1589,6 +1646,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `KeyboardShortcutsTab` |
 | **Lines** | 401 |
 | **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useShortcutPreferences`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useShortcutPreferences` → /api/customization/shortcuts, /api/customization/shortcuts/reset |
 
 **API endpoints:**
 
@@ -1602,6 +1660,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 114 |
 | **Hooks** | `useApplyLeave`, `useAuth`, `useCallback`, `useLeaveRequests`, `useMemo`, `useState` |
+| **Data hooks** | `useApplyLeave` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useLeaveRequests` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/settings/tabs/NotificationsTab.jsx`
@@ -1620,8 +1679,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 183 |
-| **Hooks** | `useAuth`, `useNavigate`, `useOffboardOrganization`, `useOrgSettings`, `useQuery`, `useQueryClient`, `useUpdateOrgSettings` |
+| **Lines** | 193 |
+| **Hooks** | `useAuth`, `useNavigate`, `useOffboardOrganization`, `useOrgOptional`, `useOrgSettings`, `useQuery`, `useQueryClient`, `useUpdateOrgSettings` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useOffboardOrganization` → /api/enterprise/offboard, /api/tenants/${tenantId}/settings, /api/tenants/memberships · `useOrgOptional` → /api/orgs/${encodeURIComponent(orgSlug)}/context, /api/tenants/${tenantId}/features, /api/tenants/${tenantId}/onboarding · `useOrgSettings` → /api/enterprise/offboard, /api/tenants/${tenantId}/settings, /api/tenants/memberships · `useUpdateOrgSettings` → /api/enterprise/offboard, /api/tenants/${tenantId}/settings, /api/tenants/memberships |
 
 **API endpoints:**
 
@@ -1633,8 +1693,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 523 |
+| **Lines** | 540 |
 | **Hooks** | `useAuth`, `useCallback`, `useDateFormat`, `useEffect`, `useMemo`, `useNavigate`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDateFormat` → /api/auth/change-required-password, /api/teams, /api/users/profile · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 
 **API endpoints:**
 
@@ -1647,8 +1708,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 222 |
+| **Lines** | 186 |
 | **Hooks** | `useGamificationHistory`, `useGamificationMissions`, `useGamificationProgress`, `useMemo`, `useState` |
+| **Data hooks** | `useGamificationHistory` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown · `useGamificationMissions` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown · `useGamificationProgress` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/settings/tabs/SessionsTab.jsx`
@@ -1659,6 +1721,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `SessionsTab` |
 | **Lines** | 169 |
 | **Hooks** | `useAuth`, `useCallback`, `useMutation`, `useQuery`, `useQueryClient`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 **API endpoints:**
 
@@ -1668,18 +1731,6 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Marketing, dev & misc
 
-#### `client/src/pages/billing/UpgradePage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | _embedded tab / child route_ |
-| **Default export** | `function` |
-| **Lines** | 160 |
-| **Hooks** | `useAuth`, `useMemo`, `useQueryClient`, `useState`, `useTenantUnlocks`, `useToast` |
-
-**API endpoints:**
-
-- `/api/tenants/${tenantId}/billing/checkout`
 #### `client/src/pages/dev/ComponentsShowcase.jsx`
 
 | Field | Value |
@@ -1697,9 +1748,19 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 75 |
-| **Hooks** | `useAuth`, `useEffect`, `useMemo`, `useSearchParams` |
+| **Lines** | 83 |
+| **Hooks** | `useAuth`, `useEffect`, `useMemo`, `useSearchParams`, `useTenantUnlocks` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
 | **Key components** | `HubPageLayout`, `ModuleSubnav` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `client/src/pages/hubs/TabHubLayout.test.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `—` |
+| **Lines** | 58 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/management/DocumentsPage.jsx`
@@ -1708,13 +1769,14 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 296 |
-| **Hooks** | `useConfirm`, `useCreateOrgDocument`, `useDeleteOrgDocument`, `useMemo`, `useOrgDocuments`, `useState`, `useUpdateOrgDocument` |
-| **Key components** | `ListPageLayout`, `ListPageSkeleton`, `OrgDocumentModal`, `SearchInput` |
+| **Lines** | 385 |
+| **Hooks** | `useCallback`, `useConfirm`, `useCreateOrgDocument`, `useDeleteOrgDocument`, `useEffect`, `useMemo`, `useOrgDocuments`, `useState`, `useUpdateOrgDocument` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateOrgDocument` → /api/org-documents, /api/org-documents/${id}, /api/org-documents/${row._id}/file · `useDeleteOrgDocument` → /api/org-documents, /api/org-documents/${id}, /api/org-documents/${row._id}/file · `useOrgDocuments` → /api/org-documents, /api/org-documents/${id}, /api/org-documents/${row._id}/file · `useUpdateOrgDocument` → /api/org-documents, /api/org-documents/${id}, /api/org-documents/${row._id}/file |
+| **Key components** | `ListPageLayout`, `ListPageSkeleton`, `OrgDocumentModal`, `OrgDocumentWorkspacePanel`, `SearchInput` |
 
 **API endpoints:**
 
-- `/api/org-documents/${doc._id}/file`
+- `/api/org-documents/${row._id}/file`
 #### `client/src/pages/management/DocumentsPage.test.jsx`
 
 | Field | Value |
@@ -1764,6 +1826,15 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Hooks** | `useRef` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `client/src/pages/org/create/steps/StepFeatures.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `function` |
+| **Lines** | 69 |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/org/create/steps/StepIdentity.jsx`
 
 | Field | Value |
@@ -1797,7 +1868,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 73 |
+| **Lines** | 81 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/org/CreateOrganizationPage.jsx`
@@ -1806,7 +1877,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /org/create |
 | **Default export** | `function` |
-| **Lines** | 153 |
+| **Lines** | 158 |
 | **Hooks** | `useNavigate`, `useState` |
 
 **API endpoints:**
@@ -1818,7 +1889,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /org/create/success |
 | **Default export** | `function` |
-| **Lines** | 53 |
+| **Lines** | 59 |
 | **Hooks** | `useCallback`, `useEffect`, `useLocation`, `useNavigate`, `useRef` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1828,8 +1899,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /org/pick |
 | **Default export** | `function` |
-| **Lines** | 82 |
-| **Hooks** | `useEffect`, `useMutation`, `useNavigate`, `useQuery`, `useQueryClient`, `useState` |
+| **Lines** | 92 |
+| **Hooks** | `useAuth`, `useEffect`, `useMutation`, `useNavigate`, `useQuery`, `useQueryClient`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 **API endpoints:**
 
@@ -1843,6 +1915,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 63 |
 | **Hooks** | `useAuth`, `useEffect`, `useNavigate`, `useParams`, `useState` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 **API endpoints:**
 
@@ -1888,7 +1961,6 @@ Standalone admin routes (same permission model):
 
 | Route | Page | API prefix |
 | --- | --- | --- |
-| `/admin/knowledge-engine` | `KnowledgeEnginePage` | `/api/knowledge-engine` |
 | `/admin/security-audit` | `SecurityAuditPage` | `/api/admin/security-audit` |
 | `/admin/tenant-sso` | `AdminTenantSsoPage` | `/api/admin/tenants` |
 
@@ -1925,7 +1997,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 | Data Hub | `dataHubRoutes.js` | `/api/data-hub` |
 | Mail / campaigns | `mailRoutes.js`, `campaignRoutes.js`, `domains/mail/routes/streamsRouter.js` | `/api/mail`, `/api/campaigns`, `/api/mail/streams` |
 | Integrations | `domains/integrations/integrationsRoutes.js` | `/api/integrations` |
-| Knowledge Engine | `knowledgeEngineRoutes.js` | `/api/knowledge-engine` |
 | Tenant SSO (admin) | `tenantAdminRoutes.js` | `/api/admin/tenants` |
 | Security audit (admin) | `securityAuditRoutes.js` | `/api/admin/security-audit` |
 | Finance | `financeRoutes.js` | `/api/finance` |
@@ -1968,7 +2039,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/googleRoutes.js`
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
-- `server/routes/knowledgeEngineRoutes.js`
 - `server/routes/logRoutes.js`
 - `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
@@ -1981,12 +2051,14 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/opsHubRoutes.js`
 - `server/routes/orgAccountRoutes.js`
 - `server/routes/orgDocumentRoutes.js`
+- `server/routes/orgRoutes.js`
 - `server/routes/pinBoardRoutes.js`
 - `server/routes/platformSettingsRoutes.js`
 - `server/routes/platformSupportRoutes.js`
 - `server/routes/projectRoutes.js`
 - `server/routes/proxyRoutes.js`
 - `server/routes/publicApiRoutes.js`
+- `server/routes/publicFormRoutes.js`
 - `server/routes/publicRoutes.js`
 - `server/routes/qaRoutes.js`
 - `server/routes/queueAdminRoutes.js`
@@ -2031,6 +2103,8 @@ Full endpoint listing: `.specify/memory/backend/express.md` and `.specify/memory
 | Gamification | XP on task completion; weekly leaderboard IST Monday reset; idempotent recalc via audit trail | `shared/gamificationRules.js`, `server/services/gamificationService.js` |
 | Credentials | OAuth/Resend tokens encrypted at rest when `CREDENTIAL_ENCRYPTION_KEY` set | `server/utils/credentialEncryption.js` |
 
+Shared rule module inventory (generated): [`docs/.generated/shared-rules-inventory.json`](../.generated/shared-rules-inventory.json)
+
 ---
 
 ## 7. Locked zones
@@ -2042,6 +2116,8 @@ Full endpoint listing: `.specify/memory/backend/express.md` and `.specify/memory
 | Production hosts | `.cursor/production-hosts.local.json` (gitignored) |
 | Legacy APIs | [`LEGACY_FREEZE.md`](../architecture/LEGACY_FREEZE.md) |
 
+Enforcement: locked-zone checks run in local tests + CI. Any override requires explicit env opt-in and rationale.
+
 ---
 
 ## 8. Documentation map
@@ -2049,7 +2125,8 @@ Full endpoint listing: `.specify/memory/backend/express.md` and `.specify/memory
 | Path | Purpose |
 | --- | --- |
 | [`DOCUMENTATION_INDEX.md`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
-| [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) | Agent memory hub |
+| [`memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
+| [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) | Compatibility mirror (deprecated) |
 | [`reference/COREKNOT_MASTER.md`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
 | [`operations/`](../operations/) | Deploy, startup, scripts, environments, [`PUBLIC_LAUNCH_BETA.md`](../operations/PUBLIC_LAUNCH_BETA.md) |
 | [`architecture/`](../architecture/) | System design, data, security, debt |

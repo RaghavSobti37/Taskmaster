@@ -4,15 +4,17 @@ Every agent in this package reads **agent memory first**, then follows platform 
 
 ## Memory first (every chat)
 
+Canonical vault: **TSC Platform root** `memory/obsidian/` (junction at `memory/obsidian/` in this package).
+
 | Step | Path |
 |------|------|
-| 1 | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) |
-| 2 | [`.specify/memory/changelog/recent-changes.md`](.specify/memory/changelog/recent-changes.md) |
-| 3 | [`.specify/memory/changelog/session-patterns.md`](.specify/memory/changelog/session-patterns.md) |
-| 4 | [`.specify/memory/operations/conventions.md`](.specify/memory/operations/conventions.md) |
+| 1 | [`memory/obsidian/INDEX.md`](memory/obsidian/INDEX.md) · platform: [`../../../../memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) |
+| 2 | [`memory/obsidian/ReportExploration.md`](memory/obsidian/ReportExploration.md) |
+| 3 | [`memory/obsidian/RecentChanges.md`](memory/obsidian/RecentChanges.md) |
+| 4 | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) *(compat fallback only)* |
 | 5 | Component doc per task — [memory-map](.cursor/skills/git-push/memory-map.md) |
 
-**Protocol:** [`.specify/memory/MEMORY_PROTOCOL.md`](.specify/memory/MEMORY_PROTOCOL.md)  
+**Protocol:** Obsidian notes are canonical; `.specify` is compatibility-only.  
 **Rule:** `.cursor/rules/memory-first.mdc` (always on)  
 **Boot skill:** `.cursor/skills/coreknot-session-boot/SKILL.md`  
 **End-of-session:** `.cursor/skills/memory-sync/SKILL.md` or `/git-push`
@@ -70,3 +72,7 @@ npm run sync:prod-tenant-tsc   # from coreknot/Taskmaster — skips Data Hub/Exl
 ```
 
 See `docs/operations/LOCAL_DEV_DATABASE.md`.
+
+**Connected Apps / forms demo (no prod sync):** `npm run seed:local-integrations-demo` — [`docs/operations/LOCAL_DEV_DEMO_DATA.md`](docs/operations/LOCAL_DEV_DEMO_DATA.md).
+
+**Intake deep dive:** [`docs/features/CONNECTED_APPS_AND_INTAKE.md`](docs/features/CONNECTED_APPS_AND_INTAKE.md).

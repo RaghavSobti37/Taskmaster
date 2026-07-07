@@ -23,11 +23,14 @@ const getSquareColor = (status, entry) => {
   return SQUARE_COLORS[status] || SQUARE_COLORS.empty;
 };
 
+const hasManualRecord = (record) => Boolean(record?.manualTimestamp);
+const getRecordDisplayTime = (record) => record?.manualTimestamp || '--';
+
 const buildTooltip = (date, entry, status) => {
   const lines = [formatWeekdayDateLong(date)];
   if (status === 'holiday') {
     lines.push(`Holiday: ${getHolidayLabel(date)}`);
-    if (entry?.inTimeRecord?.timestamp || entry?.outTimeRecord?.timestamp) {
+    if (hasManualRecord(entry?.inTimeRecord) || hasManualRecord(entry?.outTimeRecord)) {
       lines.push('Status: Present (worked on holiday)');
     }
     return lines.join('\n');
@@ -38,11 +41,11 @@ const buildTooltip = (date, entry, status) => {
   }
   if (entry.onLeave || status === 'leave') lines.push('Status: Leave');
   else if (entry.isHalfDay) lines.push('Status: Half Day');
-  else if (entry.inTimeRecord?.timestamp || entry.outTimeRecord?.timestamp) lines.push('Status: Present');
+  else if (hasManualRecord(entry?.inTimeRecord) || hasManualRecord(entry?.outTimeRecord)) lines.push('Status: Present');
   else lines.push('Status: No input');
   
-  if (entry.inTimeRecord?.timestamp) lines.push(`In: ${entry.inTimeRecord.timestamp} ${entry.inTimeRecord.isApproved ? '(Approved)' : ''}`);
-  if (entry.outTimeRecord?.timestamp) lines.push(`Out: ${entry.outTimeRecord.timestamp} ${entry.outTimeRecord.isApproved ? '(Approved)' : ''}`);
+  if (hasManualRecord(entry?.inTimeRecord)) lines.push(`In: ${getRecordDisplayTime(entry.inTimeRecord)} ${entry.inTimeRecord.isApproved ? '(Locked)' : ''}`);
+  if (hasManualRecord(entry?.outTimeRecord)) lines.push(`Out: ${getRecordDisplayTime(entry.outTimeRecord)} ${entry.outTimeRecord.isApproved ? '(Locked)' : ''}`);
   
   if (entry.reason) lines.push(`Note: ${entry.reason}`);
   return lines.join('\n');
@@ -145,6 +148,9 @@ const MonthlyAttendanceGrid = ({
           </tbody>
         </table>
       </div>
+      <p className="text-[10px] font-semibold text-[var(--color-text-muted)]">
+        Blue ring indicates fully approved and locked attendance for that day.
+      </p>
     </section>
   );
 };

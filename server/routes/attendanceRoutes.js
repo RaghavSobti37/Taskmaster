@@ -24,6 +24,7 @@ const { validateBody } = require('../validation/validateBody');
 const {
   attendanceQuery,
   attendanceCheckBody,
+  attendanceUndoBody,
   leaveRequestBody,
   leaveRequestsQuery,
   leaveReviewBody,
@@ -36,6 +37,7 @@ const {
   getAttendanceStatsCache,
   setAttendanceStatsCache,
   bustAttendanceCacheForUser,
+  bustAllAttendanceCache,
 } = require('../services/hybridCache');
 
 const emitAttendanceEvent = (eventType, doc) => {
@@ -133,6 +135,16 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
     const timeValue = req.body?.manualTime || formatHHMM(now);
     const workMode = req.body?.workMode === 'wfh' ? 'wfh' : 'office';
     const verificationMethod = 'MANUAL';
+    const timeValidation = validateAttendanceTimes({
+      dateKey: getDateKey(today),
+      timeIn: type === 'in' ? timeValue : existing?.inTimeRecord?.manualTimestamp,
+      timeOut: type === 'out' ? timeValue : existing?.outTimeRecord?.manualTimestamp,
+      onLeave: existing?.onLeave,
+      isHalfDay: existing?.isHalfDay,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
 
     const updateBlock = type === 'in'
       ? { 'inTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, verificationMethod, isApproved: false } }
@@ -165,7 +177,7 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
   }
 });
 
-router.post('/check/undo', async (req, res) => {
+router.post('/check/undo', validateBody(attendanceUndoBody), async (req, res) => {
   try {
     const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
@@ -229,6 +241,16 @@ router.patch('/:id/approve', async (req, res) => {
       row.outTimeRecord.isApproved = true;
       row.outTimeRecord.approvedBy = req.user._id;
     }
+    const timeValidation = validateAttendanceTimes({
+      dateKey: getDateKey(row.date),
+      timeIn: row.inTimeRecord?.manualTimestamp,
+      timeOut: row.outTimeRecord?.manualTimestamp,
+      onLeave: row.onLeave,
+      isHalfDay: row.isHalfDay,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
 
     const updatedRow = await computeAttendanceMetrics(row);
     await updatedRow.save();
@@ -252,6 +274,16 @@ router.put('/upsert/by-user-date', async (req, res) => {
     if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can edit attendance' });
     const { userId, username, date, inTimeRecord, outTimeRecord, isHalfDay, onLeave, reason } = req.body;
     if (!userId || !date) return res.status(400).json({ error: 'userId and date are required' });
+    const timeValidation = validateAttendanceTimes({
+      dateKey: getDateKey(toStartOfDay(date)),
+      timeIn: inTimeRecord?.manualTimestamp,
+      timeOut: outTimeRecord?.manualTimestamp,
+      onLeave: !!onLeave,
+      isHalfDay: !!isHalfDay,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
 
     const row = await Attendance.findOneAndUpdate(
       { userId, date: toStartOfDay(date) },
@@ -395,6 +427,7 @@ router.delete('/reset', async (req, res) => {
     }
     await Attendance.deleteMany({});
     await LeaveRequest.deleteMany({});
+    await bustAllAttendanceCache();
     res.json({ message: 'All attendance records reset' });
   } catch (error) {
     res.status(500).json({ error: error.message });

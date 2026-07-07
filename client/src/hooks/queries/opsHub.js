@@ -1,42 +1,58 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
+import useTenantQueryKey from '../useTenantQueryKey';
 
-export const useOpsHubTaxonomy = (options = {}) => useQuery({
-  queryKey: ['opsHub', 'taxonomy'],
-  queryFn: async () => (await axios.get('/api/ops-hub/taxonomy')).data,
-  staleTime: 1000 * 60 * 30,
-  ...options,
-});
+export const useOpsHubTaxonomy = (options = {}) => {
+  const queryKey = useTenantQueryKey('opsHub', 'taxonomy');
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get('/api/ops-hub/taxonomy')).data,
+    staleTime: 1000 * 60 * 30,
+    ...options,
+  });
+};
 
-export const useOpsHubEntities = (params = {}, options = {}) => useQuery({
-  queryKey: ['opsHub', 'entities', params],
-  queryFn: async () => (await axios.get('/api/ops-hub/entities', { params })).data,
-  placeholderData: keepPreviousData,
-  staleTime: 1000 * 30,
-  ...options,
-});
+export const useOpsHubEntities = (params = {}, options = {}) => {
+  const queryKey = useTenantQueryKey('opsHub', 'entities', params);
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get('/api/ops-hub/entities', { params })).data,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 30,
+    ...options,
+  });
+};
 
-export const useOpsHubEntity = (id, options = {}) => useQuery({
-  queryKey: ['opsHub', 'entity', id],
-  queryFn: async () => (await axios.get(`/api/ops-hub/entities/${id}`)).data,
-  enabled: !!id,
-  ...options,
-});
+export const useOpsHubEntity = (id, options = {}) => {
+  const queryKey = useTenantQueryKey('opsHub', 'entity', id);
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get(`/api/ops-hub/entities/${id}`)).data,
+    enabled: !!id,
+    ...options,
+  });
+};
 
-export const useOpsHubWeekly = (weekKey, options = {}) => useQuery({
-  queryKey: ['opsHub', 'weekly', weekKey],
-  queryFn: async () => (await axios.get('/api/ops-hub/weekly', { params: weekKey ? { weekKey } : {} })).data,
-  staleTime: 1000 * 60,
-  ...options,
-});
+export const useOpsHubWeekly = (weekKey, options = {}) => {
+  const queryKey = useTenantQueryKey('opsHub', 'weekly', weekKey);
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get('/api/ops-hub/weekly', { params: weekKey ? { weekKey } : {} })).data,
+    staleTime: 1000 * 60,
+    ...options,
+  });
+};
 
-export const useOpsHubAnalytics = (weekKey, enabled = true, options = {}) => useQuery({
-  queryKey: ['opsHub', 'analytics', weekKey],
-  queryFn: async () => (await axios.get('/api/ops-hub/analytics', { params: weekKey ? { weekKey } : {} })).data,
-  enabled: !!enabled,
-  staleTime: 1000 * 60,
-  ...options,
-});
+export const useOpsHubAnalytics = (weekKey, enabled = true, options = {}) => {
+  const queryKey = useTenantQueryKey('opsHub', 'analytics', weekKey);
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get('/api/ops-hub/analytics', { params: weekKey ? { weekKey } : {} })).data,
+    enabled: !!enabled,
+    staleTime: 1000 * 60,
+    ...options,
+  });
+};
 
 export const useCreateOpsEntity = () => {
   const queryClient = useQueryClient();

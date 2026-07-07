@@ -9,7 +9,7 @@ const PROFILE_SETTINGS_PATH = '/settings';
 const PROFILE_TAB = 'profile';
 
 function isProfileSettingsPath(pathname, search) {
-  if (pathname !== PROFILE_SETTINGS_PATH) return false;
+  if (pathname !== PROFILE_SETTINGS_PATH && !pathname.endsWith(PROFILE_SETTINGS_PATH)) return false;
   const tab = new URLSearchParams(search).get('tab');
   return !tab || tab === PROFILE_TAB;
 }

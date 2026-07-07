@@ -8,6 +8,9 @@ const ROUTE_ALLOWLIST = new Set([
   'campaignRoutes.js',
   'campaignApiRouter.js',
   'attendanceRoutes.js',
+  'departmentRoutes.js', // GET /public — resolve tenant by slug before tenant context
+  'publicApiRoutes.js', // public API lookups before tenant context
+  'publicFormRoutes.js', // public website form embed — resolve tenant by form key
 ]);
 
 const SERVICE_ALLOWLIST = new Set([
@@ -27,9 +30,12 @@ const SERVICE_ALLOWLIST = new Set([
   'campaignFacade.js',
   'folderCache.js',
   'resendWebhookHandler.js',
+  'aisensyWebhookHandler.js',
   'queueService.js',
   'emailProcessor.js',
   'scimProvisioningService.js',
+  'aisensyCampaignSyncService.js',
+  'aisensyCampaignImportService.js',
 ]);
 
 /** Controllers/middleware that bypass before tenant context exists or for break-glass ops. */
@@ -63,6 +69,7 @@ const USE_CASES = {
   ATTENDANCE_REFRESH: 'cron attendance metrics without request tenant',
   FINANCE_ADMIN: 'finance admin rollup before tenant backfill',
   SCIM_PROVISION: 'IdP SCIM user lookup/provision before request tenant context',
+  PUBLIC_TENANT_LOOKUP: 'public signup/API resolves tenant by slug before context',
 };
 
 function isRouteBypassAllowed(routeFile) {

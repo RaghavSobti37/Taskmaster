@@ -25,11 +25,12 @@ export function useConnectIntegration() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ provider, apiKey, label, mode }) => {
+      const returnPath = `${window.location.pathname}${window.location.search.includes('tab=') ? window.location.search : '?tab=integrations'}`;
       const { data } = await axios.post(`/api/integrations/${provider}/connect`, {
         apiKey,
         label,
         mode,
-        returnUrl: `${window.location.origin}/settings?tab=integrations`,
+        returnUrl: `${window.location.origin}${returnPath}`,
       });
       return data;
     },

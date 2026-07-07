@@ -9,6 +9,7 @@ const mockUseAuth = vi.fn();
 const mockUseStatusCounts = vi.fn();
 const mockUseTheme = vi.fn();
 const mockUseIsMobile = vi.fn();
+const mockGetFeatureLock = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -44,7 +45,7 @@ vi.mock('../hooks/useTenantUnlocks', () => ({
     unlocks: {},
     isLoading: false,
     isFeatureUnlocked: () => true,
-    getFeatureLock: () => null,
+    getFeatureLock: (...args) => mockGetFeatureLock(...args),
   }),
 }));
 
@@ -80,6 +81,7 @@ function renderSidebar(initialEntry = '/dashboard') {
 describe('OutletSidebar settings navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetFeatureLock.mockReturnValue(null);
     mockUseIsMobile.mockReturnValue(false);
     mockUseTheme.mockReturnValue({ theme: 'light', toggleTheme: vi.fn() });
     mockUseStatusCounts.mockReturnValue({ data: {} });
@@ -108,5 +110,17 @@ describe('OutletSidebar settings navigation', () => {
     await user.click(screen.getByRole('link', { name: /test user/i }));
 
     expect(await screen.findByRole('heading', { name: 'Settings page' })).toBeInTheDocument();
+  });
+
+  it('hides feature-locked nav pages', () => {
+    mockGetFeatureLock.mockImplementation((path) => (
+      path === '/emails'
+        ? { featureKey: 'resend', message: 'Locked' }
+        : null
+    ));
+
+    renderSidebar('/dashboard');
+
+    expect(screen.queryByRole('link', { name: 'Emails' })).not.toBeInTheDocument();
   });
 });

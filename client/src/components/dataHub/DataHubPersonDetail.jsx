@@ -23,6 +23,16 @@ const INLET_COLORS = {
   community: 'success',
   unsubscribed: 'rose',
   active: 'mint',
+  media: 'info',
+  media_pr: 'info',
+  media_journalist: 'mint',
+  media_influencer: 'warning',
+  academy_students: 'mint',
+  havells_registered: 'mint',
+  havells_selected: 'success',
+  havells_attended_delhi: 'info',
+  havells_attended_indore: 'info',
+  havells_attended_dumka: 'info',
 };
 
 const TABS = [
@@ -54,6 +64,16 @@ const INLET_LABELS = {
   enquiries: 'Enquiries',
   mail: 'Mail',
   community: 'Community',
+  media: 'Media Data',
+  media_pr: 'Media PR',
+  media_journalist: 'Media Journalists',
+  media_influencer: 'Media Influencers',
+  academy_students: 'Academy Students',
+  havells_registered: 'Havells Participants',
+  havells_selected: 'Havells Selected',
+  havells_attended_delhi: 'Havells Attended Delhi',
+  havells_attended_indore: 'Havells Attended Indore',
+  havells_attended_dumka: 'Havells Attended Dumka',
 };
 
 const SUMMARY_FIELDS = {
@@ -90,6 +110,10 @@ const SUMMARY_FIELDS = {
     { key: 'originSource', label: 'Origin' },
   ],
   mail: [
+    { key: 'campaign', label: 'WA campaign' },
+    { key: 'deliveryStatus', label: 'WA status' },
+    { key: 'tags', label: 'WA tags', format: 'tags' },
+    { key: 'failureReason', label: 'Failure reason' },
     { key: 'mailEventCount', label: 'Mail events' },
   ],
   enquiries: [
@@ -102,6 +126,10 @@ const SUMMARY_FIELDS = {
 function formatSummaryValue(value, format) {
   if (value == null || value === '') return null;
   if (format === 'currency') return `₹${Number(value).toLocaleString('en-IN')}`;
+  if (format === 'tags') {
+    if (Array.isArray(value)) return value.join(', ');
+    return String(value);
+  }
   return String(value);
 }
 
@@ -478,16 +506,39 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
           )}
 
           {tab === 'mail' && (
-            <div className="space-y-2">
-              {(person.mail?.events || []).map((evt) => (
-                <div key={evt._id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-secondary)] text-xs">
-                  <Mail size={12} />
-                  <Badge variant={evt.eventType === 'Open' ? 'mint' : evt.eventType === 'Click' ? 'info' : 'neutral'}>{evt.eventType}</Badge>
-                  <span className="flex-1 truncate">{evt.campaignName || evt.campaignId || 'Campaign'}</span>
-                  <span className="text-[var(--color-text-muted)]">{formatDate(evt.timestamp || evt.createdAt)}</span>
+            <div className="space-y-4">
+              {(person.mail?.whatsappCampaigns || []).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">WhatsApp campaigns</p>
+                  {(person.mail?.whatsappCampaigns || []).map((row) => (
+                    <div key={`${row.campaignName}-${row.phone}`} className="p-2 rounded-lg bg-[var(--color-bg-secondary)] text-xs space-y-1">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare size={12} />
+                        <span className="font-medium truncate flex-1">{row.campaignName}</span>
+                        <Badge variant={row.status === 'failed' ? 'rose' : row.status === 'read' ? 'mint' : 'info'}>{row.status}</Badge>
+                      </div>
+                      {row.tags?.length > 0 && (
+                        <p className="text-[var(--color-text-muted)]">Tags: {row.tags.join(', ')}</p>
+                      )}
+                      {row.failureReason && (
+                        <p className="text-[var(--color-text-muted)]">{row.failureReason}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {!person.mail?.events?.length && <p className="text-sm text-[var(--color-text-muted)]">No mail events</p>}
+              )}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Email events</p>
+                {(person.mail?.events || []).map((evt) => (
+                  <div key={evt._id} className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-bg-secondary)] text-xs">
+                    <Mail size={12} />
+                    <Badge variant={evt.eventType === 'Open' ? 'mint' : evt.eventType === 'Click' ? 'info' : 'neutral'}>{evt.eventType}</Badge>
+                    <span className="flex-1 truncate">{evt.campaignName || evt.campaignId || 'Campaign'}</span>
+                    <span className="text-[var(--color-text-muted)]">{formatDate(evt.timestamp || evt.createdAt)}</span>
+                  </div>
+                ))}
+                {!person.mail?.events?.length && <p className="text-sm text-[var(--color-text-muted)]">No mail events</p>}
+              </div>
             </div>
           )}
 

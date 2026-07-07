@@ -99,7 +99,7 @@ const AdminGamification = () => {
   const handleRecalculateAllLevels = useCallback(async () => {
     const ok = await confirm({
       title: 'Recalculate all user XP?',
-      message: 'Rebuilds totals from activity history using current XP rates, then syncs levels.',
+      message: 'Rebuilds totals from activity history using current XP rates.',
       confirmLabel: 'Recalculate',
       type: 'warning',
     });
@@ -126,7 +126,6 @@ const AdminGamification = () => {
   }, [rules, config]);
 
   const editableFields = useMemo(() => ([
-    { key: 'stepXp', label: 'XP per level', description: 'Total XP needed to advance one level (linear: level = floor(exp / stepXp) + 1)' },
     { key: 'dailyMissionBaseReward', label: 'Mission scale reference', description: 'Reference value; individual missions use fixed bonuses (25 / 20 / 15)' },
   ]), []);
 
@@ -157,7 +156,7 @@ const AdminGamification = () => {
             onClick={handleRecalculateAllLevels}
             disabled={recalculating}
             className="gap-2 shrink-0"
-            title="Rebuild audit log amounts, user totals, levels, and weekly leaderboard from current rates"
+            title="Rebuild audit log amounts, user totals, and monthly leaderboard from current rates"
           >
             <RefreshCw size={16} className={recalculating ? 'animate-spin' : ''} />
             {recalculating ? 'Recalculating…' : 'Recalculate all user XP'}
@@ -316,7 +315,7 @@ const AdminGamification = () => {
 
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
-          <h3 className="text-base font-bold">Level progression</h3>
+          <h3 className="text-base font-bold">XP controls</h3>
         </div>
         <div className="divide-y divide-[var(--color-bg-border)]">
           {editableFields.map(({ key, label, description }) => (
@@ -358,7 +357,7 @@ const AdminGamification = () => {
           ))}
         </div>
         <div className="px-5 py-3 bg-[var(--color-bg-secondary)]/40 text-xs text-[var(--color-text-muted)]">
-          Example: at {config?.stepXp ?? 100} XP/level — Level 2 at {config?.stepXp ?? 100} XP, Level 3 at {(config?.stepXp ?? 100) * 2} XP. Leaderboard ranks by <strong className="text-[var(--color-text-primary)]">this week&apos;s</strong> audit log sum. After rate changes, use <strong className="text-[var(--color-text-primary)]">Recalculate all user XP</strong> (top right) to sync totals and leaderboard.
+          Leaderboard ranks by <strong className="text-[var(--color-text-primary)]">monthly</strong> audit log XP sum. After rate changes, use <strong className="text-[var(--color-text-primary)]">Recalculate all user XP</strong> (top right) to sync totals and snapshots.
         </div>
       </Card>
     </PageContainer>

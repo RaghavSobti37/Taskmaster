@@ -11,7 +11,7 @@ import {
   PROJECT_GOAL_METRIC_LABELS,
 } from '../../utils/projectGoalMetrics';
 import ProjectGoalMetricCards, { ProjectGoalMetricCardsSkeleton } from './ProjectGoalMetricCards';
-import { getCrmDigestSegmentForWorkspace } from '@shared/crmDigestProjects';
+import { getCrmDigestSegmentForWorkspace } from '../../utils/crmDigestProjectsClient';
 
 function buildDraft(goal) {
   return {

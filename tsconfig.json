@@ -10,6 +10,7 @@
     "types": ["node"],
     "maxNodeModuleJsDepth": 1,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@coreknot/contracts": ["shared/contracts/index.js"],
       "@coreknot/contracts/*": ["shared/contracts/*"]

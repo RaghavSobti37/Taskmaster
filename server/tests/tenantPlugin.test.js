@@ -36,7 +36,9 @@ describe('tenantPlugin validate hook', () => {
 
   it('falls back to Default Tenant in test without context', async () => {
     const prev = process.env.NODE_ENV;
+    const prevFallback = process.env.ALLOW_DEFAULT_TENANT_FALLBACK;
     process.env.NODE_ENV = 'test';
+    process.env.ALLOW_DEFAULT_TENANT_FALLBACK = 'true';
     try {
       const doc = await TestModel.create({ name: 'fallback' });
       const defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
@@ -47,6 +49,7 @@ describe('tenantPlugin validate hook', () => {
       }
     } finally {
       process.env.NODE_ENV = prev;
+      process.env.ALLOW_DEFAULT_TENANT_FALLBACK = prevFallback;
     }
   });
 
@@ -110,5 +113,27 @@ describe('tenantPlugin validate hook', () => {
 
     const rows = await TestModel.aggregate([{ $count: 'count' }]).option({ bypassTenant: true });
     expect(rows[0]?.count).toBe(2);
+  });
+
+  it('scopes find/countDocuments when filter uses $or (tenant must not be overwritten)', async () => {
+    const tenantA = await Tenant.create({ name: 'Or A', contactEmail: 'ora@test.com' });
+    const tenantB = await Tenant.create({ name: 'Or B', contactEmail: 'orb@test.com' });
+
+    await TestModel.create([
+      { name: 'a1', category: 'keep', tenantId: tenantA._id },
+      { name: 'a2', category: 'keep', tenantId: tenantA._id },
+      { name: 'b1', category: 'keep', tenantId: tenantB._id },
+    ]);
+
+    const filter = { $or: [{ category: 'keep' }, { category: 'other' }] };
+
+    const scoped = await runWithContext({ tenantId: tenantA._id }, async () => {
+      const count = await TestModel.countDocuments(filter);
+      const docs = await TestModel.find(filter).select('name').lean();
+      return { count, names: docs.map((d) => d.name).sort() };
+    });
+
+    expect(scoped.count).toBe(2);
+    expect(scoped.names).toEqual(['a1', 'a2']);
   });
 });

@@ -78,6 +78,7 @@ export default function ProfileTab() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [avatarSaving, setAvatarSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -238,6 +239,21 @@ export default function ProfileTab() {
       setSaveError(err.response?.data?.error || 'Failed to update profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarSelect = async (url) => {
+    setAvatar(url);
+    setSaveError('');
+    setAvatarSaving(true);
+    try {
+      const { data: updatedUser } = await axios.put('/api/users/profile', { avatar: url });
+      applySessionUser(updatedUser);
+      setIsAvatarModalOpen(false);
+    } catch (err) {
+      setSaveError(err.response?.data?.error || 'Failed to save avatar');
+    } finally {
+      setAvatarSaving(false);
     }
   };
 
@@ -470,10 +486,8 @@ export default function ProfileTab() {
                 <button
                   key={url}
                   type="button"
-                  onClick={() => {
-                    setAvatar(url);
-                    setIsAvatarModalOpen(false);
-                  }}
+                  onClick={() => handleAvatarSelect(url)}
+                  disabled={avatarSaving}
                   className={`aspect-square rounded-[var(--radius-atomic)] border-2 overflow-hidden transition-all hover:scale-105 ${
                     avatar === url
                       ? 'border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/30'
@@ -486,6 +500,9 @@ export default function ProfileTab() {
             </div>
           </main>
         </div>
+        {avatarSaving && (
+          <p className="px-4 pb-3 text-[10px] text-[var(--color-text-muted)]">Saving avatar…</p>
+        )}
         <footer className="px-4 py-2 border-t border-[var(--color-bg-border)] text-[8px] text-[var(--color-text-muted)] text-center">
           Cartoon avatars by Ashwinvalento · DiceBear styles under their respective licenses
         </footer>

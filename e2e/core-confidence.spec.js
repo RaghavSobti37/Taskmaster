@@ -15,6 +15,7 @@ import {
   fetchFirstArtistId,
   getApiBase,
 } from './helpers/api.js';
+import { orgAppPath } from './helpers/orgPaths.js';
 
 const e2ePassword = process.env.E2E_PASSWORD || DEFAULT_SEED_PASSWORD;
 const loginEmail = process.env.E2E_LOGIN_EMAIL || SEEDED_OPS_EMAIL;
@@ -30,7 +31,7 @@ test.describe('login redirect', () => {
   test('protected route → login → returns to original path', async ({ page }) => {
     test.skip(!hasAuthCreds(), 'Set E2E_EMAIL and E2E_PASSWORD, or use seeded E2E users');
 
-    await page.goto('/todo');
+    await page.goto(orgAppPath('/todo'));
     await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
 
     await login(page, {
@@ -54,7 +55,7 @@ test.describe('login redirect', () => {
     });
 
     await expect(page).toHaveURL(/\/crm/, { timeout: 30_000 });
-    await expect(page.getByText('Total Leads')).toBeVisible({
+    await expect(page.getByRole('button', { name: /add lead/i })).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -103,7 +104,7 @@ test.describe('password gate', () => {
       timeout: 15_000,
     });
     await dismissOnboardingTourIfVisible(page);
-    await page.goto('/settings?tab=profile');
+    await page.goto(orgAppPath('/settings?tab=profile'));
     await expect(page).toHaveURL(/\/settings/, { timeout: 15_000 });
     await expect(page).toHaveURL(/tab=profile/);
     await expect(page.getByText(/temporary password/i)).toBeVisible({ timeout: 15_000 });
@@ -118,7 +119,7 @@ test.describe('password gate', () => {
       timeout: 15_000,
     });
 
-    await page.goto('/dashboard');
+    await page.goto(orgAppPath('/dashboard'));
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
     await expect(page.getByRole('dialog').getByText(/password change required/i)).toHaveCount(0);
   });
@@ -148,7 +149,7 @@ test.describe('artist OS smoke', () => {
 
     test.skip(!artistId, 'No artists in DB — seed data or set E2E_ARTIST_ID');
 
-    await page.goto(`/artists/${artistId}?tab=overview`);
+    await page.goto(orgAppPath(`/artists/${artistId}?tab=overview`));
 
     await expect(page.getByRole('tablist', { name: /artist os sections/i })).toBeVisible({
       timeout: 20_000,

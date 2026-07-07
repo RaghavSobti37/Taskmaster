@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { DashboardWidgetShell, DataLoading } from '../ui';
-import { useLeaderboard, useLeaderboardBreakdown } from '../../hooks/useTaskmasterQueries';
+import { useLeaderboard, useLeaderboardBreakdown, useLeaderboardHistory } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
 import LeaderboardBreakdownModal from './LeaderboardBreakdownModal';
@@ -11,7 +11,9 @@ const TOP_N = 5;
 
 const LeaderboardPodium = () => {
   const { user } = useAuth();
-  const { data, isLoading } = useLeaderboard(true);
+  const [selectedMonthStartKey, setSelectedMonthStartKey] = useState(null);
+  const { data: historyData } = useLeaderboardHistory(12, true);
+  const { data, isLoading } = useLeaderboard(selectedMonthStartKey, true);
   const entries = data?.entries ?? [];
   const meta = data?.meta;
   const topFive = useMemo(() => entries.slice(0, TOP_N), [entries]);
@@ -21,8 +23,14 @@ const LeaderboardPodium = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const { data: breakdown, isLoading: breakdownLoading } = useLeaderboardBreakdown(
     selectedMember?._id,
+    selectedMonthStartKey,
     !!selectedMember?._id
   );
+  const history = historyData?.history || [];
+  const monthOptions = history.map((row) => ({
+    value: row.monthStartKey,
+    label: `${row.monthStartKey} - ${row.monthEndKey}`,
+  }));
 
   return (
     <>
@@ -30,10 +38,24 @@ const LeaderboardPodium = () => {
         className="overflow-visible"
         bodyClassName="p-0 flex flex-col"
         title={
-          <>
-            Monthly Leaderboard
-            <LeaderboardUpdatedBadge lastRecalculatedAt={meta?.lastRecalculatedAt} />
-          </>
+          <div className="w-full flex items-center justify-between gap-2 min-w-0">
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="truncate">Monthly Leaderboard</span>
+              <LeaderboardUpdatedBadge lastRecalculatedAt={meta?.lastRecalculatedAt} />
+            </div>
+            <label className="sr-only" htmlFor="leaderboard-month-select">Month</label>
+            <select
+              id="leaderboard-month-select"
+              value={selectedMonthStartKey || ''}
+              onChange={(e) => setSelectedMonthStartKey(e.target.value || null)}
+              className="h-8 min-h-0 w-[130px] sm:w-[160px] rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-2 text-[11px] text-[var(--color-text-primary)] shrink-0"
+            >
+              <option value="">Current month</option>
+              {monthOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
         }
         icon={Trophy}
       >

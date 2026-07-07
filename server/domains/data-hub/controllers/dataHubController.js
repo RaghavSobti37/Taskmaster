@@ -9,11 +9,29 @@ const {
 const { notifyBackupResult } = require('../../../services/backupNotificationService');
 const logger = require('../../../utils/logger');
 const { getCache, setCache } = require('../../../services/cacheService');
+const {
+  importAisensyCampaignCsv,
+  listCampaignSummaries,
+  inferCampaignNameFromFilename,
+  inferStatusFromFilename,
+} = require('../../../services/aisensyCampaignImportService');
+const { registerWhatsappCampaign } = require('../../../services/aisensyCampaignSyncService');
+const { runWithContext } = require('../../../utils/tenantContext');
+const { resolveDefaultTenantId } = require('../../../utils/defaultTenant');
 
 const BACKUPS_LIST_CACHE_KEY = 'data-hub:backups:list:v1';
 const BACKUPS_LIST_TTL_SECONDS = 30;
 
 let backupInProgress = false;
+let hubRebuildInProgress = false;
+
+const HAVELLS_INLET_KEYS = [
+  'havells_registered',
+  'havells_selected',
+  'havells_attended_delhi',
+  'havells_attended_indore',
+  'havells_attended_dumka',
+];
 
 exports.getFolders = async (req, res) => {
   try {
@@ -111,6 +129,33 @@ exports.reconcile = async (req, res) => {
   }
 };
 
+exports.rebuildPersonHub = async (req, res) => {
+  if (hubRebuildInProgress) {
+    return res.status(429).json({ error: 'Person hub rebuild already in progress. Try again in a few minutes.' });
+  }
+  hubRebuildInProgress = true;
+  try {
+    const full = req.query.full === 'true';
+    const havellsOnly = req.query.havells === 'true';
+    const filter = havellsOnly ? { 'inlets.key': { $in: HAVELLS_INLET_KEYS } } : null;
+    const result = await DataHubService.rebuildPersonHubFromIndex({
+      mode: full ? 'full' : 'sync',
+      filter,
+    });
+    res.json({
+      message: full
+        ? 'Person hub view fully rebuilt from PersonIndex'
+        : 'Person hub inlet keys synced from PersonIndex',
+      stats: result,
+    });
+  } catch (error) {
+    logger.error('dataHubController', 'rebuildPersonHub', { error: error.message });
+    res.status(500).json({ error: error.message || 'Hub rebuild failed' });
+  } finally {
+    hubRebuildInProgress = false;
+  }
+};
+
 exports.getSyncStatus = async (req, res) => {
   try {
     const state = await DataHubService.getSyncState();
@@ -187,5 +232,70 @@ exports.runProductionBackup = async (req, res) => {
     logger.error('dataHubController', 'runProductionBackup', { error: error.message });
   } finally {
     backupInProgress = false;
+  }
+};
+
+exports.listCampaignOutcomes = async (req, res) => {
+  try {
+    const summaries = await listCampaignSummaries();
+    const baseUrl = process.env.API_PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || '';
+    res.json({
+      campaigns: summaries,
+      webhook: {
+        url: baseUrl ? `${baseUrl.replace(/\/$/, '')}/api/webhooks/aisensy` : '/api/webhooks/aisensy',
+        verifyTokenEnv: 'AISENSY_WEBHOOK_VERIFY_TOKEN',
+        secretEnv: 'AISENSY_WEBHOOK_SECRET',
+        events: ['sent', 'delivered', 'read', 'failed', 'replied', 'clicked'],
+      },
+    });
+  } catch (error) {
+    logger.error('dataHubController', 'listCampaignOutcomes', { error: error.message });
+    res.status(500).json({ error: 'Failed to list campaign outcomes' });
+  }
+};
+
+exports.importCampaignOutcomes = async (req, res) => {
+  try {
+    if (!req.file?.path) {
+      return res.status(400).json({ error: 'CSV file required' });
+    }
+    const campaignName = req.body.campaignName
+      || inferCampaignNameFromFilename(req.file.originalname || '');
+    const defaultStatus = req.body.status
+      || inferStatusFromFilename(req.file.originalname || '');
+    const tags = req.body.tags
+      ? String(req.body.tags).split(/[,;|]/).map((t) => t.trim()).filter(Boolean)
+      : [];
+    const tenantId = await resolveDefaultTenantId();
+    const stats = await runWithContext({ tenantId }, () => importAisensyCampaignCsv({
+      filePath: req.file.path,
+      campaignName,
+      defaultStatus,
+      tags,
+      sourceFilename: req.file.originalname,
+      dryRun: false,
+    }));
+    res.json({ message: 'Campaign outcomes imported', stats });
+  } catch (error) {
+    logger.error('dataHubController', 'importCampaignOutcomes', { error: error.message });
+    res.status(500).json({ error: error.message || 'Import failed' });
+  }
+};
+
+exports.registerWhatsappCampaign = async (req, res) => {
+  try {
+    const campaignName = String(req.body?.campaignName || '').trim();
+    if (!campaignName) {
+      return res.status(400).json({ error: 'campaignName required' });
+    }
+    const tags = req.body?.tags
+      ? (Array.isArray(req.body.tags) ? req.body.tags : String(req.body.tags).split(/[,;|]/))
+      : [];
+    const tenantId = await resolveDefaultTenantId();
+    const doc = await runWithContext({ tenantId }, () => registerWhatsappCampaign(campaignName, tags));
+    res.json({ message: 'Campaign registered', campaign: doc });
+  } catch (error) {
+    logger.error('dataHubController', 'registerWhatsappCampaign', { error: error.message });
+    res.status(500).json({ error: error.message || 'Registration failed' });
   }
 };

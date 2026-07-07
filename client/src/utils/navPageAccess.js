@@ -30,7 +30,6 @@ export const NAV_PATH_ACCESS = {
   '/admin/roles': 'admin_roles',
   '/admin': 'admin_data',
   '/admin/ops-hub': 'admin_ops_hub',
-  '/admin/knowledge-engine': 'admin_knowledge_engine',
   '/admin/exly-campaigns': 'admin_exly',
   '/admin/scripts': 'admin_scripts',
   '/admin/gamification': 'admin_gamification',
@@ -56,7 +55,6 @@ export const NAV_PATH_ACCESS = {
 /** Nested routes inherit parent page key (longest prefix wins). */
 const NAV_PATH_PREFIXES = [
   ['/admin/ops-hub', 'admin_ops_hub'],
-  ['/admin/knowledge-engine', 'admin_knowledge_engine'],
   ['/admin/control', 'admin_data'],
   ['/admin/teams', 'admin_teams'],
   ['/admin/users', 'admin_users'],
@@ -173,8 +171,11 @@ export function filterNavGroupsForUser(groups, user, hasPageAccessFn = hasPageAc
 export const FEATURE_UNLOCK_BY_PATH = {
   '/emails': 'resend',
   '/finance': 'finance',
-  '/admin/knowledge-engine': 'knowledgeEngine',
   '/artists': 'artistOs',
+  '/admin/ops-hub': 'opsHub',
+  '/admin': 'dataHub',
+  '/data-hub': 'dataHub',
+  '/developers': 'enterpriseApi',
 };
 
 export function getNavFeatureLock(path, unlockState = null) {

@@ -1,9 +1,78 @@
 // @ts-check
+import { expect } from '@playwright/test';
 import { getTestUserCreds } from './creds.js';
 import { getApiBase } from './api.js';
 
+function isSeededLocalUser(email) {
+  return /@test\.coreknot\.local$/i.test(String(email || ''));
+}
+
+function shouldUseApiSession(email) {
+  if (process.env.E2E_AUTH_MODE === 'api' || process.env.E2E_USE_API_LOGIN === '1') return true;
+  return !process.env.E2E_EMAIL && isSeededLocalUser(email);
+}
+
+function resolvePostLoginPath(page, returnPath) {
+  if (returnPath) return returnPath;
+  try {
+    const current = new URL(page.url());
+    const redirect = current.searchParams.get('redirect');
+    if (redirect?.startsWith('/') && !redirect.startsWith('//')) {
+      return redirect;
+    }
+    if (current.pathname === '/login' || current.pathname.endsWith('/login')) {
+      const fromQuery = current.searchParams.get('redirect');
+      if (fromQuery?.startsWith('/')) return fromQuery;
+    }
+  } catch {
+    /* page may still be about:blank */
+  }
+  return '/dashboard';
+}
+
 /**
- * Clerk SignIn on auth.tsccoreknot.com (identifier → password → continue).
+ * Local seeded E2E users live in Mongo, not Clerk. Use the API session cookie
+ * for those fixtures so route confidence tests stay deterministic.
+ * @param {import('@playwright/test').Page} page
+ * @param {{ email: string, password: string, returnPath?: string }} opts
+ */
+export async function loginWithApiSession(page, { email, password, returnPath }) {
+  const res = await page.request.post(`${getApiBase()}/api/auth/login`, {
+    data: { email, password },
+  });
+  if (res.status() === 410) {
+    throw new Error(
+      'Seeded E2E API login is disabled. Start the local API with ALLOW_LEGACY_LOGIN=true, '
+      + 'or set real E2E_EMAIL/E2E_PASSWORD credentials to exercise Clerk.',
+    );
+  }
+  if (!res.ok()) {
+    throw new Error(`Seeded E2E API login failed (${res.status()}): ${await res.text()}`);
+  }
+
+  await expect.poll(async () => {
+    const me = await page.request.get(`${getApiBase()}/api/auth/me`);
+    return me.ok();
+  }, { timeout: 30_000 }).toBe(true);
+
+  await page.goto(resolvePostLoginPath(page, returnPath), { waitUntil: 'domcontentloaded' });
+  await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 30_000 });
+  await dismissCookieConsentIfVisible(page);
+  await dismissOnboardingTourIfVisible(page);
+}
+
+export async function dismissCookieConsentIfVisible(page) {
+  const accept = page.getByRole('button', { name: /^accept all$/i });
+  try {
+    await accept.waitFor({ state: 'visible', timeout: 4_000 });
+    await accept.click();
+    await accept.waitFor({ state: 'hidden', timeout: 5_000 });
+  } catch {
+    /* banner optional */
+  }
+}
+
+/**
  * @param {import('@playwright/test').Page} page
  * @param {{ email: string, password: string, loginUrl?: string, expectHost?: string }} opts
  */
@@ -14,11 +83,7 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
 
   await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
 
-  try {
-    await page.getByRole('button', { name: /^accept all$/i }).click({ timeout: 4_000 });
-  } catch {
-    /* cookie banner optional */
-  }
+  await dismissCookieConsentIfVisible(page);
 
   const identifier = page
     .locator('input[name="identifier"], input[type="email"], .cl-formFieldInput__identifier input')
@@ -44,6 +109,7 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
     (url) => hostPattern.test(url.hostname) && !url.pathname.endsWith('/login'),
     { timeout: 90_000 },
   );
+  await dismissCookieConsentIfVisible(page);
   await dismissOnboardingTourIfVisible(page);
 }
 
@@ -55,6 +121,22 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
 export async function login(page, { email, password, returnPath, loginUrl, expectHost }) {
   if (!email || !password) {
     throw new Error('login requires email and password');
+  }
+
+  let resolvedReturnPath = returnPath;
+  if (!resolvedReturnPath) {
+    try {
+      const current = new URL(page.url());
+      const redirect = current.searchParams.get('redirect');
+      if (redirect?.startsWith('/')) resolvedReturnPath = redirect;
+    } catch {
+      /* page may still be about:blank */
+    }
+  }
+
+  if (shouldUseApiSession(email)) {
+    await loginWithApiSession(page, { email, password, returnPath: resolvedReturnPath });
+    return;
   }
 
   const loginPath = loginUrl

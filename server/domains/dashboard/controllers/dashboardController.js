@@ -351,9 +351,10 @@ exports.getAttendanceOverview = async (req, res) => {
       return res.status(403).json({ error: 'Operations or admin access required' });
     }
 
+    const tenantId = String(getTenantId() || req.tenantId || 'none');
     const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
     const { start, end } = rangeForTimeframe(timeframe);
-    const cacheKey = `dashboard:attendance-overview:v1:${timeframe}:${getDateKey()}`;
+    const cacheKey = `dashboard:attendance-overview:v1:${tenantId}:${timeframe}:${getDateKey()}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       res.set('Cache-Control', PRIVATE_CACHE_60);
@@ -431,9 +432,10 @@ exports.getTaskActivitySeries = async (req, res) => {
       return res.status(403).json({ error: 'Operations or admin access required' });
     }
 
+    const tenantId = String(getTenantId() || req.tenantId || 'none');
     const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
     const { start, end } = rangeForTimeframe(timeframe);
-    const cacheKey = `dashboard:task-activity:v1:${timeframe}:${getDateKey()}`;
+    const cacheKey = `dashboard:task-activity:v1:${tenantId}:${timeframe}:${getDateKey()}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       res.set('Cache-Control', PRIVATE_CACHE_60);

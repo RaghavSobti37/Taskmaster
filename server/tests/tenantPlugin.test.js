@@ -36,7 +36,9 @@ describe('tenantPlugin validate hook', () => {
 
   it('falls back to Default Tenant in test without context', async () => {
     const prev = process.env.NODE_ENV;
+    const prevFallback = process.env.ALLOW_DEFAULT_TENANT_FALLBACK;
     process.env.NODE_ENV = 'test';
+    process.env.ALLOW_DEFAULT_TENANT_FALLBACK = 'true';
     try {
       const doc = await TestModel.create({ name: 'fallback' });
       const defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
@@ -47,6 +49,7 @@ describe('tenantPlugin validate hook', () => {
       }
     } finally {
       process.env.NODE_ENV = prev;
+      process.env.ALLOW_DEFAULT_TENANT_FALLBACK = prevFallback;
     }
   });
 

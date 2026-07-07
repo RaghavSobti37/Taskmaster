@@ -45,6 +45,9 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `runQAScan.js` / `runQATests.js` | 🟡 | Project QA automation |
 | `qaRunIntegrationSubset.js` | 🟡 | Subset integration |
 | `triggerQaHttp.js` | 🟡 | HTTP-trigger QA |
+| `auditTaskAssignmentsHealth.js` | 🟢 | Compare local/prod task-assignment health for `tsc` tenant |
+| `auditUserTaskScope.js` | 🟢 | Compare local/prod task scope for platform owner |
+| `auditUserDepartments.js` | 🟢/🟡 | Audit admin-department and root-admin mapping (`--prod`) |
 | `verifyQaCleanup.js` | 🟢 | Verify QA purge |
 | `qaPurgeNow.js` | 🟡 | Immediate QA purge |
 | `masterAudit.js` / `fullProjectAudit.js` | 🟢 | Read-only audits |
@@ -79,6 +82,8 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `syncProdTenantToLocal.js` | 🔴 | Tenant-scoped prod → local (`npm run sync:prod-tenant-tsc`); skips Data Hub/Exly; finance lite |
 | `consolidatePlatformTenant.js` | 🔴 | Keep one tenant, rename slug, cascade-delete others (`--new-slug` / `--keep-slug`; `--prod --yes`) |
 | `restorePlatformTenantSetup.js` | 🟡/🔴 | Re-enable all `featureUnlocks` + clear `mustChangePassword` for Clerk users on platform tenant |
+| `restorePlatformUserRoles.js` | 🟡/🔴 | Restore platform owner + root admins, fix admin department, ensure owner membership |
+| `repairRaghavTaskAssignments.js` | 🟡/🔴 | Move legacy user task assignments to active platform owner account (`--yes`) |
 | `syncDataHubToProd.js` / `compareDataHubDbs.js` | 🔴 | Data Hub prod sync |
 | `syncFinanceToProd.js` | 🔴 | Finance → prod |
 | `sync-workspaces-to-prod.js` | 🔴 | Workspaces → prod |

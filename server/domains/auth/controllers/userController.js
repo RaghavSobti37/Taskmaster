@@ -149,7 +149,7 @@ exports.updateProfile = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (name) user.name = name;
-    if (avatar) user.avatar = avatar;
+    if (avatar !== undefined) user.avatar = String(avatar || '').trim();
     if (phone) user.phone = phone;
     if (teams) user.teams = teams;
     if (dateOfBirth !== undefined) {

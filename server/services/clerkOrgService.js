@@ -8,6 +8,11 @@ const isAlreadyMemberError = (err) => {
   return /already/i.test(msg);
 };
 
+const isSlugDisabledError = (err) => {
+  const msg = String(err?.errors?.[0]?.message || err?.message || '');
+  return /organization\s+slugs?\s+not\s+enabled|slug.*not\s+enabled/i.test(msg);
+};
+
 /**
  * Create a Clerk Organization for a new CoreKnot tenant and add creator as org admin.
  * No-op when Clerk is not configured or creator has no clerkId — Mongo tenant create still succeeds.
@@ -42,7 +47,20 @@ const syncTenantToClerkOrganization = async ({
     const normalizedSlug = String(slug || '').trim();
     if (normalizedSlug) orgPayload.slug = normalizedSlug;
 
-    const org = await clerkClient.organizations.createOrganization(orgPayload);
+    let org;
+    try {
+      org = await clerkClient.organizations.createOrganization(orgPayload);
+    } catch (createErr) {
+      if (orgPayload.slug && isSlugDisabledError(createErr)) {
+        logger.warn('clerkOrgService', 'Clerk org slug disabled; retrying without slug', {
+          creatorUserId: creatorUserId ? String(creatorUserId) : null,
+        });
+        const fallbackPayload = { name: trimmedName, createdBy: creatorClerkId };
+        org = await clerkClient.organizations.createOrganization(fallbackPayload);
+      } else {
+        throw createErr;
+      }
+    }
     const clerkOrganizationId = org?.id;
     if (!clerkOrganizationId) {
       return { synced: false, reason: 'no_org_id' };

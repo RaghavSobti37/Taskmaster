@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
@@ -247,7 +247,6 @@ const OutletSidebar = () => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
   const resolveOrgPath = useOrgPath();
   const { getFeatureLock } = useTenantUnlocks();
   const asideRef = useRef(null);
@@ -335,7 +334,12 @@ const OutletSidebar = () => {
   const prefetchNavPage = (path) => prefetchNavRoute(path, user?._id, user);
 
   const renderNavPages = (pages) => pages
-    .filter((page) => page.path !== '/chat' && page.visible !== false && canShowNavPage(user, page.path))
+    .filter((page) => (
+      page.path !== '/chat'
+      && page.visible !== false
+      && canShowNavPage(user, page.path)
+      && !getFeatureLock(page.path)
+    ))
     .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map((page) => {
       const config = PAGE_CONFIG[page.path];
@@ -345,13 +349,10 @@ const OutletSidebar = () => {
           ? getManagementHubPath(user, hasPageAccess)
           : page.path,
       );
-      const featureLock = getFeatureLock(page.path);
       return (
         <NavItem
           key={page.path}
           to={navPath}
-          featureLock={featureLock}
-          onLockedClick={(lock, navTo) => navigate(lock?.navPath || navTo || resolveOrgPath('/dashboard'))}
           icon={config.icon}
           label={page.label || config.label}
           iconTone={NAV_ICON_TONES[page.path]}
@@ -473,7 +474,12 @@ const OutletSidebar = () => {
         <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar min-h-0" aria-label="Application pages">
           {navGroups.map((group) => {
             const visiblePages = (group.pages || [])
-              .filter((page) => page.path !== '/chat' && page.visible !== false && canShowNavPage(user, page.path));
+              .filter((page) => (
+                page.path !== '/chat'
+                && page.visible !== false
+                && canShowNavPage(user, page.path)
+                && !getFeatureLock(page.path)
+              ));
 
             if (visiblePages.length === 0) return null;
 
@@ -564,29 +570,6 @@ const OutletSidebar = () => {
                   <div className={`rounded-lg bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative ${showLabels ? 'w-8 h-8' : 'w-7 h-7'}`}>
                     {user?.avatar ? <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
                   </div>
-                  {/* Gamification Ring */}
-                  {user?.level && (
-                    <>
-                      <svg className="absolute -inset-1 w-11 h-11 -rotate-90 pointer-events-none" viewBox="0 0 44 44">
-                        <circle cx="22" cy="22" r="20" fill="none" stroke="var(--color-bg-border)" strokeWidth="2" />
-                        <circle
-                          cx="22" cy="22" r="20"
-                          fill="none"
-                          stroke="var(--color-action-primary)"
-                          strokeWidth="2"
-                          strokeDasharray="125.6"
-                          strokeDashoffset={125.6 - (125.6 * (Math.max(0, user.exp - (Math.floor(100 * Math.pow(user.level - 1, 1.5)))) / ((Math.floor(100 * Math.pow(user.level, 1.5))) - (Math.floor(100 * Math.pow(user.level - 1, 1.5)))))) || 0}
-                          className="transition-all duration-1000 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[8px] font-black px-1 rounded-sm shadow-sm z-20">
-                        {user.level}
-                      </div>
-                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-slate-800 text-white text-[8px] font-bold rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-30 transition-opacity">
-                        Level {user.level} • {user.exp} / {Math.floor(100 * Math.pow(user.level, 1.5))} XP
-                      </div>
-                    </>
-                  )}
                 </div>
                 {showLabels && (
                   <div className="flex-1 min-w-0">

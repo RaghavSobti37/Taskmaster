@@ -157,7 +157,7 @@ function ClerkSessionBridgeInner() {
           return;
         }
 
-        const { token } = tokenResult;
+        const { token, organizationId: establishOrgId } = tokenResult;
 
         let establishResponse;
         try {
@@ -165,8 +165,8 @@ function ClerkSessionBridgeInner() {
             '/api/auth/clerk-establish',
             {
               token,
-              ...(pinnedOrgId
-                ? { organizationId: pinnedOrgId }
+              ...(establishOrgId
+                ? { organizationId: establishOrgId }
                 : (orgId ? { organizationId: orgId } : {})),
             },
             { withCredentials: true, ...AXIOS_SKIP_TOAST },

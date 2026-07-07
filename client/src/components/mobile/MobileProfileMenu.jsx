@@ -148,11 +148,6 @@ export default function MobileProfileMenu({ open, onClose }) {
                   <p className="text-xs text-[var(--color-text-muted)] truncate">
                     {getDepartmentName(user) || user?.email || 'Team member'}
                   </p>
-                  {user?.level ? (
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-action-primary)] mt-0.5">
-                      Level {user.level}
-                    </p>
-                  ) : null}
                 </div>
               </div>
               <button

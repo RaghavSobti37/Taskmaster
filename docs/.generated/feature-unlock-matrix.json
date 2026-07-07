@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-07-07",
+  "rows": [
+    {
+      "key": "resend",
+      "label": "Email campaigns",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/emails",
+        "/campaign"
+      ]
+    },
+    {
+      "key": "google",
+      "label": "Google integrations",
+      "defaultOnCreate": false,
+      "gatedPaths": []
+    },
+    {
+      "key": "meta",
+      "label": "Meta integrations",
+      "defaultOnCreate": false,
+      "gatedPaths": []
+    },
+    {
+      "key": "knowledgeEngine",
+      "label": "Knowledge Engine",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/admin/knowledge-engine"
+      ]
+    },
+    {
+      "key": "finance",
+      "label": "Finance",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/finance",
+        "/management"
+      ]
+    },
+    {
+      "key": "artistOs",
+      "label": "Artist OS",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/artists",
+        "/management"
+      ]
+    },
+    {
+      "key": "integrations",
+      "label": "Integrations hub",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/developers"
+      ]
+    },
+    {
+      "key": "opsHub",
+      "label": "Ops Hub",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/admin/ops-hub"
+      ]
+    },
+    {
+      "key": "dataHub",
+      "label": "Data Hub",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/admin",
+        "/data-hub"
+      ]
+    },
+    {
+      "key": "enterpriseApi",
+      "label": "Enterprise API",
+      "defaultOnCreate": false,
+      "gatedPaths": [
+        "/developers"
+      ]
+    }
+  ]
+}

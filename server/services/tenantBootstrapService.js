@@ -13,6 +13,87 @@ const DEFAULT_CRM_CONFIG = {
   qualities: ['1', '2', '3', '4', '5'],
 };
 
+const isLegacyCrmConfigDuplicate = (err) => (
+  err?.code === 11000 && /crmconfigs.*configKey_1|configKey:\s*"default"/i.test(String(err?.message || ''))
+);
+
+const isLegacyMainWorkspaceDuplicate = (err) => (
+  err?.code === 11000 && /workspaces.*name_1|name:\s*"MAIN"/i.test(String(err?.message || ''))
+);
+
+async function ensureMainWorkspace(creatorUserId) {
+  try {
+    await Workspace.findOneAndUpdate(
+      { name: 'MAIN' },
+      {
+        $setOnInsert: {
+          name: 'MAIN',
+          color: '#64748b',
+          order: 0,
+          createdBy: creatorUserId || undefined,
+        },
+      },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+    );
+    return;
+  } catch (err) {
+    if (!isLegacyMainWorkspaceDuplicate(err)) throw err;
+  }
+
+  // Legacy DBs may still have an old global unique index on name.
+  try {
+    await Workspace.collection.dropIndex('name_1');
+  } catch (dropErr) {
+    const msg = String(dropErr?.message || '');
+    if (!/index not found|ns not found|index does not exist/i.test(msg)) {
+      throw dropErr;
+    }
+  }
+
+  await Workspace.findOneAndUpdate(
+    { name: 'MAIN' },
+    {
+      $setOnInsert: {
+        name: 'MAIN',
+        color: '#64748b',
+        order: 0,
+        createdBy: creatorUserId || undefined,
+      },
+    },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+  );
+}
+
+async function ensureDefaultCrmConfig() {
+  try {
+    await CRMConfig.findOneAndUpdate(
+      { configKey: 'default' },
+      { $setOnInsert: DEFAULT_CRM_CONFIG },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+    );
+    return;
+  } catch (err) {
+    if (!isLegacyCrmConfigDuplicate(err)) throw err;
+  }
+
+  // Legacy DBs may still have an old global unique index on configKey.
+  // Drop stale index and retry tenant-scoped upsert.
+  try {
+    await CRMConfig.collection.dropIndex('configKey_1');
+  } catch (dropErr) {
+    const msg = String(dropErr?.message || '');
+    if (!/index not found|ns not found|index does not exist/i.test(msg)) {
+      throw dropErr;
+    }
+  }
+
+  await CRMConfig.findOneAndUpdate(
+    { configKey: 'default' },
+    { $setOnInsert: DEFAULT_CRM_CONFIG },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+  );
+}
+
 /**
  * Bootstrap a fresh tenant with isolated defaults (departments, workspace, CRM, gamification).
  * Must run after Tenant row exists; caller supplies creator userId for workspace attribution.
@@ -24,19 +105,10 @@ async function bootstrapTenant(tenantId, { creatorUserId } = {}) {
     await seedDepartmentsForTenant(tenantId);
 
     const existingWorkspace = await Workspace.findOne({ name: 'MAIN' });
-    if (!existingWorkspace) {
-      await Workspace.create({
-        name: 'MAIN',
-        color: '#64748b',
-        order: 0,
-        createdBy: creatorUserId || undefined,
-      });
-    }
+    await ensureMainWorkspace(creatorUserId);
 
     const existingCrm = await CRMConfig.findOne({ configKey: 'default' });
-    if (!existingCrm) {
-      await CRMConfig.create(DEFAULT_CRM_CONFIG);
-    }
+    await ensureDefaultCrmConfig();
 
     await GamificationService.ensureConfigForTenant();
 

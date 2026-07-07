@@ -1,6 +1,7 @@
 const GamificationService = require('../services/gamificationService');
 const XPAuditLog = require('../models/XPAuditLog');
 const GamificationConfig = require('../models/GamificationConfig');
+const MonthlyLeaderboardSnapshot = require('../models/MonthlyLeaderboardSnapshot');
 const User = require('../models/User');
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
@@ -17,6 +18,7 @@ describe('GamificationService XP resolution', () => {
 
   beforeEach(async () => {
     await GamificationConfig.deleteMany({ tenantId: testTenantId });
+    await MonthlyLeaderboardSnapshot.deleteMany({ tenantId: testTenantId });
   });
 
   const seedGamificationConfig = (overrides = {}) =>
@@ -74,21 +76,6 @@ describe('GamificationService XP resolution', () => {
     expect(GamificationService.resolveTaskCompletionHours({ actualHours: 100 })).toBe(12);
   });
 
-  test('getExpForLevel uses linear stepXp without rounding to 100', async () => {
-    await seedGamificationConfig({ stepXp: 150 });
-    expect(await GamificationService.getExpForLevel(1)).toBe(0);
-    expect(await GamificationService.getExpForLevel(2)).toBe(150);
-    expect(await GamificationService.getExpForLevel(3)).toBe(300);
-  });
-
-  test('getLevelFromExp aligns with getExpForLevel thresholds', async () => {
-    await seedGamificationConfig({ stepXp: 150 });
-    expect(await GamificationService.getLevelFromExp(0)).toBe(1);
-    expect(await GamificationService.getLevelFromExp(149)).toBe(1);
-    expect(await GamificationService.getLevelFromExp(150)).toBe(2);
-    expect(await GamificationService.getLevelFromExp(300)).toBe(3);
-  });
-
   test('syncAuditLogAmountsFromConfig updates time-based audit amounts from hours', async () => {
     const userId = new mongoose.Types.ObjectId();
     await seedGamificationConfig({ taskCompletion: 10, dailyLog: 8 });
@@ -135,7 +122,7 @@ describe('GamificationService XP resolution', () => {
 
   test('purgeQaGamificationData removes qaProbe XP audits', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await User.create({ _id: userId, name: 'QA XP', email: 'real-user@test.com', exp: 100, level: 2 });
+    await User.create({ _id: userId, name: 'QA XP', email: 'real-user@test.com', exp: 100 });
     await XPAuditLog.create({
       userId,
       action: 'COMPLETE_TASK',
@@ -330,8 +317,8 @@ describe('GamificationService XP resolution', () => {
 
   test('recalculateAllUsersFromConfig syncs user exp from time-based audit history', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await seedGamificationConfig({ taskCompletion: 10, stepXp: 100 });
-    await User.create({ _id: userId, name: 'Test User', email: 'xp@test.com', exp: 15, level: 1 });
+    await seedGamificationConfig({ taskCompletion: 10 });
+    await User.create({ _id: userId, name: 'Test User', email: 'xp@test.com', exp: 15 });
     await XPAuditLog.create({
       userId,
       action: 'COMPLETE_TASK',
@@ -356,8 +343,8 @@ describe('GamificationService XP resolution', () => {
 
   test('recalculateAllUsersFromConfig is idempotent on second run', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await seedGamificationConfig({ taskCompletion: 10, stepXp: 100 });
-    await User.create({ _id: userId, name: 'Idem User', email: 'idem-xp@test.com', exp: 0, level: 1 });
+    await seedGamificationConfig({ taskCompletion: 10 });
+    await User.create({ _id: userId, name: 'Idem User', email: 'idem-xp@test.com', exp: 0 });
     await XPAuditLog.create({
       userId,
       action: 'COMPLETE_TASK',
@@ -372,7 +359,6 @@ describe('GamificationService XP resolution', () => {
     const afterSecond = await User.findById(userId).lean();
 
     expect(afterSecond.exp).toBe(afterFirst.exp);
-    expect(afterSecond.level).toBe(afterFirst.level);
   });
 
   test('computeActionXp clamps inflated hours to max per event', async () => {
@@ -384,7 +370,7 @@ describe('GamificationService XP resolution', () => {
 
   test('awardActionXp blocks duplicate entity awards (race-safe upsert)', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await User.create({ _id: userId, name: 'Dup', email: 'dup@test.com', exp: 0, level: 1 });
+    await User.create({ _id: userId, name: 'Dup', email: 'dup@test.com', exp: 0 });
     const taskId = new mongoose.Types.ObjectId();
     const opts = { entityKey: 'taskId', entityId: taskId };
 
@@ -401,7 +387,7 @@ describe('GamificationService XP resolution', () => {
 
   test('MISSION_COMPLETE awards once per missionId', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await User.create({ _id: userId, name: 'Mission', email: 'mission@test.com', exp: 0, level: 1 });
+    await User.create({ _id: userId, name: 'Mission', email: 'mission@test.com', exp: 0 });
     const missionId = new mongoose.Types.ObjectId();
     const first = await GamificationService.awardActionXp(
       userId,
@@ -427,7 +413,7 @@ describe('GamificationService XP resolution', () => {
 
   test('DAILY_LOG daily cap blocks sixth manual award same day', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await User.create({ _id: userId, name: 'Cap', email: 'cap@test.com', exp: 0, level: 1 });
+    await User.create({ _id: userId, name: 'Cap', email: 'cap@test.com', exp: 0 });
     await seedGamificationConfig({ dailyLog: 10 });
 
     const awards = [];
@@ -448,7 +434,7 @@ describe('GamificationService XP resolution', () => {
 
   test('DAILY_LOG daily cap ignores awards without logId (non-manual)', async () => {
     const userId = new mongoose.Types.ObjectId();
-    await User.create({ _id: userId, name: 'Cap2', email: 'cap2@test.com', exp: 0, level: 1 });
+    await User.create({ _id: userId, name: 'Cap2', email: 'cap2@test.com', exp: 0 });
     await seedGamificationConfig({ dailyLog: 10 });
     await XPAuditLog.create({
       userId,
@@ -498,6 +484,26 @@ describe('GamificationService XP resolution', () => {
     expect(monthly.entries).toEqual([[String(userId), 30]]);
     expect(monthly.resolvedSum).toBe(30);
     expect(monthly.storedSum).toBe(5);
+  });
+
+  test('getMonthlyLeaderboardSnapshot persists month-wise standings with rank and xp', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    await User.create({ _id: userId, name: 'Snapshot User', email: 'snapshot-user@test.com', exp: 0 });
+    await seedGamificationConfig({ taskCompletion: 10 });
+    const { monthStartKey } = require('../utils/attendanceDate').getCurrentMonthRange();
+    await XPAuditLog.create({
+      userId,
+      action: 'COMPLETE_TASK',
+      amount: 7,
+      details: { hours: 3 },
+      createdAt: new Date(),
+    });
+
+    const snapshot = await GamificationService.getMonthlyLeaderboardSnapshot(monthStartKey, { refresh: true });
+    expect(snapshot.monthStartKey).toBe(monthStartKey);
+    expect(snapshot.entries[0].userId).toBe(String(userId));
+    expect(snapshot.entries[0].rank).toBe(1);
+    expect(snapshot.entries[0].monthlyXp).toBe(30);
   });
 
   test('getWeeklyLeaderboard resolves time-based amounts from stored hours', async () => {

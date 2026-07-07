@@ -5,8 +5,9 @@ const { scanBounces, updateEmailTags } = require('../services/mailService');
 const { getCache, setCache } = require('../../../services/cacheService');
 const { aggregateWithTenant } = require('../../../repositories/aggregateWithTenant');
 const { todayEnd, getDateKey, startOfDayFromKey } = require('../../../utils/attendanceDate');
+const { getTenantId } = require('../../../utils/tenantContext');
 
-const MAIL_STATS_CACHE_KEY = 'mail:stats:v1';
+const MAIL_STATS_CACHE_PREFIX = 'mail:stats:v1';
 const MAIL_STATS_TTL_SECONDS = 60;
 const TIMEFRAME_DAYS = { '1d': 1, '7d': 7, '30d': 30 };
 
@@ -45,8 +46,11 @@ async function getMailStatsForRange(start, end) {
 
 exports.getStats = async (req, res) => {
   try {
+    const tenantId = String(getTenantId() || req.tenantId || req.user?.activeTenantId || req.user?.tenantId || 'none');
     const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : null;
-    const cacheKey = timeframe ? `${MAIL_STATS_CACHE_KEY}:${timeframe}:${getDateKey()}` : MAIL_STATS_CACHE_KEY;
+    const cacheKey = timeframe
+      ? `${MAIL_STATS_CACHE_PREFIX}:${tenantId}:${timeframe}:${getDateKey()}`
+      : `${MAIL_STATS_CACHE_PREFIX}:${tenantId}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       return res.json(cached);
@@ -95,7 +99,7 @@ exports.getStats = async (req, res) => {
       totalClicked,
       totalUnsubscribed,
     };
-    await setCache(MAIL_STATS_CACHE_KEY, payload, MAIL_STATS_TTL_SECONDS);
+    await setCache(cacheKey, payload, MAIL_STATS_TTL_SECONDS);
     res.json(payload);
   } catch (err) {
     console.error('Get stats error:', err);

@@ -1,0 +1,545 @@
+{
+  "generatedAt": "2026-07-07",
+  "redirects": [
+    {
+      "from": "/relegends",
+      "to": "/login"
+    },
+    {
+      "from": "*",
+      "to": "/"
+    },
+    {
+      "from": "/",
+      "to": "/login"
+    },
+    {
+      "from": "*",
+      "to": "/login"
+    },
+    {
+      "from": "upgrade",
+      "to": "/settings?tab=organization"
+    },
+    {
+      "from": "settings/profile",
+      "to": "/settings?tab=profile"
+    },
+    {
+      "from": "org/settings",
+      "to": "/settings?tab=organization"
+    },
+    {
+      "from": "data-hub",
+      "to": "/admin"
+    },
+    {
+      "from": "chat",
+      "to": "/dashboard"
+    },
+    {
+      "from": "chat/*",
+      "to": "/dashboard"
+    },
+    {
+      "from": "tasks",
+      "to": "/todo"
+    },
+    {
+      "from": "tasks/create",
+      "to": "/todo"
+    },
+    {
+      "from": "tasks/:scope/create",
+      "to": "/todo"
+    },
+    {
+      "from": "management/equipment",
+      "to": "/office?tab=equipment"
+    },
+    {
+      "from": "management/contacts",
+      "to": "/office?tab=contacts"
+    },
+    {
+      "from": "office/subscriptions",
+      "to": "/office?tab=subscriptions"
+    },
+    {
+      "from": "management/attendance",
+      "to": "/attendance"
+    },
+    {
+      "from": "leads",
+      "to": "/crm?tab=leads"
+    },
+    {
+      "from": "followups",
+      "to": "/crm?tab=followups"
+    },
+    {
+      "from": "bookings",
+      "to": "/crm?tab=bookings"
+    },
+    {
+      "from": "equipment",
+      "to": "/office?tab=equipment"
+    },
+    {
+      "from": "contacts",
+      "to": "/office?tab=contacts"
+    },
+    {
+      "from": "subscriptions",
+      "to": "/office?tab=subscriptions"
+    },
+    {
+      "from": "finance",
+      "to": "/management?tab=finance"
+    },
+    {
+      "from": "announcements",
+      "to": "/management?tab=announcements"
+    },
+    {
+      "from": "documents",
+      "to": "/management?tab=documents"
+    },
+    {
+      "from": "management/announcements",
+      "to": "/management?tab=announcements"
+    },
+    {
+      "from": "artists",
+      "to": "/management?tab=artists"
+    },
+    {
+      "from": "admin/security-audit",
+      "to": "/admin/console"
+    },
+    {
+      "from": "admin/audits",
+      "to": "/admin/lead-audits"
+    },
+    {
+      "from": "admin/audit-log",
+      "to": "/admin/console"
+    },
+    {
+      "from": "workspace/emails",
+      "to": "/emails"
+    },
+    {
+      "from": "workspace/emails/create",
+      "to": "/emails/create"
+    }
+  ],
+  "rows": [
+    {
+      "path": "/admin",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "dataHub"
+    },
+    {
+      "path": "/admin/artist-path",
+      "pageKey": "admin_artist_path",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/console",
+      "pageKey": "admin_console",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/control",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/crm-stats",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/exly-campaigns",
+      "pageKey": "admin_exly",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/gamification",
+      "pageKey": "admin_gamification",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/knowledge-engine",
+      "pageKey": "admin_knowledge_engine",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "knowledgeEngine"
+    },
+    {
+      "path": "/admin/lead-audits",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/media-list",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/ops-hub",
+      "pageKey": "admin_ops_hub",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "opsHub"
+    },
+    {
+      "path": "/admin/platform-settings",
+      "pageKey": "admin_users",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/project-analytics",
+      "pageKey": "admin_project_analytics",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/qa",
+      "pageKey": "admin_data",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/roles",
+      "pageKey": "admin_roles",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/scripts",
+      "pageKey": "admin_scripts",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/teams",
+      "pageKey": "admin_teams",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/admin/users",
+      "pageKey": "admin_users",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/announcements",
+      "pageKey": "announcements",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/artists",
+      "pageKey": "artists",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "artistOs"
+    },
+    {
+      "path": "/assets",
+      "pageKey": "assets",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/attendance",
+      "pageKey": "attendance",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/bookings",
+      "pageKey": "bookings",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/calendar",
+      "pageKey": "calendar",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/campaign",
+      "pageKey": "campaigns",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/contacts",
+      "pageKey": "contacts",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/crm",
+      "pageKey": "crm_hub",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/crm?tab=bookings",
+      "pageKey": "bookings",
+      "tab": "bookings",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/crm?tab=followups",
+      "pageKey": "followups",
+      "tab": "followups",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/crm?tab=leads",
+      "pageKey": "leads",
+      "tab": "leads",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/dashboard",
+      "pageKey": "dashboard",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/developers",
+      "pageKey": "admin_developers",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "enterpriseApi"
+    },
+    {
+      "path": "/documents",
+      "pageKey": "org_documents",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/emails",
+      "pageKey": "emails",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "resend"
+    },
+    {
+      "path": "/equipment",
+      "pageKey": "equipment",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/features",
+      "pageKey": "features",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/finance",
+      "pageKey": "finance",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": "finance"
+    },
+    {
+      "path": "/followups",
+      "pageKey": "followups",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/inbox",
+      "pageKey": "inbox",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/leads",
+      "pageKey": "leads",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/logs",
+      "pageKey": "logs",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/management",
+      "pageKey": "management_hub",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/management?tab=announcements",
+      "pageKey": "announcements",
+      "tab": "announcements",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/management?tab=artists",
+      "pageKey": "artists",
+      "tab": "artists",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/management?tab=documents",
+      "pageKey": "org_documents",
+      "tab": "documents",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/management?tab=finance",
+      "pageKey": "finance",
+      "tab": "finance",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/notes",
+      "pageKey": "notes",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/office",
+      "pageKey": "office_hub",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/office-assets",
+      "pageKey": "office_assets",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/office?tab=contacts",
+      "pageKey": "contacts",
+      "tab": "contacts",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/office?tab=equipment",
+      "pageKey": "equipment",
+      "tab": "equipment",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/office?tab=subscriptions",
+      "pageKey": "subscriptions",
+      "tab": "subscriptions",
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/projects",
+      "pageKey": "projects",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/schedule",
+      "pageKey": "schedule",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/settings",
+      "pageKey": "settings",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/subscriptions",
+      "pageKey": "subscriptions",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/todo",
+      "pageKey": "todo",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    },
+    {
+      "path": "/workflows",
+      "pageKey": "workflows",
+      "tab": null,
+      "legacyRedirectTo": null,
+      "featureKey": null
+    }
+  ]
+}

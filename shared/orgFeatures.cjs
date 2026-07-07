@@ -8,6 +8,9 @@ const ORG_FEATURE_KEYS = [
   'finance',
   'artistOs',
   'integrations',
+  'opsHub',
+  'dataHub',
+  'enterpriseApi',
 ];
 
 const ORG_FEATURE_CATALOG = {
@@ -50,6 +53,24 @@ const ORG_FEATURE_CATALOG = {
   integrations: {
     label: 'Integrations hub',
     description: 'Third-party connectors and inbound webhooks.',
+    defaultOnCreate: false,
+    gatedPaths: ['/developers'],
+  },
+  opsHub: {
+    label: 'Ops Hub',
+    description: 'Operations hub tools and workflows.',
+    defaultOnCreate: false,
+    gatedPaths: ['/admin/ops-hub'],
+  },
+  dataHub: {
+    label: 'Data Hub',
+    description: 'Data hub admin surface and records.',
+    defaultOnCreate: false,
+    gatedPaths: ['/admin', '/data-hub'],
+  },
+  enterpriseApi: {
+    label: 'Enterprise API',
+    description: 'Enterprise developer settings and API access.',
     defaultOnCreate: false,
     gatedPaths: ['/developers'],
   },

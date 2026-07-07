@@ -21,7 +21,13 @@ module.exports = function tenantPlugin(schema, options) {
       const tenantId = getTenantId();
       if (tenantId) {
         this.tenantId = tenantId;
-      } else if (process.env.NODE_ENV !== 'production') {
+      } else if (
+        process.env.NODE_ENV !== 'production'
+        && (
+          process.env.NODE_ENV === 'test'
+          || String(process.env.ALLOW_DEFAULT_TENANT_FALLBACK || '').trim().toLowerCase() === 'true'
+        )
+      ) {
         const Tenant = require('../models/Tenant');
         const { allFeatureUnlocks } = require('../../shared/orgFeatures.cjs');
         let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' }).setOptions({ bypassTenant: true });

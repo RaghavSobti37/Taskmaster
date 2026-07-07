@@ -8,6 +8,37 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-07-07] v1.0.7 patch — Tenant-safe gamification + platform admin recovery + legacy task route redirects
+
+#### Routing & navigation
+- **Legacy task-create redirects:** `/tasks/create` and `/tasks/:scope/create` now resolve to org-scoped todo (`/:orgSlug/todo`) with compatibility redirects in both flat and org-slug route trees.
+- **Legacy tasks path redirect:** `/tasks/*` now passes through `LegacyOrgPathRedirect` for org-slug migration safety.
+
+#### Gamification
+- **Monthly snapshot model:** added `MonthlyLeaderboardSnapshot` (tenant-scoped) for persisted monthly leaderboard reads and month history.
+- **Leaderboard endpoints:** `/api/gamification/leaderboard` now serves ranked snapshot entries; new `/api/gamification/leaderboard/history`; breakdown supports `monthStartKey`.
+- **Progress payload cleanup:** removed level/step-XP fields from `/api/gamification/progress`; returns normalized XP + recalc metadata.
+- **Admin recalculation payload/messages:** now XP-focused (no level-step wording), with cleaner config output.
+
+#### Tenant isolation & auth resilience
+- **Auth self-heal:** `authMiddleware` now calls `reconcilePlatformUserDepartment` to auto-fix missing admin department assignment for platform admins.
+- **Membership utility:** `ensureMembershipForTenant(userId, tenantId)` exported for idempotent tenant membership guarantees.
+- **Clerk org sync fallback:** if Clerk org slugs are disabled, tenant sync retries org creation without slug instead of failing tenant bootstrap.
+- **Organization access resolution:** token org id now preferred over request body / pinned fallback.
+
+#### Tenant bootstrap + legacy index compatibility
+- **Bootstrap hardening:** tenant bootstrap now auto-recovers from stale global unique indexes (`workspaces.name_1`, `crmconfigs.configKey_1`) before retrying tenant-scoped upserts.
+
+#### Operations scripts
+- Added platform recovery/audit scripts:
+  - `server/scripts/restorePlatformUserRoles.js`
+  - `server/scripts/auditUserDepartments.js`
+  - `server/scripts/auditTaskAssignmentsHealth.js`
+  - `server/scripts/auditUserTaskScope.js`
+  - `server/scripts/repairRaghavTaskAssignments.js`
+
+---
+
 ### [2026-07-07] v1.0.7 patch — Org slug routes, TSC tenant sync, Clerk auth fixes
 
 #### Multi-org & routing

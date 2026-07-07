@@ -3,6 +3,7 @@ const User = require('../models/User');
 const DailyMission = require('../models/DailyMission');
 const XPAuditLog = require('../models/XPAuditLog');
 const GamificationConfig = require('../models/GamificationConfig');
+const MonthlyLeaderboardSnapshot = require('../models/MonthlyLeaderboardSnapshot');
 const logger = require('../utils/logger');
 const {
   DEFAULT_XP,
@@ -39,7 +40,6 @@ const ENTITY_DEDUPE_FIELD = {
   ANNOUNCEMENT_CREATED: 'announcementId',
 };
 
-const STEP_XP = DEFAULT_XP.stepXp;
 const BULK_WRITE_CHUNK = 500;
 
 const getTenantScopedUserFilter = () => {
@@ -112,6 +112,18 @@ class GamificationService {
     }
   }
 
+  static async resolveSnapshotTenantId(tenantId) {
+    if (tenantId) return tenantId;
+    const { getTenantId } = require('../utils/tenantContext');
+    const fromCtx = getTenantId();
+    if (fromCtx) return fromCtx;
+    if (process.env.NODE_ENV === 'test') {
+      const { ensurePlatformTenant } = require('../utils/defaultTenant');
+      return ensurePlatformTenant();
+    }
+    throw new Error('Monthly leaderboard snapshot requires tenant context');
+  }
+
   static async getConfig() {
     return this.ensureConfigForTenant();
   }
@@ -169,19 +181,6 @@ class GamificationService {
     }
 
     return Number(rate) || 0;
-  }
-
-  static async getLevelFromExp(exp) {
-    const config = await this.getConfig();
-    const stepXp = config.stepXp || STEP_XP;
-    return Math.max(1, Math.floor((exp || 0) / stepXp) + 1);
-  }
-
-  static async getExpForLevel(level) {
-    const config = await this.getConfig();
-    const stepXp = config.stepXp || STEP_XP;
-    if (level <= 1) return 0;
-    return (level - 1) * stepXp;
   }
 
   static async countActionToday(userId, action) {
@@ -777,32 +776,108 @@ class GamificationService {
     };
   }
 
-  static async getLeaderboardTopEntries(limit = 5, monthStartInput) {
+  static normalizeSnapshotEntries(entries = []) {
+    return entries.map((entry, index) => ({
+      userId: String(entry.userId),
+      rank: Number(entry.rank) || index + 1,
+      monthlyXp: Number(entry.monthlyXp) || 0,
+      name: entry.name || '',
+      avatar: entry.avatar || '',
+    }));
+  }
+
+  static async upsertMonthlyLeaderboardSnapshot(monthStartInput) {
     const monthly = await this.getMonthlyLeaderboard(null, monthStartInput);
     const tenantFilter = getTenantScopedUserFilter();
-    const allUsers = await User.find(tenantFilter, 'name avatar exp level').sort({ name: 1 }).lean();
-    const monthlyXpByUserId = new Map(
-      monthly.entries.map(([userId, monthlyXp]) => [String(userId), monthlyXp])
-    );
-
-    return allUsers
-      .map((user) => ({
-        ...user,
-        monthlyXp: monthlyXpByUserId.get(String(user._id)) || 0,
-      }))
-      .sort((a, b) => {
-        if (b.monthlyXp !== a.monthlyXp) return b.monthlyXp - a.monthlyXp;
-        return (a.name || '').localeCompare(b.name || '');
-      })
-      .slice(0, limit)
-      .map((user, index) => ({
+    const allUsers = await User.find(tenantFilter, 'name avatar').sort({ name: 1 }).lean();
+    const usersById = new Map(allUsers.map((user) => [String(user._id), user]));
+    const entries = monthly.entries.map(([userId, monthlyXp], index) => {
+      const user = usersById.get(String(userId)) || {};
+      return {
+        userId,
         rank: index + 1,
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar,
-        monthlyXp: user.monthlyXp,
-        exp: user.exp,
-        level: user.level,
+        monthlyXp: Number(monthlyXp) || 0,
+        name: user.name || '',
+        avatar: user.avatar || '',
+      };
+    });
+
+    const tenantId = await this.resolveSnapshotTenantId();
+
+    const snapshot = await MonthlyLeaderboardSnapshot.findOneAndUpdate(
+      { tenantId, monthStartKey: monthly.monthStartKey },
+      {
+        $set: {
+          monthEndKey: monthly.monthEndKey,
+          entries,
+          logCount: monthly.logCount,
+          storedSum: monthly.storedSum,
+          resolvedSum: monthly.resolvedSum,
+          computedAt: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    ).lean();
+
+    return {
+      ...snapshot,
+      entries: this.normalizeSnapshotEntries(snapshot.entries),
+    };
+  }
+
+  static async getMonthlyLeaderboardSnapshot(monthStartInput, options = {}) {
+    const { refresh = false } = options;
+    const { monthStartKey } = monthStartInput
+      ? getCurrentMonthRange(monthStartInput)
+      : getCurrentMonthRange();
+    const tenantId = await this.resolveSnapshotTenantId();
+
+    let snapshot = await MonthlyLeaderboardSnapshot.findOne({ tenantId, monthStartKey }).lean();
+    if (!snapshot || refresh) {
+      snapshot = await this.upsertMonthlyLeaderboardSnapshot(monthStartKey);
+    }
+    return {
+      ...snapshot,
+      entries: this.normalizeSnapshotEntries(snapshot.entries),
+    };
+  }
+
+  static async listMonthlyLeaderboardHistory(limit = 12) {
+    const tenantId = await this.resolveSnapshotTenantId();
+    const docs = await MonthlyLeaderboardSnapshot.find({ tenantId })
+      .sort({ monthStartKey: -1 })
+      .limit(Math.max(1, Number(limit) || 12))
+      .select('monthStartKey monthEndKey entries computedAt resolvedSum')
+      .lean();
+
+    return docs.map((doc) => ({
+      monthStartKey: doc.monthStartKey,
+      monthEndKey: doc.monthEndKey,
+      computedAt: doc.computedAt,
+      resolvedSum: Number(doc.resolvedSum) || 0,
+      top: this.normalizeSnapshotEntries(doc.entries).slice(0, 5),
+    }));
+  }
+
+  static async backfillPreviousMonthSnapshot() {
+    const prevMonth = getPreviousMonthRange();
+    return this.getMonthlyLeaderboardSnapshot(prevMonth.monthStartKey, { refresh: false });
+  }
+
+  static async getLeaderboardTopEntries(limit = 5, monthStartInput) {
+    const snapshot = await this.getMonthlyLeaderboardSnapshot(monthStartInput);
+    return this.normalizeSnapshotEntries(snapshot.entries)
+      .slice(0, limit)
+      .map((row) => ({
+        rank: row.rank,
+        _id: row.userId,
+        name: row.name,
+        avatar: row.avatar,
+        monthlyXp: row.monthlyXp,
       }));
   }
 
@@ -859,8 +934,6 @@ class GamificationService {
         recalculatedAt: recalcAt,
         prevExp: change.prevExp,
         newExp: change.newExp,
-        prevLevel: change.prevLevel,
-        newLevel: change.newLevel,
         weeklyXp: weeklyByUser.get(userKey) ?? weeklyByUser.get(change.userId) ?? 0,
         adjusted: true,
       });
@@ -879,22 +952,19 @@ class GamificationService {
     const changes = [];
 
     for (const userKey of ids) {
-      const user = await User.findById(userKey).select('_id exp level');
+      const user = await User.findById(userKey).select('_id exp');
       if (!user) continue;
 
       const newExp = Math.round(
         await this.recalculateExpFromAudit(user._id, config, backfillMaps)
       );
-      const newLevel = await this.getLevelFromExp(newExp);
       const prevExp = Math.round(user.exp || 0);
-      const prevLevel = user.level || 1;
 
-      if (newExp !== prevExp || newLevel !== prevLevel) {
+      if (newExp !== prevExp) {
         user.exp = newExp;
-        user.level = newLevel;
         await user.save();
         updatedUsers += 1;
-        changes.push({ userId: user._id, prevExp, newExp, prevLevel, newLevel });
+        changes.push({ userId: user._id, prevExp, newExp });
       }
     }
 
@@ -904,7 +974,7 @@ class GamificationService {
   static async recalculateAllUsersFromConfig() {
     const config = await this.getConfigPlain();
     const tenantFilter = getTenantScopedUserFilter();
-    const users = await User.find(tenantFilter).select('_id exp level tenantId');
+    const users = await User.find(tenantFilter).select('_id exp tenantId');
     const tenantUserIds = users.map((u) => u._id);
     const auditUserFilter = tenantUserIds.length ? { userId: { $in: tenantUserIds } } : {};
 
@@ -938,26 +1008,21 @@ class GamificationService {
       const newExp = Math.round(
         await this.recalculateExpFromAudit(user._id, config, backfillMaps)
       );
-      const newLevel = await this.getLevelFromExp(newExp);
       const prevExp = Math.round(user.exp || 0);
-      const prevLevel = user.level || 1;
 
-      if (!sampleDelta && (newExp !== prevExp || newLevel !== prevLevel)) {
-        sampleDelta = { userId: String(user._id), prevExp, newExp, prevLevel, newLevel };
+      if (!sampleDelta && newExp !== prevExp) {
+        sampleDelta = { userId: String(user._id), prevExp, newExp };
       }
 
       user.exp = newExp;
-      user.level = newLevel;
       await user.save();
 
-      if (newExp !== prevExp || newLevel !== prevLevel) {
+      if (newExp !== prevExp) {
         updatedUsers++;
         changes.push({
           userId: user._id,
           prevExp,
           newExp,
-          prevLevel,
-          newLevel,
         });
       }
     }
@@ -970,6 +1035,8 @@ class GamificationService {
     configDoc.lastRecalculatedAt = recalculatedAt;
     configDoc.lastRecalcWeeklyPrior = monthlyPriorSnapshot;
     await configDoc.save();
+    await this.upsertMonthlyLeaderboardSnapshot();
+    await this.backfillPreviousMonthSnapshot();
 
     await this.broadcastRecalculationEffects({
       changes,
@@ -1012,14 +1079,6 @@ class GamificationService {
     if (!user) return null;
 
     user.exp = (user.exp || 0) + amount;
-    const newLevel = await this.getLevelFromExp(user.exp);
-
-    let leveledUp = false;
-    if (newLevel > (user.level || 1)) {
-      user.level = newLevel;
-      leveledUp = true;
-    }
-
     await user.save();
 
     await XPAuditLog.create({
@@ -1035,11 +1094,9 @@ class GamificationService {
       action,
       actionLabel: ACTION_LABELS[action] || action,
       newTotal: user.exp,
-      newLevel: user.level,
-      leveledUp,
     });
 
-    return { exp: user.exp, level: user.level, leveledUp };
+    return { exp: user.exp };
   }
 
   static buildEntityAwardFilter(userId, action, entityKey, entityId) {
@@ -1100,14 +1157,7 @@ class GamificationService {
 
       const user = await User.findById(userId);
       if (!user) return null;
-      const prevLevel = user.level || 1;
       user.exp = (user.exp || 0) + amount;
-      const newLevel = await this.getLevelFromExp(user.exp);
-      let leveledUp = false;
-      if (newLevel > prevLevel) {
-        user.level = newLevel;
-        leveledUp = true;
-      }
       try {
         await user.save();
       } catch (err) {
@@ -1122,10 +1172,8 @@ class GamificationService {
         action,
         actionLabel: ACTION_LABELS[action] || action,
         newTotal: user.exp,
-        newLevel: user.level,
-        leveledUp,
       });
-      return { exp: user.exp, level: user.level, leveledUp };
+      return { exp: user.exp };
     }
 
     return this.awardExp(userId, amount, action, awardDetails);
@@ -1163,7 +1211,6 @@ class GamificationService {
       const user = await uq;
       if (user) {
         user.exp = Math.max(0, (user.exp || 0) - amount);
-        user.level = await this.getLevelFromExp(user.exp);
         await user.save(session ? { session } : undefined);
       }
 

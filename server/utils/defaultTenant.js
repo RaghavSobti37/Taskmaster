@@ -6,7 +6,8 @@ let cachedDefaultTenantId = null;
 
 /**
  * Resolve tenant for inbound webhooks / workers (no request AsyncLocalStorage context).
- * Prefers WEBHOOK_TENANT_ID env, then oldest active tenant, then any tenant.
+ * Prefers WEBHOOK_TENANT_ID / DEFAULT_TENANT_ID env, then PLATFORM_TENANT_SLUG lookup,
+ * then (non-production only) oldest active tenant.
  */
 async function resolveDefaultTenantId() {
   const fromContext = getTenantId();
@@ -20,12 +21,29 @@ async function resolveDefaultTenantId() {
     return cachedDefaultTenantId;
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('WEBHOOK_TENANT_ID or DEFAULT_TENANT_ID required in production when tenant context is missing');
-  }
-
   const Tenant = require('../models/Tenant');
   const tenantLookup = { bypassTenant: true };
+
+  const platformSlug = (process.env.PLATFORM_TENANT_SLUG || '').trim();
+  if (platformSlug) {
+    let tenant = await Tenant.findOne({ slug: platformSlug, status: 'active' })
+      .setOptions(tenantLookup)
+      .lean();
+    if (!tenant) {
+      tenant = await Tenant.findOne({ slug: platformSlug }).setOptions(tenantLookup).lean();
+    }
+    if (tenant) {
+      cachedDefaultTenantId = tenant._id;
+      return cachedDefaultTenantId;
+    }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'WEBHOOK_TENANT_ID, DEFAULT_TENANT_ID, or PLATFORM_TENANT_SLUG required in production when tenant context is missing',
+    );
+  }
+
   let tenant = await Tenant.findOne({ status: 'active' }).sort({ createdAt: 1 }).setOptions(tenantLookup).lean();
   if (!tenant) tenant = await Tenant.findOne().sort({ createdAt: 1 }).setOptions(tenantLookup).lean();
   if (!tenant) {

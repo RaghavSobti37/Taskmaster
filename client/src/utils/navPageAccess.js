@@ -175,6 +175,10 @@ export const FEATURE_UNLOCK_BY_PATH = {
   '/finance': 'finance',
   '/admin/knowledge-engine': 'knowledgeEngine',
   '/artists': 'artistOs',
+  '/admin/ops-hub': 'opsHub',
+  '/admin': 'dataHub',
+  '/data-hub': 'dataHub',
+  '/developers': 'enterpriseApi',
 };
 
 export function getNavFeatureLock(path, unlockState = null) {

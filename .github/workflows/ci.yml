@@ -27,6 +27,8 @@ jobs:
         run: npm audit --workspace=coreknot-server --audit-level=critical
       - name: OpenAPI version drift check
         run: node scripts/generate-openapi.mjs --check
+      - name: Locked zone guard
+        run: node scripts/check-locked-zones.mjs origin/main
       - name: Tenant bypass static suite
         run: node server/scripts/runQaSuite3Static.js
       - name: Jest
@@ -50,6 +52,10 @@ jobs:
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Dependency audit (critical)
         run: npm audit --workspace=CoreKnot-client --audit-level=critical
+      - name: Docs generation drift check
+        run: npm run docs:check
+      - name: Obsidian memory drift check
+        run: npm run memory:obsidian:check
       - name: Lint
         run: npm run lint --workspace=CoreKnot-client -- --quiet
       - name: Unit tests

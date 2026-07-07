@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema({
   /** Admin-set page access override; empty = inherit from department role. */
   pagePermissions: { type: [String], default: [] },
   exp: { type: Number, default: 0 },
-  level: { type: Number, default: 1 },
   dailyStreak: { type: Number, default: 0 },
   /** Clerk user id (optional SSO) */
   clerkId: { type: String, unique: true, sparse: true },

@@ -135,6 +135,16 @@ const LegacyArtistAnalyticsRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
+const LegacyTasksCreateRedirect = () => {
+  const { scope } = useParams();
+  const { user } = useAuth();
+  const normalized = String(scope || '').trim().toLowerCase();
+  if (normalized) {
+    return <Navigate to={`/${encodeURIComponent(normalized)}/todo`} replace />;
+  }
+  return <Navigate to={orgPathFromUser(user, '/todo')} replace />;
+};
+
 function AppCatchAllRedirect() {
   const { user } = useAuth();
   const target = user ? orgPathFromUser(user, '/dashboard') : '/landing';
@@ -256,6 +266,8 @@ function App() {
             marketingAuthRoutes
           )}
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
+          <Route path="/tasks/create" element={<LegacyTasksCreateRedirect />} />
+          <Route path="/tasks/:scope/create" element={<LegacyTasksCreateRedirect />} />
           <Route path="/preview/artist/:id/analytics/:platform" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/analytics" element={<LegacyArtistAnalyticsRedirect />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
@@ -322,6 +334,9 @@ function App() {
               <Route path="chat/*" element={<OrgNavigate to="/dashboard" replace />} />
               <Route element={<PageRoute page="todo" />}>
                 <Route path="todo" element={<TodoPage />} />
+                <Route path="tasks" element={<OrgNavigate to="/todo" replace />} />
+                <Route path="tasks/create" element={<OrgNavigate to="/todo" replace />} />
+                <Route path="tasks/:scope/create" element={<OrgNavigate to="/todo" replace />} />
               </Route>
               <Route element={<PageRoute page="notes" />}>
                 <Route path="notes" element={<NotesPage />} />
@@ -465,6 +480,7 @@ function App() {
                 <Route path="/schedule/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/inbox/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/todo/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/tasks/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/notes/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/crm/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/office/*" element={<LegacyOrgPathRedirect />} />

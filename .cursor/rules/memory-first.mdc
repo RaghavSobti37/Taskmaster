@@ -1,21 +1,21 @@
 ---
-description: CoreKnot agents read .specify/memory first; sync memory after verified ship
+description: CoreKnot agents read Obsidian memory first; sync compatibility mirror after verified ship
 alwaysApply: true
 ---
 
 # Memory first (CoreKnot)
 
-**Iron law:** Every chat turn that touches CoreKnot — read agent memory **before** code, plans, or edits. Update memory **after** verify passes and changes are committed (or when user asks to ship).
+**Iron law:** Every chat turn that touches CoreKnot — read Obsidian agent memory **before** code, plans, or edits. Update memory **after** verify passes and changes are committed (or when user asks to ship).
 
 ## Session start (mandatory)
 
 Read in order (use Read tool — do not skip):
 
-1. `.specify/memory/INDEX.md` — hub + last updated date
-2. `.specify/memory/changelog/recent-changes.md` — newest 3 entries minimum
-3. `.specify/memory/changelog/session-patterns.md` — user prefs + recurring chat patterns
-4. `.specify/memory/operations/conventions.md` — locked zones, audits, ship workflow
-5. Task slice from [memory-map](../../.cursor/skills/git-push/memory-map.md) (e.g. `frontend/client.md` for UI)
+1. `memory/obsidian/INDEX.md` — canonical hub + last updated date
+2. `memory/obsidian/ReportExploration.md` — required report reading flow
+3. `memory/obsidian/RecentChanges.md` — newest entries
+4. `memory/obsidian/LockedZones.md` — lock policy + enforcement
+5. `.specify/memory/INDEX.md` — compatibility fallback only
 
 Optional quick check:
 
@@ -29,11 +29,10 @@ Then run `.cursor/skills/coreknot-session-boot/SKILL.md` for task-specific docs.
 
 Follow `.cursor/skills/memory-sync/SKILL.md` or `/git-push` (`.cursor/skills/git-push/SKILL.md`):
 
-1. Append `.specify/memory/changelog/recent-changes.md`
-2. Update component memory files touched by the change set
-3. Append durable patterns to `.specify/memory/changelog/session-patterns.md`
-4. Bump `Last updated:` in `.specify/memory/INDEX.md`
-5. Commit memory with `docs(memory): …` if not already in code commit
+1. Update `memory/obsidian/RecentChanges.md` (canonical)
+2. Update relevant canonical obsidian notes for touched domains
+3. Sync `.specify/memory/INDEX.md` compatibility stub
+4. Commit memory updates with code changes
 
 **Never** store secrets, tokens, or live hostnames in memory — use gitignored `.cursor/production-hosts.local.json`.
 

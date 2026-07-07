@@ -27,11 +27,19 @@ describe('organizationAccess', () => {
     expect(matchesAllowedDomain('user@gmail.com', 'theshakticollective.in')).toBe(false);
   });
 
-  it('resolveClerkOrganizationId prefers pinned env', () => {
+  it('resolveClerkOrganizationId prefers active Clerk org over pinned env', () => {
     process.env.CLERK_ORGANIZATION_ID = 'org_pinned';
     expect(resolveClerkOrganizationId({
       bodyOrganizationId: 'org_body',
       tokenOrganizationId: 'org_token',
+    })).toBe('org_token');
+    expect(resolveClerkOrganizationId({
+      bodyOrganizationId: 'org_body',
+      tokenOrganizationId: '',
+    })).toBe('org_body');
+    expect(resolveClerkOrganizationId({
+      bodyOrganizationId: '',
+      tokenOrganizationId: '',
     })).toBe('org_pinned');
   });
 

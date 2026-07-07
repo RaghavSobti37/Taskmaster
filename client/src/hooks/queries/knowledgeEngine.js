@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
+import useTenantQueryKey from '../useTenantQueryKey';
 
 const BASE = '/api/knowledge-engine';
 
@@ -79,11 +80,14 @@ export const useKnowledgeOutreach = (options = {}) => useQuery({
   ...options,
 });
 
-export const useKnowledgeAnalytics = (options = {}) => useQuery({
-  queryKey: ['knowledgeEngine', 'analytics'],
-  queryFn: async () => (await axios.get(`${BASE}/analytics`)).data,
-  ...options,
-});
+export const useKnowledgeAnalytics = (options = {}) => {
+  const queryKey = useTenantQueryKey('knowledgeEngine', 'analytics');
+  return useQuery({
+    queryKey,
+    queryFn: async () => (await axios.get(`${BASE}/analytics`)).data,
+    ...options,
+  });
+};
 
 export const useKnowledgeSettings = (options = {}) => useQuery({
   queryKey: ['knowledgeEngine', 'settings'],

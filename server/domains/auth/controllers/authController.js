@@ -112,9 +112,13 @@ const sendAuthSuccess = async (req, res, populated, { authMethod, clerkActiveTen
 
   const {
     backfillMembershipFromUser,
+    ensureMembershipForTenant,
     listActiveMemberships,
     resolveInitialActiveTenantId,
   } = require('../../../services/tenantMembershipService');
+  if (clerkActiveTenantId) {
+    await ensureMembershipForTenant(populated._id, clerkActiveTenantId);
+  }
   await backfillMembershipFromUser(populated);
   const memberships = await listActiveMemberships(populated._id);
   const orgFirst = require('../../../utils/orgFirstAuth').isOrgFirstAuthEnabled();

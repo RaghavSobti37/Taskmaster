@@ -150,7 +150,7 @@
     "routes": [
       "/admin/gamification"
     ],
-    "lines": 369,
+    "lines": 368,
     "defaultExport": "AdminGamification",
     "namedExports": [],
     "hooks": [
@@ -402,21 +402,6 @@
     ]
   },
   {
-    "file": "client/src/pages/admin/AuditLogPage.jsx",
-    "routes": [],
-    "lines": 66,
-    "defaultExport": "AuditLogPage",
-    "namedExports": [],
-    "hooks": [
-      "useEffect",
-      "useState"
-    ],
-    "apis": [
-      "/api/enterprise/audit"
-    ],
-    "components": []
-  },
-  {
     "file": "client/src/pages/admin/CrmStatsPage.jsx",
     "routes": [
       "/admin/crm-stats"
@@ -647,26 +632,6 @@
       "/api/qa/start"
     ],
     "components": []
-  },
-  {
-    "file": "client/src/pages/admin/SecurityAuditPage.jsx",
-    "routes": [
-      "/admin/security-audit"
-    ],
-    "lines": 83,
-    "defaultExport": "function",
-    "namedExports": [],
-    "hooks": [
-      "useMemo",
-      "useQuery",
-      "useState"
-    ],
-    "apis": [
-      "/api/admin/security-audit"
-    ],
-    "components": [
-      "QueryErrorSlot"
-    ]
   },
   {
     "file": "client/src/pages/artists/ArtistDetail.jsx",
@@ -1416,25 +1381,6 @@
     "components": []
   },
   {
-    "file": "client/src/pages/billing/UpgradePage.jsx",
-    "routes": [],
-    "lines": 160,
-    "defaultExport": "function",
-    "namedExports": [],
-    "hooks": [
-      "useAuth",
-      "useMemo",
-      "useQueryClient",
-      "useState",
-      "useTenantUnlocks",
-      "useToast"
-    ],
-    "apis": [
-      "/api/tenants/${tenantId}/billing/checkout"
-    ],
-    "components": []
-  },
-  {
     "file": "client/src/pages/calendar/CalendarView.jsx",
     "routes": [
       "/calendar"
@@ -1820,20 +1766,31 @@
   {
     "file": "client/src/pages/hubs/TabHubLayout.jsx",
     "routes": [],
-    "lines": 75,
+    "lines": 83,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useAuth",
       "useEffect",
       "useMemo",
-      "useSearchParams"
+      "useSearchParams",
+      "useTenantUnlocks"
     ],
     "apis": [],
     "components": [
       "HubPageLayout",
       "ModuleSubnav"
     ]
+  },
+  {
+    "file": "client/src/pages/hubs/TabHubLayout.test.jsx",
+    "routes": [],
+    "lines": 58,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
   },
   {
     "file": "client/src/pages/inbox/InboxPage.jsx",
@@ -2012,25 +1969,28 @@
   {
     "file": "client/src/pages/management/DocumentsPage.jsx",
     "routes": [],
-    "lines": 296,
+    "lines": 385,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useCallback",
       "useConfirm",
       "useCreateOrgDocument",
       "useDeleteOrgDocument",
+      "useEffect",
       "useMemo",
       "useOrgDocuments",
       "useState",
       "useUpdateOrgDocument"
     ],
     "apis": [
-      "/api/org-documents/${doc._id}/file"
+      "/api/org-documents/${row._id}/file"
     ],
     "components": [
       "ListPageLayout",
       "ListPageSkeleton",
       "OrgDocumentModal",
+      "OrgDocumentWorkspacePanel",
       "SearchInput"
     ]
   },
@@ -2212,7 +2172,7 @@
     "routes": [
       "/org/create"
     ],
-    "lines": 153,
+    "lines": 158,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2229,7 +2189,7 @@
     "routes": [
       "/org/create/success"
     ],
-    "lines": 53,
+    "lines": 59,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2247,10 +2207,11 @@
     "routes": [
       "/org/pick"
     ],
-    "lines": 82,
+    "lines": 92,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useAuth",
       "useEffect",
       "useMutation",
       "useNavigate",
@@ -2308,6 +2269,16 @@
     "components": []
   },
   {
+    "file": "client/src/pages/org/create/steps/StepFeatures.jsx",
+    "routes": [],
+    "lines": 69,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
     "file": "client/src/pages/org/create/steps/StepIdentity.jsx",
     "routes": [],
     "lines": 75,
@@ -2340,7 +2311,7 @@
   {
     "file": "client/src/pages/org/create/steps/StepReview.jsx",
     "routes": [],
-    "lines": 73,
+    "lines": 81,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -2782,13 +2753,14 @@
   {
     "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
     "routes": [],
-    "lines": 183,
+    "lines": 193,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useAuth",
       "useNavigate",
       "useOffboardOrganization",
+      "useOrgOptional",
       "useOrgSettings",
       "useQuery",
       "useQueryClient",
@@ -2803,7 +2775,7 @@
   {
     "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
     "routes": [],
-    "lines": 523,
+    "lines": 540,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2826,7 +2798,7 @@
   {
     "file": "client/src/pages/settings/tabs/ProgressTab.jsx",
     "routes": [],
-    "lines": 222,
+    "lines": 186,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

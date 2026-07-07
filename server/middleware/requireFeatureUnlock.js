@@ -8,6 +8,9 @@ const FEATURE_ROUTE_MAP = {
   google: ['google'],
   meta: ['meta'],
   integrations: ['integrations'],
+  opsHub: ['opsHub'],
+  dataHub: ['dataHub'],
+  enterpriseApi: ['enterpriseApi'],
 };
 
 const requireFeatureUnlock = (featureKey) => async (req, res, next) => {

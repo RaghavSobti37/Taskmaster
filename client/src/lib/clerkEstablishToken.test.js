@@ -62,20 +62,20 @@ describe('fetchClerkEstablishToken', () => {
     expect(result.retryable).toBe(true);
   });
 
-  it('surfaces org activation failure', async () => {
+  it('continues when org activation fails but user session token is available', async () => {
     const setActive = vi.fn(async () => {
       throw new Error('not a member');
     });
+    const getToken = vi.fn(async (opts) => (opts?.organizationId ? null : 'jwt_user'));
 
     const result = await fetchClerkEstablishToken({
-      getToken: vi.fn(),
+      getToken,
       setActive,
       pinnedOrgId: 'org_bad',
       activeOrgId: null,
     });
 
-    expect(result.ok).toBe(false);
-    expect(result.retryable).toBe(false);
-    expect(result.error.message).toMatch(/not a member/i);
+    expect(setActive).toHaveBeenCalledWith({ organization: 'org_bad' });
+    expect(result).toEqual({ ok: true, token: 'jwt_user' });
   });
 });

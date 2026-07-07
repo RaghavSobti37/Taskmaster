@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth, useClerk } from '@clerk/react';
 import { getPinnedClerkOrganizationId, isClerkConfigured } from '../../config/clerk';
+import { isAuthSite } from '../../config/siteMode';
 import { isClerkSignInSubflowPath, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 
 /**
@@ -21,6 +22,8 @@ function ClerkOrgActivatorInner() {
 
   useEffect(() => {
     if (!isClerkConfigured() || !pinnedOrgId || !isLoaded || !isSignedIn) return;
+    // ponytail: auth host — ClerkSessionBridge owns setActive during clerk-establish
+    if (isAuthSite()) return;
     if (isClerkSignInSubflowPath(signInPath)) return;
     if (orgId === pinnedOrgId) return;
     setActive({ organization: pinnedOrgId }).catch(() => {

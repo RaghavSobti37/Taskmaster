@@ -4,17 +4,26 @@ import {
   shouldOfferSessionReset,
 } from '../../utils/authSessionReset';
 
-const btnClass =
+const panelBtnClass =
   'text-xs text-white/75 underline-offset-2 hover:text-white hover:underline transition-colors disabled:opacity-60 disabled:pointer-events-none';
 
+const footerBtnClass =
+  'text-[11px] text-[var(--brand-teal-mid)]/80 font-medium underline-offset-2 hover:text-[var(--brand-green)] hover:underline transition-colors disabled:opacity-60 disabled:pointer-events-none';
+
 /**
- * One-time troubleshooting control — clears stale CoreKnot + Clerk session cookies.
+ * Clears stale CoreKnot + Clerk session cookies.
+ * @param {'panel'|'footer'} variant — panel: login troubleshooting; footer: always visible legal row
  */
-export default function ClearSessionCookiesButton({ bootError = false, stuckLogin = false }) {
+export default function ClearSessionCookiesButton({
+  bootError = false,
+  stuckLogin = false,
+  variant = 'panel',
+}) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const isFooter = variant === 'footer';
 
-  if (done || !shouldOfferSessionReset({ bootError, stuckLogin })) {
+  if (!isFooter && (done || !shouldOfferSessionReset({ bootError, stuckLogin }))) {
     return null;
   }
 
@@ -23,12 +32,27 @@ export default function ClearSessionCookiesButton({ bootError = false, stuckLogi
     setBusy(true);
     try {
       await resetAuthSession();
-      setDone(true);
+      if (!isFooter) setDone(true);
       window.location.replace(`${window.location.pathname}${window.location.search}`);
     } catch {
       setBusy(false);
     }
   };
+
+  const label = busy ? 'Clearing…' : (isFooter ? 'Clear cookies' : 'Clear old session cookies');
+
+  if (isFooter) {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={busy}
+        className={footerBtnClass}
+      >
+        {label}
+      </button>
+    );
+  }
 
   return (
     <div className="mt-4 pt-4 border-t border-white/15 text-center">
@@ -39,9 +63,9 @@ export default function ClearSessionCookiesButton({ bootError = false, stuckLogi
         type="button"
         onClick={handleClick}
         disabled={busy}
-        className={btnClass}
+        className={panelBtnClass}
       >
-        {busy ? 'Clearing session…' : 'Clear old session cookies'}
+        {label}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ClearSessionCookiesButton from './ClearSessionCookiesButton';
 
 /** Small legal row below auth card — low visual weight. */
 export default function AuthLegalFooter() {
@@ -12,6 +13,8 @@ export default function AuthLegalFooter() {
       <Link to="/userdata" className="hover:text-[var(--brand-green)] transition-colors">
         User Data Deletion
       </Link>
+      <span aria-hidden className="opacity-40">·</span>
+      <ClearSessionCookiesButton variant="footer" />
     </footer>
   );
 }

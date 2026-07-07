@@ -11,17 +11,8 @@ export async function fetchClerkEstablishToken({
   if (pinnedOrgId && activeOrgId !== pinnedOrgId) {
     try {
       await setActive({ organization: pinnedOrgId });
-    } catch (err) {
-      const clerkMessage = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message;
-      return {
-        ok: false,
-        retryable: false,
-        error: {
-          message: clerkMessage
-            || err?.message
-            || 'Could not open your organization workspace. Ask an admin for an invitation.',
-        },
-      };
+    } catch {
+      // ponytail: server pins org via CLERK_ORGANIZATION_ID — still try session JWT below
     }
   }
 

@@ -1,0 +1,26 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "name": "home"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "happy-root",
+      "type": "happy",
+      "route": "/",
+      "url": "http://127.0.0.1:5173/",
+      "instruction": "Navigate to http://127.0.0.1:5173/, verify page loads without console errors, main content visible, no 5xx network responses.",
+      "priority": 1
+    },
+    {
+      "id": "edge-empty-submit-root",
+      "type": "edge",
+      "route": "/",
+      "url": "http://127.0.0.1:5173/",
+      "instruction": "On http://127.0.0.1:5173/, find primary form if any; submit empty; expect validation errors not crash.",
+      "priority": 2
+    }
+  ]
+}

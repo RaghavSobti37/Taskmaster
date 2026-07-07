@@ -24,6 +24,7 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `reset-weak-passwords:*` | `resetWeakUserPasswords.js` | 🔴 | Needs `RESET_WEAK_PASSWORDS_CONFIRM=1` for `--apply` |
 | `reconcile:datahub:prod` | `reconcileDataHub.js` | 🔴 | Prod Data Hub reconcile |
 | `seed:music-calendar:prod` | `seedMusicContentCalendar.js --prod` | 🔴 | Prod content seed |
+| `seed:local-integrations-demo` | `seedLocalDevIntegrationsDemo.js` | 🟢 | Dummy Connected Apps + Website Forms per active tenant |
 | `import-finance` | `importInvoices.js` | 🟡 | Finance import (OCR optional) |
 
 ## Dev & infra

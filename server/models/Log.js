@@ -87,7 +87,7 @@ logSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      clientRequestId: { $type: 'string', $ne: '' },
+      clientRequestId: { $type: 'string', $gt: '' },
     },
   },
 );

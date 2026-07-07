@@ -51,7 +51,7 @@ async function main() {
     slug: `smoke-${stamp}`,
     contactEmail: email,
     plan: 'enterprise',
-    featureUnlocks: { resend: true, finance: true, knowledgeEngine: true },
+    featureUnlocks: { resend: true, finance: true },
   });
   const user = await User.create({
     name: 'Enterprise Smoke',

@@ -13,6 +13,16 @@ import { redirectToLogin } from '../utils/authNavigation';
 
 const CLERK_ESTABLISH_TIMEOUT_MS = 15_000;
 
+function loginPathWithReturn(location) {
+  const returnPath = `${location.pathname}${location.search}${location.hash}`;
+  if (!returnPath || returnPath === '/' || returnPath.startsWith('/login')) {
+    return '/login';
+  }
+  const params = new URLSearchParams();
+  params.set('redirect', returnPath);
+  return `/login?${params.toString()}`;
+}
+
 function ProtectedRouteInner({ clerkLoaded, clerkSignedIn }) {
   const { user, loading, sessionReady, bootError, retryBoot } = useAuth();
   const location = useLocation();
@@ -72,11 +82,10 @@ function ProtectedRouteInner({ clerkLoaded, clerkSignedIn }) {
       });
       return <BootScreen onRefresh={() => retryBoot()} />;
     }
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to={loginPathWithReturn(location)} replace state={{ from: location }} />;
   }
 
-  if (!sessionEstablished && (clerkBoot || loading || clerkSessionPending)) {
-    return <BootScreen bootError={bootError} onRefresh={() => retryBoot()} />;
+  if (!sessionEstablished && (clerkBoot || loading || clerkSessionPending)) {    return <BootScreen bootError={bootError} onRefresh={() => retryBoot()} />;
   }
 
   if (!user) {
@@ -90,7 +99,7 @@ function ProtectedRouteInner({ clerkLoaded, clerkSignedIn }) {
       const target = query ? `${authUrl('/login')}?${query}` : authUrl('/login');
       return <ExternalRedirect to={target} />;
     }
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to={loginPathWithReturn(location)} replace state={{ from: location }} />;
   }
 
   return <Outlet />;

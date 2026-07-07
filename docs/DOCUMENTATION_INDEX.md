@@ -61,9 +61,12 @@ node scripts/generate-master-doc.mjs
 | Data topology | [`operations/DATA_ENV_TOPOLOGY.md`](./operations/DATA_ENV_TOPOLOGY.md) |
 | Deploy env | [`operations/deployment.md`](./operations/deployment.md) |
 | Environment matrix | [`operations/environments.md`](./operations/environments.md) |
+| Production readiness audit | [`operations/PRODUCTION_READINESS_AUDIT_2026-07-08.md`](./operations/PRODUCTION_READINESS_AUDIT_2026-07-08.md) |
 | Staging | [`operations/STAGING_SETUP.md`](./operations/STAGING_SETUP.md) |
 | Rollback | [`operations/DEPLOY_ROLLBACK.md`](./operations/DEPLOY_ROLLBACK.md) |
 | Scripts | [`operations/SCRIPTS_RUNBOOK.md`](./operations/SCRIPTS_RUNBOOK.md) |
+| Local demo integrations seed | [`operations/LOCAL_DEV_DEMO_DATA.md`](./operations/LOCAL_DEV_DEMO_DATA.md) |
+| Knowledge Engine removal | [`operations/KNOWLEDGE_ENGINE_REMOVAL.md`](./operations/KNOWLEDGE_ENGINE_REMOVAL.md) |
 | Production migration | [`operations/PRODUCTION_MIGRATION.md`](./operations/PRODUCTION_MIGRATION.md) |
 | Backups | [`operations/DATA_BACKUP.md`](./operations/DATA_BACKUP.md) |
 | Cloudflare DNS | [`operations/CLOUDFLARE_DNS.md`](./operations/CLOUDFLARE_DNS.md) |
@@ -85,6 +88,10 @@ node scripts/generate-master-doc.mjs
 
 | Topic | Document |
 | --- | --- |
+| **Connected Apps & intake (master)** | [`features/CONNECTED_APPS_AND_INTAKE.md`](./features/CONNECTED_APPS_AND_INTAKE.md) |
+| Integration Hub | [`features/INTEGRATION_HUB.md`](./features/INTEGRATION_HUB.md) |
+| Website Forms | [`features/WEBSITE_FORMS.md`](./features/WEBSITE_FORMS.md) |
+| AiSensy (WhatsApp) | [`features/AISENSY.md`](./features/AISENSY.md) |
 | Artist OS | [`features/artist-os.md`](./features/artist-os.md) |
 | Data Hub vision | [`features/DATA_HUB_PRODUCT_VISION.md`](./features/DATA_HUB_PRODUCT_VISION.md) |
 | Integration catalog | [`features/INTEGRATION_DATA_CATALOG.md`](./features/INTEGRATION_DATA_CATALOG.md) |

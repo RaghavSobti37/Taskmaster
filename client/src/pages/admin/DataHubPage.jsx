@@ -6,7 +6,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import SearchInput from '../../components/ui/SearchInput';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
-import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
+import { countActiveFilters, countPendingFilterChanges } from '../../components/ui/selectionFilterUtils';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
 import DataHubOpsMenu from '../../components/dataHub/DataHubOpsMenu';
@@ -15,6 +15,7 @@ import {
   useDataHubPeople,
   useDataHubAnalytics,
   useDataHubReconcile,
+  useDataHubRebuildPersonHub,
   useDataHubSyncStatus,
   useDataHubBackups,
   useDataHubProductionBackup,
@@ -90,32 +91,39 @@ function formatBytes(bytes) {
 
 export function DataHubContent() {
   const savedFilters = useMemo(() => loadDataHubFilters(), []);
-  const [activeFolder, setActiveFolder] = useState(savedFilters.activeFolder);
+  const [appliedFolder, setAppliedFolder] = useState(savedFilters.activeFolder);
+  const [draftFolder, setDraftFolder] = useState(savedFilters.activeFolder);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(savedFilters.pageSize);
+  const [appliedPageSize, setAppliedPageSize] = useState(savedFilters.pageSize);
+  const [draftPageSize, setDraftPageSize] = useState(savedFilters.pageSize);
   const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(savedFilters.showAnalytics);
-  const [emailStatusFilter, setEmailStatusFilter] = useState(savedFilters.emailStatusFilter);
-  const [sortField, setSortField] = useState(savedFilters.sortField || 'lastActivity');
-  const [sortOrder, setSortOrder] = useState(savedFilters.sortOrder || 'desc');
-  const sortValue = `${sortField}:${sortOrder}`;
+  const [appliedEmailStatus, setAppliedEmailStatus] = useState(savedFilters.emailStatusFilter);
+  const [draftEmailStatus, setDraftEmailStatus] = useState(savedFilters.emailStatusFilter);
+  const [appliedSortField, setAppliedSortField] = useState(savedFilters.sortField || 'lastActivity');
+  const [appliedSortOrder, setAppliedSortOrder] = useState(savedFilters.sortOrder || 'desc');
+  const [draftSortField, setDraftSortField] = useState(savedFilters.sortField || 'lastActivity');
+  const [draftSortOrder, setDraftSortOrder] = useState(savedFilters.sortOrder || 'desc');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const appliedSortValue = `${appliedSortField}:${appliedSortOrder}`;
+  const draftSortValue = `${draftSortField}:${draftSortOrder}`;
 
   useEffect(() => {
     try {
       localStorage.setItem(DATA_HUB_FILTERS_KEY, JSON.stringify({
-        activeFolder,
-        pageSize,
-        emailStatusFilter,
+        activeFolder: appliedFolder,
+        pageSize: appliedPageSize,
+        emailStatusFilter: appliedEmailStatus,
         showAnalytics,
-        sortField,
-        sortOrder,
+        sortField: appliedSortField,
+        sortOrder: appliedSortOrder,
       }));
     } catch {
       /* ignore */
     }
-  }, [activeFolder, pageSize, emailStatusFilter, showAnalytics, sortField, sortOrder]);
+  }, [appliedFolder, appliedPageSize, appliedEmailStatus, showAnalytics, appliedSortField, appliedSortOrder]);
 
   const queryClient = useQueryClient();
   const { confirm } = useConfirm();
@@ -123,6 +131,7 @@ export function DataHubContent() {
   const { data: folderData, isError: foldersError, error: foldersErr } = useDataHubFolders();
   const deferDataHubSecondary = useDeferredQueryEnabled(folderData !== undefined);
   const reconcileMutation = useDataHubReconcile();
+  const rebuildHubMutation = useDataHubRebuildPersonHub();
   const backupMutation = useDataHubProductionBackup();
   const { data: syncStatus } = useDataHubSyncStatus({ enabled: deferDataHubSecondary });
   const reconcileEnabled = syncStatus?.reconcileEnabled !== false;
@@ -157,17 +166,17 @@ export function DataHubContent() {
   }, [runIncrementalSync, syncStatus?.lastSyncedAt, reconcileEnabled]);
 
   const peopleParams = useMemo(() => ({
-    folder: activeFolder,
+    folder: appliedFolder,
     search: debouncedSearch,
     page,
-    limit: pageSize,
-    emailStatus: emailStatusFilter !== 'all' ? emailStatusFilter : undefined,
-    sort: sortField,
-    order: sortOrder,
-  }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter, sortField, sortOrder]);
+    limit: appliedPageSize,
+    emailStatus: appliedEmailStatus !== 'all' ? appliedEmailStatus : undefined,
+    sort: appliedSortField,
+    order: appliedSortOrder,
+  }), [appliedFolder, debouncedSearch, page, appliedPageSize, appliedEmailStatus, appliedSortField, appliedSortOrder]);
 
   const { data: peopleData, isLoading, isError: peopleError, error: peopleErr } = useDataHubPeople(peopleParams);
-  const { data: analytics, isError: analyticsError, error: analyticsErr } = useDataHubAnalytics(activeFolder, { enabled: showAnalytics });
+  const { data: analytics, isError: analyticsError, error: analyticsErr } = useDataHubAnalytics(appliedFolder, { enabled: showAnalytics });
 
   const queryError = peopleError
     ? peopleErr
@@ -178,15 +187,44 @@ export function DataHubContent() {
         : null;
 
   const folders = folderData?.folders || [];
+  const folderGroups = folderData?.groups || [];
   const folderCounts = folderData?.counts || {};
-  const folderOptions = useMemo(
-    () => folders.map((folder) => ({
-      value: folder.key,
-      label: `${folder.label} (${folder.count ?? 0})`,
-    })),
-    [folders],
-  );
-  const activeFolderLabel = folders.find((f) => f.key === activeFolder)?.label || 'All people';
+  const folderGroupOptions = useMemo(() => {
+    if (folderGroups.length > 0) {
+      return folderGroups
+        .filter((group) => group.key !== 'all')
+        .map((group) => ({
+          label: group.label,
+          options: (group.inlets || [])
+            .filter((inlet) => inlet.key !== 'all')
+            .map((inlet) => ({
+              value: inlet.key,
+              label: `${inlet.label} (${inlet.count ?? 0})`,
+            })),
+        }))
+        .filter((group) => group.options.length > 0);
+    }
+    return [{
+      label: 'Folders',
+      options: folders
+        .filter((folder) => folder.key !== 'all')
+        .map((folder) => ({
+          value: folder.key,
+          label: `${folder.label} (${folder.count ?? 0})`,
+        })),
+    }];
+  }, [folders, folderGroups]);
+
+  const folderLabelByKey = useMemo(() => {
+    const map = { all: 'All people', loyal: 'Loyal (2+ inlets)', unsubscribed: 'Unsubscribed' };
+    for (const folder of folders) map[folder.key] = folder.label;
+    for (const group of folderGroups) {
+      for (const inlet of group.inlets || []) map[inlet.key] = inlet.label;
+    }
+    return map;
+  }, [folders, folderGroups]);
+
+  const activeFolderLabel = folderLabelByKey[appliedFolder] || 'All people';
   const lastSyncedAt = syncStatus?.lastSyncedAt || syncStatus?.lastStats?.syncedAt;
   const latestBackup = backupStatus?.snapshots?.[0];
   const backupDestination = backupStatus?.destination || 'mongo';
@@ -208,25 +246,36 @@ export function DataHubContent() {
     let stats = kpis?.length
       ? mapKpisToStats(kpis, KPI_ICONS)
       : [
-          { id: 'total', label: activeFolder === 'all' ? 'Total People' : 'In Folder', value: total, icon: Database, variant: 'primary' },
+          { id: 'total', label: appliedFolder === 'all' ? 'Total People' : 'In Folder', value: total, icon: Database, variant: 'primary' },
           { id: 'newWeek', label: 'New This Week', value: analytics?.newThisWeek ?? 0, icon: TrendingUp, variant: 'mint' },
-          { id: 'loyal', label: 'Loyal (2+ Inlets)', value: folderCounts.loyal ?? analytics?.loyalCount ?? 0, icon: Star, variant: 'warning' },
+          {
+            id: 'loyal',
+            label: 'Loyal (2+ Inlets)',
+            value: folderCounts.loyal ?? analytics?.loyalCount ?? 0,
+            icon: Star,
+            variant: 'warning',
+            onClick: () => {
+              setAppliedFolder('loyal');
+              setDraftFolder('loyal');
+              setPage(1);
+            },
+          },
         ];
-    if (!kpis?.length && (activeFolder === 'all' || activeFolder === 'unsubscribed')) {
+    if (!kpis?.length && (appliedFolder === 'all' || appliedFolder === 'unsubscribed')) {
       const unsubCount = folderCounts.unsubscribed ?? 0;
-      const unsubRate = total > 0 && activeFolder === 'all' ? Math.round((unsubCount / total) * 100) : null;
+      const unsubRate = total > 0 && appliedFolder === 'all' ? Math.round((unsubCount / total) * 100) : null;
       stats = [
         ...stats,
         {
           id: 'unsub',
-          label: activeFolder === 'unsubscribed' ? 'Unsubscribed' : 'Unsub Rate',
-          value: activeFolder === 'unsubscribed' ? unsubCount : `${unsubRate ?? 0}%`,
+          label: appliedFolder === 'unsubscribed' ? 'Unsubscribed' : 'Unsub Rate',
+          value: appliedFolder === 'unsubscribed' ? unsubCount : `${unsubRate ?? 0}%`,
           icon: UserX,
           variant: 'rose',
         },
       ];
     }
-    const analyticsCharts = buildDataHubOverviewCharts(analytics, activeFolder);
+    const analyticsCharts = buildDataHubOverviewCharts(analytics, appliedFolder);
     const folderChart = Object.entries(folderCounts)
       .filter(([key, val]) => key !== 'all' && Number(val) > 0)
       .map(([label, value]) => ({ label: label.replace(/_/g, ' '), value: Number(value) }))
@@ -238,7 +287,7 @@ export function DataHubContent() {
         ? [{ id: 'folders', title: 'Folder mix', type: folderChart.length <= 6 ? 'donut' : 'bar', data: folderChart }]
         : []);
     return { stats: stats.slice(0, 4), charts, eagerCharts: analyticsCharts.length > 0 };
-  }, [analytics, activeFolder, folderCounts, total]);
+  }, [analytics, appliedFolder, folderCounts, total]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['dataHub'] });
@@ -274,6 +323,23 @@ export function DataHubContent() {
       toast.error(err.response?.data?.error || 'Full sync failed');
     } finally {
       setUserSyncActive(false);
+    }
+  };
+
+  const handleRebuildHub = async () => {
+    const ok = await confirm({
+      title: 'Sync hub view?',
+      message: 'Syncs PersonHubView inlet keys from PersonIndex (low memory). Run after Havells or other imports so new folders show counts and rows.',
+      confirmLabel: 'Sync hub',
+      type: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await rebuildHubMutation.mutateAsync();
+      handleRefresh();
+      toast.success('Person hub view rebuilt');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Hub rebuild failed');
     }
   };
 
@@ -342,7 +408,7 @@ export function DataHubContent() {
     {
       header: 'Email status',
       render: (item) => (
-        <StatusBadge status={item.emailStatus === 'Active' ? 'available' : item.emailStatus === 'Unsubscribed' ? 'advisory' : 'neutral'}>
+        <StatusBadge status={item.emailStatus || 'Pending'}>
           {item.emailStatus || 'Pending'}
         </StatusBadge>
       ),
@@ -362,67 +428,176 @@ export function DataHubContent() {
     ? 'Syncing…'
     : `Synced ${formatLastSynced(lastSyncedAt)}${latestBackup?.date ? ` · Backup ${latestBackup.date}` : ''}`;
 
-  const handleClearDataHubFilters = useCallback(() => {
-    setActiveFolder('all');
-    setEmailStatusFilter('all');
-    setSortField('lastActivity');
-    setSortOrder('desc');
-    setPageSize(10);
+  const resetFilters = useCallback(() => {
+    setAppliedFolder('all');
+    setDraftFolder('all');
+    setAppliedEmailStatus('all');
+    setDraftEmailStatus('all');
+    setAppliedSortField('lastActivity');
+    setAppliedSortOrder('desc');
+    setDraftSortField('lastActivity');
+    setDraftSortOrder('desc');
+    setAppliedPageSize(10);
+    setDraftPageSize(10);
     setPage(1);
   }, []);
 
-  const dataHubFilterFields = useMemo(() => [
+  const syncDraftFromApplied = useCallback(() => {
+    setDraftFolder(appliedFolder);
+    setDraftEmailStatus(appliedEmailStatus);
+    setDraftSortField(appliedSortField);
+    setDraftSortOrder(appliedSortOrder);
+    setDraftPageSize(appliedPageSize);
+  }, [appliedFolder, appliedEmailStatus, appliedSortField, appliedSortOrder, appliedPageSize]);
+
+  const handleFilterOpenChange = useCallback((open) => {
+    if (open) syncDraftFromApplied();
+    setFilterOpen(open);
+  }, [syncDraftFromApplied]);
+
+  const handleApplyFilters = useCallback(() => {
+    setAppliedFolder(draftFolder);
+    setAppliedEmailStatus(draftEmailStatus);
+    setAppliedSortField(draftSortField);
+    setAppliedSortOrder(draftSortOrder);
+    setAppliedPageSize(draftPageSize);
+    setPage(1);
+    setFilterOpen(false);
+  }, [draftFolder, draftEmailStatus, draftSortField, draftSortOrder, draftPageSize]);
+
+  const appliedFilterFields = useMemo(() => [
     {
       id: 'folder',
       label: 'Folder',
-      type: 'searchable',
-      value: activeFolder,
+      type: 'groupedRadio',
+      value: appliedFolder,
       defaultValue: 'all',
-      options: [
-        { value: 'all', label: 'All people' },
-        ...folderOptions,
-      ],
-      onChange: (v) => { setActiveFolder(v); setPage(1); },
+      resetOptions: [{ value: 'all', label: 'All people' }],
+      groups: folderGroupOptions,
     },
     {
       id: 'status',
       label: 'Email status',
       type: 'radio',
-      value: emailStatusFilter,
+      value: appliedEmailStatus,
       defaultValue: 'all',
       options: [
         { value: 'all', label: 'All statuses' },
         { value: 'Active', label: 'Active' },
         { value: 'Unsubscribed', label: 'Unsubscribed' },
         { value: 'Bounced', label: 'Bounced' },
+        { value: 'Invalid', label: 'Invalid' },
         { value: 'Pending', label: 'Pending' },
       ],
-      onChange: (v) => { setEmailStatusFilter(v); setPage(1); },
     },
     {
       id: 'sort',
       label: 'Sort',
       type: 'radio',
-      value: sortValue,
+      value: appliedSortValue,
+      defaultValue: 'lastActivity:desc',
+      options: SORT_OPTIONS,
+    },
+    {
+      id: 'pageSize',
+      label: 'Rows per page',
+      type: 'radio',
+      value: String(appliedPageSize),
+      defaultValue: '10',
+      options: PAGE_SIZE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label })),
+    },
+  ], [appliedFolder, appliedEmailStatus, appliedSortValue, appliedPageSize, folderGroupOptions]);
+
+  const dataHubFilterFields = useMemo(() => [
+    {
+      id: 'folder',
+      label: 'Folder',
+      type: 'groupedRadio',
+      value: draftFolder,
+      defaultValue: 'all',
+      resetOptions: [{ value: 'all', label: 'All people' }],
+      groups: folderGroupOptions,
+      onChange: setDraftFolder,
+    },
+    {
+      id: 'status',
+      label: 'Email status',
+      type: 'radio',
+      value: draftEmailStatus,
+      defaultValue: 'all',
+      options: [
+        { value: 'all', label: 'All statuses' },
+        { value: 'Active', label: 'Active' },
+        { value: 'Unsubscribed', label: 'Unsubscribed' },
+        { value: 'Bounced', label: 'Bounced' },
+        { value: 'Invalid', label: 'Invalid' },
+        { value: 'Pending', label: 'Pending' },
+      ],
+      onChange: setDraftEmailStatus,
+    },
+    {
+      id: 'sort',
+      label: 'Sort',
+      type: 'radio',
+      value: draftSortValue,
       defaultValue: 'lastActivity:desc',
       options: SORT_OPTIONS,
       onChange: (v) => {
         const [field, order] = String(v).split(':');
-        setSortField(field || 'lastActivity');
-        setSortOrder(order || 'desc');
-        setPage(1);
+        setDraftSortField(field || 'lastActivity');
+        setDraftSortOrder(order || 'desc');
       },
     },
     {
       id: 'pageSize',
       label: 'Rows per page',
       type: 'radio',
-      value: String(pageSize),
+      value: String(draftPageSize),
       defaultValue: '10',
       options: PAGE_SIZE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label })),
-      onChange: (v) => { setPageSize(Number(v)); setPage(1); },
+      onChange: (v) => setDraftPageSize(Number(v)),
     },
-  ], [activeFolder, emailStatusFilter, sortValue, pageSize, folderOptions]);
+  ], [draftFolder, draftEmailStatus, draftSortValue, draftPageSize, folderGroupOptions]);
+
+  const pendingFilterCount = countPendingFilterChanges(dataHubFilterFields, appliedFilterFields);
+  const filterApplyLabel = pendingFilterCount > 0 ? `Apply (${pendingFilterCount} filter${pendingFilterCount === 1 ? '' : 's'})` : 'Apply';
+
+  const activeFilterChips = useMemo(() => {
+    const chips = [];
+    if (appliedFolder !== 'all') {
+      chips.push({ id: 'folder', label: folderLabelByKey[appliedFolder] || appliedFolder });
+    }
+    if (appliedEmailStatus !== 'all') {
+      chips.push({ id: 'status', label: `Status: ${appliedEmailStatus}` });
+    }
+    if (appliedSortValue !== 'lastActivity:desc') {
+      const sortLabel = SORT_OPTIONS.find((o) => o.value === appliedSortValue)?.label || appliedSortValue;
+      chips.push({ id: 'sort', label: `Sort: ${sortLabel}` });
+    }
+    if (appliedPageSize !== 10) {
+      chips.push({ id: 'pageSize', label: `${appliedPageSize} rows` });
+    }
+    return chips;
+  }, [appliedFolder, appliedEmailStatus, appliedSortValue, appliedPageSize, folderLabelByKey]);
+
+  const handleActiveFilterRemove = useCallback((chipId) => {
+    if (chipId === 'folder') {
+      setAppliedFolder('all');
+      setDraftFolder('all');
+    } else if (chipId === 'status') {
+      setAppliedEmailStatus('all');
+      setDraftEmailStatus('all');
+    } else if (chipId === 'sort') {
+      setAppliedSortField('lastActivity');
+      setAppliedSortOrder('desc');
+      setDraftSortField('lastActivity');
+      setDraftSortOrder('desc');
+    } else if (chipId === 'pageSize') {
+      setAppliedPageSize(10);
+      setDraftPageSize(10);
+    }
+    setPage(1);
+  }, []);
 
   return (
     <>
@@ -435,8 +610,15 @@ export function DataHubContent() {
         overview={showAnalytics ? overview : undefined}
         filterFields={dataHubFilterFields}
         filterSheetTitle="Data Hub filters"
-        mobileFilterCount={countActiveFilters(dataHubFilterFields)}
-        onActiveFiltersClear={handleClearDataHubFilters}
+        filterPanelMode="push"
+        filterOpen={filterOpen}
+        onFilterOpenChange={handleFilterOpenChange}
+        onFilterApply={handleApplyFilters}
+        filterApplyLabel={filterApplyLabel}
+        mobileFilterCount={countActiveFilters(appliedFilterFields)}
+        activeFilterChips={activeFilterChips}
+        onActiveFilterRemove={handleActiveFilterRemove}
+        onActiveFiltersClear={resetFilters}
         queryError={queryError}
         onQueryRetry={handleRefresh}
         queryErrorFallback="Failed to load Data Hub data"
@@ -476,9 +658,11 @@ export function DataHubContent() {
               onBackup={handleProductionBackup}
               onIncrementalSync={handleReconcile}
               onFullReconcile={handleFullReconcile}
+              onRebuildHub={handleRebuildHub}
               onImported={handleRefresh}
               backupPending={backupMutation.isPending}
               reconcilePending={reconcileMutation.isPending}
+              rebuildHubPending={rebuildHubMutation.isPending}
               reconcileEnabled={reconcileEnabled}
             />
           </>
@@ -490,7 +674,7 @@ export function DataHubContent() {
           </p>
         )}
 
-        <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase -mt-1 mb-2">
+        <p className="tm-widget-label text-[var(--color-text-muted)] -mt-1 mb-2 tabular-nums">
           {activeFolderLabel} · {total.toLocaleString()} {total === 1 ? 'person' : 'people'}
         </p>
 
@@ -505,9 +689,9 @@ export function DataHubContent() {
             totalItems={peopleData?.total || 0}
             totalPages={peopleData?.pages || 0}
             currentPage={page}
-            pageSize={pageSize}
+            pageSize={appliedPageSize}
             onPageChange={setPage}
-            onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            onPageSizeChange={(size) => { setAppliedPageSize(size); setDraftPageSize(size); setPage(1); }}
             rowEstimateSize={56}
           />
         </div>

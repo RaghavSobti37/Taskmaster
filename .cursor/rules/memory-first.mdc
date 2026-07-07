@@ -11,11 +11,13 @@ alwaysApply: true
 
 Read in order (use Read tool — do not skip):
 
-1. `memory/obsidian/INDEX.md` — canonical hub + last updated date
+1. `memory/obsidian/INDEX.md` — canonical hub at TSC Platform root (junction from this package)
 2. `memory/obsidian/ReportExploration.md` — required report reading flow
 3. `memory/obsidian/RecentChanges.md` — newest entries
 4. `memory/obsidian/LockedZones.md` — lock policy + enforcement
 5. `.specify/memory/INDEX.md` — compatibility fallback only
+
+Workspace-root path (non-CoreKnot chats): `memory/obsidian/INDEX.md` from TSC Platform root.
 
 Optional quick check:
 

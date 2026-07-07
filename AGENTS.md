@@ -4,9 +4,11 @@ Every agent in this package reads **agent memory first**, then follows platform 
 
 ## Memory first (every chat)
 
+Canonical vault: **TSC Platform root** `memory/obsidian/` (junction at `memory/obsidian/` in this package).
+
 | Step | Path |
 |------|------|
-| 1 | [`memory/obsidian/INDEX.md`](memory/obsidian/INDEX.md) |
+| 1 | [`memory/obsidian/INDEX.md`](memory/obsidian/INDEX.md) · platform: [`../../../../memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) |
 | 2 | [`memory/obsidian/ReportExploration.md`](memory/obsidian/ReportExploration.md) |
 | 3 | [`memory/obsidian/RecentChanges.md`](memory/obsidian/RecentChanges.md) |
 | 4 | [`.specify/memory/INDEX.md`](.specify/memory/INDEX.md) *(compat fallback only)* |
@@ -70,3 +72,7 @@ npm run sync:prod-tenant-tsc   # from coreknot/Taskmaster — skips Data Hub/Exl
 ```
 
 See `docs/operations/LOCAL_DEV_DATABASE.md`.
+
+**Connected Apps / forms demo (no prod sync):** `npm run seed:local-integrations-demo` — [`docs/operations/LOCAL_DEV_DEMO_DATA.md`](docs/operations/LOCAL_DEV_DEMO_DATA.md).
+
+**Intake deep dive:** [`docs/features/CONNECTED_APPS_AND_INTAKE.md`](docs/features/CONNECTED_APPS_AND_INTAKE.md).

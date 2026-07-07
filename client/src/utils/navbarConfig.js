@@ -46,7 +46,6 @@ export const HUB_CONFIG = {
       'admin_roles',
       'admin_data',
       'admin_ops_hub',
-      'admin_knowledge_engine',
       'admin_artist_path',
       'admin_exly',
       'admin_scripts',
@@ -167,16 +166,6 @@ export const HUB_CONFIG = {
         section: 'operations',
         accent: 'orange',
         description: 'Operational workflows and hub management tools',
-      },
-      {
-        id: 'knowledge-engine',
-        label: 'Knowledge Engine',
-        path: '/admin/knowledge-engine',
-        key: 'admin_knowledge_engine',
-        icon: 'Newspaper',
-        section: 'content',
-        accent: 'teal',
-        description: 'SEO content pipeline, blog calendar, and distribution',
       },
       {
         id: 'platform-settings',
@@ -302,7 +291,6 @@ const HUB_CHILD_PATHS = new Set([
   '/admin/gamification',
   '/admin/project-analytics',
   '/admin/ops-hub',
-  '/admin/knowledge-engine',
   '/admin/qa',
 ]);
 

@@ -17,6 +17,11 @@ const HUB_SOURCE_TO_FOLDER = {
   mail: 'mail',
   enquiry: 'enquiries',
   community: 'community',
+  havells_registered: 'havells_registered',
+  havells_selected: 'havells_selected',
+  havells_attended_delhi: 'havells_attended_delhi',
+  havells_attended_indore: 'havells_attended_indore',
+  havells_attended_dumka: 'havells_attended_dumka',
 };
 const HUB_KEY_TO_FOLDER = { ...HUB_SOURCE_TO_FOLDER };
 

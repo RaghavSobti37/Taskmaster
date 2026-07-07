@@ -154,6 +154,14 @@ node scripts/seedDepartmentsAndTaskTypes.js
 node scripts/reconcileDataHub.js --full
 ```
 
+**Connected Apps + Website Forms demo** (from package root):
+
+```bash
+npm run seed:local-integrations-demo
+```
+
+See [`docs/operations/LOCAL_DEV_DEMO_DATA.md`](docs/operations/LOCAL_DEV_DEMO_DATA.md).
+
 ### Nest / Postgres path (optional)
 
 ```bash
@@ -373,6 +381,9 @@ Full catalog: [`docs/operations/SCRIPTS_RUNBOOK.md`](docs/operations/SCRIPTS_RUN
 | [`docs/operations/deployment.md`](docs/operations/deployment.md) | Render + Vercel deploy |
 | [`docs/operations/STAGING_SETUP.md`](docs/operations/STAGING_SETUP.md) | Staging mirror setup |
 | [`docs/operations/ENTERPRISE_READINESS.md`](docs/operations/ENTERPRISE_READINESS.md) | Multi-org, audit, enterprise APIs |
+| [`docs/features/CONNECTED_APPS_AND_INTAKE.md`](docs/features/CONNECTED_APPS_AND_INTAKE.md) | Integrations, forms, intake |
+| [`docs/operations/LOCAL_DEV_DEMO_DATA.md`](docs/operations/LOCAL_DEV_DEMO_DATA.md) | Local integrations demo seed |
+| [`docs/operations/KNOWLEDGE_ENGINE_REMOVAL.md`](docs/operations/KNOWLEDGE_ENGINE_REMOVAL.md) | KE removal log |
 | [`docs/features/artist-os.md`](docs/features/artist-os.md) | Artist OS routes |
 | [`docs/reference/VERSION_HISTORY.md`](docs/reference/VERSION_HISTORY.md) | Release notes |
 | [`AGENTS.md`](AGENTS.md) | Cursor / agent conventions |
@@ -392,6 +403,7 @@ Full catalog: [`docs/operations/SCRIPTS_RUNBOOK.md`](docs/operations/SCRIPTS_RUN
 | **HR** | Attendance, daily logs, leave |
 | **Artists** | Artist OS, OAuth analytics, workspace membership |
 | **Platform** | Gamification, notifications, admin tooling, QA runner |
+| **Connected Apps** | Gmail, Resend, Google Sheets, AiSensy, inbound webhook; Website Forms embed |
 
 Feature memory (agents): [`.specify/memory/features/modules.md`](.specify/memory/features/modules.md)
 

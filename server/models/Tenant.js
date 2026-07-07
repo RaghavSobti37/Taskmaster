@@ -24,7 +24,6 @@ const tenantSchema = new mongoose.Schema({
     resend: { type: Boolean, default: false },
     google: { type: Boolean, default: false },
     meta: { type: Boolean, default: false },
-    knowledgeEngine: { type: Boolean, default: false },
     finance: { type: Boolean, default: false },
     artistOs: { type: Boolean, default: false },
     integrations: { type: Boolean, default: false },

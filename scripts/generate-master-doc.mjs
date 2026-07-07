@@ -113,7 +113,7 @@ const header = `# CoreKnot — Master Reference
 | Audience | Start here |
 | --- | --- |
 | **New engineer** | [Platform overview](#1-platform-overview) → your domain in [Page catalog](#3-page-catalog-by-domain) |
-| **AI agent** | Full file + [\`memory/obsidian/INDEX.md\`](../../memory/obsidian/INDEX.md) (canonical) + [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) (compat) |
+| **AI agent** | Full file + [\`memory/obsidian/INDEX.md\`](../../../../memory/obsidian/INDEX.md) (canonical) + [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) (compat) |
 | **Ops / deploy** | [\`operations/deployment.md\`](../operations/deployment.md) + [\`operations/environments.md\`](../operations/environments.md) |
 
 **Live inventory:** Regenerate with \`node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs\`.
@@ -191,7 +191,6 @@ Resolved via \`getUserPagePermissions()\` in \`client/src/utils/pagePermissions.
 
 - \`emails\` / \`campaigns\` — any authenticated user
 - \`admin_artist_path\` — admin dept OR \`admin_data\` permission
-- \`admin_knowledge_engine\` — admin dept OR \`admin_data\` permission
 - \`admin_ops_hub\` — admin OR ops-hub sub-permissions
 
 ### Route → permission mapping (\`App.jsx\`)
@@ -338,7 +337,6 @@ Standalone admin routes (same permission model):
 
 | Route | Page | API prefix |
 | --- | --- | --- |
-| \`/admin/knowledge-engine\` | \`KnowledgeEnginePage\` | \`/api/knowledge-engine\` |
 | \`/admin/security-audit\` | \`SecurityAuditPage\` | \`/api/admin/security-audit\` |
 | \`/admin/tenant-sso\` | \`AdminTenantSsoPage\` | \`/api/admin/tenants\` |
 
@@ -380,7 +378,6 @@ Express mounts route modules from \`server/routes/\` (see \`server/server.js\` f
 | Data Hub | \`dataHubRoutes.js\` | \`/api/data-hub\` |
 | Mail / campaigns | \`mailRoutes.js\`, \`campaignRoutes.js\`, \`domains/mail/routes/streamsRouter.js\` | \`/api/mail\`, \`/api/campaigns\`, \`/api/mail/streams\` |
 | Integrations | \`domains/integrations/integrationsRoutes.js\` | \`/api/integrations\` |
-| Knowledge Engine | \`knowledgeEngineRoutes.js\` | \`/api/knowledge-engine\` |
 | Tenant SSO (admin) | \`tenantAdminRoutes.js\` | \`/api/admin/tenants\` |
 | Security audit (admin) | \`securityAuditRoutes.js\` | \`/api/admin/security-audit\` |
 | Finance | \`financeRoutes.js\` | \`/api/finance\` |
@@ -439,7 +436,7 @@ Enforcement: locked-zone checks run in local tests + CI. Any override requires e
 | Path | Purpose |
 | --- | --- |
 | [\`DOCUMENTATION_INDEX.md\`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
-| [\`memory/obsidian/INDEX.md\`](../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
+| [\`memory/obsidian/INDEX.md\`](../../../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
 | [\`.specify/memory/INDEX.md\`](../.specify/memory/INDEX.md) | Compatibility mirror (deprecated) |
 | [\`reference/COREKNOT_MASTER.md\`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
 | [\`operations/\`](../operations/) | Deploy, startup, scripts, environments, [\`PUBLIC_LAUNCH_BETA.md\`](../operations/PUBLIC_LAUNCH_BETA.md) |

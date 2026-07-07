@@ -131,6 +131,7 @@ export default function DataOverviewSection({
                   type={c.type || 'bar'}
                   data={c.data}
                   height={c.height}
+                  emptyLabel={c.emptyLabel}
                   className="h-full"
                 />
               </Suspense>

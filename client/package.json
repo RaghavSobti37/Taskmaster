@@ -4,7 +4,8 @@
   "version": "1.0.7",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "predev": "node ../server/scripts/freePort.js 5173 --wait",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "postinstall": "node scripts/generateVercelConfig.cjs",
     "prebuild": "node scripts/generateVercelConfig.cjs && node scripts/prebuildIcons.mjs",
     "build": "node scripts/generateVercelConfig.cjs && vite build && node scripts/verify-production-build.mjs",

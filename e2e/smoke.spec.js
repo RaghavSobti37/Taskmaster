@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from './helpers/auth.js';
 import { hasAuthCreds } from './helpers/creds.js';
 import { mockPublicAuthApi } from './helpers/publicApiMock.js';
+import { clerkLoginSurface } from './helpers/orgPaths.js';
 
 test.describe('public smoke', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,21 +17,16 @@ test.describe('public smoke', () => {
 
   test('login page renders', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /coreknot/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /coreknot/i }).first()).toBeVisible();
 
-    const clerkSignIn = page.locator(
-      '[data-clerk-component], .cl-signIn-root, .cl-rootBox, iframe[title*="Clerk" i]',
-    );
-    const clerkMissing = page.getByText(/Clerk is not configured/i);
-    const legacyEmail = page.locator('input[autocomplete="username"]');
-
-    await expect(clerkSignIn.or(clerkMissing).or(legacyEmail).first()).toBeVisible();
+    await expect(clerkLoginSurface(page).first()).toBeVisible();
   });
 });
 
 test.describe('authenticated smoke', () => {
-  test.beforeEach(() => {
+  test.beforeEach(async ({ context }) => {
     test.skip(!hasAuthCreds(), 'Set E2E_EMAIL and E2E_PASSWORD, or use seeded E2E users');
+    await context.clearCookies();
   });
 
   test('login → dashboard', async ({ page }) => {

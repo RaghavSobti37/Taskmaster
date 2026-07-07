@@ -63,6 +63,9 @@ function registerRoutes(app) {
     res.sendFile(path.join(healthStaticDir, 'brand-mark.svg'));
   });
 
+  const embedStaticDir = path.join(__dirname, '../public/embed');
+  app.use('/embed', express.static(embedStaticDir, { maxAge: '1h', etag: true }));
+
   // --- Public / health ---
   app.use('/api/v1', require('../routes/v1'));
   app.use('/api', require('../routes/openApiRoutes'));
@@ -153,6 +156,7 @@ function registerRoutes(app) {
   app.use('/api/invites', require('../routes/inviteRoutes'));
 
   // --- Webhooks & tracking (public, rate-limited) ---
+  app.use('/api/public/forms', require('../routes/publicFormRoutes'));
   app.use(require('../routes/track'));
   app.post('/api/crm/unsubscribe', crmUnsubscribeLimiter, asyncHandler(async (req, res) => {
     const { email, reason, tenantSlug, orgSlug } = req.body;
@@ -225,8 +229,8 @@ function registerRoutes(app) {
   app.use('/api/announcements', require('../routes/announcementRoutes'));
   app.use('/api/org-documents', require('../routes/orgDocumentRoutes'));
   app.use('/api/ops-hub', require('../routes/opsHubRoutes'));
-  app.use('/api/knowledge-engine', require('../routes/knowledgeEngineRoutes'));
   app.use('/api/enterprise', require('../routes/enterpriseRoutes'));
+  app.use('/api/forms', require('../domains/forms/routes/websiteFormRoutes'));
   app.use('/api/scim/v2', require('../routes/scimRoutes'));
   app.use('/api/v1', require('../routes/publicApiRoutes'));
   app.use('/api/admin/support', require('../routes/platformSupportRoutes'));

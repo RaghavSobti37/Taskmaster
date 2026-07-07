@@ -55,16 +55,29 @@ module.exports = function tenantPlugin(schema, options) {
     }
   });
 
-  // Helper to inject tenantId into query filter
+  // ponytail: merge tenant via $and — mongoose .where(tenant $or) overwrites an existing filter $or
+  const mergeTenantIntoQuery = (query, tenantId) => {
+    const tenantMatch = tenantIdFilter(tenantId);
+    const current = query.getFilter();
+    if (!current || Object.keys(current).length === 0) {
+      query.setQuery(tenantMatch);
+      return;
+    }
+    if (current.$and) {
+      query.setQuery({ $and: [...current.$and, tenantMatch] });
+      return;
+    }
+    query.setQuery({ $and: [current, tenantMatch] });
+  };
+
   const injectTenantId = function () {
-    // Check if query options explicitly bypass tenant scoping
     if (this.options && this.options.bypassTenant) {
       return;
     }
 
     const tenantId = (this.options && this.options.tenantId) || getTenantId();
     if (tenantId) {
-      this.where(tenantIdFilter(tenantId));
+      mergeTenantIntoQuery(this, tenantId);
     }
   };
 

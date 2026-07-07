@@ -8,7 +8,7 @@
 |-------|--------|
 | `rejectClientTenantSpoof` on all authenticated routes | Via `protect` middleware chain |
 | `TenantMembership` unique `{tenantId, userId}` | Model index |
-| Server `requireFeatureUnlock` on campaigns, finance, knowledge-engine | Mounted |
+| Server `requireFeatureUnlock` on campaigns, finance | Mounted |
 | Tenant isolation integration tests | `server/tests/tenantIsolation.integration.test.js` |
 | Enterprise smoke | `node server/scripts/enterpriseSmoke.cjs` |
 
@@ -36,7 +36,7 @@
 ## Plan tiers (`shared/planLimits.js`)
 
 - **free** — 5 seats, core features
-- **pro** — 25 seats, resend/google/meta/knowledge/finance
+- **pro** — 25 seats, resend/google/meta/finance
 - **enterprise** — SSO, SCIM, custom roles, audit export, API keys, webhooks
 
 ## Ops

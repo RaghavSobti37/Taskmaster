@@ -13,6 +13,8 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 const { seedDepartments, DEFAULT_DEPARTMENTS } = require('../services/departmentService');
+const { resolveDefaultTenantId } = require('../utils/defaultTenant');
+const { runWithContext } = require('../utils/tenantContext');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 const { E2E_PW_GATE_EMAIL, E2E_PW_GATE_TEMP_PASSWORD } = require('../utils/e2eTestUsers');
 const { getRandomAvatar } = require('../utils/avatarGenerator');
@@ -321,6 +323,10 @@ async function main() {
   const Department = require('../models/Department');
   const Project = require('../models/Project');
 
+  const tenantId = await resolveDefaultTenantId();
+  console.log(`Tenant: ${tenantId}`);
+
+  await runWithContext({ tenantId: String(tenantId) }, async () => {
   const password = getDefaultSeedPassword();
 
   await seedDepartments();
@@ -359,6 +365,7 @@ async function main() {
   }
 
   console.log(`\nE2E users: ${manifest.userCount} (${createdUsers} newly created)`);
+  });
   await mongoose.disconnect();
   process.exit(0);
 }

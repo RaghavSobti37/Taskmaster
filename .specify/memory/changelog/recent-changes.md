@@ -4,6 +4,15 @@ Session deltas appended by `/git-push`, `memory-sync`, and agent ship workflows.
 
 ---
 
+## 2026-07-07 — Connected Apps intake, KE removal, local integrations demo, docs + memory
+
+- **What:** Trimmed Connected Apps to five providers; Website Forms (embed + public API); full Knowledge Engine removal from CoreKnot; local demo seed `seed:local-integrations-demo`; in-depth docs `CONNECTED_APPS_AND_INTAKE.md`, `KNOWLEDGE_ENGINE_REMOVAL.md`, `LOCAL_DEV_DEMO_DATA.md`.
+- **Why:** Product focus on CRM intake + mail/WhatsApp; KE never shipped in prod; local UI needed dummy integration data.
+- **Files:** `server/domains/integrations-hub/`, `server/domains/forms/`, deleted `server/domains/knowledge-engine/**`, `seedLocalDevIntegrationsDemo.js`, `docs/features/*`, `memory/obsidian/ConnectedAppsAndIntake.md`, `KnowledgeEngineRemoval.md`.
+- **Verify:** `npm run docs:generate` (140 pages); `npm test --prefix server`; `npm run build --prefix client`.
+
+---
+
 ## 2026-07-07 — TSC platform tenant, org slug routes, prod→local sync, Clerk auth fixes
 
 - **What:** Single platform org **The Shakti Collective** (`slug: tsc`, id `6a14c0d1d2ce3fb936553e35`). Org-scoped URL prefix `/:orgSlug/*` behind `VITE_ORG_SLUG_ROUTES` (default on); `GET /api/orgs/:slug/context`, `OrgContext`, `orgPaths.js`, feature catalog `shared/orgFeatures.cjs`, create-org wizard + `PATCH /api/tenants/:id/features`. Consolidation script removes other tenants; `PLATFORM_TENANT_SLUG=tsc` on local + Render prod API.

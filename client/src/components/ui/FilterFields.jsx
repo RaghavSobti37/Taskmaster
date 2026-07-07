@@ -23,6 +23,81 @@ function chipClass(selected) {
   }`;
 }
 
+function GroupedSearchableRadioList({
+  groups = [],
+  resetOptions = [],
+  value,
+  onChange,
+  placeholder = 'Search folders…',
+}) {
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+
+  const filteredGroups = useMemo(() => {
+    if (!q) return groups;
+    return groups
+      .map((group) => ({
+        ...group,
+        options: (group.options || []).filter((o) =>
+          String(o.label || '').toLowerCase().includes(q)
+          || String(group.label || '').toLowerCase().includes(q)),
+      }))
+      .filter((group) => group.options?.length > 0);
+  }, [groups, q]);
+
+  const showSearch = groups.reduce((n, g) => n + (g.options?.length || 0), 0) > 8;
+
+  return (
+    <div className="space-y-3">
+      {showSearch && (
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={placeholder}
+            className="w-full min-h-[44px] pl-9 pr-3 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-xs font-medium text-[var(--color-text-primary)] outline-none focus:border-[var(--color-action-primary)]"
+          />
+        </div>
+      )}
+      <div className="space-y-1.5">
+        {resetOptions.map((opt) => (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={optionClass(value === opt.value)}
+            aria-pressed={value === opt.value}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      {filteredGroups.map((group) => (
+        <div key={group.label} className="space-y-1.5">
+          <p className="sticky top-0 z-[1] py-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+            {group.label}
+          </p>
+          {(group.options || []).map((opt) => (
+            <button
+              key={String(opt.value)}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={optionClass(value === opt.value)}
+              aria-pressed={value === opt.value}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ))}
+      {filteredGroups.length === 0 && q && (
+        <p className="text-[10px] text-[var(--color-text-muted)] italic px-1">No matches</p>
+      )}
+    </div>
+  );
+}
 function SearchableRadioList({ options = [], value, onChange, placeholder = 'Search options…' }) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
@@ -45,7 +120,7 @@ function SearchableRadioList({ options = [], value, onChange, placeholder = 'Sea
           />
         </div>
       )}
-      <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+      <div className="space-y-1.5">
         {filtered.map((opt) => (
           <button
             key={String(opt.value)}
@@ -200,6 +275,17 @@ export function FilterField({ field }) {
   switch (type) {
     case 'chips':
       control = <ChipMultiSelect options={options} value={value} onChange={onChange} />;
+      break;
+    case 'groupedRadio':
+      control = (
+        <GroupedSearchableRadioList
+          groups={field.groups || []}
+          resetOptions={field.resetOptions || []}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder || `Search ${label?.toLowerCase() || 'folders'}…`}
+        />
+      );
       break;
     case 'searchable':
     case 'radio':

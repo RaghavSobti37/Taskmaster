@@ -22,6 +22,11 @@ const SOURCE_TYPE_FOR_LINK = {
   booked_calls: 'booked_call',
   enquiries: 'enquiry',
   community: 'outsourced',
+  havells_registered: 'havells_registered',
+  havells_selected: 'havells_selected',
+  havells_attended_delhi: 'havells_attended_delhi',
+  havells_attended_indore: 'havells_attended_indore',
+  havells_attended_dumka: 'havells_attended_dumka',
 };
 
 class ContactService {
@@ -29,7 +34,8 @@ class ContactService {
    * Resolve golden Person, link source, rebuild hub view.
    * Still maintains legacy PersonIndex inlets for backward compatibility during migration.
    */
-  async mergeContact(data, source = 'crm') {
+  async mergeContact(data, source = 'crm', options = {}) {
+    const { skipHubRebuild = false } = options;
     const normalized = normalizePersonRecord(
       {
         name: sanitizeName(data.name) || data.name || 'Anonymous',
@@ -65,14 +71,42 @@ class ContactService {
       await PersonIdentityService.linkSource(resolved.personId, linkType, recordId, data.summary || {});
     }
 
-    await PersonHubBuilder.rebuildPerson(resolved.personId);
+    if (!skipHubRebuild) {
+      await PersonHubBuilder.rebuildPerson(resolved.personId);
+    }
 
     const legacy = await this._mergeLegacyPersonIndex(data, source, inletKey, recordId, normalized);
     if (legacy?._id) {
       await this.recomputeInletCounts(legacy._id);
-      return PersonIndex.findById(legacy._id).setOptions(PERSON_INDEX_OPTS);
+      const doc = await PersonIndex.findById(legacy._id).setOptions(PERSON_INDEX_OPTS);
+      return { ...doc?.toObject?.(), personId: resolved.personId, _id: legacy._id };
     }
     return legacy || { _id: resolved.personId, personId: resolved.personId, ...resolved.person?.toObject?.() };
+  }
+
+  async mergeLegacyInletContact(data, inletKey) {
+    const normalized = normalizePersonRecord(
+      {
+        name: sanitizeName(data.name) || data.name || 'Anonymous',
+        email: sanitizeEmail(data.email) || data.email,
+        phone: normalizePhone(data.phone) || data.phone,
+        city: data.city,
+      },
+      { tryRepairPhone: true }
+    );
+    if (!normalized.email && !normalized.phone) return null;
+    const legacy = await this._mergeLegacyPersonIndex(
+      data,
+      inletKey,
+      inletKey,
+      data.recordId || null,
+      normalized
+    );
+    if (legacy?._id) {
+      await this.recomputeInletCounts(legacy._id);
+      return PersonIndex.findById(legacy._id).setOptions(PERSON_INDEX_OPTS);
+    }
+    return legacy;
   }
 
   async _mergeLegacyPersonIndex(data, source, inletKey, recordId, normalized) {
@@ -81,15 +115,9 @@ class ContactService {
     const name = normalized.name || 'Anonymous';
     const nameKey = normalized.nameKey;
     const now = new Date();
-    const filter = { $or: [] };
-    if (email) filter.$or.push({ email });
-    if (phone) filter.$or.push({ phone });
-
     const updatePayload = { $set: {}, $addToSet: {} };
-    if (name && name !== 'Anonymous') {
-      updatePayload.$set.name = name;
-      if (nameKey) updatePayload.$set.nameKey = nameKey;
-    }
+    if (nameKey) updatePayload.$set.nameKey = nameKey;
+    updatePayload.$set.name = name || 'Anonymous';
     if (email) updatePayload.$set.email = email;
     if (phone) updatePayload.$set.phone = phone;
     if (normalized.city) updatePayload.$set.city = normalized.city;
@@ -107,15 +135,39 @@ class ContactService {
       updatePayload.$set.inCRM = true;
     } else if (inletKey === 'enquiries') updatePayload.$set.inEnquiries = true;
     else if (inletKey === 'community') updatePayload.$set.inCommunity = true;
+    else if (String(inletKey || '').startsWith('havells_')) updatePayload.$set.inOutsourced = true;
+
+    if (data.exlyOfferingTitle) {
+      updatePayload.$addToSet.exlyOfferings = data.exlyOfferingTitle;
+      if (/\biml\b|i\.?m\.?l/i.test(String(data.exlyOfferingTitle))) {
+        updatePayload.$set.imlPriority = true;
+      }
+    }
+    if (data.imlPriority) updatePayload.$set.imlPriority = true;
 
     if (Object.keys(updatePayload.$addToSet).length === 0) delete updatePayload.$addToSet;
-    if (!filter.$or.length) return null;
+    if (!email && !phone) return null;
 
-    const contact = await PersonIndex.findOneAndUpdate(filter, updatePayload, {
-      upsert: true,
-      new: true,
-      runValidators: true,
-    }).setOptions(PERSON_INDEX_OPTS);
+    let contact = null;
+    if (email) {
+      contact = await PersonIndex.findOne({ email }).setOptions(PERSON_INDEX_OPTS);
+    }
+    if (!contact && phone) {
+      contact = await PersonIndex.findOne({ phone }).setOptions(PERSON_INDEX_OPTS);
+    }
+
+    if (contact) {
+      contact = await PersonIndex.findByIdAndUpdate(contact._id, updatePayload, {
+        returnDocument: 'after',
+        runValidators: true,
+      }).setOptions(PERSON_INDEX_OPTS);
+    } else {
+      contact = await PersonIndex.findOneAndUpdate(
+        email ? { email } : { phone },
+        updatePayload,
+        { upsert: true, returnDocument: 'after', runValidators: true }
+      ).setOptions(PERSON_INDEX_OPTS);
+    }
     if (inletKey && inletKey !== 'all' && inletKey !== 'loyal') {
       const normalizedInlet = inletKey === 'tsc' ? 'outsourced' : inletKey;
       await this._upsertInletEntry(contact._id, normalizedInlet, recordId, data.summary || {}, now);

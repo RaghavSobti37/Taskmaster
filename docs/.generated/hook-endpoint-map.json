@@ -191,21 +191,6 @@
       ],
       "network": true
     },
-    "useApproveKnowledgeArticle": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
     "useApproveLeaveRequest": {
       "files": [
         {
@@ -2942,36 +2927,6 @@
       ],
       "network": true
     },
-    "useCreateDistribution": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useCreateKnowledgeArticle": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
     "useCreateLead": {
       "files": [
         {
@@ -3380,6 +3335,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3394,6 +3350,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3411,6 +3368,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3425,6 +3383,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3442,6 +3401,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3456,6 +3416,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3473,6 +3434,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3487,6 +3449,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3504,6 +3467,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3518,6 +3482,40 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
+        "/api/data-hub/reconcile",
+        "/api/data-hub/sync-status"
+      ],
+      "network": true
+    },
+    "useDataHubRebuildPersonHub": {
+      "files": [
+        {
+          "file": "client/src/hooks/queries/dataHub.js",
+          "endpoints": [
+            "/api/data-hub/backup/progress",
+            "/api/data-hub/folders",
+            "/api/data-hub/people",
+            "/api/data-hub/people/${id}",
+            "/api/data-hub/analytics",
+            "/api/data-hub/sync-status",
+            "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
+            "/api/data-hub/backups",
+            "/api/data-hub/backup"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/data-hub/analytics",
+        "/api/data-hub/backup",
+        "/api/data-hub/backup/progress",
+        "/api/data-hub/backups",
+        "/api/data-hub/folders",
+        "/api/data-hub/people",
+        "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3535,6 +3533,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3549,6 +3548,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -3566,6 +3566,7 @@
             "/api/data-hub/analytics",
             "/api/data-hub/sync-status",
             "/api/data-hub/reconcile",
+            "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/backups",
             "/api/data-hub/backup"
           ],
@@ -3580,6 +3581,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
       ],
@@ -4370,21 +4372,6 @@
       ],
       "network": true
     },
-    "useGenerateBrief": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
     "useGoogleAccounts": {
       "files": [
         {
@@ -4547,171 +4534,6 @@
       ],
       "endpoints": [
         "/api/customization/dashboard/preset"
-      ],
-      "network": true
-    },
-    "useKnowledgeAnalytics": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeArticles": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeBriefs": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeChunks": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeConnections": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeDashboard": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeDistribution": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeJobTrigger": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeOpportunities": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeSettings": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
-    "useKnowledgeSources": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
       ],
       "network": true
     },
@@ -5185,21 +5007,6 @@
         "/api/notifications",
         "/api/notifications/${id}/read",
         "/api/notifications/read-all"
-      ],
-      "network": true
-    },
-    "useMediumPrep": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
       ],
       "network": true
     },
@@ -6070,21 +5877,6 @@
       ],
       "network": true
     },
-    "usePublishKnowledgeArticle": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
     "useQAProgress": {
       "files": [
         {
@@ -6416,21 +6208,6 @@
       ],
       "network": true
     },
-    "useRunArticlePipeline": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
-      ],
-      "network": true
-    },
     "useSalesReps": {
       "files": [
         {
@@ -6679,21 +6456,6 @@
         "/api/projects/workspaces/${encodeURIComponent(workspace)}",
         "/api/track/unsubscribe",
         "/api/users/team"
-      ],
-      "network": true
-    },
-    "useSetMediumUrl": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
       ],
       "network": true
     },
@@ -7853,21 +7615,6 @@
         "/api/google/accounts/${id}",
         "/api/google/accounts/manual",
         "/api/google/accounts/simulate"
-      ],
-      "network": true
-    },
-    "useUpdateKnowledgeSettings": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/knowledgeEngine.js",
-          "endpoints": [
-            "/api/knowledge-engine"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/knowledge-engine"
       ],
       "network": true
     },

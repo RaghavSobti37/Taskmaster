@@ -10,7 +10,7 @@
 | Audience | Start here |
 | --- | --- |
 | **New engineer** | [Platform overview](#1-platform-overview) → your domain in [Page catalog](#3-page-catalog-by-domain) |
-| **AI agent** | Full file + [`memory/obsidian/INDEX.md`](../../memory/obsidian/INDEX.md) (canonical) + [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) (compat) |
+| **AI agent** | Full file + [`memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) (canonical) + [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) (compat) |
 | **Ops / deploy** | [`operations/deployment.md`](../operations/deployment.md) + [`operations/environments.md`](../operations/environments.md) |
 
 **Live inventory:** Regenerate with `node scripts/generate-page-inventory.mjs && node scripts/generate-master-doc.mjs`.
@@ -88,7 +88,6 @@ Resolved via `getUserPagePermissions()` in `client/src/utils/pagePermissions.js`
 
 - `emails` / `campaigns` — any authenticated user
 - `admin_artist_path` — admin dept OR `admin_data` permission
-- `admin_knowledge_engine` — admin dept OR `admin_data` permission
 - `admin_ops_hub` — admin OR ops-hub sub-permissions
 
 ### Route → permission mapping (`App.jsx`)
@@ -191,7 +190,7 @@ Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organ
 
 ## 3. Page catalog by domain
 
-_Total page files: 141. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 140. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -764,7 +763,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /attendance, /attendance/all |
 | **Default export** | `AttendancePage` |
-| **Lines** | 744 |
+| **Lines** | 782 |
 | **Hooks** | `useApproveAttendance`, `useApproveLeaveRequest`, `useAttendance`, `useAttendanceCheck`, `useAttendanceRosterUsers`, `useAuth`, `useDeferredQueryEnabled`, `useEffect`, `useLeaveRequests`, `useLocation`, `useMemo`, `useNavigate`, `useRejectLeaveRequest`, `useResetAttendance`, `useState`, `useSystemToast`, `useUndoAttendanceCheck`, `useUnsavedChanges`, `useUpsertAttendance` |
 | **Data hooks** | `useApproveAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useApproveLeaveRequest` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAttendanceRosterUsers` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeaveRequests` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useRejectLeaveRequest` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useResetAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useUndoAttendanceCheck` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpsertAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check |
 | **Key components** | `AttendanceStatusLegend`, `MonthlyAttendanceGrid`, `SelfMonthlyAttendanceCalendar`, `TeamAttendanceMobileList`, `UnifiedTimeCard` |
@@ -1478,10 +1477,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 531 |
+| **Lines** | 715 |
 | **Named exports** | `DataHubContent` |
-| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
-| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1494,18 +1493,6 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 75 |
 | **Hooks** | `useState` |
 | **Key components** | `ExlyDataContent`, `MasterclassFunnelPanel` |
-
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/KnowledgeEnginePage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | /admin/knowledge-engine |
-| **Default export** | `function` |
-| **Lines** | 401 |
-| **Hooks** | `useApproveKnowledgeArticle`, `useCreateDistribution`, `useCreateKnowledgeArticle`, `useEffect`, `useGenerateBrief`, `useHook`, `useKnowledgeAnalytics`, `useKnowledgeArticles`, `useKnowledgeBriefs`, `useKnowledgeChunks`, `useKnowledgeConnections`, `useKnowledgeDashboard`, `useKnowledgeDistribution`, `useKnowledgeJobTrigger`, `useKnowledgeOpportunities`, `useKnowledgeSettings`, `useKnowledgeSources`, `useMediumPrep`, `useMemo`, `usePublishKnowledgeArticle`, `useRunArticlePipeline`, `useSearchParams`, `useSetMediumUrl`, `useState`, `useToast`, `useUpdateKnowledgeSettings` |
-| **Data hooks** | `useApproveKnowledgeArticle` → /api/knowledge-engine · `useCreateDistribution` → /api/knowledge-engine · `useCreateKnowledgeArticle` → /api/knowledge-engine · `useGenerateBrief` → /api/knowledge-engine · `useKnowledgeAnalytics` → /api/knowledge-engine · `useKnowledgeArticles` → /api/knowledge-engine · `useKnowledgeBriefs` → /api/knowledge-engine · `useKnowledgeChunks` → /api/knowledge-engine · `useKnowledgeConnections` → /api/knowledge-engine · `useKnowledgeDashboard` → /api/knowledge-engine · `useKnowledgeDistribution` → /api/knowledge-engine · `useKnowledgeJobTrigger` → /api/knowledge-engine · `useKnowledgeOpportunities` → /api/knowledge-engine · `useKnowledgeSettings` → /api/knowledge-engine · `useKnowledgeSources` → /api/knowledge-engine · `useMediumPrep` → /api/knowledge-engine · `usePublishKnowledgeArticle` → /api/knowledge-engine · `useRunArticlePipeline` → /api/knowledge-engine · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useSetMediumUrl` → /api/knowledge-engine · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateKnowledgeSettings` → /api/knowledge-engine |
-| **Key components** | `AdminConsoleBackButton`, `PageHeader`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/admin/LeadAuditsPage.jsx`
@@ -1592,9 +1579,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /developers |
 | **Default export** | `DevelopersPage` |
-| **Lines** | 375 |
+| **Lines** | 398 |
 | **Hooks** | `useEffect`, `useState`, `useWebhookDeliveries` |
 | **Data hooks** | `useWebhookDeliveries` → /api/enterprise/api-keys, /api/enterprise/usage, /api/enterprise/webhooks |
+| **Key components** | `WebsiteFormsPanel` |
 
 **API endpoints:**
 
@@ -1632,7 +1620,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 153 |
+| **Lines** | 193 |
 | **Hooks** | `useConnectIntegration`, `useDisconnectIntegration`, `useIntegrationHealth`, `useIntegrationProviders`, `useIntegrationSync`, `useMemo`, `usePatchIntegrationMetadata`, `useSearchParams`, `useState` |
 | **Data hooks** | `useConnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useDisconnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationHealth` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationProviders` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationSync` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `usePatchIntegrationMetadata` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
 
@@ -1973,7 +1961,6 @@ Standalone admin routes (same permission model):
 
 | Route | Page | API prefix |
 | --- | --- | --- |
-| `/admin/knowledge-engine` | `KnowledgeEnginePage` | `/api/knowledge-engine` |
 | `/admin/security-audit` | `SecurityAuditPage` | `/api/admin/security-audit` |
 | `/admin/tenant-sso` | `AdminTenantSsoPage` | `/api/admin/tenants` |
 
@@ -2010,7 +1997,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 | Data Hub | `dataHubRoutes.js` | `/api/data-hub` |
 | Mail / campaigns | `mailRoutes.js`, `campaignRoutes.js`, `domains/mail/routes/streamsRouter.js` | `/api/mail`, `/api/campaigns`, `/api/mail/streams` |
 | Integrations | `domains/integrations/integrationsRoutes.js` | `/api/integrations` |
-| Knowledge Engine | `knowledgeEngineRoutes.js` | `/api/knowledge-engine` |
 | Tenant SSO (admin) | `tenantAdminRoutes.js` | `/api/admin/tenants` |
 | Security audit (admin) | `securityAuditRoutes.js` | `/api/admin/security-audit` |
 | Finance | `financeRoutes.js` | `/api/finance` |
@@ -2053,7 +2039,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/googleRoutes.js`
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
-- `server/routes/knowledgeEngineRoutes.js`
 - `server/routes/logRoutes.js`
 - `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
@@ -2073,6 +2058,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/projectRoutes.js`
 - `server/routes/proxyRoutes.js`
 - `server/routes/publicApiRoutes.js`
+- `server/routes/publicFormRoutes.js`
 - `server/routes/publicRoutes.js`
 - `server/routes/qaRoutes.js`
 - `server/routes/queueAdminRoutes.js`
@@ -2139,7 +2125,7 @@ Enforcement: locked-zone checks run in local tests + CI. Any override requires e
 | Path | Purpose |
 | --- | --- |
 | [`DOCUMENTATION_INDEX.md`](../DOCUMENTATION_INDEX.md) | Human navigation hub |
-| [`memory/obsidian/INDEX.md`](../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
+| [`memory/obsidian/INDEX.md`](../../../../memory/obsidian/INDEX.md) | Canonical agent memory hub |
 | [`.specify/memory/INDEX.md`](../.specify/memory/INDEX.md) | Compatibility mirror (deprecated) |
 | [`reference/COREKNOT_MASTER.md`](./COREKNOT_MASTER.md) | **This file** — page-level truth |
 | [`operations/`](../operations/) | Deploy, startup, scripts, environments, [`PUBLIC_LAUNCH_BETA.md`](../operations/PUBLIC_LAUNCH_BETA.md) |

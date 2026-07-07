@@ -40,12 +40,15 @@ export default function SelectionFilterPanel({
   fields = [],
   onApply,
   onClear,
+  applyLabel = 'Apply',
+  layout = 'overlay',
 }) {
   const isMobile = useIsMobile();
   const handleApply = onApply || onClose;
+  const isPush = layout === 'push' && !isMobile;
 
   useEffect(() => {
-    if (isMobile || !open) return undefined;
+    if (isMobile || !open || isPush) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.();
     };
@@ -55,7 +58,57 @@ export default function SelectionFilterPanel({
       document.removeEventListener('keydown', onKey);
       document.body.classList.remove('mobile-scroll-lock');
     };
-  }, [isMobile, open, onClose]);
+  }, [isMobile, open, onClose, isPush]);
+
+  const panelBody = (
+    <>
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar min-h-0 ${isPush ? 'max-h-[calc(100vh-14rem)]' : ''}`}>
+        <FilterFields fields={fields} />
+        {isPush && (
+          <div
+            className="sticky bottom-0 left-0 right-0 h-6 -mb-4 pointer-events-none bg-gradient-to-t from-[var(--color-bg-primary)] to-transparent"
+            aria-hidden
+          />
+        )}
+      </div>
+      <div className="flex gap-2 p-4 border-t border-[var(--color-bg-border)] shrink-0 bg-[var(--color-bg-primary)]">
+        {onClear && (
+          <Button variant="secondary" className="flex-1 min-h-[48px]" onClick={onClear}>
+            Clear all
+          </Button>
+        )}
+        <Button className="flex-1 min-h-[48px]" onClick={handleApply}>
+          {applyLabel}
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isPush && open) {
+    return (
+      <aside
+        className="hidden lg:flex w-full max-w-sm shrink-0 sticky top-4 self-start flex-col max-h-[calc(100vh-6rem)] bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-lg ml-4"
+        role="dialog"
+        aria-modal="false"
+        aria-label={title}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-bg-border)] shrink-0">
+          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Close filters"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {panelBody}
+      </aside>
+    );
+  }
 
   if (isMobile) {
     return (
@@ -116,7 +169,7 @@ export default function SelectionFilterPanel({
                 </Button>
               )}
               <Button className="flex-1 min-h-[48px]" onClick={handleApply}>
-                Apply
+                {applyLabel}
               </Button>
             </div>
           </motion.aside>

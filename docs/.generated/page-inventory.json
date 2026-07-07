@@ -424,7 +424,7 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 531,
+    "lines": 715,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
@@ -437,6 +437,7 @@
       "useDataHubFolders",
       "useDataHubPeople",
       "useDataHubProductionBackup",
+      "useDataHubRebuildPersonHub",
       "useDataHubReconcile",
       "useDataHubSyncStatus",
       "useDebounce",
@@ -473,49 +474,6 @@
     "components": [
       "ExlyDataContent",
       "MasterclassFunnelPanel"
-    ]
-  },
-  {
-    "file": "client/src/pages/admin/KnowledgeEnginePage.jsx",
-    "routes": [
-      "/admin/knowledge-engine"
-    ],
-    "lines": 401,
-    "defaultExport": "function",
-    "namedExports": [],
-    "hooks": [
-      "useApproveKnowledgeArticle",
-      "useCreateDistribution",
-      "useCreateKnowledgeArticle",
-      "useEffect",
-      "useGenerateBrief",
-      "useHook",
-      "useKnowledgeAnalytics",
-      "useKnowledgeArticles",
-      "useKnowledgeBriefs",
-      "useKnowledgeChunks",
-      "useKnowledgeConnections",
-      "useKnowledgeDashboard",
-      "useKnowledgeDistribution",
-      "useKnowledgeJobTrigger",
-      "useKnowledgeOpportunities",
-      "useKnowledgeSettings",
-      "useKnowledgeSources",
-      "useMediumPrep",
-      "useMemo",
-      "usePublishKnowledgeArticle",
-      "useRunArticlePipeline",
-      "useSearchParams",
-      "useSetMediumUrl",
-      "useState",
-      "useToast",
-      "useUpdateKnowledgeSettings"
-    ],
-    "apis": [],
-    "components": [
-      "AdminConsoleBackButton",
-      "PageHeader",
-      "SearchInput"
     ]
   },
   {
@@ -1906,7 +1864,7 @@
       "/attendance",
       "/attendance/all"
     ],
-    "lines": 744,
+    "lines": 782,
     "defaultExport": "AttendancePage",
     "namedExports": [],
     "hooks": [
@@ -2583,7 +2541,7 @@
     "routes": [
       "/developers"
     ],
-    "lines": 375,
+    "lines": 398,
     "defaultExport": "DevelopersPage",
     "namedExports": [],
     "hooks": [
@@ -2598,7 +2556,9 @@
       "/api/enterprise/webhooks/${id}",
       "/api/openapi.json"
     ],
-    "components": []
+    "components": [
+      "WebsiteFormsPanel"
+    ]
   },
   {
     "file": "client/src/pages/settings/SettingsPage.jsx",
@@ -2659,7 +2619,7 @@
   {
     "file": "client/src/pages/settings/tabs/IntegrationsTab.jsx",
     "routes": [],
-    "lines": 153,
+    "lines": 193,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

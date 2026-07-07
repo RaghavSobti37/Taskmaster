@@ -28,6 +28,7 @@ const PersonHubViewSchema = new mongoose.Schema({
   inArtistCrm: { type: Boolean, default: false, index: true },
   latestArtistType: { type: String },
   artistPathResponseCount: { type: Number, default: 0 },
+  imlPriority: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 
 PersonHubViewSchema.index({ tenantId: 1, email: 1 }, { unique: true, sparse: true });

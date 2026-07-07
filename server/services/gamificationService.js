@@ -89,11 +89,11 @@ class GamificationService {
     const { getTenantId } = require('../utils/tenantContext');
     const fromCtx = getTenantId();
     if (fromCtx) return fromCtx;
-    if (process.env.NODE_ENV === 'test') {
-      const { ensurePlatformTenant } = require('../utils/defaultTenant');
-      return ensurePlatformTenant();
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('GamificationConfig requires tenant context');
     }
-    throw new Error('GamificationConfig requires tenant context');
+    const { resolveDefaultTenantId } = require('../utils/defaultTenant');
+    return resolveDefaultTenantId();
   }
 
   static async ensureConfigForTenant(tenantId) {
@@ -117,11 +117,11 @@ class GamificationService {
     const { getTenantId } = require('../utils/tenantContext');
     const fromCtx = getTenantId();
     if (fromCtx) return fromCtx;
-    if (process.env.NODE_ENV === 'test') {
-      const { ensurePlatformTenant } = require('../utils/defaultTenant');
-      return ensurePlatformTenant();
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Monthly leaderboard snapshot requires tenant context');
     }
-    throw new Error('Monthly leaderboard snapshot requires tenant context');
+    const { resolveDefaultTenantId } = require('../utils/defaultTenant');
+    return resolveDefaultTenantId();
   }
 
   static async getConfig() {
@@ -815,13 +815,16 @@ class GamificationService {
           resolvedSum: monthly.resolvedSum,
           computedAt: new Date(),
         },
+        $setOnInsert: { tenantId },
       },
       {
         upsert: true,
         new: true,
         setDefaultsOnInsert: true,
       }
-    ).lean();
+    )
+      .setOptions({ bypassTenant: true })
+      .lean();
 
     return {
       ...snapshot,
@@ -836,7 +839,9 @@ class GamificationService {
       : getCurrentMonthRange();
     const tenantId = await this.resolveSnapshotTenantId();
 
-    let snapshot = await MonthlyLeaderboardSnapshot.findOne({ tenantId, monthStartKey }).lean();
+    let snapshot = await MonthlyLeaderboardSnapshot.findOne({ tenantId, monthStartKey })
+      .setOptions({ bypassTenant: true })
+      .lean();
     if (!snapshot || refresh) {
       snapshot = await this.upsertMonthlyLeaderboardSnapshot(monthStartKey);
     }
@@ -849,6 +854,7 @@ class GamificationService {
   static async listMonthlyLeaderboardHistory(limit = 12) {
     const tenantId = await this.resolveSnapshotTenantId();
     const docs = await MonthlyLeaderboardSnapshot.find({ tenantId })
+      .setOptions({ bypassTenant: true })
       .sort({ monthStartKey: -1 })
       .limit(Math.max(1, Number(limit) || 12))
       .select('monthStartKey monthEndKey entries computedAt resolvedSum')

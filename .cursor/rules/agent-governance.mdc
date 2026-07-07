@@ -10,7 +10,7 @@ Inherits platform rule: `../../../../.cursor/rules/agent-governance.mdc`
 ## Boot
 
 1. Read `AGENTS.md` in this package root (memory-first table)
-2. Read `memory/obsidian/INDEX.md` + `memory/obsidian/ReportExploration.md` + `memory/obsidian/RecentChanges.md` (canonical)
+2. Read `memory/obsidian/INDEX.md` + `memory/obsidian/ReportExploration.md` + `memory/obsidian/RecentChanges.md` (canonical; physical path: TSC Platform `memory/obsidian/`)
 3. Read `.specify/memory/INDEX.md` only if compatibility context is needed
 4. Run `.cursor/skills/coreknot-session-boot/SKILL.md` for non-trivial edits
 5. Pick agency agent via agent-menu; record on ledger slice

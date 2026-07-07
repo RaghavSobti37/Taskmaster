@@ -109,7 +109,6 @@ const AdminTenantSsoPage = lazyWithRetry(() => import('./pages/admin/AdminTenant
 const DevelopersPage = lazyWithRetry(() => import('./pages/settings/DevelopersPage'));
 const CrmStatsPage = lazyWithRetry(() => import('./pages/admin/CrmStatsPage'));
 const OpsHubPage = lazyWithRetry(() => import('./pages/admin/OpsHubPage'));
-const KnowledgeEnginePage = lazyWithRetry(() => import('./pages/admin/KnowledgeEnginePage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
@@ -428,11 +427,6 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_ops_hub" />}>
                 <Route path="admin/ops-hub" element={<OpsHubPage />} />
-              </Route>
-              <Route element={<PageRoute pages={['admin_knowledge_engine', 'admin_data']} />}>
-                <Route element={<FeatureUnlockRoute featureKey="knowledgeEngine" />}>
-                  <Route path="admin/knowledge-engine" element={<KnowledgeEnginePage />} />
-                </Route>
               </Route>
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="admin/project-analytics" element={<AdminProjectAnalyticsPage />} />

@@ -2,7 +2,9 @@
 
 **Mandatory read before any client UI change.** Apply the checklist on every page you touch.
 
-Related: [COMPONENT_STANDARDS.md](../COMPONENT_STANDARDS.md) (UDIF implementation), [design_guidelines.md](../../client/design_guidelines.md) (data-first layout), [dateDisplay.js](../../client/src/utils/dateDisplay.js) (DD/MM/YYYY).
+**Canonical spec (tokens, archetypes, route map):** [COREKNOT_DESIGN_SYSTEM.md](./COREKNOT_DESIGN_SYSTEM.md)
+
+Related: [COMPONENT_STANDARDS.md](../reference/COMPONENT_STANDARDS.md) (UDIF implementation), [design_guidelines.md](../../client/design_guidelines.md) (data-first layout), [dateDisplay.js](../../client/src/utils/dateDisplay.js) (DD/MM/YYYY).
 
 ---
 

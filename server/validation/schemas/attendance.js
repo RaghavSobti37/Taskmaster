@@ -16,6 +16,10 @@ const attendanceCheckBody = z.object({
   workMode: z.enum(['office', 'wfh']).optional(),
 });
 
+const attendanceUndoBody = z.object({
+  type: z.enum(['in', 'out']).optional(),
+});
+
 const leaveRequestBody = z.object({
   fromDate: z.string().min(1),
   toDate: z.string().min(1),
@@ -39,6 +43,7 @@ const rosterUsersQuery = z.object({
 module.exports = {
   attendanceQuery,
   attendanceCheckBody,
+  attendanceUndoBody,
   leaveRequestBody,
   leaveRequestsQuery,
   leaveReviewBody,

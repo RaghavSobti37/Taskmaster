@@ -145,6 +145,18 @@ Each module below maps to routes, pages, and services.
 
 ---
 
+## Connected Apps & intake (2026-07-07)
+
+- **Providers (trimmed):** Gmail, Resend, Google Sheets, Inbound Webhook, AiSensy — `integrationProviders.config.js`
+- **Hub:** `server/domains/integrations-hub/` · API `/api/integrations/*`
+- **Website Forms:** `server/domains/forms/` · admin `/api/forms` · public `POST /api/public/forms/:publishableKey/submit` · embed `server/public/embed/coreknot-form.js`
+- **Developers UI:** `/:orgSlug/developers` — Forms, Inbound Webhook, Public API keys
+- **Local demo seed:** `npm run seed:local-integrations-demo`
+- **Deep doc:** `docs/features/CONNECTED_APPS_AND_INTAKE.md`
+- **Removed:** Knowledge Engine — see `docs/operations/KNOWLEDGE_ENGINE_REMOVAL.md` · archive `legacy/tsc-knowledge-engine/`
+
+---
+
 ## Admin & roles
 
 - **Platform settings** — `/admin/platform-settings` — user pickers for digest/backup/subscription/password-reset recipients, CRM call reps, root admins, QA exclusions, mail approvers, auto project members

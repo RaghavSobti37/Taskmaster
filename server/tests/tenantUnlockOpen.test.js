@@ -40,7 +40,6 @@ describe('tenant unlock open (pre-billing)', () => {
       featureUnlocks: {
         resend: false,
         finance: false,
-        knowledgeEngine: false,
         artistOs: false,
       },
     });

@@ -95,7 +95,6 @@ const ROUTE_MAP = {
   'pages/admin/AdminGamification.jsx': ['/admin/gamification'],
   'pages/admin/OpsHubPage.jsx': ['/admin/ops-hub'],
   'pages/admin/AdminProjectAnalyticsPage.jsx': ['/admin/project-analytics'],
-  'pages/admin/KnowledgeEnginePage.jsx': ['/admin/knowledge-engine'],
   'pages/admin/SecurityAuditPage.jsx': ['/admin/security-audit'],
   'pages/admin/AdminTenantSsoPage.jsx': ['/admin/tenant-sso'],
   'pages/admin/DataHubPage.jsx': ['(AdminCRM tab)'],

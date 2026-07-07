@@ -29,9 +29,12 @@ const SERVICE_ALLOWLIST = new Set([
   'campaignFacade.js',
   'folderCache.js',
   'resendWebhookHandler.js',
+  'aisensyWebhookHandler.js',
   'queueService.js',
   'emailProcessor.js',
   'scimProvisioningService.js',
+  'aisensyCampaignSyncService.js',
+  'aisensyCampaignImportService.js',
 ]);
 
 /** Controllers/middleware that bypass before tenant context exists or for break-glass ops. */

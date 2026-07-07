@@ -58,3 +58,19 @@ export function isFilterFieldActive(field) {
 export function countActiveFilters(fields = []) {
   return fields.filter(isFilterFieldActive).length;
 }
+
+/** Count draft fields that differ from applied baseline (deferred-apply panels). */
+export function countPendingFilterChanges(draftFields = [], appliedFields = []) {
+  const appliedById = new Map(appliedFields.map((f) => [f.id, f]));
+  let pending = 0;
+  for (const draft of draftFields) {
+    const applied = appliedById.get(draft.id);
+    if (!applied) continue;
+    const draftBaseline = resolveFilterDefault(draft);
+    const appliedBaseline = resolveFilterDefault(applied);
+    const draftVal = draft.value ?? draftBaseline;
+    const appliedVal = applied.value ?? appliedBaseline;
+    if (JSON.stringify(draftVal) !== JSON.stringify(appliedVal)) pending += 1;
+  }
+  return pending;
+}

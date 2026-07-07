@@ -35,7 +35,7 @@ Redis connection lost. Switching to memory queue.
 
 Local development can fall back to memory or synchronous handling for some jobs. Production should not run that way because queue state, retries, and cross-instance behavior are not durable. After changing Redis env or Render service links, redeploy the affected service and verify `GET /api/health` plus the Admin queue status endpoint.
 
-Queue-dependent areas include TSC webhooks, mail/campaign dispatch, invite email jobs, Knowledge Engine jobs, gamification, CSV/import jobs, and Supabase/domain sync workers.
+Queue-dependent areas include TSC webhooks, mail/campaign dispatch, invite email jobs, gamification, CSV/import jobs, and Supabase/domain sync workers.
 
 **Platform role user IDs** are managed in the app: **Admin → Users → Platform roles** (saved in MongoDB). Env `ROOT_ADMIN_USER_IDS` etc. are optional bootstrap only on first empty DB.
 

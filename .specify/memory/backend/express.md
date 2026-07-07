@@ -20,7 +20,7 @@
 | **mail** | Campaigns, templates, HolySheet, Resend, open/click tracking |
 | **artists** | Artist hub, OAuth (Spotify/Meta), artist path, enquiries |
 | **dashboard** | Dashboard metrics, attendance overview |
-| **integrations** | Google Calendar/accounts, Exly, integration verify |
+| **integrations** | Connected Apps hub (`integrations-hub`), OAuth/API-key providers, inbound webhook, Google Sheets sync, AiSensy adapter |
 
 Legacy shims remain in `server/routes/`, `server/controllers/`, `server/models/` for backward compatibility.
 
@@ -44,6 +44,9 @@ Legacy shims remain in `server/routes/`, `server/controllers/`, `server/models/`
 | `/api/admin/platform-settings` | Platform roles + notification routing (admin UI) |
 | `/api/admin/scripts` | Whitelisted script runner |
 | `/api/qa` | QA testing runner |
+| `/api/integrations` | Connected Apps (tenant integrations hub) |
+| `/api/forms` | Website Forms admin CRUD |
+| `/api/public/forms` | Browser form submit (publishable key + CORS) |
 
 Full mount table: [MASTER.md](../MASTER.md) §12
 

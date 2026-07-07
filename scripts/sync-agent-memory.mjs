@@ -13,8 +13,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const INDEX = path.join(ROOT, "memory/obsidian/INDEX.md");
-const RECENT = path.join(ROOT, "memory/obsidian/RecentChanges.md");
+const PLATFORM_ROOT = path.resolve(ROOT, "..", "..");
+const INDEX = path.join(PLATFORM_ROOT, "memory/obsidian/INDEX.md");
+const RECENT = path.join(PLATFORM_ROOT, "memory/obsidian/RecentChanges.md");
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -22,7 +23,9 @@ function today() {
 
 function readIndexDate() {
   const raw = fs.readFileSync(INDEX, "utf8");
-  const m = raw.match(/\*\*Last updated:\*\*\s*(\d{4}-\d{2}-\d{2})/);
+  const m =
+    raw.match(/\*\*Last updated:\*\*\s*(\d{4}-\d{2}-\d{2})/) ??
+    raw.match(/Last updated:\s*(\d{4}-\d{2}-\d{2})/);
   return m?.[1] ?? "1970-01-01";
 }
 
@@ -31,6 +34,8 @@ function stampIndex() {
   const d = today();
   if (raw.includes("**Last updated:**")) {
     raw = raw.replace(/\*\*Last updated:\*\*\s*\d{4}-\d{2}-\d{2}/, `**Last updated:** ${d}`);
+  } else if (/Last updated:\s*\d{4}-\d{2}-\d{2}/.test(raw)) {
+    raw = raw.replace(/Last updated:\s*\d{4}-\d{2}-\d{2}/, `Last updated: ${d}`);
   } else {
     raw = raw.replace(/(# CoreKnot Memory Index\n)/, `$1\n> **Last updated:** ${d}\n`);
   }

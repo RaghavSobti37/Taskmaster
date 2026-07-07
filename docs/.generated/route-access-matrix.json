@@ -185,13 +185,6 @@
       "featureKey": null
     },
     {
-      "path": "/admin/knowledge-engine",
-      "pageKey": "admin_knowledge_engine",
-      "tab": null,
-      "legacyRedirectTo": null,
-      "featureKey": "knowledgeEngine"
-    },
-    {
       "path": "/admin/lead-audits",
       "pageKey": "admin_data",
       "tab": null,

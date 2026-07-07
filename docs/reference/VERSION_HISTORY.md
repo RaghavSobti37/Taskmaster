@@ -8,6 +8,54 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-07-08] v1.0.7 patch - Production-readiness stabilization
+
+#### Security and isolation
+- **CRM lead delete hardening:** sales reps can no longer delete leads assigned to other reps; delete now enforces assigned-rep scope atomically.
+- **Fixture-scoped e2e login:** seeded `e2e-*@test.coreknot.local` users can use non-production API-session login without opening the legacy path broadly.
+
+#### Test and typecheck stability
+- **Server Jest memory:** local server Jest runner now uses a larger Node heap for broad suites.
+- **TypeScript 6 readiness:** root typecheck restored with TypeScript 6 deprecation handling.
+- **Shared contracts:** Zod v4 record compatibility fixed across attendance, CRM, mail, and safe-value contracts.
+- **NestJS e2e:** Jest globals and test tsconfig wiring fixed.
+
+#### Local e2e and heal loop
+- **Vite port detection:** heal-loop/project detection now resolves CoreKnot client dev to `5173`.
+- **Windows process handling:** heal-loop spawning fixed for Windows local agents.
+- **Seeded e2e users:** local e2e seeder now resolves tenant context and writes `.agents/e2e-users.json`.
+- **Core-confidence cleanup:** org-slug login parsing, CRM smoke assertion, and forced-password settings route handling were hardened.
+
+#### Open production blockers
+- `npm run docs:check` still needs generated-doc reconciliation.
+- `npm run test:e2e:core-confidence` is not yet fully green.
+- Preview Clerk env hardening is still needed.
+- Stagehand heal loop needs model credentials or an accepted deterministic fallback.
+
+See [`operations/PRODUCTION_READINESS_AUDIT_2026-07-08.md`](../operations/PRODUCTION_READINESS_AUDIT_2026-07-08.md).
+
+---
+
+### [2026-07-07] v1.0.7 patch — Connected Apps intake, Website Forms, Knowledge Engine removal
+
+#### Connected Apps & intake
+- **Provider trim:** Connected Apps limited to Gmail, Resend, Google Sheets, Inbound Webhook, AiSensy.
+- **Resend:** Tenant API key from integration used in `mailDriver` when Gmail not preferred.
+- **Google Sheets:** OAuth + worksheet mapping + sync to CRM leads in `IntegrationDetailDrawer`.
+- **Website Forms:** `WebsiteForm` model, public submit with CORS + honeypot, embed script, Developers UI with LLM agent prompt.
+- **Developers page:** Reorganized into Website Forms / Inbound Webhook / Public API keys sections.
+
+#### Knowledge Engine
+- **Removed** from CoreKnot (server domain, workers, admin UI, feature flags, public content routes). Archive: `legacy/tsc-knowledge-engine/`.
+
+#### Local dev
+- **`npm run seed:local-integrations-demo`** — dummy integrations + 2 forms per active tenant for local UI smoke tests.
+
+#### Docs
+- `docs/features/CONNECTED_APPS_AND_INTAKE.md`, `docs/operations/KNOWLEDGE_ENGINE_REMOVAL.md`, `docs/operations/LOCAL_DEV_DEMO_DATA.md`.
+
+---
+
 ### [2026-07-07] v1.0.7 patch — Tenant-safe gamification + platform admin recovery + legacy task route redirects
 
 #### Routing & navigation

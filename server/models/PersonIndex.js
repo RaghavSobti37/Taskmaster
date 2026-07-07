@@ -37,6 +37,7 @@ const personIndexSchema = new mongoose.Schema({
   leadStatus: { type: String },
   leadQuality: { type: String },
   exlyOfferings: [{ type: String }],
+  imlPriority: { type: Boolean, default: false, index: true },
   city: { type: String },
   sourceFilename: { type: String },
 

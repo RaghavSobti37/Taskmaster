@@ -23,14 +23,6 @@
       "gatedPaths": []
     },
     {
-      "key": "knowledgeEngine",
-      "label": "Knowledge Engine",
-      "defaultOnCreate": false,
-      "gatedPaths": [
-        "/admin/knowledge-engine"
-      ]
-    },
-    {
       "key": "finance",
       "label": "Finance",
       "defaultOnCreate": false,

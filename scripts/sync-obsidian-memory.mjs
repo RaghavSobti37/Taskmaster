@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const obsidianRoot = path.join(root, 'memory/obsidian');
+const platformRoot = path.resolve(root, '..', '..');
+const obsidianRoot = path.join(platformRoot, 'memory/obsidian');
 const legacyIndex = path.join(root, '.specify/memory/INDEX.md');
 const legacyRecent = path.join(root, '.specify/memory/changelog/recent-changes.md');
 
@@ -40,9 +41,11 @@ const obsidianIndex = `# CoreKnot Obsidian Memory Index
 - [[MasterReference]]
 
 ## Source of Truth
-- Page reference: \`docs/reference/COREKNOT_MASTER.md\`
-- Generated maps: \`docs/.generated/*.json\`
-- Legacy compatibility index: \`.specify/memory/INDEX.md\`
+- Vault root: \`memory/obsidian/\` (TSC Platform repo root)
+- Page reference: \`coreknot/Taskmaster/docs/reference/COREKNOT_MASTER.md\`
+- Generated maps: \`coreknot/Taskmaster/docs/.generated/*.json\`
+- Legacy compatibility index: \`coreknot/Taskmaster/.specify/memory/INDEX.md\`
+- Hermes cron output: \`memory/Daily/\` · candidates: \`memory/Memory-Review/\`
 `;
 
 const conventions = `# Conventions
@@ -115,7 +118,7 @@ const compatStub = `# CoreKnot Legacy Memory Index (Compatibility Stub)
 
 This tree remains for backward compatibility only.
 
-- Canonical memory now lives in: \`memory/obsidian/INDEX.md\`
+- Canonical memory now lives in: \`memory/obsidian/INDEX.md\` (TSC Platform root; junction at \`coreknot/Taskmaster/memory/obsidian\`)
 - Legacy files should not be extended with new canonical content.
 
 Last synced: ${today}

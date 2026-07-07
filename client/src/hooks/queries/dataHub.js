@@ -82,6 +82,17 @@ export const useDataHubReconcile = () => {
   });
 };
 
+export const useDataHubRebuildPersonHub = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.post('/api/data-hub/rebuild-person-hub'),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+      await queryClient.refetchQueries({ queryKey: ['dataHub'], type: 'active' });
+    },
+  });
+};
+
 export const useDataHubBackups = (options = {}) => useQuery({
   queryKey: ['dataHub', 'backups'],
   queryFn: async () => (await axios.get('/api/data-hub/backups')).data,

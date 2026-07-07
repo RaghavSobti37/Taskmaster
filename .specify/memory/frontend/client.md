@@ -120,7 +120,13 @@ Legacy redirects: `/leads` → `/crm`, `/finance` → `/management`, `/data-hub`
 
 `MainLayout`, `ProtectedRoute`, `PageRoute`, `CommandPalette`, `BottomNavigation`, `OutletSidebar`, `QuickAddMenu`, `HelpBugButton`, `PwaInstallBanner`, `NotificationBridge`, `CookieBanner`, `OnboardingTour`
 
-### Onboarding & profile alerts (Jun 2026)
+### Developers & Connected Apps (Jul 2026)
+
+- **Settings → Connected Apps** — `IntegrationsTab` + `IntegrationDetailDrawer` (five providers: Gmail, Resend, Google Sheets, Inbound Webhook, AiSensy)
+- **Developers** — `/:orgSlug/developers` — Website Forms (embed + LLM prompt), Inbound Webhook, Public API keys
+- **Removed:** `/admin/knowledge-engine` and `KnowledgeEnginePage`
+
+---
 
 - `ProfileCompletionAlerts` — amber **Onboarding checklist** (password, phone, DOB, product tour); tour replay via `coreknot:replay-onboarding`
 - `OnboardingTour` — dashboard auto-start; completion → `coreknot:onboarding-complete` + `onboardingStorage.js`

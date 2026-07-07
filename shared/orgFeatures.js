@@ -4,7 +4,6 @@ export const ORG_FEATURE_KEYS = [
   'resend',
   'google',
   'meta',
-  'knowledgeEngine',
   'finance',
   'artistOs',
   'integrations',
@@ -31,12 +30,6 @@ export const ORG_FEATURE_CATALOG = {
     description: 'Meta ads and social integrations.',
     defaultOnCreate: false,
     gatedPaths: [],
-  },
-  knowledgeEngine: {
-    label: 'Knowledge Engine',
-    description: 'Admin knowledge base and AI retrieval.',
-    defaultOnCreate: false,
-    gatedPaths: ['/admin/knowledge-engine'],
   },
   finance: {
     label: 'Finance',

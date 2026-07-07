@@ -3,6 +3,7 @@ import DataOverviewSection from './DataOverviewSection';
 import DataInsightsLayout from './DataInsightsLayout';
 import PageToolbar from './PageToolbar';
 import ActiveFilterBar from './ActiveFilterBar';
+import SelectionFilterPanel from './SelectionFilterPanel';
 import QueryErrorSlot from './QueryErrorSlot';
 import AdminConsoleBackButton from '../admin/AdminConsoleBackButton';
 import AdminBreadcrumbs from '../admin/AdminBreadcrumbs';
@@ -40,6 +41,11 @@ export default function ListPageLayout({
   onQueryRetry,
   header,
   breadcrumbs,
+  filterPanelMode = 'overlay',
+  filterOpen,
+  onFilterOpenChange,
+  onFilterApply,
+  filterApplyLabel,
 }) {
   const hasInsights =
     insights &&
@@ -55,6 +61,9 @@ export default function ListPageLayout({
   const showOverviewTitleRow = backTo && hasTopAnalytics;
   const resolvedSearchBar = searchBar ?? mobileSearch;
   const resolvedToolbarFill = toolbarFill ?? Boolean(resolvedSearchBar);
+
+  const isPushFilter = filterPanelMode === 'push' && filterFields?.length > 0;
+  const showPushPanel = isPushFilter && filterOpen && !isMobile;
 
   const shellClass = `tm-page-container min-w-0 w-full overflow-x-clip ${containerClassName}`.trim();
 
@@ -97,6 +106,7 @@ export default function ListPageLayout({
           <DataOverviewSection
             stats={overview.stats}
             charts={overview.charts}
+            eagerCharts={overview.eagerCharts}
             mobileCollapsed={overview.mobileCollapsed ?? overviewMobileCollapsed}
             mobileMaxStats={overview.mobileMaxStats ?? overviewMobileMaxStats}
             className={overviewSectionClassName}
@@ -115,18 +125,50 @@ export default function ListPageLayout({
             filtersInPanel={filtersInPanel}
             filterFields={filterFields}
             onFilterClear={onActiveFiltersClear}
+            filterOpen={filterOpen}
+            onFilterOpenChange={onFilterOpenChange}
+            filterPanelMode={filterPanelMode}
+            filterApplyLabel={filterApplyLabel}
+            onFilterApply={onFilterApply}
           >
             {toolbar}
           </PageToolbar>
         )}
-        {activeFilterChips?.length > 0 && (
-          <ActiveFilterBar
-            chips={activeFilterChips}
-            onRemove={onActiveFilterRemove}
-            onClear={onActiveFiltersClear}
-          />
+        {showPushPanel ? (
+          <div className="flex items-start gap-0 min-w-0">
+            <div className="list-page-workspace flex-1 min-w-0">
+              {activeFilterChips?.length > 0 && (
+                <ActiveFilterBar
+                  chips={activeFilterChips}
+                  onRemove={onActiveFilterRemove}
+                  onClear={onActiveFiltersClear}
+                />
+              )}
+              {children}
+            </div>
+            <SelectionFilterPanel
+              open={filterOpen}
+              onClose={() => onFilterOpenChange?.(false)}
+              title={filterSheetTitle || 'Filters'}
+              fields={filterFields}
+              onApply={onFilterApply}
+              onClear={onActiveFiltersClear}
+              applyLabel={filterApplyLabel || 'Apply'}
+              layout="push"
+            />
+          </div>
+        ) : (
+          <>
+            {activeFilterChips?.length > 0 && (
+              <ActiveFilterBar
+                chips={activeFilterChips}
+                onRemove={onActiveFilterRemove}
+                onClear={onActiveFiltersClear}
+              />
+            )}
+            <div className="list-page-workspace">{children}</div>
+          </>
         )}
-        <div className="list-page-workspace">{children}</div>
       </div>
     </div>
   );

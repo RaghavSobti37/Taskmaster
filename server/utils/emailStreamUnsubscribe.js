@@ -1,14 +1,8 @@
-const { ROOT_DOMAIN } = require('../../shared/emailStreams.cjs');
-
-const isVerifiedResendEmail = (email) => {
-  const addr = (email || '').trim().toLowerCase();
-  if (!addr.includes('@')) return false;
-  const domain = addr.split('@')[1];
-  if (domain === ROOT_DOMAIN) return true;
-  return domain.endsWith(`.${ROOT_DOMAIN}`);
-};
-
-const domainFromEmail = (email) => (email || '').trim().toLowerCase().split('@')[1] || '';
+const {
+  ROOT_DOMAIN,
+  domainFromEmail,
+  isVerifiedResendEmail,
+} = require('../../shared/emailStreams.cjs');
 
 const isBlockedForStreamSend = (leadDoc, streamSlug) => {
   if (!leadDoc) return false;

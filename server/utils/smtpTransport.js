@@ -69,6 +69,7 @@ const buildEnvTransporter = () => {
 const resolveMailTransport = async ({ senderMode, profile, preferResend = true, providerKey = null }) => {
   const { resend } = require('../services/mailDriver');
   const { usesSmtpRotation, resolveRotationProvider } = require('../services/profileSendStats');
+  const { resolveResendFromEmail, displayNameForResendEmail } = require('./resendFromEmails');
   const mode = senderMode || 'single';
 
   if (mode === 'system_resend') {
@@ -78,8 +79,8 @@ const resolveMailTransport = async ({ senderMode, profile, preferResend = true, 
     return {
       type: 'resend',
       resend,
-      fromEmail: profile?.email || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev',
-      fromName: profile?.name || 'System Resend'
+      fromEmail: resolveResendFromEmail({ senderProfileId: profile }),
+      fromName: profile?.name || displayNameForResendEmail(resolveResendFromEmail({ senderProfileId: profile })),
     };
   }
 
@@ -116,11 +117,12 @@ const resolveMailTransport = async ({ senderMode, profile, preferResend = true, 
   }
 
   if (preferResend && resend && !usesSmtpRotation(profile)) {
+    const fromEmail = resolveResendFromEmail({ senderProfileId: profile });
     return {
       type: 'resend',
       resend,
-      fromEmail: profile?.email || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev',
-      fromName: profile?.name || 'Mail Engine'
+      fromEmail,
+      fromName: profile?.name || displayNameForResendEmail(fromEmail),
     };
   }
 

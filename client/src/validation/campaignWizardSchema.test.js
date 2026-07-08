@@ -39,6 +39,17 @@ describe('campaignWizardSchema', () => {
     expect(good.success).toBe(true);
   });
 
+  it('step1 rejects Resend senders on unverified subdomains', () => {
+    const result = step1Schema.safeParse({
+      title: 'Resend test',
+      subject: 'Hi',
+      senderMode: 'system_resend',
+      resendFromEmail: 'team@team.theshakticollective.in',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('step2 requires mailTemplateId', () => {
     expect(step2Schema.safeParse({ mailTemplateId: '' }).success).toBe(false);
     expect(step2Schema.safeParse({ mailTemplateId: 'tpl_1' }).success).toBe(true);

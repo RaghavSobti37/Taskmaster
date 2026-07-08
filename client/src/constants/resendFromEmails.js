@@ -1,6 +1,17 @@
-import { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS, normalizeEmailStream } from '@shared/emailStreams.cjs';
+import {
+  ROOT_DOMAIN,
+  RESEND_VERIFIED_DOMAINS,
+  DEFAULT_EMAIL_STREAMS,
+  normalizeEmailStream,
+  isVerifiedResendEmail as isSharedVerifiedResendEmail,
+} from '@shared/emailStreams.cjs';
 
-export { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS, normalizeEmailStream };
+export {
+  ROOT_DOMAIN,
+  RESEND_VERIFIED_DOMAINS,
+  DEFAULT_EMAIL_STREAMS,
+  normalizeEmailStream,
+};
 
 export const normalizeEmailStreams = (streams) => {
   const normalized = (Array.isArray(streams) ? streams : [])
@@ -10,7 +21,7 @@ export const normalizeEmailStreams = (streams) => {
   return DEFAULT_EMAIL_STREAMS.map((s, i) => normalizeEmailStream(s, i));
 };
 
-/** Legacy alias — root domain; subdomains also allowed */
+/** Legacy alias — root domain currently verified in Resend. */
 export const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;
 
 export const DEFAULT_RESEND_FROM_EMAILS = DEFAULT_EMAIL_STREAMS.find((s) => s.slug === 'main')?.fromEmails || [
@@ -23,19 +34,13 @@ export const RESEND_FROM_DISPLAY_NAMES = {
   'artist@theshakticollective.in': 'The Shakti Collective',
   'helloworld@theshakticollective.in': 'The Shakti Collective',
   'team@theshakticollective.in': 'The Shakti Collective',
-  'artist@artist.theshakticollective.in': 'The Shakti Collective — Artist',
-  'team@team.theshakticollective.in': 'The Shakti Collective — Team',
-  'hello@events.theshakticollective.in': 'The Shakti Collective — Events',
+  'hello@theshakticollective.in': 'The Shakti Collective — Events',
 };
 
 const STORAGE_KEY = 'tsc_custom_resend_from_emails';
 
 export const isVerifiedResendEmail = (email) => {
-  const addr = (email || '').trim().toLowerCase();
-  if (!addr.includes('@')) return false;
-  const domain = addr.split('@')[1];
-  if (domain === ROOT_DOMAIN) return true;
-  return domain.endsWith(`.${ROOT_DOMAIN}`);
+  return isSharedVerifiedResendEmail(email);
 };
 
 export const getCustomResendEmails = () => {
@@ -51,7 +56,7 @@ export const getCustomResendEmails = () => {
 export const addCustomResendEmail = (email) => {
   const normalized = (email || '').trim().toLowerCase();
   if (!isVerifiedResendEmail(normalized)) {
-    return { ok: false, error: `Must be a valid @${ROOT_DOMAIN} or subdomain address` };
+    return { ok: false, error: `Must be a valid @${ROOT_DOMAIN} address` };
   }
   if (DEFAULT_RESEND_FROM_EMAILS.includes(normalized)) return { ok: true, email: normalized };
   const existing = getCustomResendEmails();

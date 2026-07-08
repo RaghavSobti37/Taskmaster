@@ -1,10 +1,14 @@
-const { ROOT_DOMAIN } = require('../../shared/emailStreams.cjs');
+const {
+  ROOT_DOMAIN,
+  RESEND_VERIFIED_DOMAINS,
+} = require('../../shared/emailStreams.cjs');
 const {
   isVerifiedResendEmail,
   domainFromEmail,
 } = require('./emailStreamUnsubscribe');
 
 const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;
+const DEFAULT_RESEND_FROM_EMAIL = `team@${ROOT_DOMAIN}`;
 
 const displayNameForResendEmail = (email) => {
   const key = (email || '').trim().toLowerCase();
@@ -12,9 +16,7 @@ const displayNameForResendEmail = (email) => {
     'artist@theshakticollective.in': 'The Shakti Collective',
     'helloworld@theshakticollective.in': 'The Shakti Collective',
     'team@theshakticollective.in': 'The Shakti Collective',
-    'artist@artist.theshakticollective.in': 'The Shakti Collective — Artist',
-    'team@team.theshakticollective.in': 'The Shakti Collective — Team',
-    'hello@events.theshakticollective.in': 'The Shakti Collective — Events',
+    'hello@theshakticollective.in': 'The Shakti Collective — Events',
   };
   if (labels[key]) return labels[key];
   const local = key.split('@')[0] || '';
@@ -31,11 +33,13 @@ const resolveResendFromEmail = (campaign) => {
   if (linked && isVerifiedResendEmail(linked)) return linked.trim().toLowerCase();
   const envDefault = (process.env.SYSTEM_VERIFIED_FROM_EMAIL || '').trim().toLowerCase();
   if (envDefault && isVerifiedResendEmail(envDefault)) return envDefault;
-  return envDefault || 'onboarding@resend.dev';
+  return DEFAULT_RESEND_FROM_EMAIL;
 };
 
 module.exports = {
   VERIFIED_RESEND_DOMAIN,
+  RESEND_VERIFIED_DOMAINS,
+  DEFAULT_RESEND_FROM_EMAIL,
   ROOT_DOMAIN,
   isVerifiedResendEmail,
   domainFromEmail,

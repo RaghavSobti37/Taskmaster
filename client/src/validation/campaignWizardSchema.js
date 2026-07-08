@@ -14,7 +14,7 @@ export const step1Schema = z.object({
     ctx.addIssue({ code: 'custom', message: 'Select a Gmail profile', path: ['senderProfileId'] });
   }
   if (data.senderMode === 'system_resend' && !isVerifiedResendEmail(data.resendFromEmail)) {
-    ctx.addIssue({ code: 'custom', message: 'Select a from address on theshakticollective.in or a subdomain', path: ['resendFromEmail'] });
+    ctx.addIssue({ code: 'custom', message: 'Select a from address on theshakticollective.in', path: ['resendFromEmail'] });
   }
 });
 

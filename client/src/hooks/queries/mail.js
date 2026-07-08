@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
+import { normalizeEmailStreams } from '../../constants/resendFromEmails';
 import useTenantQueryKey from '../useTenantQueryKey';
 
 export const useMailStats = (enabled = true, options = {}) => {
@@ -360,7 +361,14 @@ export const useCampaignDataHubAudience = (params = {}, options = {}) => useQuer
 
 export const useEmailStreams = (enabled = true) => useQuery({
   queryKey: ['mail', 'streams'],
-  queryFn: async () => (await axios.get('/api/mail/streams')).data,
+  queryFn: async () => {
+    try {
+      const { data } = await axios.get('/api/mail/streams');
+      return normalizeEmailStreams(data);
+    } catch {
+      return normalizeEmailStreams([]);
+    }
+  },
   enabled,
   staleTime: 1000 * 60 * 10,
 });

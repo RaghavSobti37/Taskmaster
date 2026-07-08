@@ -48,6 +48,10 @@ export default function ResendFromEmailPicker({
         </p>
         {isLoading ? (
           <p className="text-xs text-[var(--color-text-muted)]">Loading streams…</p>
+        ) : activeStreams.length === 0 ? (
+          <p className="text-xs text-amber-500 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            No sending streams available. Check Resend setup or reload the page.
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {activeStreams.map((stream) => {

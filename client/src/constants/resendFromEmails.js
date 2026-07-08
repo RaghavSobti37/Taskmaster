@@ -1,6 +1,14 @@
-import { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS } from '@shared/emailStreams.cjs';
+import { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS, normalizeEmailStream } from '@shared/emailStreams.cjs';
 
-export { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS };
+export { ROOT_DOMAIN, DEFAULT_EMAIL_STREAMS, normalizeEmailStream };
+
+export const normalizeEmailStreams = (streams) => {
+  const normalized = (Array.isArray(streams) ? streams : [])
+    .map((s, i) => normalizeEmailStream(s, i))
+    .filter(Boolean);
+  if (normalized.length) return normalized;
+  return DEFAULT_EMAIL_STREAMS.map((s, i) => normalizeEmailStream(s, i));
+};
 
 /** Legacy alias — root domain; subdomains also allowed */
 export const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;

@@ -425,7 +425,7 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 750,
+    "lines": 796,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
@@ -435,6 +435,7 @@
       "useConfirm",
       "useDataHubAnalytics",
       "useDataHubBackups",
+      "useDataHubBulkDeletePeople",
       "useDataHubFolders",
       "useDataHubPeople",
       "useDataHubProductionBackup",
@@ -452,6 +453,7 @@
     ],
     "apis": [],
     "components": [
+      "DataHubCampaignOutcomes",
       "DataHubInletCluster",
       "DataHubOpsMenu",
       "DataHubTemporalColumn",

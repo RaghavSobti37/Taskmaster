@@ -31,10 +31,17 @@ const dataHubBackupQuery = z.object({
   notify: z.enum(['true', 'false']).optional(),
 });
 
+const objectIdString = z.string().regex(/^[a-f0-9]{24}$/i);
+
+const dataHubBulkDeleteBody = z.object({
+  ids: z.array(objectIdString).min(1).max(100),
+});
+
 module.exports = {
   dataHubPeopleQuery,
   dataHubPersonQuery,
   dataHubAnalyticsQuery,
   dataHubReconcileQuery,
   dataHubBackupQuery,
+  dataHubBulkDeleteBody,
 };

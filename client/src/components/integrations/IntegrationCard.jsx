@@ -31,10 +31,7 @@ export default function IntegrationCard({
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-sm text-[var(--color-text-primary)]">{provider.name}</h3>
             <Badge variant={STATUS_VARIANT[status] || 'default'}>{status.replace('_', ' ')}</Badge>
-            {provider.planLocked ? (
-              <Badge variant="warning">Plan upgrade</Badge>
-            ) : null}
-            {blocked && !provider.planLocked ? (
+            {blocked ? (
               <Badge variant="warning">Setup required</Badge>
             ) : null}
           </div>

@@ -1,15 +1,22 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { config } = require('../config');
+const { RedisRateLimitStore } = require('../utils/redisRateLimitStore');
 
 const limitMessage = (message) => ({ ok: false, error: message });
 
 const clientIpKey = (req) => ipKeyGenerator(req);
+
+const redisStore = (prefix, windowMs) =>
+  process.env.NODE_ENV === 'test'
+    ? undefined
+    : new RedisRateLimitStore({ prefix, windowMs });
 
 const authRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: config.isProduction ? 5 : 20,
   standardHeaders: true,
   legacyHeaders: false,
+  store: redisStore('auth:', 60 * 60 * 1000),
   message: limitMessage('Too many auth requests. Try again in an hour.'),
   keyGenerator: (req) => {
     const email = req.body?.email;
@@ -25,6 +32,7 @@ const searchRateLimit = rateLimit({
   max: config.isProduction ? 30 : 120,
   standardHeaders: true,
   legacyHeaders: false,
+  store: redisStore('search:', 60 * 1000),
   message: limitMessage('Too many search requests. Slow down and try again.'),
   keyGenerator: (req) => {
     const userId = req.user?._id?.toString?.() || req.user?.id;

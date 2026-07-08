@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
+const { auditLogPlugin } = require('../plugins/auditLogPlugin');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
@@ -78,5 +79,6 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 userSchema.plugin(tenantPlugin);
+userSchema.plugin(auditLogPlugin, { modelName: 'User' });
 
 module.exports = mongoose.model('User', userSchema);

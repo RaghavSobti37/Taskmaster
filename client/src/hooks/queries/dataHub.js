@@ -115,6 +115,17 @@ export const useDataHubBackupProgress = (enabled = false, poll = false) => useQu
   enabled,
 });
 
+export const useDataHubBulkDeletePeople = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids) => axios.post('/api/data-hub/people/bulk-delete', { ids }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+      await queryClient.refetchQueries({ queryKey: ['dataHub'], type: 'active' });
+    },
+  });
+};
+
 export const useDataHubProductionBackup = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import OutletSidebar from './OutletSidebar';
 import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
 import BottomNavigation from './BottomNavigation';
@@ -11,9 +12,11 @@ import MobilePullToRefresh from './mobile/MobilePullToRefresh';
 import NetworkStatusBanner from './NetworkStatusBanner';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import RouteContentSkeleton from './ui/RouteContentSkeleton';
+import PageTransition from './ui/PageTransition';
 import BrandedLoadingPanel from './ui/BrandedLoadingPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
+import { schedulePredictivePrefetch } from '../lib/predictivePrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
 import OnboardingTour from './onboarding/OnboardingTour';
 import { stripOrgPrefix } from '../lib/orgPaths';
@@ -36,6 +39,7 @@ function MainRouteSuspenseFallback() {
 
 const CommandPalette = lazyWithRetry(() => import('./CommandPalette'));
 const PwaInstallBanner = lazyWithRetry(() => import('./PwaInstallBanner'));
+const PushEnableBanner = lazyWithRetry(() => import('./pwa/PushEnableBanner'));
 const CookieConsentBanner = lazyWithRetry(() => import('./legal/CookieConsentBanner'));
 const NotificationBridge = lazyWithRetry(() => import('./NotificationBridge'));
 const MobileAppShell = lazyWithRetry(() => import('./mobile/MobileAppShell'));
@@ -47,14 +51,18 @@ const GChordHint = lazyWithRetry(() => import('./GChordHint'));
 const MainLayout = () => {
   const { isOpen } = useSidebar();
   const isDesktop = useIsDesktop();
+  const location = useLocation();
   // ponytail: useIsDesktop matches OutletSidebar — PWA installed app keeps sidebar margin + footer nav
   const applySidebarMargin = isDesktop;
   const { user } = useAuth();
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
 
   useEffect(() => {
-    if (user?._id) scheduleIdlePrefetch(user._id, user);
-  }, [user?._id]);
+    if (user?._id) {
+      scheduleIdlePrefetch(user._id, user);
+      schedulePredictivePrefetch(user._id, user);
+    }
+  }, [user?._id, user]);
 
   useEffect(() => {
     const enable = () => setAttendancePromptReady(true);
@@ -84,6 +92,7 @@ const MainLayout = () => {
         <CommandPalette />
         <NotificationBridge />
         <PwaInstallBanner />
+        <PushEnableBanner />
         <CookieConsentBanner />
         <QuickAddMenu />
         <BottomNavigation />
@@ -119,7 +128,11 @@ const MainLayout = () => {
             <MobileRouteGuard>
               <RouteErrorBoundary>
                 <Suspense fallback={<MainRouteSuspenseFallback />}>
-                  <Outlet />
+                  <AnimatePresence mode="wait">
+                    <PageTransition key={location.pathname} className="w-full">
+                      <Outlet />
+                    </PageTransition>
+                  </AnimatePresence>
                 </Suspense>
               </RouteErrorBoundary>
             </MobileRouteGuard>

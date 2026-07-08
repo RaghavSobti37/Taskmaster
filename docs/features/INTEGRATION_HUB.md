@@ -18,6 +18,8 @@ Registry: `server/config/integrationProviders.config.js`
 
 Non-essential providers were removed from the registry in July 2026 — only the five above ship in UI.
 
+**No plan paywalls** — every provider is connectable on any org plan. Only blockers: missing server OAuth env (Gmail/Sheets) or invalid API keys.
+
 ## UI & API
 
 | Surface | Path |

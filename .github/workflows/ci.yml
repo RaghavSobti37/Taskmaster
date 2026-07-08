@@ -21,6 +21,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
+      - name: Secrets audit
+        run: npm run audit:secrets
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Dependency audit (critical)
@@ -48,6 +50,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Exposure audit
         run: node scripts/checkCommittedExposure.js
+      - name: Secrets audit
+        run: npm run audit:secrets
       - name: Install deps
         run: npx --yes npm@${{ env.NPM_VERSION }} ci
       - name: Dependency audit (critical)

@@ -47,7 +47,7 @@ export default function AuthMarketingShell({
             </aside>
 
             <section
-              className="order-1 relative isolate flex items-center justify-center overflow-hidden px-5 py-7 sm:px-7 sm:py-8 md:order-2 md:px-9 md:py-10"
+              className="tm-auth-panel order-1 relative isolate flex items-center justify-center overflow-hidden px-5 py-7 sm:px-7 sm:py-8 md:order-2 md:px-9 md:py-10"
               style={{ backgroundColor: AUTH_PANEL_TEAL }}
             >
               <AuthSparkleWatermark />

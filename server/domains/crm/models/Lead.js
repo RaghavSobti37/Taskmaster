@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../../../plugins/tenantPlugin');
+const { auditLogPlugin } = require('../../../plugins/auditLogPlugin');
 
 const { canonicalLeadStatus } = require('../../../utils/crmPipelineFilters');
 const { applyPersonIdentityToDoc } = require('../../../utils/personNormalization');
@@ -168,5 +169,6 @@ LeadSchema.index({ leadStatus: 1, notifiedOverdue: 1, nextFollowupDate: 1 });
 LeadSchema.index({ name: 'text', email: 'text', phone: 'text', remarks: 'text' });
 
 LeadSchema.plugin(tenantPlugin);
+LeadSchema.plugin(auditLogPlugin, { modelName: 'Lead' });
 
 module.exports = mongoose.model('Lead', LeadSchema);

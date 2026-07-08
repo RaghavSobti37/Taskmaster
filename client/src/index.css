@@ -275,6 +275,15 @@
   color: var(--brand-teal-deep);
 }
 
+/* Teal form panel — labels must read on #0B3B31 (match Clerk formFieldLabel) */
+.tm-auth-panel .tm-section-label {
+  color: #d1fae5;
+}
+
+.tm-auth-panel .tm-auth-hint {
+  color: #a7f3d0;
+}
+
 .dark {
   /* CoreKnot dark — neutral charcoal surfaces, TSC green on actions only */
   --color-bg-workspace: var(--global-canvas);

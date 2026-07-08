@@ -11,6 +11,8 @@ import { bootstrapDocumentTheme } from './lib/publicRouteTheme'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
+import { setupQueryPersistence } from './lib/queryPersistence'
+import { initReportWebVitals } from './lib/reportWebVitals'
 
 
 import { ToastProvider } from './contexts/ToastContext';
@@ -51,6 +53,8 @@ const syncPostHogClient = () => {
 
 syncPostHogClient();
 void initSentry();
+setupQueryPersistence();
+void initReportWebVitals();
 
 function Root() {
   const [posthogClient, setPosthogClient] = useState(() => syncPostHogClient());

@@ -18,6 +18,7 @@
     "install:all": "npx --yes npm@11.13.0 ci",
     "preflight": "node server/scripts/preflightEnv.js",
     "audit:exposure": "node scripts/checkCommittedExposure.js",
+    "audit:secrets": "node scripts/audit-secrets.mjs",
     "audit:deadcode": "node scripts/auditDeadCode.js",
     "audit:history": "node scripts/auditGitHistoryExposure.js",
     "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npx --yes wait-on@8.0.1 tcp:127.0.0.1:5000 -t 120000 && npm run dev --prefix client\"",

@@ -17,4 +17,17 @@ describe('integration hub', () => {
     expect(unpacked.accessToken).toBe('tok');
     expect(unpacked.refreshToken).toBe('ref');
   });
+
+  test('resolvePlanLock never blocks providers', () => {
+    const { listProvidersWithStatus } = require('../../domains/integrations-hub/services/integrationService');
+    const mongoose = require('mongoose');
+    const tenantId = new mongoose.Types.ObjectId();
+    return listProvidersWithStatus(tenantId).then((rows) => {
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.planLocked).toBe(false);
+        expect(row.planLockReason).toBeNull();
+      }
+    });
+  });
 });

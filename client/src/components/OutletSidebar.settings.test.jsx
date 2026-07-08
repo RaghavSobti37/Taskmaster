@@ -53,6 +53,10 @@ vi.mock('./org/OrgSwitcher', () => ({
   default: () => null,
 }));
 
+vi.mock('../contexts/KeyboardShortcutsContext', () => ({
+  useKeyboardShortcuts: () => ({ bindingsMap: {} }),
+}));
+
 function SettingsStub() {
   return <h1>Settings page</h1>;
 }

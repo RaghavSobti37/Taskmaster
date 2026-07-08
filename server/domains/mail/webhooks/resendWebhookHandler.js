@@ -121,6 +121,45 @@ async function createResendMailEvent(payload, tenantId) {
   await MailEvent.create({ ...payload, tenantId });
 }
 
+function extractResendEngagement(payload, eventType) {
+  let ip = '';
+  let userAgent = 'Unknown';
+  let url = '';
+
+  if (eventType === 'email.clicked') {
+    ip = payload.data.click?.ipAddress || payload.data.click?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
+    userAgent = payload.data.click?.userAgent || payload.data.click?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
+    url = payload.data.click?.link || payload.data.url || '';
+  } else if (eventType === 'email.opened') {
+    ip = payload.data.open?.ipAddress || payload.data.open?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
+    userAgent = payload.data.open?.userAgent || payload.data.open?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
+  }
+
+  return { ip: normalizeIp(ip), userAgent, url };
+}
+
+async function resolveResendEngagementGeo(payload, eventType) {
+  const details = extractResendEngagement(payload, eventType);
+  const { ip, userAgent } = details;
+  let locationObj = null;
+
+  if (eventType === 'email.clicked') {
+    if (!isEmailLinkScanner(userAgent) && ip) {
+      const geo = await lookupGeoForClick(ip);
+      if (!geo.untrusted && isValidDisplayCity(geo.city)) {
+        locationObj = { city: geo.city, country: geo.country || undefined };
+      }
+    }
+  } else if (eventType === 'email.opened' && ip && !isEmailImageProxy(userAgent) && !isGoogleInfrastructureIp(ip)) {
+    const geo = await lookupGeoAsync(ip);
+    if (isValidDisplayCity(geo.city)) {
+      locationObj = { city: geo.city, country: geo.country || undefined };
+    }
+  }
+
+  return { ...details, locationObj };
+}
+
 /** Track host: /webhooks/resend — locked geo + tag-based campaign lookup */
 async function handleTrackResendWebhook(req, res) {
   try {
@@ -216,37 +255,7 @@ async function handleTrackResendWebhook(req, res) {
       }
     }
 
-    let locationObj = null;
-    let ip = '';
-    let userAgent = 'Unknown';
-    let url = '';
-
-    if (eventType === 'email.opened' || eventType === 'email.clicked') {
-      if (eventType === 'email.clicked') {
-        ip = payload.data.click?.ipAddress || payload.data.click?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
-        userAgent = payload.data.click?.userAgent || payload.data.click?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
-        url = payload.data.click?.link || payload.data.url || '';
-      } else if (eventType === 'email.opened') {
-        ip = payload.data.open?.ipAddress || payload.data.open?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
-        userAgent = payload.data.open?.userAgent || payload.data.open?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
-      }
-
-      ip = normalizeIp(ip);
-
-      if (eventType === 'email.clicked') {
-        if (!isEmailLinkScanner(userAgent) && ip) {
-          const geo = await lookupGeoForClick(ip);
-          if (!geo.untrusted && isValidDisplayCity(geo.city)) {
-            locationObj = { city: geo.city, country: geo.country || undefined };
-          }
-        }
-      } else if (ip && !isEmailImageProxy(userAgent) && !isGoogleInfrastructureIp(ip)) {
-        const geo = await lookupGeoAsync(ip);
-        if (isValidDisplayCity(geo.city)) {
-          locationObj = { city: geo.city, country: geo.country || undefined };
-        }
-      }
-    }
+    const { ip, userAgent, url, locationObj } = await resolveResendEngagementGeo(payload, eventType);
 
     const isWebhookBot = isEmailLinkScanner(userAgent);
     const mailEventTenantId = await resolveMailEventTenantId(camp, cleanEmail);
@@ -441,7 +450,7 @@ async function handleTrackResendWebhook(req, res) {
   }
 }
 
-/** API host: /api/webhooks/resend — legacy geoip-lite path + metadata events */
+/** API host: /api/webhooks/resend — same trusted geo + bot filtering as track host. */
 async function handleApiResendWebhook(req, res) {
   try {
     const secret = process.env.RESEND_WEBHOOK_SECRET;
@@ -483,7 +492,6 @@ async function handleApiResendWebhook(req, res) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const geoip = require('geoip-lite');
 
     logger.debug('resendWebhook', 'Processing event (API)', { eventType, email: cleanEmail, emailId });
 
@@ -532,45 +540,10 @@ async function handleApiResendWebhook(req, res) {
       }
     }
 
-    let locationObj = { city: 'Mumbai', region: 'MH', country: 'IN', ip: '127.0.0.1', userAgent: 'Unknown' };
-    let locationString = 'Mumbai, MH, IN';
-    let url = '';
-
-    if (eventType === 'email.opened' || eventType === 'email.clicked') {
-      let ip = '';
-      let userAgent = 'Unknown';
-
-      if (eventType === 'email.clicked') {
-        ip = payload.data.click?.ipAddress || payload.data.ipAddress || '';
-        userAgent = payload.data.click?.userAgent || payload.data.userAgent || 'Unknown';
-        url = payload.data.click?.link || payload.data.url || '';
-      } else if (eventType === 'email.opened') {
-        ip = payload.data.open?.ipAddress || payload.data.ipAddress || '';
-        userAgent = payload.data.open?.userAgent || payload.data.userAgent || 'Unknown';
-      }
-
-      if (ip && ip.includes(',')) {
-        ip = ip.split(',')[0].trim();
-      }
-
-      if (ip && ip.startsWith('::ffff:')) {
-        ip = ip.substring(7);
-      }
-
-      const isLocalIp = !ip || ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1');
-      const geo = !isLocalIp ? geoip.lookup(ip) : null;
-      locationObj = {
-        city: geo ? (geo.city || 'Unknown City') : (isLocalIp ? 'Mumbai' : 'Unknown City'),
-        region: geo ? (geo.region || 'Unknown Region') : (isLocalIp ? 'MH' : 'Unknown Region'),
-        country: geo ? (geo.country || 'Unknown Country') : (isLocalIp ? 'IN' : 'Unknown Country'),
-        ip: ip || '127.0.0.1',
-        userAgent,
-      };
-      locationString = `${locationObj.city}, ${locationObj.region}, ${locationObj.country}`;
-    }
+    const { ip, userAgent, url, locationObj } = await resolveResendEngagementGeo(payload, eventType);
 
     const mailEventTenantId = await resolveMailEventTenantId(camp, cleanEmail);
-    const apiWebhookBot = isEmailLinkScanner(locationObj.userAgent || '');
+    const apiWebhookBot = isEmailLinkScanner(userAgent || '');
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       if (recipient) {
@@ -650,16 +623,18 @@ async function handleApiResendWebhook(req, res) {
           if (countOpenMetric) {
             if (isCore) {
               camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-              const city = locationObj.city || 'Unknown City';
-              if (!camp.locationBreakdown) {
-                camp.locationBreakdown = new Map();
+              const city = locationObj?.city;
+              if (isValidDisplayCity(city)) {
+                if (!camp.locationBreakdown) {
+                  camp.locationBreakdown = new Map();
+                }
+                const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+                camp.locationBreakdown.set(city, {
+                  opens: (locData.opens || 0) + 1,
+                  clicks: locData.clicks || 0,
+                });
+                camp.markModified('locationBreakdown');
               }
-              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-              camp.locationBreakdown.set(city, {
-                opens: (locData.opens || 0) + 1,
-                clicks: locData.clicks || 0,
-              });
-              camp.markModified('locationBreakdown');
               camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
             } else {
               camp.stats.opened = (camp.stats.opened || 0) + 1;
@@ -685,14 +660,9 @@ async function handleApiResendWebhook(req, res) {
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-        metadata: {
-          ip: locationObj.ip,
-          location: locationString,
-          city: locationObj.city,
-          region: locationObj.region,
-          country: locationObj.country,
-          userAgent: locationObj.userAgent,
-        },
+        ipAddress: ip || undefined,
+        userAgent,
+        ...(locationObj ? { location: locationObj } : {}),
       }, mailEventTenantId);
     } else if (eventType === 'email.clicked') {
       if (apiWebhookBot) return res.status(200).send('Ignored bot click');
@@ -711,16 +681,18 @@ async function handleApiResendWebhook(req, res) {
           if (countClickMetric) {
             if (isCore) {
               camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-              const city = locationObj.city || 'Unknown City';
-              if (!camp.locationBreakdown) {
-                camp.locationBreakdown = new Map();
+              const city = locationObj?.city;
+              if (isValidDisplayCity(city)) {
+                if (!camp.locationBreakdown) {
+                  camp.locationBreakdown = new Map();
+                }
+                const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+                camp.locationBreakdown.set(city, {
+                  opens: locData.opens || 0,
+                  clicks: (locData.clicks || 0) + 1,
+                });
+                camp.markModified('locationBreakdown');
               }
-              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-              camp.locationBreakdown.set(city, {
-                opens: locData.opens || 0,
-                clicks: (locData.clicks || 0) + 1,
-              });
-              camp.markModified('locationBreakdown');
               camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
             } else {
               camp.stats.clicked = (camp.stats.clicked || 0) + 1;
@@ -746,15 +718,10 @@ async function handleApiResendWebhook(req, res) {
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-        metadata: {
-          url,
-          ip: locationObj.ip,
-          location: locationString,
-          city: locationObj.city,
-          region: locationObj.region,
-          country: locationObj.country,
-          userAgent: locationObj.userAgent,
-        },
+        linkClicked: url,
+        ipAddress: ip || undefined,
+        userAgent,
+        ...(locationObj ? { location: locationObj } : {}),
       }, mailEventTenantId);
     } else if (eventType === 'email.delivered') {
       if (recipient) {
@@ -786,5 +753,7 @@ module.exports = {
   __private: {
     safeUpdateEmailTags,
     scheduleUpdateEmailTags,
+    extractResendEngagement,
+    resolveResendEngagementGeo,
   },
 };

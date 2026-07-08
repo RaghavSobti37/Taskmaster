@@ -59,4 +59,37 @@ describe('Resend webhook tenant helpers', () => {
       jest.dontMock('../utils/workerTenantContext');
     }
   });
+
+  it('does not infer reader location from Gmail image proxy opens', async () => {
+    const { __private } = require('../domains/mail/webhooks/resendWebhookHandler');
+    const result = await __private.resolveResendEngagementGeo({
+      data: {
+        open: {
+          ipAddress: '66.249.84.1',
+          userAgent: 'Mozilla/5.0 GoogleImageProxy',
+        },
+      },
+    }, 'email.opened');
+
+    expect(result.ip).toBe('66.249.84.1');
+    expect(result.userAgent).toContain('GoogleImageProxy');
+    expect(result.locationObj).toBeNull();
+  });
+
+  it('does not geolocate security scanner clicks as recipient clicks', async () => {
+    const { __private } = require('../domains/mail/webhooks/resendWebhookHandler');
+    const result = await __private.resolveResendEngagementGeo({
+      data: {
+        click: {
+          ip_address: '203.0.113.10',
+          user_agent: 'Proofpoint URL Defense',
+          link: 'https://example.com',
+        },
+      },
+    }, 'email.clicked');
+
+    expect(result.ip).toBe('203.0.113.10');
+    expect(result.url).toBe('https://example.com');
+    expect(result.locationObj).toBeNull();
+  });
 });

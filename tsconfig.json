@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "types": ["node"],
     "maxNodeModuleJsDepth": 1,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@coreknot/contracts": ["shared/contracts/index.js"],

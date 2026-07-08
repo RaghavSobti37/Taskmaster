@@ -4,7 +4,7 @@ import {
   DEFAULT_EMAIL_STREAMS,
   normalizeEmailStream,
   isVerifiedResendEmail as isSharedVerifiedResendEmail,
-} from '@shared/emailStreams.cjs';
+} from '@shared/emailStreams.js';
 
 export {
   ROOT_DOMAIN,

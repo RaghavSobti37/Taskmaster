@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = process.env.COREKNOT_REDACTION_ROOT || path.join(__dirname, '..');
 const block = /const (NEEDLES|BLOCKED_LITERALS) = \[[\s\S]*?\];/;
 
 const NEEDLES = `const NEEDLES = [

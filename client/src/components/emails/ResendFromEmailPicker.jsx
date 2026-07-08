@@ -44,7 +44,7 @@ export default function ResendFromEmailPicker({
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-          Sending stream (subdomain)
+          Sending stream
         </p>
         {isLoading ? (
           <p className="text-xs text-[var(--color-text-muted)]">Loading streams…</p>

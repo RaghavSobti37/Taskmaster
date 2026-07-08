@@ -38,7 +38,7 @@ export function buildCampaignPayloadFromForm(formValues, approvedTemplates, cust
   };
 }
 
-export function useCampaignSubmit({ approvedTemplates, audience }) {
+export function useCampaignSubmit({ approvedTemplates, audience, onDraftCommitted }) {
   const toast = useToast();
   const navigate = useNavigate();
   const createCampaignMutation = useCreateCampaign();
@@ -96,6 +96,7 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
         toast.success('Campaign saved as draft.');
       }
     }
+    onDraftCommitted?.();
     if (!stayOnPage) {
       audience.resetAudience();
       if (action === 'dispatch' && campaignId) {
@@ -105,7 +106,7 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
       }
     }
     return true;
-  }, [approvedTemplates, audience, buildCampaignPayload, createCampaignMutation, navigate, toast]);
+  }, [approvedTemplates, audience, buildCampaignPayload, createCampaignMutation, navigate, onDraftCommitted, toast]);
 
   return { buildCampaignPayload, submitCampaign, createCampaignMutation };
 }

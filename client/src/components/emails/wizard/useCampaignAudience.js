@@ -423,6 +423,66 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     setEngagementByEmail({});
   }, []);
 
+  const getAudienceSnapshot = useCallback(() => ({
+    selectedLeadIds,
+    selectedExlyIds,
+    selectedDataHubIds,
+    csvRecipients,
+    csvFileName,
+    excludedSources,
+    excludedEmails,
+    searchTerm,
+    audienceSource,
+    manualRecipients,
+    crmSegment,
+    artistProjectFilter,
+    contactCategoryFilter,
+    tagFilter,
+    leadStatusFilter,
+    exlyOfferingIdsFilter,
+    exlyLeadStatusFilter,
+    exlyOfferingFilter,
+    dataHubIncludeInlets,
+    dataHubExcludeInlets,
+    exlyLoadRequested,
+    dataHubLoadRequested,
+    campaignEngagementFilter,
+  }), [
+    selectedLeadIds, selectedExlyIds, selectedDataHubIds, csvRecipients, csvFileName,
+    excludedSources, excludedEmails, searchTerm, audienceSource, manualRecipients,
+    crmSegment, artistProjectFilter, contactCategoryFilter, tagFilter, leadStatusFilter,
+    exlyOfferingIdsFilter, exlyLeadStatusFilter, exlyOfferingFilter,
+    dataHubIncludeInlets, dataHubExcludeInlets, exlyLoadRequested, dataHubLoadRequested,
+    campaignEngagementFilter,
+  ]);
+
+  const restoreFromSnapshot = useCallback((snap) => {
+    if (!snap || typeof snap !== 'object') return;
+    setSelectedLeadIds(snap.selectedLeadIds || []);
+    setSelectedExlyIds(snap.selectedExlyIds || []);
+    setSelectedDataHubIds(snap.selectedDataHubIds || []);
+    setCsvRecipients(snap.csvRecipients || []);
+    setCsvFileName(snap.csvFileName || '');
+    setExcludedSources(snap.excludedSources || []);
+    setExcludedEmails(snap.excludedEmails || []);
+    setSearchTerm(snap.searchTerm || '');
+    setAudienceSource(snap.audienceSource || 'csv');
+    setManualRecipients(snap.manualRecipients || []);
+    setCrmSegment(snap.crmSegment || 'sales');
+    setArtistProjectFilter(snap.artistProjectFilter || 'all');
+    setContactCategoryFilter(snap.contactCategoryFilter || 'all');
+    setTagFilter(snap.tagFilter || 'all');
+    setLeadStatusFilter(snap.leadStatusFilter || 'all');
+    setExlyOfferingIdsFilter(snap.exlyOfferingIdsFilter || []);
+    setExlyLeadStatusFilter(snap.exlyLeadStatusFilter || 'all');
+    setExlyOfferingFilter(snap.exlyOfferingFilter || 'all');
+    setDataHubIncludeInlets(snap.dataHubIncludeInlets || []);
+    setDataHubExcludeInlets(snap.dataHubExcludeInlets || []);
+    setExlyLoadRequested(Boolean(snap.exlyLoadRequested));
+    setDataHubLoadRequested(Boolean(snap.dataHubLoadRequested));
+    setCampaignEngagementFilter(snap.campaignEngagementFilter || 'all');
+  }, []);
+
   return {
     selectedLeadIds, setSelectedLeadIds,
     selectedExlyIds, setSelectedExlyIds,
@@ -440,6 +500,7 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     filteredContacts, filteredExlyContacts, filteredDataHubContacts, displayContacts,
     previewRecipients, availableColumns, audienceHealth,
     buildMergedRecipients, buildLeadIds, resetAudience,
+    getAudienceSnapshot, restoreFromSnapshot,
     crmSegment, setCrmSegment,
     artistProjectFilter, setArtistProjectFilter,
     contactCategoryFilter, setContactCategoryFilter,

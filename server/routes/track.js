@@ -326,8 +326,8 @@ router.post('/webhooks/resend', handleTrackResendWebhook);
 // Public list for unsubscribe page (slug, name, domain only)
 router.get('/email-streams', async (req, res) => {
   try {
-    const { listActiveEmailStreams } = require('../services/emailStreamService');
-    const streams = await listActiveEmailStreams();
+    const { listEmailStreamsForApi } = require('../../shared/emailStreams.cjs');
+    const streams = listEmailStreamsForApi();
     res.json(streams.map((s) => ({
       slug: s.slug,
       name: s.name,

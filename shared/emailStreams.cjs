@@ -1,5 +1,17 @@
 /** Shared email stream catalog — branded from-addresses per stream. */
 const ROOT_DOMAIN = 'theshakticollective.in';
+const RESEND_VERIFIED_DOMAINS = [ROOT_DOMAIN];
+
+const domainFromEmail = (email) => String(email || '').trim().toLowerCase().split('@')[1] || '';
+
+const isVerifiedResendDomain = (domain) =>
+  RESEND_VERIFIED_DOMAINS.includes(String(domain || '').trim().toLowerCase());
+
+const isVerifiedResendEmail = (email) => {
+  const addr = String(email || '').trim().toLowerCase();
+  if (!addr.includes('@')) return false;
+  return isVerifiedResendDomain(domainFromEmail(addr));
+};
 
 const DEFAULT_EMAIL_STREAMS = [
   {
@@ -15,19 +27,22 @@ const DEFAULT_EMAIL_STREAMS = [
   {
     slug: 'artist',
     label: 'Artist',
-    fromEmails: ['artist@artist.theshakticollective.in'],
+    domain: ROOT_DOMAIN,
+    fromEmails: ['artist@theshakticollective.in'],
     unsubscribeSlug: 'artist',
   },
   {
     slug: 'team',
     label: 'Team',
-    fromEmails: ['team@team.theshakticollective.in'],
+    domain: ROOT_DOMAIN,
+    fromEmails: ['team@theshakticollective.in'],
     unsubscribeSlug: 'team',
   },
   {
     slug: 'events',
     label: 'Events',
-    fromEmails: ['hello@events.theshakticollective.in'],
+    domain: ROOT_DOMAIN,
+    fromEmails: ['hello@theshakticollective.in'],
     unsubscribeSlug: 'events',
   },
 ];
@@ -57,8 +72,12 @@ const listEmailStreamsForApi = () => DEFAULT_EMAIL_STREAMS.map((s, i) => normali
 
 module.exports = {
   ROOT_DOMAIN,
+  RESEND_VERIFIED_DOMAINS,
   DEFAULT_EMAIL_STREAMS,
   domainForSlug,
+  domainFromEmail,
+  isVerifiedResendDomain,
+  isVerifiedResendEmail,
   normalizeEmailStream,
   listEmailStreamsForApi,
 };

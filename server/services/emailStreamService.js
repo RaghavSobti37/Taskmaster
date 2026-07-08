@@ -11,7 +11,7 @@ const resolveStreamForCampaign = async (campaign) => {
 const validateFromEmailForStream = async (fromEmail, streamSlug) => {
   const from = String(fromEmail || '').trim().toLowerCase();
   if (!isVerifiedResendEmail(from)) {
-    return { ok: false, error: `From address must be @${ROOT_DOMAIN} or a verified subdomain` };
+    return { ok: false, error: `From address must use a verified Resend domain: @${ROOT_DOMAIN}` };
   }
   const slug = String(streamSlug || 'main').toLowerCase();
   const stream = DEFAULT_EMAIL_STREAMS.find((s) => s.slug === slug) || DEFAULT_EMAIL_STREAMS[0];

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeEmailStreams } from '../constants/resendFromEmails';
+import {
+  DEFAULT_EMAIL_STREAMS,
+  isVerifiedResendEmail,
+  normalizeEmailStreams,
+} from '../constants/resendFromEmails';
 
 describe('normalizeEmailStreams', () => {
   it('maps catalog label to picker name and domain', () => {
@@ -17,5 +21,13 @@ describe('normalizeEmailStreams', () => {
     const streams = normalizeEmailStreams([]);
     expect(streams.length).toBeGreaterThanOrEqual(4);
     expect(streams.some((s) => s.slug === 'events')).toBe(true);
+  });
+
+  it('keeps default senders on verified Resend domains only', () => {
+    const senders = DEFAULT_EMAIL_STREAMS.flatMap((stream) => stream.fromEmails || []);
+
+    expect(senders.length).toBeGreaterThan(0);
+    expect(senders.every(isVerifiedResendEmail)).toBe(true);
+    expect(isVerifiedResendEmail('team@team.theshakticollective.in')).toBe(false);
   });
 });

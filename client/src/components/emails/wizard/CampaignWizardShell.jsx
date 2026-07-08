@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { ArrowLeft } from 'lucide-react';
@@ -20,14 +20,6 @@ import {
 import { useMailProfiles, useMailTemplates } from '../../../hooks/useTaskmasterQueries';
 import { useToast } from '../../../contexts/ToastContext';
 import { useConfirm } from '../../../contexts/confirmContext';
-import {
-  clearCampaignWizardDraft,
-  campaignWizardDraftFingerprint,
-  readCampaignWizardDraft,
-  writeCampaignWizardDraft,
-} from '../../../utils/campaignWizardDraftStorage';
-
-const DRAFT_AUTOSAVE_DEBOUNCE_MS = 5000;
 
 export default function CampaignWizardShell() {
   const navigate = useNavigate();
@@ -49,10 +41,7 @@ export default function CampaignWizardShell() {
     mode: 'onChange',
   });
 
-  const { watch, setValue, getValues, setError, clearErrors, reset } = methods;
-  const draftRestoredRef = useRef(false);
-  const lastAutosavedFingerprintRef = useRef(null);
-  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const { watch, setValue, getValues, setError, clearErrors } = methods;
   const mailTemplateId = watch('mailTemplateId');
   const variableMapping = watch('variableMapping');
 
@@ -76,58 +65,7 @@ export default function CampaignWizardShell() {
   const { submitCampaign, createCampaignMutation } = useCampaignSubmit({
     approvedTemplates,
     audience,
-    onDraftCommitted: clearCampaignWizardDraft,
   });
-
-  const persistLocalDraft = useCallback((options = {}) => {
-    const { silent = true, force = false } = options;
-    const payload = {
-      formValues: getValues(),
-      step,
-      audience: audience.getAudienceSnapshot(),
-    };
-    const fingerprint = campaignWizardDraftFingerprint(payload);
-    if (!force && fingerprint === lastAutosavedFingerprintRef.current) {
-      return true;
-    }
-    const ok = writeCampaignWizardDraft(payload);
-    if (ok) {
-      lastAutosavedFingerprintRef.current = fingerprint;
-      setDraftSavedAt(new Date().toISOString());
-      if (!silent) toast.success('Draft saved');
-    } else if (!silent) {
-      toast.warn('Could not save draft locally');
-    }
-    return ok;
-  }, [audience, getValues, step, toast]);
-
-  useEffect(() => {
-    if (draftRestoredRef.current) return;
-    if (searchParams.get('templateId') || searchParams.get('subject')) return;
-    const draft = readCampaignWizardDraft();
-    if (!draft?.formValues) return;
-    draftRestoredRef.current = true;
-    reset({ ...WIZARD_DEFAULTS, ...draft.formValues });
-    if (draft.audience) audience.restoreFromSnapshot(draft.audience);
-    if (draft.step >= 1 && draft.step <= 4) setStep(draft.step);
-    if (draft.savedAt) setDraftSavedAt(draft.savedAt);
-    lastAutosavedFingerprintRef.current = campaignWizardDraftFingerprint({
-      formValues: draft.formValues,
-      step: draft.step,
-      audience: draft.audience,
-    });
-    toast.success('Restored your saved campaign draft');
-  }, [audience, reset, searchParams, toast]);
-
-  const watchedForm = watch();
-  useEffect(() => {
-    if (!draftRestoredRef.current && !watchedForm.title && !watchedForm.subject) return undefined;
-    draftRestoredRef.current = true;
-    const timer = window.setTimeout(() => {
-      persistLocalDraft({ silent: true });
-    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [watchedForm, step, audience.previewRecipients.length, persistLocalDraft]);
 
   useEffect(() => {
     const templateId = searchParams.get('templateId');
@@ -208,13 +146,6 @@ export default function CampaignWizardShell() {
 
   const handleSaveDraft = async (options = {}) => {
     const { stayOnPage = true, silent = false } = options;
-    persistLocalDraft({ silent: true, force: true });
-
-    if (step < 4) {
-      if (!silent) toast.success('Draft saved — restores after refresh');
-      return true;
-    }
-
     const ok = await validateStep(4);
     if (!ok) return false;
     setSubmittingAction('save_draft');
@@ -313,18 +244,6 @@ export default function CampaignWizardShell() {
               <Button variant="primary" onClick={handleNext}>
                 Continue
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handleSaveDraft({ stayOnPage: true, silent: false })}
-                disabled={isSubmitting}
-              >
-                {submittingAction === 'save_draft' ? 'Saving…' : 'Save draft'}
-              </Button>
-              {draftSavedAt && (
-                <span className="text-[10px] text-[var(--color-text-muted)]">
-                  Auto-saved {new Date(draftSavedAt).toLocaleTimeString()}
-                </span>
-              )}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2 ml-auto">

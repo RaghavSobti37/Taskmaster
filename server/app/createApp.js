@@ -52,7 +52,10 @@ function createApp() {
   const { clerkProxyRateLimit } = require('../middleware/rateLimits');
   app.use('/__clerk', clerkProxyRateLimit, require('../middleware/clerkFapiProxy'));
   app.use(perfMiddleware);
-  app.use(requestTimeoutMiddleware(Number(config.REQUEST_TIMEOUT_MS || 10_000)));
+  app.use(requestTimeoutMiddleware(
+    Number(config.REQUEST_TIMEOUT_MS || 30_000),
+    Number(config.REQUEST_TIMEOUT_LONG_MS || 120_000),
+  ));
   app.use(helmet({
     contentSecurityPolicy: {
       directives: buildCspDirectives(),

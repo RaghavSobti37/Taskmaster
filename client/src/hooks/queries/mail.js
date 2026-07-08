@@ -106,7 +106,7 @@ export const useUpdateMailProfile = () => {
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data) => axios.post('/api/campaigns', data),
+    mutationFn: (data) => axios.post('/api/campaigns', data, { timeout: 120_000 }),
     onSuccess: (response) => {
       const campaign = response?.data ?? response;
       const id = campaign?.campaignId || campaign?._id;

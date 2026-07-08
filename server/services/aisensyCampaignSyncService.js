@@ -4,6 +4,7 @@ const AisensyCampaignSend = require('../models/AisensyCampaignSend');
 const ContactService = require('./ContactService');
 const Lead = require('../models/Lead');
 const { normalizeEmail, normalizePhone } = require('./havellsDataHubService');
+const { normalizeCampaignBaseName } = require('./aisensyCampaignNameUtils');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 const logger = require('../utils/logger');
 
@@ -397,6 +398,58 @@ async function processAisensyWebhook(body) {
   };
 }
 
+async function resolveCampaignNameAliases(campaignName) {
+  const base = normalizeCampaignBaseName(campaignName) || String(campaignName || '').trim();
+  const aliases = new Set([base, String(campaignName || '').trim()].filter(Boolean));
+  const registries = await WhatsappCampaignRegistry.find({})
+    .select('campaignName')
+    .lean();
+  for (const row of registries) {
+    if (normalizeCampaignBaseName(row.campaignName) === base) {
+      aliases.add(row.campaignName);
+    }
+  }
+  const outcomes = await CampaignChannelOutcome.find({})
+    .select('campaignName')
+    .lean();
+  for (const row of outcomes) {
+    if (normalizeCampaignBaseName(row.campaignName) === base) {
+      aliases.add(row.campaignName);
+    }
+  }
+  return { baseName: base, aliases: [...aliases] };
+}
+
+async function listCampaignOutcomeUsers({
+  campaignName,
+  page = 1,
+  limit = 50,
+  status,
+} = {}) {
+  const { baseName, aliases } = await resolveCampaignNameAliases(campaignName);
+  const query = { campaignName: { $in: aliases } };
+  if (status && status !== 'all') query.status = status;
+  const skip = Math.max(0, (Number(page) || 1) - 1) * Number(limit || 50);
+  const take = Math.min(200, Math.max(1, Number(limit) || 50));
+  const [data, total] = await Promise.all([
+    CampaignChannelOutcome.find(query)
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(take)
+      .lean(),
+    CampaignChannelOutcome.countDocuments(query),
+  ]);
+  return {
+    campaignName: baseName,
+    aliases,
+    page: Number(page) || 1,
+    limit: take,
+    total,
+    pages: total ? Math.ceil(total / take) : 0,
+    recipients: data,
+  };
+}
+
 async function listCampaignSummaries() {
   const rows = await CampaignChannelOutcome.aggregate([
     {
@@ -409,35 +462,59 @@ async function listCampaignSummaries() {
   ]);
 
   const registries = await WhatsappCampaignRegistry.find({})
-    .select('campaignName tags firstSeenAt lastSeenAt')
+    .select('campaignName tags firstSeenAt lastSeenAt metadata')
     .lean();
   const tagByCampaign = new Map(registries.map((r) => [r.campaignName, r.tags || []]));
+  const audienceByCampaign = new Map(
+    registries.map((r) => [r.campaignName, r.metadata?.audienceSize ?? null]),
+  );
 
   const campaigns = new Map();
   for (const row of rows) {
-    const name = row._id.campaignName;
+    const rawName = row._id.campaignName;
+    const name = normalizeCampaignBaseName(rawName) || rawName;
     if (!campaigns.has(name)) {
-      campaigns.set(name, { campaignName: name, total: 0, byStatus: {}, tags: tagByCampaign.get(name) || [] });
+      campaigns.set(name, {
+        campaignName: name,
+        segmentNames: new Set(),
+        total: 0,
+        byStatus: {},
+        tags: tagByCampaign.get(rawName) || tagByCampaign.get(name) || [],
+        audienceSize: audienceByCampaign.get(rawName) ?? audienceByCampaign.get(name) ?? null,
+      });
     }
     const entry = campaigns.get(name);
-    entry.byStatus[row._id.status] = row.count;
+    entry.segmentNames.add(rawName);
+    entry.byStatus[row._id.status] = (entry.byStatus[row._id.status] || 0) + row.count;
     entry.total += row.count;
   }
 
   for (const reg of registries) {
-    if (!campaigns.has(reg.campaignName)) {
-      campaigns.set(reg.campaignName, {
-        campaignName: reg.campaignName,
+    const name = normalizeCampaignBaseName(reg.campaignName) || reg.campaignName;
+    if (!campaigns.has(name)) {
+      campaigns.set(name, {
+        campaignName: name,
+        segmentNames: new Set([reg.campaignName]),
         total: 0,
         byStatus: {},
         tags: reg.tags || [],
+        audienceSize: reg.metadata?.audienceSize ?? null,
         firstSeenAt: reg.firstSeenAt,
         lastSeenAt: reg.lastSeenAt,
       });
+    } else {
+      const entry = campaigns.get(name);
+      entry.segmentNames.add(reg.campaignName);
+      if (entry.audienceSize == null && reg.metadata?.audienceSize != null) {
+        entry.audienceSize = reg.metadata.audienceSize;
+      }
     }
   }
 
-  return [...campaigns.values()];
+  return [...campaigns.values()].map((entry) => ({
+    ...entry,
+    segmentNames: [...entry.segmentNames],
+  }));
 }
 
 async function listOutcomesForPerson({ personIndexId, phone, email }) {
@@ -463,6 +540,8 @@ module.exports = {
   processAisensyWebhook,
   registerWhatsappCampaign,
   listCampaignSummaries,
+  listCampaignOutcomeUsers,
+  resolveCampaignNameAliases,
   listOutcomesForPerson,
   pickHigherStatus,
 };

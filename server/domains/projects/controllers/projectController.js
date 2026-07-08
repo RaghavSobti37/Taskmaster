@@ -120,7 +120,7 @@ async function upsertWorkspacePreferenceOrder(userId, order) {
   const existing = await WorkspacePreference.findOneAndUpdate(
     { userId },
     { $set: update },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (existing) return existing;
 
@@ -131,14 +131,14 @@ async function upsertWorkspacePreferenceOrder(userId, order) {
         $set: update,
         $setOnInsert: { userId, tenantId },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
   }
 
   return WorkspacePreference.findOneAndUpdate(
     { userId },
     { $set: update, $setOnInsert: { userId } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 }
 
@@ -505,7 +505,7 @@ exports.updateProject = async (req, res) => {
           $set: { workspace: targetWsName },
           $inc: { __v: 1 },
         },
-        { new: true, runValidators: true }
+        { returnDocument: 'after', runValidators: true }
       );
       if (!updated) {
         return res.status(409).json({ error: 'Version conflict — refresh and retry' });
@@ -541,7 +541,7 @@ exports.updateProject = async (req, res) => {
     const updated = await Project.findOneAndUpdate(
       { _id: req.params.id, __v: expectedVersion },
       { $set: sanitizedUpdate, $inc: { __v: 1 } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!updated) {
       return res.status(409).json({ error: 'Version conflict — refresh and retry' });

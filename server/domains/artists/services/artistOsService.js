@@ -170,7 +170,7 @@ async function updateInquiry(artistId, inquiryId, body) {
   const doc = await ArtistInquiry.findOneAndUpdate(
     { _id: inquiryId, artistId },
     { $set: body },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!doc) return null;
   if (body.status === 'confirmed') {
@@ -212,7 +212,7 @@ async function createGig(artistId, body) {
 
 async function updateGig(artistId, gigId, body) {
   await requireArtist(artistId);
-  const gig = await ArtistGig.findOneAndUpdate({ _id: gigId, artistId }, { $set: body }, { new: true });
+  const gig = await ArtistGig.findOneAndUpdate({ _id: gigId, artistId }, { $set: body }, { returnDocument: 'after' });
   if (gig) await logActivity(artistId, 'gig_updated', `Gig updated: ${gig.name}`, 'gig', gig._id);
   return gig;
 }

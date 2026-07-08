@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { formatDisplayDateTime } from '../../utils/dateDisplay';
-import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
+import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX, Copy } from 'lucide-react';
 import { DataTable, Button, Badge } from '../../components/ui/primitives';
 import StatusBadge from '../../components/ui/StatusBadge';
 import ListPageLayout from '../../components/ui/ListPageLayout';
@@ -107,6 +107,7 @@ export function DataHubContent() {
   const [draftSortField, setDraftSortField] = useState(savedFilters.sortField || 'lastActivity');
   const [draftSortOrder, setDraftSortOrder] = useState(savedFilters.sortOrder || 'desc');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedPersonIds, setSelectedPersonIds] = useState([]);
   const appliedSortValue = `${appliedSortField}:${appliedSortOrder}`;
   const draftSortValue = `${draftSortField}:${draftSortOrder}`;
 
@@ -599,6 +600,22 @@ export function DataHubContent() {
     setPage(1);
   }, []);
 
+  const handleBulkCopyEmails = useCallback(async () => {
+    if (!selectedPersonIds.length) return;
+    const rows = (peopleData?.data || []).filter((p) => selectedPersonIds.includes(p._id));
+    const emails = rows.map((p) => p.email).filter(Boolean);
+    if (!emails.length) {
+      toast.error('No emails in selection');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(emails.join('\n'));
+      toast.success(`Copied ${emails.length} email${emails.length === 1 ? '' : 's'}`);
+    } catch {
+      toast.error('Clipboard failed');
+    }
+  }, [selectedPersonIds, peopleData?.data, toast]);
+
   return (
     <>
       <ListPageLayout
@@ -678,12 +695,30 @@ export function DataHubContent() {
           {activeFolderLabel} · {total.toLocaleString()} {total === 1 ? 'person' : 'people'}
         </p>
 
+        {selectedPersonIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-xs font-bold text-[var(--color-text-secondary)]">
+              {selectedPersonIds.length} selected
+            </span>
+            <Button size="sm" variant="secondary" onClick={handleBulkCopyEmails}>
+              <Copy size={14} /> Copy emails
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedPersonIds([])}>
+              Clear
+            </Button>
+          </div>
+        )}
+
         <div data-density="compact" className="min-w-0">
           <DataTable
             columns={columns}
             data={peopleData?.data || []}
             isLoading={isLoading}
             onRowClick={(item) => setSelectedPersonId(item._id)}
+            selectable
+            selectedIds={selectedPersonIds}
+            onSelectedIdsChange={setSelectedPersonIds}
+            getRowId={(row) => row._id}
             paginated
             serverSide
             totalItems={peopleData?.total || 0}

@@ -40,7 +40,7 @@ async function syncMailchimp(integrationDoc, options = {}) {
             metadata: { mailchimpMemberId: member.id, listId },
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       ).setOptions({ bypassTenant: true });
       if (resolved.personId) {
         await PersonIdentityService.linkSource(

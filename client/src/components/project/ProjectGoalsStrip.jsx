@@ -8,7 +8,7 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import { getProjectRoleForUser } from '../../constants/taskOptions';
 import ProjectGoalMetricCards, { ProjectGoalMetricCardsSkeleton } from './ProjectGoalMetricCards';
 
-export default function ProjectGoalsStrip({ projectId, project, onEditGoals }) {
+export default function ProjectGoalsStrip({ projectId, project, onEditGoals, deferLoad = false }) {
   const { user } = useAuth();
   const role = getProjectRoleForUser(project, user?._id);
   const canEdit = isAdminUser(user) || role === 'admin' || role === 'manager';
@@ -16,7 +16,7 @@ export default function ProjectGoalsStrip({ projectId, project, onEditGoals }) {
   const { data, isLoading } = useQuery({
     queryKey: ['projects', projectId, 'goals'],
     queryFn: async () => (await axios.get(`/api/projects/${projectId}/goals`)).data,
-    enabled: !!projectId,
+    enabled: !!projectId && !deferLoad,
     staleTime: 60_000,
   });
 
@@ -39,7 +39,9 @@ export default function ProjectGoalsStrip({ projectId, project, onEditGoals }) {
           </Button>
         )}
       </div>
-      {isLoading ? (
+      {deferLoad ? (
+        <p className="text-[11px] text-[var(--color-text-muted)]">Goals load in sidebar after tasks…</p>
+      ) : isLoading ? (
         <ProjectGoalMetricCardsSkeleton compact />
       ) : (
         <ProjectGoalMetricCards

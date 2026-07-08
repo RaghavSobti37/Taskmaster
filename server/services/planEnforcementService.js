@@ -22,7 +22,7 @@ async function incrementUsage(tenantId, field, amount = 1) {
   await TenantUsage.findOneAndUpdate(
     { tenantId, periodKey },
     { $inc: { [field]: amount } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   );
 }
 

@@ -111,7 +111,7 @@ exports.updateNote = async (req, res) => {
     const note = await UserNote.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
       { $set: allowed },
-      { new: true }
+      { returnDocument: 'after' }
     ).populate(notePopulate);
 
     res.json(note);

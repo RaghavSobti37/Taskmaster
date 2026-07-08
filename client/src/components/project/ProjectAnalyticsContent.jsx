@@ -1,17 +1,21 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2, Timer, Wallet, IndianRupee, PiggyBank, TrendingUp,
-  NotebookPen, BarChart3, ListChecks,
+  NotebookPen, BarChart3, ListChecks, SlidersHorizontal,
 } from 'lucide-react';
 import { useProjectAnalytics } from '../../hooks/queries/projects';
 import { useAuth } from '../../contexts/AuthContext';
-import { DataLoading, Badge, UserLabel, Card } from '../ui';
+import { DataLoading, Badge, UserLabel, Card, Button } from '../ui';
+import SelectionFilterPanel, { FilterToolbarButton } from '../ui/SelectionFilterPanel';
+import { countActiveFilters } from '../ui/selectionFilterUtils';
 import { useProjectReportRangeState } from '../../hooks/useProjectReportRangeState';
 import DailyLogHoursChart from '../admin/reports/DailyLogHoursChart';
 import DailyLogsTable from '../admin/DailyLogsTable';
 import ProjectFinanceDocumentsTable from './ProjectFinanceDocumentsTable';
 import ProjectOpenTasksTable from './ProjectOpenTasksTable';
 import ProjectAnalyticsDataQualityBanner from './ProjectAnalyticsDataQualityBanner';
+import ProjectBudgetQuickSet from './ProjectBudgetQuickSet';
+import FinanceAssignProjectsBanner from '../finance/FinanceAssignProjectsBanner';
 import ProjectAnalyticsKpiGrid from './ProjectAnalyticsKpiGrid';
 import {
   formatProjectInr,
@@ -75,6 +79,8 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
   const internalRangeState = useProjectReportRangeState();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showFlaggedMembers, setShowFlaggedMembers] = useState(false);
+  const [logFilterOpen, setLogFilterOpen] = useState(false);
+  const [draftLogDay, setDraftLogDay] = useState('');
 
   const {
     queryParams,
@@ -205,8 +211,27 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
   const drillLogs = useMemo(() => {
     const logs = report?.recentLogs || [];
     if (!selectedDay) return logs;
-    return logs.filter((l) => l.date === selectedDay);
+    return logs.filter((l) => (l.date || '').slice(0, 10) === selectedDay);
   }, [report?.recentLogs, selectedDay]);
+
+  const logFilterFields = useMemo(() => ([
+    {
+      id: 'logDay',
+      label: 'Log day',
+      type: 'custom',
+      render: () => (
+        <input
+          type="date"
+          value={draftLogDay}
+          onChange={(e) => setDraftLogDay(e.target.value)}
+          className="w-full min-h-[44px] px-3 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-xs"
+        />
+      ),
+    },
+  ]), [draftLogDay]);
+
+  const logFilterActiveCount = selectedDay ? 1 : 0;
+  const canEditBudget = viewMode === 'admin' || hasPageAccess(user, 'admin_project_analytics');
 
   const handleReviewMembers = () => {
     setShowFlaggedMembers(true);
@@ -248,6 +273,11 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
 
       {report && (
         <div className={isFetching ? 'opacity-70 pointer-events-none transition-opacity' : 'transition-opacity'}>
+          {(viewMode === 'admin' || hasPageAccess(user, 'admin_project_analytics')) && (
+            <div className="mb-4">
+              <FinanceAssignProjectsBanner />
+            </div>
+          )}
           <ProjectAnalyticsDataQualityBanner
             dataQuality={report.dataQuality}
             onReviewMembers={handleReviewMembers}
@@ -265,6 +295,11 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
               Financial · project finance docs
             </h3>
             <ProjectAnalyticsKpiGrid items={financeKpis} columns={5} />
+            <ProjectBudgetQuickSet
+              projectId={projectId}
+              hasBudget={report.summary.hasBudget}
+              canEdit={canEditBudget}
+            />
           </section>
 
           {(report.summary.laborCostInr != null || report.summary.estimatedTotalCostInr != null) && (
@@ -290,22 +325,46 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
           <section className="mt-8 pt-6 border-t border-[var(--color-bg-border)]">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="tm-widget-label">Hours trend</h3>
-              {selectedDay && (
-                <button
-                  type="button"
-                  className="text-[10px] font-bold uppercase text-blue-400 hover:underline"
-                  onClick={() => setSelectedDay(null)}
-                >
-                  Clear filter · {selectedDay}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <FilterToolbarButton
+                  activeCount={logFilterActiveCount}
+                  onClick={() => {
+                    setDraftLogDay(selectedDay || '');
+                    setLogFilterOpen(true);
+                  }}
+                />
+                {selectedDay && (
+                  <button
+                    type="button"
+                    className="text-[10px] font-bold uppercase text-blue-400 hover:underline"
+                    onClick={() => setSelectedDay(null)}
+                  >
+                    Clear · {selectedDay}
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-[10px] text-[var(--color-text-muted)] mb-3">Click a day below to filter recent logs.</p>
+            <p className="text-[10px] text-[var(--color-text-muted)] mb-3">Use filters to narrow recent logs by day.</p>
             <DailyLogHoursChart
               byDay={report.byDay}
               totalEntries={report.summary.logEntries}
               onDaySelect={setSelectedDay}
               selectedDay={selectedDay}
+              hideDayChips
+            />
+            <SelectionFilterPanel
+              open={logFilterOpen}
+              onClose={() => setLogFilterOpen(false)}
+              title="Log filters"
+              fields={logFilterFields}
+              onApply={() => {
+                setSelectedDay(draftLogDay || null);
+                setLogFilterOpen(false);
+              }}
+              onClear={() => {
+                setDraftLogDay('');
+                setSelectedDay(null);
+              }}
             />
           </section>
 

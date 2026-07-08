@@ -24,6 +24,7 @@ import {
   Building2,
   CircleDollarSign,
   Shield,
+  Database,
 } from 'lucide-react';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +36,9 @@ import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
 import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
 import { useTenantUnlocks } from '../hooks/useTenantUnlocks';
 import { useOrgPath } from '../hooks/useOrgPath';
+import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { getGlobalGChordRoutes } from '../lib/keyboardShortcuts';
+import { isAdminUser } from '../utils/departmentPermissions';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
@@ -95,7 +99,14 @@ const PAGE_CONFIG = {
     icon: Shield,
     label: 'Admin',
     accessKey: 'admin_console',
-    matchPaths: ['/admin', '/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control', '/admin/media-list', '/admin/lead-audits', '/admin/crm-stats'],
+    matchPaths: ['/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control', '/admin/media-list', '/admin/lead-audits', '/admin/crm-stats'],
+    end: true,
+  },
+  '/admin': {
+    icon: Database,
+    label: 'Data Hub',
+    accessKey: 'admin_data',
+    matchPaths: ['/admin', '/data-hub'],
     end: true,
   },
 };
@@ -120,9 +131,10 @@ const NAV_ICON_TONES = {
   '/office': { chip: 'rgba(20, 184, 166, 0.16)', icon: '#2dd4bf' },
   '/management': { chip: 'rgba(234, 179, 8, 0.16)', icon: '#facc15' },
   '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
+  '/admin': { chip: 'rgba(16, 185, 129, 0.16)', icon: '#34d399' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId, featureLock, onLockedClick }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId, featureLock, onLockedClick, shortcut }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
@@ -136,10 +148,12 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
   const isActive = matchPaths?.length ? isHubMatch : isExactMatch;
   const iconOnly = collapsed && !isMobile;
   const tone = iconTone || NAV_ICON_TONES[pathOnly] || NAV_ICON_TONES['/dashboard'];
-  const navTitle = iconOnly ? label : undefined;
+  const navTitle = iconOnly
+    ? (shortcut ? `${label} (${shortcut})` : label)
+    : (shortcut ? `${label} · ${shortcut}` : undefined);
   const isLocked = Boolean(featureLock);
 
-  const itemClassName = `tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''} ${isLocked ? 'tm-sidebar-nav-item--locked' : ''}`;
+  const itemClassName = `tm-sidebar-nav-item group ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''} ${isLocked ? 'tm-sidebar-nav-item--locked' : ''}`;
 
   const itemBody = (
     <>
@@ -160,6 +174,16 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
       {(!collapsed || isMobile) && (
         <>
           <span className="tm-sidebar-nav-label min-w-0 flex-1 truncate">{label}</span>
+          {shortcut && (
+            <span
+              className={`shrink-0 text-[9px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] tabular-nums transition-opacity ${
+                isActive ? 'opacity-90' : 'opacity-0 group-hover:opacity-80'
+              }`}
+              aria-hidden
+            >
+              {shortcut}
+            </span>
+          )}
           {displayBadge > 0 && (
             <CountBadge
               count={displayBadge}
@@ -264,6 +288,18 @@ const OutletSidebar = () => {
   }, []);
 
   const shellQueriesEnabled = shellQueriesReady && !!user;
+  const { bindingsMap } = useKeyboardShortcuts();
+  const gChordRoutes = useMemo(
+    () => getGlobalGChordRoutes(bindingsMap, { isAdmin: isAdminUser(user), user }),
+    [bindingsMap, user],
+  );
+  const shortcutByPath = useMemo(() => {
+    const map = new Map();
+    Object.values(gChordRoutes || {}).forEach((route) => {
+      if (route?.path && route?.chord) map.set(route.path, route.chord);
+    });
+    return map;
+  }, [gChordRoutes]);
   const { data: statusCounts = {
     tasks: { overdue: 0, today: 0, inReview: 0 },
     followups: { overdue: 0, today: 0 },
@@ -367,6 +403,7 @@ const OutletSidebar = () => {
           onClick={isMobile ? closeMobileSidebar : undefined}
           onMouseEnter={() => prefetchNavPage(page.path)}
           tourId={TOUR_ATTR_BY_PATH[page.path]}
+          shortcut={shortcutByPath.get(page.path)}
         />
       );
     });

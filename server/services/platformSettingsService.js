@@ -143,7 +143,7 @@ async function updateAdminSettings(body, updatedBy) {
   const doc = await PlatformSettings.findOneAndUpdate(
     { singletonKey: SINGLETON_KEY },
     { $set: { ...normalized, updatedBy } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
   );
   setRuntimePlatformSettings(docToRuntime(doc));
   try {

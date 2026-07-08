@@ -257,7 +257,7 @@ async function importArtistAnalyticsFromFile({
         analyticsHistory: historyEntry,
       },
     },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   ).setOptions(BYPASS);
 
   await ArtistAudienceSnapshot.findOneAndUpdate(
@@ -276,7 +276,7 @@ async function importArtistAnalyticsFromFile({
         demographics: instagramPatch.demographics,
       },
     },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   ).setOptions(BYPASS);
 
   return {

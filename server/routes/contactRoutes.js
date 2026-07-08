@@ -34,7 +34,7 @@ router.post('/', contactsPage, async (req, res) => {
 
 router.put('/:id', contactsPage, async (req, res) => {
   try {
-    const updated = await OfficeContact.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('addedBy', 'name email');
+    const updated = await OfficeContact.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' }).populate('addedBy', 'name email');
     if (!updated) return res.status(404).json({ error: 'Contact not found' });
     res.json(updated);
   } catch (error) {

@@ -81,7 +81,7 @@ exports.updateSubscription = async (req, res) => {
     }
 
     const updated = await populateFields(
-      Subscription.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true })
+      Subscription.findByIdAndUpdate(req.params.id, { $set: updates }, { returnDocument: 'after' })
     );
     res.json(normalizeUsedByOnDoc(updated));
   } catch (error) {

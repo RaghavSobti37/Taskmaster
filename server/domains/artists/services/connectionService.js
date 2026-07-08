@@ -158,7 +158,7 @@ async function upsertConnection({
         lastError: null,
       },
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 }
 

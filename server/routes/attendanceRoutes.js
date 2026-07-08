@@ -161,7 +161,7 @@ router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
           ...updateBlock,
         },
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
     ).setOptions({ bypassTenant: true });
 
     if (attendance.inTimeRecord?.manualTimestamp && attendance.outTimeRecord?.manualTimestamp) {
@@ -200,7 +200,7 @@ router.post('/check/undo', validateBody(attendanceUndoBody), async (req, res) =>
     const attendance = await Attendance.findOneAndUpdate(
       { userId: req.user._id, date: today },
       updateBlock,
-      { new: true }
+      { returnDocument: 'after' }
     );
     await bustAttendanceCacheForUser(String(req.user._id));
     res.json(attendance);
@@ -300,7 +300,7 @@ router.put('/upsert/by-user-date', async (req, res) => {
           createdBy: req.user._id
         }
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
     );
 
     if (row.inTimeRecord?.manualTimestamp && row.outTimeRecord?.manualTimestamp) {

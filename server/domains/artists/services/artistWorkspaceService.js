@@ -107,7 +107,7 @@ async function updateAsset(artistId, assetId, body) {
   const doc = await ArtistAsset.findOneAndUpdate(
     { _id: assetId, artistId },
     { $set: pickFields(body, ASSET_FIELDS) },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   );
   if (!doc) {
     const err = new Error('Asset not found');
@@ -159,7 +159,7 @@ async function updateReleaseCampaign(artistId, releaseId, body) {
   const doc = await ArtistReleaseCampaign.findOneAndUpdate(
     { _id: releaseId, artistId },
     { $set: patch },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   );
   if (!doc) {
     const err = new Error('Release not found');

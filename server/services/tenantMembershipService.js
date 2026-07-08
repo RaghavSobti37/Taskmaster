@@ -474,7 +474,7 @@ const acceptInvite = async (token, userId) => {
         joinedAt: new Date(),
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   ).setOptions(BYPASS);
 
   invite.status = 'accepted';

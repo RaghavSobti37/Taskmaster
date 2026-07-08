@@ -97,7 +97,15 @@ const ProjectList = ({
   const [localCompletedPage, setLocalCompletedPage] = useState(1);
   const [localCompletedPageSize, setLocalCompletedPageSize] = useState(COMPLETED_PAGE_SIZE_DEFAULT);
 
-  const activeTasks = tasks.filter((t) => t.status !== 'done');
+  const activeTasks = tasks
+    .filter((t) => t.status !== 'done')
+    .sort((a, b) => {
+      const rank = { urgent: 0, high: 1, medium: 2, low: 3 };
+      const ap = rank[String(a.priority || 'medium').toLowerCase()] ?? 2;
+      const bp = rank[String(b.priority || 'medium').toLowerCase()] ?? 2;
+      if (ap !== bp) return ap - bp;
+      return String(a.title || '').localeCompare(String(b.title || ''));
+    });
   const doneTasks = tasks.filter((t) => t.status === 'done');
   const useServerPagination = serverCompletedPagination && typeof onCompletedPageChange === 'function';
   const pageSize = useServerPagination ? completedPageSize : localCompletedPageSize;

@@ -3,6 +3,10 @@ import { isAppSite, isAuthSite } from '../config/siteMode';
 import { usesExternalAuthHost } from '../config/siteUrls';
 import { isLocalViteDev } from './runtimeEnv';
 
+// ponytail: Vercel rewrites cannot proxy WebSocket — fallback when VITE_API_URL unset at build
+const PROD_RENDER_API_SUFFIX = `${['taskmaster', 'jfw0'].join('-')}.onrender.com`;
+const PROD_RENDER_API_ORIGIN = `https://${PROD_RENDER_API_SUFFIX}`;
+
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
@@ -47,6 +51,7 @@ export function getRealtimeOrigin() {
   if (isViteProxyDev()) return window.location.origin;
   const apiBase = getApiBaseUrl();
   if (import.meta.env.PROD && apiBase) return apiBase;
+  if (import.meta.env.PROD && isAppSite()) return PROD_RENDER_API_ORIGIN;
   return window.location.origin;
 }
 

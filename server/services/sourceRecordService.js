@@ -91,7 +91,7 @@ async function upsertClassifiedRow(rawDoc) {
     const saved = await OutsourcedRecord.findOneAndUpdate(
       buildIdentityFilter(rawDoc) || {},
       { $set: toOutsourcedDoc(rawDoc) },
-      { upsert: true, new: true, runValidators: true }
+      { upsert: true, returnDocument: 'after', runValidators: true }
     );
     await ContactService.mergeContact({
       name: rawDoc.name,
@@ -113,7 +113,7 @@ async function upsertClassifiedRow(rawDoc) {
   const filter = buildIdentityFilter(payload);
   let saved;
   if (filter) {
-    saved = await Model.findOneAndUpdate(filter, { $set: payload }, { upsert: true, new: true, runValidators: true });
+    saved = await Model.findOneAndUpdate(filter, { $set: payload }, { upsert: true, returnDocument: 'after', runValidators: true });
   } else {
     saved = await Model.create(payload);
   }

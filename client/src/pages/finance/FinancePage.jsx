@@ -19,6 +19,7 @@ import { FINANCE_CURRENCY_OPTIONS, normalizeFinanceCurrency } from '../../utils/
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
 import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAccordion';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
+import FinanceAssignProjectsBanner from '../../components/finance/FinanceAssignProjectsBanner';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { Button, SearchInput, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
@@ -126,6 +127,7 @@ const FinancePage = () => {
 
   // Selected document for Workspace Preview Modal
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [editForm, setEditForm] = useState(null);
   const [editBaseline, setEditBaseline] = useState(null);
   const [editAmountUsd, setEditAmountUsd] = useState('');
@@ -205,7 +207,9 @@ const FinancePage = () => {
   const { data: workspaces = [] } = useWorkspaces(deferFinanceFilters);
 
   const filteredProjects = useMemo(
-    () => filterProjectsByWorkspace(projects, selectedWorkspace || 'all'),
+    () => (selectedWorkspace
+      ? filterProjectsByWorkspace(projects, selectedWorkspace)
+      : []),
     [projects, selectedWorkspace]
   );
 
@@ -393,6 +397,29 @@ const FinancePage = () => {
     mutationFn: ({ id, payload }) => axios.patch(`/api/finance/${id}`, payload, {
       headers: { 'x-skip-toast': 'true' },
     }),
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: ['finance-docs'] });
+      const snapshots = queryClient.getQueriesData({ queryKey: ['finance-docs'] });
+      const patchDoc = (doc) => {
+        if (doc._id !== id) return doc;
+        const next = { ...doc, ...payload };
+        if (payload.metadata) {
+          next.metadata = { ...doc.metadata, ...payload.metadata };
+        }
+        return next;
+      };
+      snapshots.forEach(([key, data]) => {
+        if (!data?.data) return;
+        queryClient.setQueryData(key, {
+          ...data,
+          data: data.data.map(patchDoc),
+        });
+      });
+      if (selectedDoc?._id === id) {
+        setSelectedDoc((prev) => (prev ? patchDoc(prev) : prev));
+      }
+      return { snapshots };
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['finance-docs'] });
       const doc = res?.data?.data;
@@ -404,7 +431,8 @@ const FinancePage = () => {
         setEditBaseline(cloneFinanceEditForm(form));
       }
     },
-    onError: (err) => {
+    onError: (err, _vars, context) => {
+      context?.snapshots?.forEach(([key, data]) => queryClient.setQueryData(key, data));
       const message = err.response?.data?.message || err.message || 'Failed to save document';
       alert(message);
     },
@@ -417,6 +445,28 @@ const FinancePage = () => {
       setSelectedDoc(null);
     },
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      await Promise.all(ids.map((id) => axios.delete(`/api/finance/${id}`)));
+    },
+    onSuccess: (_data, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['finance-docs'] });
+      setSelectedDocIds((prev) => prev.filter((id) => !ids.includes(id)));
+      if (selectedDoc && ids.includes(selectedDoc._id)) setSelectedDoc(null);
+    },
+  });
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!selectedDocIds.length) return;
+    const ok = await confirm({
+      title: 'Delete selected documents',
+      message: `Delete ${selectedDocIds.length} document${selectedDocIds.length === 1 ? '' : 's'}? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (ok) bulkDeleteMutation.mutate([...selectedDocIds]);
+  }, [selectedDocIds, confirm, bulkDeleteMutation]);
 
   const hasFinanceEdits =
     !!selectedDoc && !!editForm && !!editBaseline && !stableJsonEqual(editForm, editBaseline);
@@ -730,10 +780,14 @@ const FinancePage = () => {
       type: 'searchable',
       value: selectedProject,
       defaultValue: '',
-      options: [
-        { value: '', label: 'All projects' },
-        ...filteredProjects.map((p) => ({ value: p._id, label: p.name })),
-      ],
+      disabled: !selectedWorkspace,
+      disabledHint: 'Select a workspace to see its projects',
+      options: selectedWorkspace
+        ? [
+          { value: '', label: 'All projects in workspace' },
+          ...filteredProjects.map((p) => ({ value: p._id, label: p.name })),
+        ]
+        : [],
       onChange: (projectId) => {
         setSelectedProject(projectId);
         const projectRecord = projects.find((p) => p._id === projectId);
@@ -815,25 +869,30 @@ const FinancePage = () => {
         isRejecting={rejectInvoiceMutation.isPending}
       />
       <DesktopRecommendedBanner message="Finance document management works best on desktop. You can browse folders on mobile with limited preview." />
-      {canRunFinanceScripts && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-xs text-[var(--color-text-primary)]">
-          Project analytics uses finance doc project + amount fields.
-          {' '}
-          Run
-          {' '}
-          <Link to="/admin/scripts" className="font-semibold text-amber-600 hover:underline">
-            Assign Finance to Projects
-          </Link>
-          {' '}
-          in Script Runner to map unassigned docs (uncertain → General).
-          Reparse OCR if amounts are missing.
-        </div>
-      )}
+      {canRunFinanceScripts && <FinanceAssignProjectsBanner />}
 
       {/* Documents Table */}
       <div className="min-w-0">
         {tableBreadcrumb}
         {folderToolbar}
+        {selectedDocIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3 px-1">
+            <span className="text-xs font-bold text-[var(--color-text-secondary)]">
+              {selectedDocIds.length} selected
+            </span>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Delete selected
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setSelectedDocIds([])}>
+              Clear
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           <div className="p-8 flex justify-center"><DataLoading showPhrase /></div>
         ) : docs.length === 0 ? (
@@ -849,6 +908,10 @@ const FinancePage = () => {
             {...FINANCE_TABLE_PROPS}
             columns={financeColumns}
             data={financeTableRows}
+            selectable
+            selectedIds={selectedDocIds}
+            onSelectedIdsChange={setSelectedDocIds}
+            isRowSelectable={(row) => !row.isFolder && !row._isDivider}
             serverSide
             sortState={sortConfig.field ? { key: sortConfig.field, direction: sortConfig.order } : null}
             onSortChange={(state) => {
@@ -1155,7 +1218,8 @@ const FinancePage = () => {
                       <div className={flashOcrFields.has('amount') ? 'flash-highlight rounded-lg' : ''}>
                       <UsdInrAmountFields
                         compact
-                        enabled={!!selectedDoc}
+                        enabled={false}
+                        fetchRateOnDemand
                         inrLabel="Total Amount (INR)"
                         usdLabel="Amount (USD)"
                         inrValue={editForm.metadata?.amount === 0 || editForm.metadata?.amount === '' ? '' : String(editForm.metadata?.amount ?? '')}

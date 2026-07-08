@@ -63,7 +63,7 @@ exports.updateMember = async (req, res) => {
     const member = await ArtistMembership.findOneAndUpdate(
       { _id: req.params.membershipId, artistId: req.params.id, status: { $ne: 'revoked' } },
       { $set: update },
-      { new: true },
+      { returnDocument: 'after' },
     ).populate('userId', 'name email profileImage');
 
     if (!member) return res.status(404).json({ message: 'Membership not found' });

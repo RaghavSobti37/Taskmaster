@@ -182,7 +182,7 @@ const CommandPalette = () => {
   }, [user]);
 
   const { data: searchData, isFetching: searchLoading } = useUnifiedSearch(search, {
-    enabled: isOpen && !!user,
+    enabled: false,
   });
 
   const badgeFor = (path) => {
@@ -255,13 +255,13 @@ const CommandPalette = () => {
     if (trimmed) {
       const filteredQuick = q ? quickActions.filter((a) => matchesQuery(a, q)) : quickActions;
       const filteredNav = q ? navItems.filter((a) => matchesQuery(a, q)) : navItems;
+      const filteredAdmin = q ? adminConsoleActions.filter((a) => matchesQuery(a, q)) : adminConsoleActions;
       const items = [];
       if (specialAction) items.push(specialAction);
-      if (trimmed.length >= 2) items.push(...searchResults);
-      items.push(...filteredQuick, ...filteredNav);
+      items.push(...filteredQuick, ...filteredAdmin, ...filteredNav);
       const deduped = dedupeItems(items);
       return deduped.length
-        ? [{ id: 'results', title: trimmed.length >= 2 ? 'Results' : 'Matching commands', items: deduped }]
+        ? [{ id: 'results', title: 'Pages & actions', items: deduped }]
         : [];
     }
 

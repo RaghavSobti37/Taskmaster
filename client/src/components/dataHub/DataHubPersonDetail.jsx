@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { Badge, Card, FullScreenWorkspace, Spinner } from '../ui';
-import { useDataHubPerson, useDataHubPersonSection } from '../../hooks/useTaskmasterQueries';
+import { useDataHubPersonFull } from '../../hooks/queries/dataHub';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
 import ArtistPathAnswerSections from '../artistPath/ArtistPathAnswerSections';
 import { displayStageBadge } from '../../utils/artistPathDisplay';
@@ -35,18 +35,24 @@ const INLET_COLORS = {
   havells_attended_dumka: 'info',
 };
 
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'crm', label: 'CRM' },
-  { id: 'exly', label: 'Exly' },
-  { id: 'outsourced', label: 'Outsourced' },
-  { id: 'artist_path', label: 'Artist Path' },
-  { id: 'newsletter', label: 'Newsletter' },
-  { id: 'booked', label: 'Booked Calls' },
-  { id: 'enquiries', label: 'Enquiries' },
-  { id: 'mail', label: 'Mail' },
-  { id: 'timeline', label: 'Timeline' },
-];
+const TABS = [];
+
+function PersonSection({ id, title, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section id={id} className="scroll-mt-4 border border-[var(--color-bg-border)] rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-secondary)]/60 text-left"
+      >
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">{title}</h3>
+        <span className="text-[10px] text-[var(--color-text-muted)]">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="p-4">{children}</div>}
+    </section>
+  );
+}
 
 function formatDate(d) {
   if (!d) return '—';
@@ -210,30 +216,10 @@ function QuickStatRow({ label, value, highlight }) {
 }
 
 export default function DataHubPersonDetail({ contactId, onClose }) {
-  const [tab, setTab] = useState('overview');
-  const { data: base, isLoading: baseLoading } = useDataHubPerson(contactId);
-  const { data: sectionData, isLoading: sectionLoading } = useDataHubPersonSection(contactId, tab);
+  const { data: person, isLoading: loading } = useDataHubPersonFull(contactId);
 
-  const person = useMemo(() => {
-    if (!base) return null;
-    return {
-      contact: base.contact,
-      overview: { ...base.overview, ...(sectionData?.overview || {}) },
-      crm: sectionData?.crm,
-      exly: sectionData?.exly,
-      outsourced: sectionData?.outsourced || sectionData?.tsc,
-      newsletter: sectionData?.newsletter,
-      bookedCalls: sectionData?.bookedCalls,
-      enquiries: sectionData?.enquiries,
-      mail: sectionData?.mail,
-      artistPath: sectionData?.artistPath,
-      timeline: sectionData?.timeline,
-    };
-  }, [base, sectionData]);
-
-  const overview = person?.overview || base?.overview;
-  const contact = person?.contact || base?.contact;
-  const loading = baseLoading || sectionLoading;
+  const overview = person?.overview;
+  const contact = person?.contact;
 
   if (!contactId) return null;
 
@@ -290,27 +276,8 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
       )}
 
       {!loading && person && (
-        <>
-          <div className="flex gap-1 flex-wrap border-b border-[var(--color-bg-border)] mb-4 pb-2">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                aria-selected={tab === t.id}
-                role="tab"
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
-                  tab === t.id
-                    ? 'bg-[var(--color-action-primary)] text-white'
-                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {tab === 'overview' && (
+        <div className="space-y-4">
+          <PersonSection id="overview" title="Overview">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="p-4">
                 <h4 className="text-[10px] font-black uppercase mb-3">Data Inlets</h4>
@@ -349,9 +316,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 </div>
               </Card>
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'crm' && (
+          <PersonSection id="crm" title="CRM">
             <div className="space-y-4">
               {(person.crm?.leads || []).map((lead) => (
                 <Card key={lead._id} className="p-4 space-y-2">
@@ -393,9 +360,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               )}
               {!person.crm?.leads?.length && <p className="text-sm text-[var(--color-text-muted)]">No CRM data</p>}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'exly' && (
+          <PersonSection id="exly" title="Exly">
             <div className="space-y-3">
               {(person.exly?.bookings || []).map((b) => (
                 <Card key={b._id} className="p-4 flex justify-between items-start">
@@ -409,9 +376,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               ))}
               {!person.exly?.bookings?.length && <p className="text-sm text-[var(--color-text-muted)]">No Exly bookings</p>}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'outsourced' && (
+          <PersonSection id="outsourced" title="Outsourced">
             <div className="space-y-3">
               {(person.outsourced?.rows || []).map((row) => (
                 <Card key={row._id} className="p-4 space-y-1">
@@ -426,9 +393,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               ))}
               {!person.outsourced?.rows?.length && <p className="text-sm text-[var(--color-text-muted)]">No outsourced records</p>}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'newsletter' && (
+          <PersonSection id="newsletter" title="Newsletter">
             <div className="space-y-3">
               {(person.newsletter?.rows || []).map((row) => (
                 <Card key={row._id} className="p-4 space-y-1">
@@ -439,9 +406,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               ))}
               {!person.newsletter?.rows?.length && <p className="text-sm text-[var(--color-text-muted)]">No newsletter subscriptions</p>}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'artist_path' && (
+          <PersonSection id="artist_path" title="Artist Path">
             <div className="space-y-4">
               {(person.artistPath?.responses || []).map((resp) => (
                 <Card key={resp._id} className="p-5 sm:p-6 space-y-5">
@@ -458,9 +425,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 <p className="text-sm text-[var(--color-text-muted)]">No Artist Path responses</p>
               )}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'booked' && (
+          <PersonSection id="booked" title="Booked Calls">
             <div className="space-y-3">
               {(person.bookedCalls?.calls || []).map((row) => (
                 <Card key={row._id} className="p-4">
@@ -480,9 +447,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 <p className="text-sm text-[var(--color-text-muted)]">No booked calls</p>
               )}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'enquiries' && (
+          <PersonSection id="enquiries" title="Enquiries">
             <div className="space-y-3">
               {(person.enquiries || []).map((t) => (
                 <Card key={t._id} className="p-4 space-y-2">
@@ -503,9 +470,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               ))}
               {!person.enquiries?.length && <p className="text-sm text-[var(--color-text-muted)]">No enquiries</p>}
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'mail' && (
+          <PersonSection id="mail" title="Mail">
             <div className="space-y-4">
               {(person.mail?.whatsappCampaigns || []).length > 0 && (
                 <div className="space-y-2">
@@ -540,9 +507,9 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 {!person.mail?.events?.length && <p className="text-sm text-[var(--color-text-muted)]">No mail events</p>}
               </div>
             </div>
-          )}
+          </PersonSection>
 
-          {tab === 'timeline' && (
+          <PersonSection id="timeline" title="Timeline">
             <div className="space-y-2">
               {(person.timeline || []).map((evt, i) => (
                 <div key={i} className="flex gap-3 p-3 rounded-lg border border-[var(--color-bg-border)]">
@@ -562,8 +529,8 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               ))}
               {!person.timeline?.length && <p className="text-sm text-[var(--color-text-muted)]">No timeline events</p>}
             </div>
-          )}
-        </>
+          </PersonSection>
+        </div>
       )}
     </FullScreenWorkspace>
   );

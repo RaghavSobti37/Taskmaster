@@ -33,6 +33,7 @@ const DailyLogHoursChart = ({
   totalEntries = 0,
   onDaySelect,
   selectedDay,
+  hideDayChips = false,
 }) => {
   const chartData = useMemo(
     () => byDay.map((d) => ({
@@ -68,7 +69,7 @@ const DailyLogHoursChart = ({
         title="Logs per Day"
       />
     </div>
-    {onDaySelect && chartData.length > 0 && (
+    {onDaySelect && chartData.length > 0 && !hideDayChips && (
       <div className="flex flex-wrap gap-1.5">
         {chartData.map((d) => (
           <button

@@ -48,6 +48,13 @@ export const useDataHubPerson = (id) => useQuery({
   staleTime: 1000 * 60 * 2,
 });
 
+export const useDataHubPersonFull = (id) => useQuery({
+  queryKey: ['dataHub', 'person', id, 'full'],
+  queryFn: async () => (await axios.get(`/api/data-hub/people/${id}`, { params: { full: 'true' } })).data,
+  enabled: !!id,
+  staleTime: 1000 * 60 * 2,
+});
+
 export const useDataHubPersonSection = (id, section) => useQuery({
   queryKey: ['dataHub', 'person', id, 'section', section],
   queryFn: async () => (await axios.get(`/api/data-hub/people/${id}`, { params: { section } })).data,

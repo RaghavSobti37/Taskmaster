@@ -24,6 +24,7 @@ const {
   crmInletProcessor,
   exlyInletProcessor,
   bookedCallsInletProcessor,
+  artistPathInletProcessor,
 } = require('./processors');
 
 async function findHubContact(contactId) {
@@ -139,10 +140,11 @@ async function getPerson360(contactId) {
   const { outsourced, bookedCalls: bookedCallRecords, newsletter } = fragmented;
   const filteredEnquiries = filterEnquiriesForContact(enquiryTasks, contact);
 
-  const [crmSection, exlySection, bookedSection, whatsappOutcomes] = await Promise.all([
+  const [crmSection, exlySection, bookedSection, artistPathSection, whatsappOutcomes] = await Promise.all([
     crmInletProcessor.loadCrmSection(match),
     exlyInletProcessor.loadExlySection(match),
     bookedCallsInletProcessor.loadBookedCallsSection(match),
+    artistPathInletProcessor.loadArtistPathSection(contact),
     listOutcomesForPerson({
       personIndexId: contact._id || contact.personId,
       phone: contact.phone,
@@ -185,6 +187,7 @@ async function getPerson360(contactId) {
     bookedCalls: bookedSection.bookedCalls,
     enquiries: filteredEnquiries.map((t) => ({ ...t, parsed: parseEnquiryDescription(t.description) })),
     mail: { events: mailEvents, whatsappCampaigns: whatsappOutcomes },
+    artistPath: artistPathSection.artistPath,
     timeline,
   };
 }

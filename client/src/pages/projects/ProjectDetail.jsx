@@ -378,14 +378,8 @@ const ProjectDetail = () => {
         />
       </PageHeader>
 
-      <ProjectGoalsStrip
-        projectId={id}
-        project={project}
-        onEditGoals={() => {
-          setGoalsEditRequested(true);
-          setActiveTab('goals');
-        }}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4 items-start">
+        <div className="min-w-0">
 
       <NexusModal
         isOpen={showCloseWarning}
@@ -564,6 +558,20 @@ const ProjectDetail = () => {
               )}
             </motion.div>
           </AnimatePresence>
+        </div>
+        </div>
+
+        <aside className="hidden xl:block sticky top-4">
+          <ProjectGoalsStrip
+            projectId={id}
+            project={project}
+            deferLoad={tasksLoading}
+            onEditGoals={() => {
+              setGoalsEditRequested(true);
+              setActiveTab('goals');
+            }}
+          />
+        </aside>
       </div>
     </PageContainer>
   );

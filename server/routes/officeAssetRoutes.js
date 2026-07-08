@@ -81,7 +81,7 @@ router.put('/:id', officeAssetsPage, async (req, res) => {
     const updated = await OfficeAsset.findByIdAndUpdate(
       req.params.id,
       { $set: updates, $push: { history: newHistory } },
-      { new: true }
+      { returnDocument: 'after' }
     ).populate('updatedBy', 'name email avatar');
 
     await bustOfficeAssetsCache(req.tenantId || req.user?.activeTenantId || req.user?.tenantId);

@@ -1,4 +1,4 @@
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Input } from '../ui';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
@@ -48,12 +48,15 @@ export default function UsdInrAmountFields({
   className = '',
   layout = 'grid',
   showRateInfo = true,
+  fetchRateOnDemand = false,
   inrInputProps = {},
   usdInputProps = {},
   rateHintClassName = 'mt-1 text-[10px] text-[var(--color-text-muted)]',
 }) {
   const sublineId = useId();
-  const { data: rateData, isLoading: rateLoading, isError: rateError } = useUsdInrRate({ enabled });
+  const [rateRequested, setRateRequested] = useState(false);
+  const rateEnabled = fetchRateOnDemand ? rateRequested : enabled;
+  const { data: rateData, isLoading: rateLoading, isError: rateError } = useUsdInrRate({ enabled: rateEnabled });
   const rate = rateData?.rate;
   const hasRate = Number.isFinite(rate) && rate > 0;
   const rateWarning = isRateWarning(rateData);
@@ -80,7 +83,17 @@ export default function UsdInrAmountFields({
     }
   };
 
-  const conversionSubline = showRateInfo && (
+  const conversionSubline = showRateInfo && fetchRateOnDemand && !rateRequested && (
+    <button
+      type="button"
+      onClick={() => setRateRequested(true)}
+      className={`${rateHintClassName} text-left text-[var(--color-action-primary)] hover:underline`}
+    >
+      Show USD conversion
+    </button>
+  );
+
+  const conversionDetails = showRateInfo && (!fetchRateOnDemand || rateRequested) && (
     <>
       {rateLoading && (
         <p className={`${rateHintClassName} flex items-center gap-1`} id={sublineId}>
@@ -158,6 +171,7 @@ export default function UsdInrAmountFields({
         )}
       </div>
       {conversionSubline}
+      {conversionDetails}
     </div>
   );
 

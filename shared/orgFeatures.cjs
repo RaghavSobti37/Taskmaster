@@ -58,7 +58,7 @@ const ORG_FEATURE_CATALOG = {
   dataHub: {
     label: 'Data Hub',
     description: 'Data hub admin surface and records.',
-    defaultOnCreate: false,
+    defaultOnCreate: true,
     gatedPaths: ['/admin', '/data-hub'],
   },
   enterpriseApi: {

@@ -78,7 +78,7 @@ async function upsertSocialProfile({
         ...(connectionId ? { connectionId } : {}),
       },
     },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   ).lean();
 }
 

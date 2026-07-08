@@ -7,16 +7,22 @@ const FIELD_LABEL_CLASS =
 const OPTION_BASE =
   'w-full min-h-[44px] px-3 py-2.5 rounded-[var(--radius-atomic)] border text-left text-xs font-bold transition-colors';
 
-function optionClass(selected) {
-  return `${OPTION_BASE} ${
+const OPTION_BASE_COMPACT =
+  'w-full min-h-[34px] px-2 py-1.5 rounded-[var(--radius-atomic)] border text-left text-[11px] font-semibold transition-colors';
+
+function optionClass(selected, compact = false) {
+  const base = compact ? OPTION_BASE_COMPACT : OPTION_BASE;
+  return `${base} ${
     selected
       ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]'
       : 'border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)]/40'
   }`;
 }
 
-function chipClass(selected) {
-  return `min-h-[44px] px-3 py-2 rounded-full border text-[10px] font-bold uppercase tracking-wide transition-colors ${
+function chipClass(selected, compact = false) {
+  const minH = compact ? 'min-h-[34px]' : 'min-h-[44px]';
+  const text = compact ? 'text-[9px]' : 'text-[10px]';
+  return `${minH} px-3 py-2 rounded-full border ${text} font-bold uppercase tracking-wide transition-colors ${
     selected
       ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/15 text-[var(--color-action-primary)]'
       : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -29,6 +35,7 @@ function GroupedSearchableRadioList({
   value,
   onChange,
   placeholder = 'Search folders…',
+  compact = false,
 }) {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -67,7 +74,7 @@ function GroupedSearchableRadioList({
             key={String(opt.value)}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={optionClass(value === opt.value)}
+            className={optionClass(value === opt.value, compact)}
             aria-pressed={value === opt.value}
           >
             {opt.label}
@@ -84,7 +91,7 @@ function GroupedSearchableRadioList({
               key={String(opt.value)}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={optionClass(value === opt.value)}
+              className={optionClass(value === opt.value, compact)}
               aria-pressed={value === opt.value}
             >
               {opt.label}
@@ -98,7 +105,7 @@ function GroupedSearchableRadioList({
     </div>
   );
 }
-function SearchableRadioList({ options = [], value, onChange, placeholder = 'Search options…' }) {
+function SearchableRadioList({ options = [], value, onChange, placeholder = 'Search options…', compact = false }) {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -126,7 +133,7 @@ function SearchableRadioList({ options = [], value, onChange, placeholder = 'Sea
             key={String(opt.value)}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={optionClass(value === opt.value)}
+            className={optionClass(value === opt.value, compact)}
             aria-pressed={value === opt.value}
           >
             {opt.label}
@@ -140,7 +147,7 @@ function SearchableRadioList({ options = [], value, onChange, placeholder = 'Sea
   );
 }
 
-function RadioList({ options = [], value, onChange }) {
+function RadioList({ options = [], value, onChange, compact = false }) {
   return (
     <div className="space-y-1.5" role="radiogroup">
       {options.map((opt) => (
@@ -269,7 +276,18 @@ function ToggleField({ value, onChange, label }) {
 export function FilterField({ field }) {
   if (!field || field.hidden) return null;
 
-  const { id, label, type = 'radio', options = [], value, onChange, searchable, placeholder } = field;
+  const { id, label, type = 'radio', options = [], value, onChange, searchable, placeholder, compact = false, disabled = false, disabledHint } = field;
+
+  if (disabled) {
+    return (
+      <div className="w-full min-w-0 space-y-1.5" data-filter-field={id}>
+        {label && <span className={FIELD_LABEL_CLASS}>{label}</span>}
+        <p className="text-[11px] text-[var(--color-text-muted)] italic px-1">
+          {disabledHint || 'Select the field above first'}
+        </p>
+      </div>
+    );
+  }
 
   let control;
   switch (type) {
@@ -283,6 +301,7 @@ export function FilterField({ field }) {
           resetOptions={field.resetOptions || []}
           value={value}
           onChange={onChange}
+          compact={compact}
           placeholder={placeholder || `Search ${label?.toLowerCase() || 'folders'}…`}
         />
       );
@@ -294,10 +313,11 @@ export function FilterField({ field }) {
           options={options}
           value={value}
           onChange={onChange}
+          compact={compact}
           placeholder={placeholder || `Search ${label?.toLowerCase() || 'options'}…`}
         />
       ) : (
-        <RadioList options={options} value={value} onChange={onChange} />
+        <RadioList options={options} value={value} onChange={onChange} compact={compact} />
       );
       break;
     case 'segmented':
@@ -326,11 +346,17 @@ export function FilterField({ field }) {
 }
 
 /** Stack of labeled filter fields for SelectionFilterPanel / MobileFilterSheet. */
-export default function FilterFields({ fields = [] }) {
+export default function FilterFields({ fields = [], columns = 1, compact = false }) {
+  const layoutClass = columns >= 3
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+    : columns === 2
+      ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
+      : 'space-y-5';
+
   return (
-    <div className="space-y-5">
+    <div className={layoutClass}>
       {fields.map((field) => (
-        <FilterField key={field.id} field={field} />
+        <FilterField key={field.id} field={{ ...field, compact: field.compact ?? compact }} />
       ))}
     </div>
   );

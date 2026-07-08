@@ -23,7 +23,7 @@ async function heartbeatLeadLock(leadId, userId) {
       lockedAt: { $gte: lockDuration },
     },
     { $set: { lockedAt: new Date() } },
-    { new: true },
+    { returnDocument: 'after' },
   ).select('lockedBy lockedAt');
   if (!lead) {
     return { error: 'Lock not held or expired', status: 409 };

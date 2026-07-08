@@ -83,7 +83,7 @@ exports.upsertProjectKra = async (req, res) => {
         moved: String(moved),
         assignedBy: req.user._id,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     )
       .populate('userId', 'name email avatar')
       .populate('assignedBy', 'name');

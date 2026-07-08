@@ -459,6 +459,10 @@ export const DataTable = ({
   tableMaxHeight: _tableMaxHeight,
   virtualize = false,
   density = 'default',
+  selectable = false,
+  selectedIds = [],
+  onSelectedIdsChange,
+  isRowSelectable = () => true,
 }) => {
   const tableRows = useMemo(() => coerceTableRows(data), [data]);
 
@@ -551,6 +555,35 @@ export const DataTable = ({
   const paginatedData = paginated && !serverSide ? tableData.slice(startIndex, endIndex) : tableData;
   const showEmpty = !isLoading && paginatedData.length === 0;
 
+  const selectedIdSet = useMemo(() => new Set((selectedIds || []).map(String)), [selectedIds]);
+  const selectablePageRows = useMemo(
+    () => paginatedData.filter((row) => isRowSelectable(row) && getRowId?.(row)),
+    [paginatedData, isRowSelectable, getRowId],
+  );
+  const allPageSelected = selectablePageRows.length > 0
+    && selectablePageRows.every((row) => selectedIdSet.has(String(getRowId(row))));
+  const somePageSelected = selectablePageRows.some((row) => selectedIdSet.has(String(getRowId(row))));
+
+  const toggleRowSelection = (rowId, checked) => {
+    if (!onSelectedIdsChange || rowId == null) return;
+    const id = String(rowId);
+    const next = new Set(selectedIdSet);
+    if (checked) next.add(id);
+    else next.delete(id);
+    onSelectedIdsChange([...next]);
+  };
+
+  const togglePageSelection = (checked) => {
+    if (!onSelectedIdsChange) return;
+    const next = new Set(selectedIdSet);
+    selectablePageRows.forEach((row) => {
+      const id = String(getRowId(row));
+      if (checked) next.add(id);
+      else next.delete(id);
+    });
+    onSelectedIdsChange([...next]);
+  };
+
   const parentRef = useRef();
 
   const useRowVirtualizer = virtualize && paginatedData.length > 0;
@@ -580,6 +613,20 @@ export const DataTable = ({
         >
           <thead className="border-b border-[var(--color-bg-border)]">
             <tr>
+              {selectable && (
+                <th className={`${thCellPad} w-10`}>
+                  <input
+                    type="checkbox"
+                    className="rounded border-[var(--color-bg-border)]"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allPageSelected && somePageSelected;
+                    }}
+                    onChange={(e) => togglePageSelection(e.target.checked)}
+                    aria-label="Select all on page"
+                  />
+                </th>
+              )}
               {columns.map((col, i) => {
                 const sortKey = col.sortKey || col.key;
                 const sortable = Boolean(sortKey && col.sortable !== false);
@@ -623,13 +670,13 @@ export const DataTable = ({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="p-0">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="p-0">
                   <TableSkeleton rows={6} className="border-0 rounded-none" />
                 </td>
               </tr>
             ) : showEmpty ? (
               <tr>
-                <td colSpan={columns.length} className="p-0">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="p-0">
                   <div className="py-12 px-4 text-center">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]" aria-hidden>
                       <span className="text-lg font-bold">∅</span>
@@ -661,6 +708,19 @@ export const DataTable = ({
                   className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
                   style={{ height: `${virtualRow.size}px` }}
                 >
+                  {selectable && (
+                    <td className={`${tdCellPad} w-10`} onClick={(e) => e.stopPropagation()}>
+                      {isRowSelectable(row) && rowId != null ? (
+                        <input
+                          type="checkbox"
+                          className="rounded border-[var(--color-bg-border)]"
+                          checked={selectedIdSet.has(String(rowId))}
+                          onChange={(e) => toggleRowSelection(rowId, e.target.checked)}
+                          aria-label="Select row"
+                        />
+                      ) : null}
+                    </td>
+                  )}
                   {columns.map((col, j) => {
                     const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
                     return (
@@ -692,6 +752,19 @@ export const DataTable = ({
                     }}
                     className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
                   >
+                    {selectable && (
+                      <td className={`${tdCellPad} w-10`} onClick={(e) => e.stopPropagation()}>
+                        {isRowSelectable(row) && rowId != null ? (
+                          <input
+                            type="checkbox"
+                            className="rounded border-[var(--color-bg-border)]"
+                            checked={selectedIdSet.has(String(rowId))}
+                            onChange={(e) => toggleRowSelection(rowId, e.target.checked)}
+                            aria-label="Select row"
+                          />
+                        ) : null}
+                      </td>
+                    )}
                     {columns.map((col, j) => {
                       const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
                       return (

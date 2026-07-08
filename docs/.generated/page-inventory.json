@@ -237,10 +237,11 @@
     "routes": [
       "/admin/project-analytics"
     ],
-    "lines": 446,
+    "lines": 503,
     "defaultExport": "AdminProjectAnalyticsPage",
     "namedExports": [],
     "hooks": [
+      "useCallback",
       "useDeferredQueryEnabled",
       "useEffect",
       "useMemo",
@@ -424,7 +425,7 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 715,
+    "lines": 750,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
@@ -1438,7 +1439,7 @@
     "routes": [
       "(tab: leads)"
     ],
-    "lines": 1311,
+    "lines": 1353,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1467,6 +1468,7 @@
     ],
     "apis": [
       "/api/crm/leads/${highlightId}",
+      "/api/crm/leads/${id}",
       "/api/crm/leads/${selectedLead._id}",
       "/api/crm/leads/${selectedLead._id}/audit",
       "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1621,7 +1623,7 @@
     "routes": [
       "(tab: finance)"
     ],
-    "lines": 1314,
+    "lines": 1378,
     "defaultExport": "FinancePage",
     "namedExports": [],
     "hooks": [
@@ -1653,6 +1655,7 @@
       "/api/projects"
     ],
     "components": [
+      "FinanceAssignProjectsBanner",
       "FinanceDocumentPreview",
       "NeedsAttentionAccordion",
       "UploadDocumentModal",
@@ -1664,7 +1667,7 @@
     "routes": [
       "/admin/console"
     ],
-    "lines": 344,
+    "lines": 347,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2387,7 +2390,7 @@
     "routes": [
       "/projects/:id"
     ],
-    "lines": 576,
+    "lines": 584,
     "defaultExport": "ProjectDetail",
     "namedExports": [],
     "hooks": [

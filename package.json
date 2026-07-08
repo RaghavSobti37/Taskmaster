@@ -178,7 +178,7 @@
     "@opentelemetry/host-metrics": "^0.38.1"
   },
   "dependencies": {
-    "mongoose": "^9.7.3",
+    "mongoose": "^9.7.4",
     "node-fetch": "^3.3.2"
   }
 }

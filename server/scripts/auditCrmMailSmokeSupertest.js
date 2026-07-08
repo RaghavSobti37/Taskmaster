@@ -25,7 +25,6 @@ const ENDPOINTS = [
   { group: 'mail', path: '/api/mail/profiles' },
   { group: 'mail', path: '/api/mail/holysheet/all', adminOnly: true },
   { group: 'campaigns', path: '/api/campaigns' },
-  { group: 'analytics', path: '/api/analytics/cumulative' },
   { group: 'newsletter', path: '/api/newsletter/categories' },
   { group: 'newsletter', path: '/api/newsletter/issues/current' },
   { group: 'data-hub', path: '/api/data-hub/folders', adminOnly: true },

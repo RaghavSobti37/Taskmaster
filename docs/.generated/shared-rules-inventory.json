@@ -51,7 +51,10 @@
       "file": "shared/emailStreams.cjs",
       "exports": [
         "DEFAULT_EMAIL_STREAMS",
-        "ROOT_DOMAIN"
+        "ROOT_DOMAIN",
+        "domainForSlug",
+        "listEmailStreamsForApi",
+        "normalizeEmailStream"
       ]
     },
     {

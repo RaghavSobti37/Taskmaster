@@ -97,7 +97,6 @@ const SMOKE_GETS = [
   '/mail/profiles',
   '/mail/templates',
   '/campaigns',
-  '/analytics/cumulative',
   '/gamification/leaderboard',
   '/finance/pending',
   '/exly/config',

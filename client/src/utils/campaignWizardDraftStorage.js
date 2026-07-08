@@ -1,5 +1,12 @@
 const STORAGE_KEY = 'tsc_campaign_wizard_draft_v1';
 
+/** Stable JSON key order for deduping autosave writes. */
+export const campaignWizardDraftFingerprint = (payload) => JSON.stringify({
+  formValues: payload?.formValues ?? {},
+  step: payload?.step ?? 1,
+  audience: payload?.audience ?? null,
+});
+
 export const readCampaignWizardDraft = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

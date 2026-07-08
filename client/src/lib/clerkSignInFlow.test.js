@@ -104,4 +104,19 @@ describe('clerkSignInFlow', () => {
       bootError: null,
     })).toBe('ESTABLISHING');
   });
+
+  it('shows SignIn while CoreKnot session probe is still loading', () => {
+    expect(computeLoginUiState({
+      clerkReady: true,
+      clerkLoaded: true,
+      clerkSignedIn: false,
+      clerkSessionId: null,
+      pathname: '/login',
+      authLoading: true,
+      user: null,
+      sessionReady: false,
+      establishError: null,
+      bootError: null,
+    })).toBe('SHOW_SIGN_IN');
+  });
 });

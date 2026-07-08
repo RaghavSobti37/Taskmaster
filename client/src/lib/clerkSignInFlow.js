@@ -103,7 +103,6 @@ export function computeLoginUiState({
     return 'ESTABLISHING';
   }
 
-  if (authLoading && !clerkSignedIn) return 'BOOT_LOADING';
-
+  // Session probe (`authLoading`) must not hide SignIn — cold API would flash BootScreen past smoke timeouts.
   return 'SHOW_SIGN_IN';
 }

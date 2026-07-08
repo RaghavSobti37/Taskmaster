@@ -6,6 +6,27 @@ export const CROP_ASPECT_PRESETS = [
   { id: '1:1', label: '1:1', ratio: 1 },
 ];
 
+export const CROP_ZOOM_MIN = 0.35;
+export const CROP_ZOOM_MAX = 3;
+export const CROP_FREE_MIN_PX = 72;
+
+export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+/** Initial free crop box — react-easy-crop needs explicit cropSize when aspect is free */
+export const buildInitialFreeCropSize = (containerWidth, containerHeight) => {
+  const width = Math.round(containerWidth * 0.92);
+  const height = Math.round(containerHeight * 0.92);
+  return {
+    width: clamp(width, CROP_FREE_MIN_PX, containerWidth),
+    height: clamp(height, CROP_FREE_MIN_PX, containerHeight),
+  };
+};
+
+export const clampFreeCropSize = (size, containerWidth, containerHeight) => ({
+  width: clamp(Math.round(size?.width || 0), CROP_FREE_MIN_PX, containerWidth),
+  height: clamp(Math.round(size?.height || 0), CROP_FREE_MIN_PX, containerHeight),
+});
+
 export const resolveCropMimeType = (sourceType) => (
   String(sourceType || '').toLowerCase().includes('png') ? 'image/png' : 'image/jpeg'
 );

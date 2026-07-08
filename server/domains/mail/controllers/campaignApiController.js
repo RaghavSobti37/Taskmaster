@@ -15,6 +15,7 @@ const { normalizeOutboundEmailHtml } = require('../../../utils/normalizeOutbound
 const { dispatchCampaignJobs, stopCampaign } = require('../../../services/queueService');
 const { computeRecipientStats, aggregateRecipientStats } = require('../../../utils/campaignStats');
 const { resolveCampaignByParam } = require('../campaignFacade');
+const { sendJson } = require('../../../utils/httpRespond');
 
 /** Any authenticated user with emails page access can view and manage all org campaigns. */
 const assertCampaignAccess = (campaign, user) => Boolean(campaign && user);
@@ -402,14 +403,16 @@ exports.create = async (req, res) => {
       dispatchResult = await dispatchCampaignJobs(campaign._id);
     }
 
-    res.status(201).json({
+    if (req.timedOut || res.headersSent) return;
+    sendJson(res, 201, {
       ...slimCampaignForResponse(campaign),
       skippedInvalidCount,
       dispatch: dispatchResult,
     });
   } catch (err) {
     console.error('Create campaign error:', err);
-    res.status(500).json({ error: err.message });
+    if (req.timedOut || res.headersSent) return;
+    sendJson(res, 500, { error: err.message });
   }
 };
 
@@ -428,9 +431,11 @@ exports.dispatch = async (req, res) => {
       ).setOptions(bypassOptions('CAMPAIGN_DISPATCH'));
     }
     const result = await dispatchCampaignJobs(campaign._id);
-    res.json(result);
+    if (req.timedOut || res.headersSent) return;
+    sendJson(res, 200, result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (req.timedOut || res.headersSent) return;
+    sendJson(res, 500, { error: err.message });
   }
 };
 

@@ -236,6 +236,9 @@ const runCampaignDispatchLoop = async (campaignId) => {
     }
 
     await runWithWorkerTenant(tenantId, async () => {
+      // ponytail: validate off the HTTP path — full $unwind on 100k rows was causing 10–30s + timeout 503
+      await markInvalidPendingRecipients(Model, campaign._id);
+
       let jobOffset = 0;
       let hasMore = true;
 
@@ -354,9 +357,12 @@ const dispatchCampaignJobs = async (campaignId) => {
     return { success: false, queuedCount: 0, message: 'Campaign is a draft — dispatch explicitly to send' };
   }
 
-  await markInvalidPendingRecipients(Model, campaign._id);
-
-  const pendingCount = await countPendingRecipientsForModel(Model, campaign._id);
+  // Prefer recipientCount for HTTP latency — $unwind count on 100k+ rows can exceed request timeout.
+  // Background loop still validates emails and only enqueues Pending/Queued chunks.
+  let pendingCount = Number(campaign.recipientCount) || 0;
+  if (pendingCount <= 0) {
+    pendingCount = await countPendingRecipientsForModel(Model, campaign._id);
+  }
   if (pendingCount === 0) {
     return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
   }

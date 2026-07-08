@@ -56,6 +56,10 @@ const errorHandler = (err, req, res, next) => {
     logger.warn('errorMiddleware', message, logMeta);
   }
 
+  if (res.headersSent || res.writableEnded) {
+    return;
+  }
+
   res.status(statusCode).json({
     success: false,
     error: message,

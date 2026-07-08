@@ -15,6 +15,7 @@ const {
   getSyncState: fetchSyncState,
 } = require('../domains/data-hub/syncService');
 const { repairDuplicateInlets } = require('../domains/data-hub/repairService');
+const { deletePeopleByIds } = require('../domains/data-hub/deletePeopleService');
 const PersonHubBuilder = require('./PersonHubBuilder');
 
 class DataHubService {
@@ -48,6 +49,12 @@ class DataHubService {
 
   async getOverlapMatrix() {
     return getOverlapMatrix();
+  }
+
+  async deletePeople(ids) {
+    const result = await deletePeopleByIds(ids);
+    this.clearFolderCache();
+    return result;
   }
 
   async getSyncState() {

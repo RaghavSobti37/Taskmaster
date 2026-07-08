@@ -157,7 +157,7 @@ function RadioList({ options = [], value, onChange, compact = false }) {
           role="radio"
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
-          className={optionClass(value === opt.value)}
+          className={optionClass(value === opt.value, compact)}
         >
           {opt.label}
         </button>
@@ -347,17 +347,39 @@ export function FilterField({ field }) {
 
 /** Stack of labeled filter fields for SelectionFilterPanel / MobileFilterSheet. */
 export default function FilterFields({ fields = [], columns = 1, compact = false }) {
+  const visibleFields = fields.filter((field) => field && !field.hidden);
+  const renderField = (field) => (
+    <FilterField key={field.id} field={{ ...field, compact: field.compact ?? compact }} />
+  );
+
+  const hasGroupedPrimary = visibleFields.some((field) => field.type === 'groupedRadio');
+  if (hasGroupedPrimary) {
+    const primaryFields = visibleFields.filter((field) => field.type === 'groupedRadio');
+    const secondaryFields = visibleFields.filter((field) => field.type !== 'groupedRadio');
+
+    return (
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="order-2 lg:order-1 flex-1 min-w-0 w-full space-y-4">
+          {primaryFields.map(renderField)}
+        </div>
+        {secondaryFields.length > 0 && (
+          <div className="order-1 lg:order-2 w-full lg:w-[11.5rem] shrink-0 space-y-3">
+            {secondaryFields.map(renderField)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const layoutClass = columns >= 3
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start'
     : columns === 2
-      ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
+      ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 items-start'
       : 'space-y-5';
 
   return (
     <div className={layoutClass}>
-      {fields.map((field) => (
-        <FilterField key={field.id} field={{ ...field, compact: field.compact ?? compact }} />
-      ))}
+      {visibleFields.map(renderField)}
     </div>
   );
 }

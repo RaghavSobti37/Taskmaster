@@ -161,7 +161,7 @@ function RegisterPageView({
         <div className="space-y-1">
           <label
             htmlFor="access-request-message"
-            className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block"
+            className="block tm-section-label"
           >
             Note for admin (optional)
           </label>
@@ -174,7 +174,7 @@ function RegisterPageView({
             placeholder="Team, role, or why you need access"
           />
         </div>
-        <p className="text-xs text-[var(--brand-teal-mid)] text-center leading-relaxed">
+        <p className="tm-auth-hint text-xs text-center leading-relaxed">
           {registerCopy.closedSystemNote}
         </p>
         <Button type="submit" className="w-full" disabled={pending || !form.email.trim()}>

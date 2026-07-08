@@ -9,7 +9,6 @@ const {
   integrationCallbackUri,
   buildOAuthUrl,
 } = require('./oauthService');
-const { planAllowsFeature } = require('../../../../shared/planLimits.cjs');
 const { recordAuditEvent } = require('../../../services/auditEventService');
 const webhookInAdapter = require('../adapters/webhookInAdapter');
 
@@ -29,16 +28,8 @@ async function markIntegrationsOnboardingStep(tenantId) {
   }
 }
 
-function resolvePlanLock(plan, providerConfig) {
-  if (providerConfig.planMin === 'enterprise' && plan !== 'enterprise') {
-    return { locked: true, reason: 'Enterprise plan required' };
-  }
-  if (providerConfig.planMin === 'pro' && !['pro', 'enterprise'].includes(plan)) {
-    return { locked: true, reason: 'Pro plan or higher required' };
-  }
-  if (providerConfig.featureUnlock && !planAllowsFeature(plan, providerConfig.featureUnlock)) {
-    return { locked: true, reason: `${providerConfig.featureUnlock} feature not on your plan` };
-  }
+// ponytail: paywalls removed — plan tiers informational only (see shared/planLimits)
+function resolvePlanLock() {
   return { locked: false, reason: null };
 }
 
@@ -79,39 +70,18 @@ function serializeConnection(doc) {
   };
 }
 
-async function assertPlanForProvider(tenantId, providerConfig) {
-  const tenant = await Tenant.findById(tenantId).select('plan').setOptions({ bypassTenant: true });
-  const plan = tenant?.plan || 'free';
-  if (providerConfig.planMin === 'enterprise' && plan !== 'enterprise') {
-    const err = new Error('This integration requires an enterprise plan');
-    err.status = 402;
-    err.code = 'PLAN_UPGRADE_REQUIRED';
-    throw err;
-  }
-  if (providerConfig.planMin === 'pro' && !['pro', 'enterprise'].includes(plan)) {
-    const err = new Error('This integration requires a pro plan or higher');
-    err.status = 402;
-    err.code = 'PLAN_UPGRADE_REQUIRED';
-    throw err;
-  }
-  if (providerConfig.featureUnlock && !planAllowsFeature(plan, providerConfig.featureUnlock)) {
-    const err = new Error('Feature not unlocked for this organization');
-    err.status = 403;
-    err.code = 'FEATURE_LOCKED';
-    throw err;
-  }
+async function assertPlanForProvider() {
+  // no-op — integrations open on all plans
 }
 
 async function listProvidersWithStatus(tenantId) {
-  const tenant = await Tenant.findById(tenantId).select('plan').setOptions({ bypassTenant: true });
-  const plan = tenant?.plan || 'free';
   const connections = await TenantIntegration.find({ tenantId })
     .setOptions({ bypassTenant: true })
     .lean();
   const byProvider = new Map(connections.map((c) => [c.provider, c]));
   return INTEGRATION_PROVIDERS.map((p) => {
     const conn = byProvider.get(p.id);
-    const planLock = resolvePlanLock(plan, p);
+    const planLock = resolvePlanLock();
     const oauth = resolveServerOAuthReady(p);
     const canConnect = !planLock.locked && oauth.ready;
     let connectBlockReason = null;

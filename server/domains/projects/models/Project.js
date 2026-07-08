@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../../../plugins/tenantPlugin');
+const { auditLogPlugin } = require('../../../plugins/auditLogPlugin');
 const { formatProjectName } = require('../../../utils/formatProjectName');
 
 const applyProjectNameFormat = (doc) => {
@@ -78,5 +79,6 @@ projectSchema.index({ members: 1 });
 projectSchema.index({ workspace: 1 });
 
 projectSchema.plugin(tenantPlugin);
+projectSchema.plugin(auditLogPlugin, { modelName: 'Project' });
 
 module.exports = mongoose.model('Project', projectSchema);

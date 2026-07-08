@@ -3348,6 +3348,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3363,6 +3364,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3381,6 +3383,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3396,6 +3399,42 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
+        "/api/data-hub/rebuild-person-hub",
+        "/api/data-hub/reconcile",
+        "/api/data-hub/sync-status"
+      ],
+      "network": true
+    },
+    "useDataHubBulkDeletePeople": {
+      "files": [
+        {
+          "file": "client/src/hooks/queries/dataHub.js",
+          "endpoints": [
+            "/api/data-hub/analytics",
+            "/api/data-hub/backup",
+            "/api/data-hub/backup/progress",
+            "/api/data-hub/backups",
+            "/api/data-hub/folders",
+            "/api/data-hub/people",
+            "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
+            "/api/data-hub/rebuild-person-hub",
+            "/api/data-hub/reconcile",
+            "/api/data-hub/sync-status"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/data-hub/analytics",
+        "/api/data-hub/backup",
+        "/api/data-hub/backup/progress",
+        "/api/data-hub/backups",
+        "/api/data-hub/folders",
+        "/api/data-hub/people",
+        "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3414,6 +3453,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3429,6 +3469,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3447,6 +3488,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3462,6 +3504,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3480,6 +3523,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3495,6 +3539,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3513,6 +3558,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3528,6 +3574,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3546,6 +3593,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3561,6 +3609,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3579,6 +3628,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3594,6 +3644,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"

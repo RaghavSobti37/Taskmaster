@@ -182,7 +182,7 @@ const CommandPalette = () => {
   }, [user]);
 
   const { data: searchData, isFetching: searchLoading } = useUnifiedSearch(search, {
-    enabled: false,
+    enabled: isOpen,
   });
 
   const badgeFor = (path) => {

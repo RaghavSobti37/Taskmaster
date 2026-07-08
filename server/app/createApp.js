@@ -11,6 +11,7 @@ const { applyRateLimits } = require('./rateLimits');
 const { buildCspDirectives } = require('./csp');
 const perfMiddleware = require('../middleware/perfMiddleware');
 const { qaProbeGate } = require('../middleware/qaProbeGate');
+const { requestTimeoutMiddleware } = require('../middleware/requestTimeout');
 
 const PERF_LOG_PATH = path.join(__dirname, '..', 'performance.log');
 const PERF_LOG_MAX_BYTES = 5 * 1024 * 1024;
@@ -51,6 +52,7 @@ function createApp() {
   const { clerkProxyRateLimit } = require('../middleware/rateLimits');
   app.use('/__clerk', clerkProxyRateLimit, require('../middleware/clerkFapiProxy'));
   app.use(perfMiddleware);
+  app.use(requestTimeoutMiddleware(Number(config.REQUEST_TIMEOUT_MS || 10_000)));
   app.use(helmet({
     contentSecurityPolicy: {
       directives: buildCspDirectives(),

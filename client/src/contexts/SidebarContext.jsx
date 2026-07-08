@@ -4,6 +4,7 @@ import { resolveSidebarDefaultOpen } from '../utils/activeFilterChips';
 const SidebarContext = createContext();
 
 const SIDEBAR_STORAGE_KEY = 'coreknot-sidebar-open';
+const DENSITY_STORAGE_KEY = 'coreknot-ui-density';
 
 export const SIDEBAR_WIDTH_OPEN = 216;
 export const SIDEBAR_WIDTH_COLLAPSED = 40;
@@ -29,6 +30,33 @@ export const SidebarProvider = ({ children }) => {
       /* ignore */
     }
   }, [isOpen]);
+
+  const [density, setDensity] = useState(() => {
+    try {
+      return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'comfortable';
+    } catch {
+      return 'comfortable';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DENSITY_STORAGE_KEY, density);
+    } catch {
+      /* ignore */
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute(
+        'data-density',
+        density === 'compact' ? 'compact' : 'comfortable',
+      );
+    }
+  }, [density]);
+
+  const toggleDensity = () => {
+    setDensity((current) => (current === 'compact' ? 'comfortable' : 'compact'));
+  };
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState('Default');
   const mobileMenuTriggerRef = useRef(null);
@@ -52,6 +80,9 @@ export const SidebarProvider = ({ children }) => {
       mobileMenuTriggerRef,
       activeWorkspace,
       setActiveWorkspace,
+      density,
+      setDensity,
+      toggleDensity,
     }}>
       {children}
     </SidebarContext.Provider>

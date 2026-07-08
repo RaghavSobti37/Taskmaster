@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../../../plugins/tenantPlugin');
+const { auditLogPlugin } = require('../../../plugins/auditLogPlugin');
 
 
 const taskSchema = new mongoose.Schema({
@@ -65,5 +66,6 @@ taskSchema.set('toObject', { virtuals: true });
 taskSchema.set('toJSON', { virtuals: true });
 
 taskSchema.plugin(tenantPlugin);
+taskSchema.plugin(auditLogPlugin, { modelName: 'Task' });
 
 module.exports = mongoose.model('Task', taskSchema);

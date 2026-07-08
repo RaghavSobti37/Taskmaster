@@ -10,6 +10,10 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ### [2026-07-08] v1.0.7 patch - Production-readiness stabilization
 
+#### Billing / paywalls
+- **Connected Apps:** removed plan-upgrade gating on all five providers (`integrationService`, `IntegrationCard`). Plan tiers remain informational only (`shared/planLimits.js`).
+- **Docs:** `CAMPAIGN_DATA_SYNC.md` (AiSensy CSV/webhook + Exly sync); paywall note in `CONNECTED_APPS_AND_INTAKE.md`, `INTEGRATION_HUB.md`.
+
 #### Security and isolation
 - **CRM lead delete hardening:** sales reps can no longer delete leads assigned to other reps; delete now enforces assigned-rep scope atomically.
 - **Fixture-scoped e2e login:** seeded `e2e-*@test.coreknot.local` users can use non-production API-session login without opening the legacy path broadly.

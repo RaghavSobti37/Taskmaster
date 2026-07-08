@@ -673,29 +673,37 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
                   Template images
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {(draft.assets || []).map((asset) => (
                     <div
                       key={asset.url}
-                      className="group relative w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]"
+                      className="group relative w-36 h-36 sm:w-40 sm:h-40 rounded-xl overflow-hidden border border-[var(--color-bg-border)] bg-white dark:bg-zinc-950"
+                      title={asset.name || 'Template image'}
                     >
-                      <img src={asset.url} alt={asset.name || ''} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center gap-1 transition-opacity">
+                      {/* ponytail: contain + white pad so logos stay legible (cover crushed them) */}
+                      <img
+                        src={asset.url}
+                        alt={asset.name || 'Template image'}
+                        className="w-full h-full object-contain p-2"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/55 flex items-center justify-center gap-1.5 transition-opacity">
                         <button
                           type="button"
-                          className="p-1 rounded bg-white/90 text-[var(--color-text-primary)]"
+                          className="p-2 min-w-11 min-h-11 rounded-lg bg-white/95 text-[var(--color-text-primary)] inline-flex items-center justify-center"
                           title="Insert at cursor"
                           onClick={() => insertImageUrl(asset.url)}
                         >
-                          <Plus size={12} />
+                          <Plus size={16} />
                         </button>
                         <button
                           type="button"
-                          className="p-1 rounded bg-white/90 text-[var(--color-text-primary)]"
+                          className="p-2 min-w-11 min-h-11 rounded-lg bg-white/95 text-[var(--color-text-primary)] inline-flex items-center justify-center"
                           title="Copy URL"
                           onClick={() => copyAssetUrl(asset.url)}
                         >
-                          <Copy size={12} />
+                          <Copy size={16} />
                         </button>
                       </div>
                     </div>

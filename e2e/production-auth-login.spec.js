@@ -18,12 +18,12 @@ async function waitForLoginShell(page) {
     /* banner dismissed or absent */
   }
 
-  // ponytail: locator.or — Promise.race rejects when the first waitFor times out
-  const shell = page
-    .getByText(/sign in to coreknot/i)
-    .or(page.locator('[data-clerk-sign-in-shell], .cl-rootBox').first())
-    .or(page.getByRole('heading', { name: /^CoreKnot$/i }));
-  await shell.waitFor({ state: 'visible', timeout: 90_000 });
+  // Clerk title + brand h1 both match broad text — use first() to avoid strict-mode.
+  await page
+    .locator('[data-clerk-sign-in-shell], .cl-rootBox, h1.cl-headerTitle')
+    .or(page.getByRole('heading', { name: /^CoreKnot$/i }))
+    .first()
+    .waitFor({ state: 'visible', timeout: 90_000 });
 }
 
 test.describe('production auth subdomain', () => {

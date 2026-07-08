@@ -98,7 +98,6 @@ const MONGOOSE_POOL_OPTIONS = Object.freeze({
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
   heartbeatFrequencyMS: 10000,
-  maxTimeMS: 10_000,
 });
 
 const getMongooseConnectOptions = (overrides = {}) => ({

@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const dashboardMetricsController = require('../domains/dashboard/controllers/dashboardMetricsController');
 const mailAnalyticsController = require('../domains/mail/controllers/mailAnalyticsController');
 const { protect } = require('../middleware/authMiddleware');
 const { getTenantId } = require('../utils/tenantContext');
@@ -8,8 +7,6 @@ const { comparePeriods } = require('../services/analytics/comparisonEngine');
 const { getSparkline } = require('../services/analytics/sparklineService');
 const logger = require('../utils/logger');
 
-router.get('/cumulative', protect, dashboardMetricsController.getCumulativeMetrics);
-router.get('/location-leads', protect, dashboardMetricsController.getLocationLeads);
 router.get('/geo-campaign', protect, mailAnalyticsController.getGeoCampaignAnalytics);
 
 router.get('/compare', protect, async (req, res) => {

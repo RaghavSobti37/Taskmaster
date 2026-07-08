@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Mail, FileCode, Zap, BarChart2, Newspaper, Link2, KeyRound, Globe,
+  LayoutDashboard, Mail, FileCode, Zap, Newspaper, Link2, KeyRound, Globe,
   UserPlus, Users, Phone, CalendarCheck, Building2, Monitor, Contact, CreditCard,
   CircleDollarSign, Wallet, Megaphone, Music2, FolderArchive,
 } from 'lucide-react';
@@ -37,7 +37,6 @@ export const EMAIL_SUBNAV_ITEMS = [
   { id: 'templates', to: '/emails/templates', label: 'Templates', icon: FileCode, featureKey: EMAIL_HUB_FEATURE_KEY },
   { id: 'profiles', to: '/emails/profiles', label: 'Profiles', icon: Zap, featureKey: EMAIL_HUB_FEATURE_KEY },
   { id: 'streams', to: '/emails/streams', label: 'Streams', icon: Globe, featureKey: EMAIL_HUB_FEATURE_KEY },
-  { id: 'analytics', to: '/emails/analytics', label: 'Analytics', icon: BarChart2, featureKey: EMAIL_HUB_FEATURE_KEY },
   { id: 'newsletter', to: '/emails/newsletter', label: 'Newsletter', icon: Newspaper, featureKey: EMAIL_HUB_FEATURE_KEY },
 ];
 

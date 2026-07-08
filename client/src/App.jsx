@@ -84,7 +84,6 @@ const EmailsCampaignsPage = lazyWithRetry(() => import('./pages/emails/EmailsCam
 const EmailsTemplatesPage = lazyWithRetry(() => import('./pages/emails/EmailsTemplatesPage'));
 const EmailsProfilesPage = lazyWithRetry(() => import('./pages/emails/EmailsProfilesPage'));
 const EmailsStreamsPage = lazyWithRetry(() => import('./pages/emails/EmailsStreamsPage'));
-const EmailsAnalyticsPage = lazyWithRetry(() => import('./pages/emails/EmailsAnalyticsPage'));
 const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterPage'));
 const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
 const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
@@ -440,7 +439,6 @@ function App() {
                     <Route path="emails/templates" element={<EmailsTemplatesPage />} />
                     <Route path="emails/profiles" element={<EmailsProfilesPage />} />
                     <Route path="emails/streams" element={<EmailsStreamsPage />} />
-                    <Route path="emails/analytics" element={<EmailsAnalyticsPage />} />
                     <Route path="emails/newsletter" element={<NewsletterPage />} />
                     <Route path="emails/newsletter/curate" element={<NewsletterCuratePage />} />
                     <Route path="emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />

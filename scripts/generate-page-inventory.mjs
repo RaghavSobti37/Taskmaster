@@ -103,7 +103,6 @@ const ROUTE_MAP = {
   'pages/emails/EmailsCampaignsPage.jsx': ['/emails/campaigns'],
   'pages/emails/EmailsTemplatesPage.jsx': ['/emails/templates'],
   'pages/emails/EmailsProfilesPage.jsx': ['/emails/profiles'],
-  'pages/emails/EmailsAnalyticsPage.jsx': ['/emails/analytics'],
   'pages/emails/EmailsStreamsPage.jsx': ['/emails/streams'],
   'pages/workspace/NewsletterPage.jsx': ['/emails/newsletter'],
   'pages/workspace/NewsletterCuratePage.jsx': ['/emails/newsletter/curate'],

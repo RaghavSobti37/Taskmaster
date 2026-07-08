@@ -69,16 +69,6 @@ export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all'
   });
 };
 
-export const useCumulativeAnalytics = (enabled = true) => {
-  const queryKey = useTenantQueryKey('analytics', 'cumulative');
-  return useQuery({
-    queryKey,
-  queryFn: async () => (await axios.get('/api/analytics/cumulative')).data,
-  enabled,
-  staleTime: 1000 * 60,
-  });
-};
-
 export const useMailProfiles = (enabled = true) => {
   const queryKey = useTenantQueryKey('mail', 'profiles');
   return useQuery({
@@ -86,18 +76,6 @@ export const useMailProfiles = (enabled = true) => {
   queryFn: async () => (await axios.get('/api/mail/profiles')).data,
   enabled,
   staleTime: 1000 * 60 * 10,
-  });
-};
-
-export const useLocationLeads = (location, enabled = false) => {
-  const queryKey = useTenantQueryKey('leads', 'location', location);
-  return useQuery({
-    queryKey,
-  queryFn: async () => {
-    const { data } = await axios.get('/api/analytics/location-leads', { params: { location } });
-    return data?.data ?? data;
-  },
-  enabled: enabled && !!location,
   });
 };
 
@@ -201,7 +179,6 @@ export const useResendFilteredCampaign = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
     },
   });
@@ -214,7 +191,6 @@ export const useDeleteCampaign = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
     },
   });
 };

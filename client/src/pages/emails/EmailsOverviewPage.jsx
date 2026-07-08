@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Play, Mail, Eye, Plus, ArrowRight, FileCode, BarChart2 } from 'lucide-react';
+import { Send, Play, Mail, Eye, Plus, ArrowRight, FileCode } from 'lucide-react';
 import { Button } from '../../components/ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../../components/ui/QueryErrorBanner';
 import MailStatsSummary from '../../components/admin/MailStatsSummary';
@@ -18,11 +18,6 @@ const QUICK_ACTION_ACCENTS = {
     card: 'bg-[var(--color-pastel-blue-bg)] border-[color-mix(in_srgb,var(--color-pastel-blue-text)_28%,transparent)] hover:border-[var(--color-pastel-blue-text)]/55',
     iconWrap: 'bg-[color-mix(in_srgb,var(--color-pastel-blue-text)_16%,transparent)]',
     icon: 'text-[var(--color-pastel-blue-text)]',
-  },
-  apricot: {
-    card: 'bg-[var(--color-pastel-apricot-bg)] border-[color-mix(in_srgb,var(--color-pastel-apricot-text)_28%,transparent)] hover:border-[var(--color-pastel-apricot-text)]/55',
-    iconWrap: 'bg-[color-mix(in_srgb,var(--color-pastel-apricot-text)_16%,transparent)]',
-    icon: 'text-[var(--color-pastel-apricot-text)]',
   },
 };
 
@@ -54,11 +49,10 @@ export default function EmailsOverviewPage() {  const navigate = useNavigate();
 
       <MailStatsSummary stats={stats} campaignCount={campaigns.length} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
           { label: 'New campaign', desc: 'Template → audience → send', to: '/emails/create', icon: Plus, accent: 'mint' },
           { label: 'Templates', desc: 'Draft, preview, approve', to: '/emails/templates', icon: FileCode, accent: 'blue' },
-          { label: 'Analytics', desc: 'Opens, clicks, trends', to: '/emails/analytics', icon: BarChart2, accent: 'apricot' },
         ].map(({ label, desc, to, icon: Icon, accent }) => {
           const styles = QUICK_ACTION_ACCENTS[accent];
           return (

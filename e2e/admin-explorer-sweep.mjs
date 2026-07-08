@@ -74,7 +74,6 @@ const STATIC_ROUTES = [
   '/emails/campaigns',
   '/emails/templates',
   '/emails/profiles',
-  '/emails/analytics',
   '/emails/newsletter',
   '/emails/newsletter/curate',
   '/emails/create',

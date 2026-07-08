@@ -22,9 +22,12 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useConfirm } from '../../../contexts/confirmContext';
 import {
   clearCampaignWizardDraft,
+  campaignWizardDraftFingerprint,
   readCampaignWizardDraft,
   writeCampaignWizardDraft,
 } from '../../../utils/campaignWizardDraftStorage';
+
+const DRAFT_AUTOSAVE_DEBOUNCE_MS = 5000;
 
 export default function CampaignWizardShell() {
   const navigate = useNavigate();
@@ -48,6 +51,7 @@ export default function CampaignWizardShell() {
 
   const { watch, setValue, getValues, setError, clearErrors, reset } = methods;
   const draftRestoredRef = useRef(false);
+  const lastAutosavedFingerprintRef = useRef(null);
   const [draftSavedAt, setDraftSavedAt] = useState(null);
   const mailTemplateId = watch('mailTemplateId');
   const variableMapping = watch('variableMapping');
@@ -76,13 +80,19 @@ export default function CampaignWizardShell() {
   });
 
   const persistLocalDraft = useCallback((options = {}) => {
-    const { silent = true } = options;
-    const ok = writeCampaignWizardDraft({
+    const { silent = true, force = false } = options;
+    const payload = {
       formValues: getValues(),
       step,
       audience: audience.getAudienceSnapshot(),
-    });
+    };
+    const fingerprint = campaignWizardDraftFingerprint(payload);
+    if (!force && fingerprint === lastAutosavedFingerprintRef.current) {
+      return true;
+    }
+    const ok = writeCampaignWizardDraft(payload);
     if (ok) {
+      lastAutosavedFingerprintRef.current = fingerprint;
       setDraftSavedAt(new Date().toISOString());
       if (!silent) toast.success('Draft saved');
     } else if (!silent) {
@@ -101,6 +111,11 @@ export default function CampaignWizardShell() {
     if (draft.audience) audience.restoreFromSnapshot(draft.audience);
     if (draft.step >= 1 && draft.step <= 4) setStep(draft.step);
     if (draft.savedAt) setDraftSavedAt(draft.savedAt);
+    lastAutosavedFingerprintRef.current = campaignWizardDraftFingerprint({
+      formValues: draft.formValues,
+      step: draft.step,
+      audience: draft.audience,
+    });
     toast.success('Restored your saved campaign draft');
   }, [audience, reset, searchParams, toast]);
 
@@ -110,7 +125,7 @@ export default function CampaignWizardShell() {
     draftRestoredRef.current = true;
     const timer = window.setTimeout(() => {
       persistLocalDraft({ silent: true });
-    }, 1200);
+    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [watchedForm, step, audience.previewRecipients.length, persistLocalDraft]);
 
@@ -193,7 +208,7 @@ export default function CampaignWizardShell() {
 
   const handleSaveDraft = async (options = {}) => {
     const { stayOnPage = true, silent = false } = options;
-    persistLocalDraft({ silent: true });
+    persistLocalDraft({ silent: true, force: true });
 
     if (step < 4) {
       if (!silent) toast.success('Draft saved — restores after refresh');

@@ -3,6 +3,7 @@ import {
   readCampaignWizardDraft,
   writeCampaignWizardDraft,
   clearCampaignWizardDraft,
+  campaignWizardDraftFingerprint,
 } from './campaignWizardDraftStorage';
 
 describe('campaignWizardDraftStorage', () => {
@@ -27,5 +28,14 @@ describe('campaignWizardDraftStorage', () => {
     expect(draft.step).toBe(2);
     expect(draft.audience.audienceSource).toBe('csv');
     expect(draft.savedAt).toBeTruthy();
+  });
+
+  it('fingerprint is stable for identical draft payloads', () => {
+    const payload = {
+      formValues: { title: 'A', subject: 'B' },
+      step: 2,
+      audience: { audienceSource: 'crm' },
+    };
+    expect(campaignWizardDraftFingerprint(payload)).toBe(campaignWizardDraftFingerprint({ ...payload }));
   });
 });

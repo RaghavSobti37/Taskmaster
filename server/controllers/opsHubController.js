@@ -146,7 +146,7 @@ exports.submitWeekly = async (req, res) => {
     const doc = await OpsWeeklyCycle.findOneAndUpdate(
       { weekKey, domain },
       { submittedAt: new Date(), submittedBy: req.user._id, notes: notes || '' },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' },
     );
     res.json(doc);
   } catch (err) {

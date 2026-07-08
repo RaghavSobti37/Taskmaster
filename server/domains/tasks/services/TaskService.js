@@ -1042,7 +1042,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
     coreUpdates.description = '';
   }
 
-  const task = await Task.findByIdAndUpdate(taskId, coreUpdates, { new: true, runValidators: true, session });
+  const task = await Task.findByIdAndUpdate(taskId, coreUpdates, { returnDocument: 'after', runValidators: true, session });
 
   if (task && projectMoveRollup) {
     const { previousProjectId: oldId, nextProjectId: newId } = projectMoveRollup;

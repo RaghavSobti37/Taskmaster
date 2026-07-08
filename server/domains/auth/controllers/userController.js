@@ -134,7 +134,7 @@ exports.updateUserTeams = async (req, res) => {
     const update = {};
     if (teams) update.teams = teams.map((t) => t.toUpperCase());
 
-    const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true })
+    const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { returnDocument: 'after' })
       .select('-password')
       .populate('departmentId', 'name slug permissionPreset pagePermissions');
     res.json(user);

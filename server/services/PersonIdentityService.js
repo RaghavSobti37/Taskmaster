@@ -134,7 +134,7 @@ class PersonIdentityService {
       return await PersonCommunicationProfile.findOneAndUpdate(
         { personId },
         { $setOnInsert: { personId } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       ).setOptions(BYPASS);
     } catch (err) {
       if (err.code === 11000) {
@@ -149,7 +149,7 @@ class PersonIdentityService {
       await PersonIdentifier.findOneAndUpdate(
         { type, valueNormalized: value },
         { $setOnInsert: { personId, type, valueNormalized: value, source } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } catch (err) {
       if (err.code === 11000) {
@@ -211,7 +211,7 @@ class PersonIdentityService {
         $set: { lastSeenAt: now, summary: { ...summary } },
         $setOnInsert: { firstSeenAt: now },
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   }
 
@@ -235,7 +235,7 @@ class PersonIdentityService {
     return PersonCommunicationProfile.findOneAndUpdate(
       { personId },
       { $set: update },
-      { new: true }
+      { returnDocument: 'after' }
     ).setOptions(BYPASS);
   }
 }

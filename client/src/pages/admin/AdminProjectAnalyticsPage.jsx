@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   BarChart3, Search, ChevronRight, ChevronLeft, Clock, NotebookPen, CheckCircle2, ListChecks,
@@ -23,6 +23,8 @@ import {
   QueryErrorBanner,
   getQueryErrorMessage,
 } from '../../components/ui';
+import SelectionFilterPanel, { FilterToolbarButton } from '../../components/ui/SelectionFilterPanel';
+import { countActiveFilters } from '../../components/ui/selectionFilterUtils';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ProjectReportRangeControls from '../../components/project/ProjectReportRangeControls';
 import ProjectAnalyticsContent from '../../components/project/ProjectAnalyticsContent';
@@ -35,6 +37,9 @@ const AdminProjectAnalyticsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedProjectId = searchParams.get('project') || '';
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [appliedWorkspace, setAppliedWorkspace] = useState('');
+  const [draftWorkspace, setDraftWorkspace] = useState('');
   const detailSectionRef = useRef(null);
 
   const rangeState = useProjectReportRangeState();
@@ -102,11 +107,47 @@ const AdminProjectAnalyticsPage = () => {
     const q = searchTerm.trim().toLowerCase();
     return allProjectRows
       .filter((row) => {
+        if (appliedWorkspace && row.workspace !== appliedWorkspace) return false;
         if (!q) return true;
         return `${row.name} ${row.workspace}`.toLowerCase().includes(q);
       })
       .sort((a, b) => b.totalHours - a.totalHours || a.name.localeCompare(b.name));
-  }, [allProjectRows, searchTerm]);
+  }, [allProjectRows, searchTerm, appliedWorkspace]);
+
+  const workspaceOptions = useMemo(() => {
+    const set = new Set(projects.map((p) => p.workspace || 'General').filter(Boolean));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [projects]);
+
+  const analyticsFilterFields = useMemo(() => ([
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      type: 'radio',
+      value: draftWorkspace,
+      defaultValue: '',
+      options: [
+        { value: '', label: 'All workspaces' },
+        ...workspaceOptions.map((ws) => ({ value: ws, label: ws })),
+      ],
+      onChange: setDraftWorkspace,
+    },
+  ]), [draftWorkspace, workspaceOptions]);
+
+  const appliedAnalyticsFilterFields = useMemo(() => ([
+    { id: 'workspace', value: appliedWorkspace, defaultValue: '' },
+  ]), [appliedWorkspace]);
+
+  const handleApplyAnalyticsFilters = useCallback(() => {
+    setAppliedWorkspace(draftWorkspace);
+    setFilterOpen(false);
+  }, [draftWorkspace]);
+
+  const handleClearAnalyticsFilters = useCallback(() => {
+    setDraftWorkspace('');
+    setAppliedWorkspace('');
+    setFilterOpen(false);
+  }, []);
 
   const totals = useMemo(() => (summary?.projects || []).reduce(
     (acc, row) => ({
@@ -372,14 +413,22 @@ const AdminProjectAnalyticsPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                 All projects ({rows.length})
+                {appliedWorkspace ? ` · ${appliedWorkspace}` : ''}
               </p>
-              <div className="w-full max-w-xs">
+              <div className="flex items-center gap-2 w-full max-w-md">
+                <FilterToolbarButton
+                  activeCount={countActiveFilters(appliedAnalyticsFilterFields)}
+                  onClick={() => {
+                    setDraftWorkspace(appliedWorkspace);
+                    setFilterOpen(true);
+                  }}
+                />
                 <SearchInput
                   variant="toolbar"
                   placeholder="Search projects..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="!w-full"
+                  className="!w-full min-w-0"
                 />
               </div>
             </div>
@@ -438,6 +487,14 @@ const AdminProjectAnalyticsPage = () => {
               <ProjectAnalyticsContent projectId={selectedProjectId} rangeState={rangeState} viewMode="admin" />
         </div>
       )}
+      <SelectionFilterPanel
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        title="Project filters"
+        fields={analyticsFilterFields}
+        onApply={handleApplyAnalyticsFilters}
+        onClear={handleClearAnalyticsFilters}
+      />
     </PageContainer>
   );
 };

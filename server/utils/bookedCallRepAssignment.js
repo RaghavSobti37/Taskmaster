@@ -37,7 +37,7 @@ async function incrementBookedCallRoundRobinCounter() {
   const doc = await PlatformSettings.findOneAndUpdate(
     { singletonKey: SETTINGS_SINGLETON_KEY },
     { $inc: { bookedCallRoundRobinCounter: 1 } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   ).setOptions(BYPASS);
 
   return doc?.bookedCallRoundRobinCounter || 1;

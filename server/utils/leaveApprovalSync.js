@@ -29,7 +29,7 @@ const syncApprovedLeaveToAttendance = async (leaveRequest) => {
             reason: leaveRequest.reason || '',
           },
         },
-        { upsert: true, setDefaultsOnInsert: true, new: true }
+        { upsert: true, setDefaultsOnInsert: true, returnDocument: 'after' }
       )
     )
   );

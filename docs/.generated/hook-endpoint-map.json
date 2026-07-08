@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07",
+  "generatedAt": "2026-07-08",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
@@ -340,6 +340,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1090,6 +1091,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1455,7 +1457,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -1516,6 +1519,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1652,6 +1656,7 @@
         "/api/calendar/${id}",
         "/api/calendar/seed-music-content",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1700,6 +1705,7 @@
         "/api/tasks/${task?._id}",
         "/api/tasks/${taskId}",
         "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}",
         "/api/teams",
         "/api/tenants/${tenantId}/onboarding",
         "/api/tenants/${tenantId}/unlocks",
@@ -1742,6 +1748,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1793,6 +1800,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2237,6 +2245,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2305,6 +2314,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2950,6 +2960,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3296,7 +3307,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -3319,7 +3331,8 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -3638,6 +3651,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3655,6 +3669,7 @@
       ],
       "endpoints": [
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3753,6 +3768,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3837,6 +3853,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -4102,7 +4119,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -4122,7 +4140,8 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -4603,6 +4622,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -4700,6 +4720,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -5614,7 +5635,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -5634,7 +5656,8 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -6171,7 +6194,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -6204,7 +6228,8 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -6240,6 +6265,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6392,6 +6418,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6436,6 +6463,7 @@
       "endpoints": [
         "/api/auth/google?state=link_${user?._id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6785,7 +6813,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         }
@@ -6794,7 +6823,8 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -6957,6 +6987,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6995,6 +7026,7 @@
         "/api/crm/artist/upload",
         "/api/crm/leads",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7027,7 +7059,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -7044,7 +7077,8 @@
         "/api/tasks/${id}",
         "/api/tasks/${task?._id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
@@ -7180,6 +7214,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7289,6 +7324,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7650,6 +7686,7 @@
           "file": "client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7824,7 +7861,8 @@
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
@@ -7845,7 +7883,8 @@
         "/api/tasks/${id}",
         "/api/tasks/${task._id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },

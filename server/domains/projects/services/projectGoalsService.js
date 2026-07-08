@@ -197,7 +197,7 @@ async function captureWeeklySnapshot(projectId, goalDoc) {
   const snapshot = await ProjectGoalSnapshot.findOneAndUpdate(
     { projectId, weekKey: weekStartKey },
     { values, increments, capturedAt: new Date() },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   return snapshot;

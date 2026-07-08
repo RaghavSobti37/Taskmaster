@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07",
+  "generatedAt": "2026-07-08",
   "rows": [
     {
       "key": "resend",
@@ -59,7 +59,7 @@
     {
       "key": "dataHub",
       "label": "Data Hub",
-      "defaultOnCreate": false,
+      "defaultOnCreate": true,
       "gatedPaths": [
         "/admin",
         "/data-hub"

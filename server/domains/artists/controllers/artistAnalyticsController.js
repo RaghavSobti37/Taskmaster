@@ -274,13 +274,13 @@ exports.syncArtistStats = async (req, res) => {
           analyticsHistory: currentSnapshot
         }
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     const updatedAuth = await ArtistAuthModel.findOneAndUpdate(
       { artistId: id },
       { $set: { isSynced: true } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     // Mark connections as synced

@@ -161,7 +161,7 @@ async function approveMasterclassReview(reviewId) {
   const review = await MasterclassReview.findByIdAndUpdate(
     reviewId,
     { $set: { isApproved: true } },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!review) throw new Error('Review not found');
   return review;

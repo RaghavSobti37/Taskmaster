@@ -15,6 +15,21 @@ import {
   isOrgFirstAuthEnabled,
   loadOrgFirstAuthConfig,
 } from './orgFirstAuth';
+import { flushBackgroundMutationQueue } from './backgroundMutationQueue';
+
+const RETRYABLE_GATEWAY = new Set([502, 503, 504]);
+const RETRY_DELAY_MS = 700;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const shouldRetryRequest = (error) => {
+  const config = error?.config;
+  if (!config || config.__gatewayRetried) return false;
+  const status = error?.response?.status;
+  if (!RETRYABLE_GATEWAY.has(status) && error?.code !== 'ERR_NETWORK') return false;
+  const method = (config.method || 'get').toLowerCase();
+  return ['get', 'head', 'put', 'patch'].includes(method);
+};
 
 const normalizeProjectsInResponse = (url, data) => {
   if (data == null) return data;
@@ -67,9 +82,20 @@ export function setupAxiosInterceptors() {
       if (response.data?.traceId) {
         startClientTrace();
       }
+      void flushBackgroundMutationQueue();
       return response;
     },
-    (error) => {
+    async (error) => {
+      if (shouldRetryRequest(error)) {
+        const config = error.config;
+        config.__gatewayRetried = true;
+        await sleep(RETRY_DELAY_MS);
+        try {
+          return await axios(config);
+        } catch (retryErr) {
+          error = retryErr;
+        }
+      }
       const method = error.config?.method?.toLowerCase();
       if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiErrorToast(error)) {
         const url = (error.config?.url || '').split('?')[0];

@@ -63,7 +63,7 @@ export default function SelectionFilterPanel({
   const panelBody = (
     <>
       <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar min-h-0 ${isPush ? 'max-h-[calc(100vh-14rem)]' : ''}`}>
-        <FilterFields fields={fields} />
+        <FilterFields fields={fields} columns={3} compact />
         {isPush && (
           <div
             className="sticky bottom-0 left-0 right-0 h-6 -mb-4 pointer-events-none bg-gradient-to-t from-[var(--color-bg-primary)] to-transparent"
@@ -87,7 +87,7 @@ export default function SelectionFilterPanel({
   if (isPush && open) {
     return (
       <aside
-        className="hidden lg:flex w-full max-w-sm shrink-0 sticky top-4 self-start flex-col max-h-[calc(100vh-6rem)] bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-lg ml-4"
+        className="hidden lg:flex w-[30vw] min-w-[280px] max-w-[520px] shrink-0 sticky top-4 self-start flex-col max-h-[calc(100vh-6rem)] bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-lg ml-4"
         role="dialog"
         aria-modal="false"
         aria-label={title}
@@ -119,7 +119,7 @@ export default function SelectionFilterPanel({
         onApply={handleApply}
         onClear={onClear}
       >
-        <FilterFields fields={fields} />
+        <FilterFields fields={fields} columns={3} compact />
       </MobileFilterSheet>
     );
   }
@@ -141,7 +141,7 @@ export default function SelectionFilterPanel({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-            className="fixed top-0 right-0 bottom-0 z-[71] hidden lg:flex w-full max-w-md flex-col bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl"
+            className="fixed top-0 right-0 bottom-0 z-[71] hidden lg:flex w-[30vw] min-w-[280px] max-w-[520px] flex-col bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-label={title}
@@ -160,7 +160,7 @@ export default function SelectionFilterPanel({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar min-h-0">
-              <FilterFields fields={fields} />
+              <FilterFields fields={fields} columns={3} compact />
             </div>
             <div className="flex gap-2 p-4 border-t border-[var(--color-bg-border)] shrink-0 bg-[var(--color-bg-primary)]">
               {onClear && (

@@ -27,7 +27,7 @@ async function upsertMembership(tenantId, userId, { role, status }) {
   return TenantMembership.findOneAndUpdate(
     { tenantId, userId },
     { role, status },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   ).setOptions(scimOpts());
 }
 

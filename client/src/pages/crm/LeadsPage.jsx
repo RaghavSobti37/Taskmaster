@@ -72,6 +72,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [pageSize, setPageSize] = useState(() => loadLeadsFilters().pageSize || 10);
   const [selectedLead, setSelectedLead] = useState(null);
   const artistRepContext = isArtistCrmContext(user, selectedLead);
@@ -223,6 +224,30 @@ export default function LeadsPage() {
       alert(err.response?.data?.error || err.message);
     }
   };
+
+  const handleBulkDeleteLeads = useCallback(async () => {
+    if (!selectedLeadIds.length) return;
+    const ok = await confirm({
+      title: 'Remove selected leads',
+      message: `Delete ${selectedLeadIds.length} lead${selectedLeadIds.length === 1 ? '' : 's'}? Permanent.`,
+      confirmLabel: 'Remove',
+      type: 'danger',
+    });
+    if (!ok) return;
+    const count = selectedLeadIds.length;
+    try {
+      await Promise.all(selectedLeadIds.map((id) => axios.delete(`/api/crm/leads/${id}`)));
+      setSelectedLeadIds([]);
+      if (selectedLead && selectedLeadIds.includes(selectedLead._id)) {
+        closeLeadEditor(selectedLead._id, setSelectedLead);
+      }
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      toast.success(`Removed ${count} lead${count === 1 ? '' : 's'}`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Bulk delete failed');
+    }
+  }, [selectedLeadIds, confirm, selectedLead, queryClient, toast]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();
@@ -821,10 +846,27 @@ export default function LeadsPage() {
           onRetry={() => refetch()}
         />
       )}
+      {selectedLeadIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs font-bold text-[var(--color-text-secondary)]">
+            {selectedLeadIds.length} selected
+          </span>
+          <Button size="sm" variant="danger" onClick={handleBulkDeleteLeads}>
+            <Trash2 size={14} /> Delete selected
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setSelectedLeadIds([])}>
+            Clear
+          </Button>
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={leads}
         onRowClick={(row) => setSelectedLead(row)}
+        selectable
+        selectedIds={selectedLeadIds}
+        onSelectedIdsChange={setSelectedLeadIds}
+        getRowId={(row) => row._id}
         paginated
         serverSide
         totalItems={totalLeads}

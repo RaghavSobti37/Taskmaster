@@ -125,7 +125,7 @@ const syncTechProjectMembers = async (techProject, ownerId, session) => {
   return Project.findByIdAndUpdate(
     techProject._id,
     { members: newMembers, memberRoles: newMemberRoles },
-    { new: true, session }
+    { returnDocument: 'after', session }
   ) || techProject;
 };
 

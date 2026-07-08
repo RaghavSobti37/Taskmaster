@@ -260,7 +260,7 @@ router.patch('/users/:userId', deptAdminAccess, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.userId,
       { departmentId: departmentId || null },
-      { new: true }
+      { returnDocument: 'after' }
     ).populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);

@@ -140,7 +140,7 @@ async function upsertIntegration(tenant, providerConfig, userId) {
         createdBy: userId,
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   ).setOptions(BYPASS);
   return { doc, created: !existing };
 }
@@ -182,7 +182,7 @@ async function upsertWebsiteForms(tenant, userId) {
           createdBy: userId,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     ).setOptions(BYPASS);
     results.push({ slug: demo.slug, created: !existing, key: doc.publishableKey });
   }

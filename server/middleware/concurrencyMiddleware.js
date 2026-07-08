@@ -26,7 +26,7 @@ const checkLock = (Model) => async (req, res, next) => {
       {
         $set: { lockedBy: userId.toString(), lockedAt: new Date() },
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!lockedLead) {

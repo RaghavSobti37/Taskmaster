@@ -10,6 +10,7 @@ import {
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { buildProjectFinanceTableColumns } from '../finance/buildFinanceTableColumns';
 import { DataTable } from '../ui';
+import { Button } from '../ui/primitives';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -73,7 +74,16 @@ const InfoTooltip = ({ content }) => {
   );
 };
 
-const ProjectFinanceTable = ({ docs, isLoading, onViewDoc, onDeleteDoc, confirm }) => {
+const ProjectFinanceTable = ({
+  docs,
+  isLoading,
+  onViewDoc,
+  onDeleteDoc,
+  confirm,
+  selectable = false,
+  selectedIds = [],
+  onSelectedIdsChange,
+}) => {
   const handleConfirmDeleteDoc = useCallback(async () => confirm({
     title: 'Delete record?',
     message: 'Delete record?',
@@ -100,6 +110,9 @@ const ProjectFinanceTable = ({ docs, isLoading, onViewDoc, onDeleteDoc, confirm 
       virtualize={false}
       onRowClick={onViewDoc}
       getRowId={(row) => row._id}
+      selectable={selectable}
+      selectedIds={selectedIds}
+      onSelectedIdsChange={onSelectedIdsChange}
       emptyTitle="No finance records for this project"
       emptyDescription="Upload invoices and receipts for this project to see them here."
     />
@@ -113,6 +126,7 @@ const ProjectFinance = ({ projectId }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [editForm, setEditForm] = useState(null);
   const [editAmountUsd, setEditAmountUsd] = useState('');
 
@@ -199,6 +213,29 @@ const ProjectFinance = ({ projectId }) => {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      await Promise.all(ids.map((id) => axios.delete(`/api/finance/${id}`)));
+    },
+    onSuccess: (_data, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['project-finance-docs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      setSelectedDocIds((prev) => prev.filter((id) => !ids.includes(id)));
+      if (selectedDoc && ids.includes(selectedDoc._id)) setSelectedDoc(null);
+    },
+  });
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!selectedDocIds.length) return;
+    const ok = await confirm({
+      title: 'Delete selected documents',
+      message: `Delete ${selectedDocIds.length} document${selectedDocIds.length === 1 ? '' : 's'}?`,
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (ok) bulkDeleteMutation.mutate([...selectedDocIds]);
+  }, [selectedDocIds, confirm, bulkDeleteMutation]);
+
   return (
     <div className="space-y-6">
       {/* Search & Category Filter */}
@@ -227,12 +264,28 @@ const ProjectFinance = ({ projectId }) => {
 
       {/* Finance Table */}
       <div className="overflow-hidden border-t border-[var(--color-bg-border)]">
+        {selectedDocIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-[var(--color-bg-border)]">
+            <span className="text-xs font-bold text-[var(--color-text-secondary)]">
+              {selectedDocIds.length} selected
+            </span>
+            <Button size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending}>
+              <Trash2 size={14} /> Delete selected
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setSelectedDocIds([])}>
+              Clear
+            </Button>
+          </div>
+        )}
         <ProjectFinanceTable
           docs={docs}
           isLoading={isLoading}
           onViewDoc={setSelectedDoc}
           onDeleteDoc={(id) => deleteMutation.mutate(id)}
           confirm={confirm}
+          selectable
+          selectedIds={selectedDocIds}
+          onSelectedIdsChange={setSelectedDocIds}
         />
 
         {/* Pagination Controls */}

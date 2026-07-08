@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { consumeEscapeKey } from '../../lib/escapeBack';
 
 export const FullScreenWorkspace = ({
   isOpen,
@@ -47,6 +48,7 @@ export const FullScreenWorkspace = ({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
+        consumeEscapeKey(e);
         handleClose();
       }
     };

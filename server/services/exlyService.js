@@ -92,7 +92,7 @@ class ExlyService {
       await ExlyOffering.findOneAndUpdate(
         { offeringId: cleanOffId },
         { $set: offeringUpdate },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     }
 

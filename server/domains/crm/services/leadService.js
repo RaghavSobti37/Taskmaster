@@ -103,7 +103,7 @@ class LeadService {
     const existingLead = await Lead.findOne(query).select('nextFollowupDate nextFollowupTime reminderSent notifiedOverdue');
     const withResets = this.applyFollowupReminderResets(updateData, existingLead);
     const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(withResets);
-    const updatedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, { new: true });
+    const updatedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, { returnDocument: 'after' });
     
     if (updatedLead) {
       await backgroundQueue.queueHolySheetSync(updatedLead._id);
@@ -127,7 +127,7 @@ class LeadService {
       sanitizedUpdate.$setOnInsert = cleanOnInsert;
     }
     
-    const options = { upsert: true, new: true, runValidators: true };
+    const options = { upsert: true, returnDocument: 'after', runValidators: true };
     if (session) options.session = session;
     
     const upsertedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, options);

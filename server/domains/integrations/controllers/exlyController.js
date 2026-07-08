@@ -269,7 +269,7 @@ exports.handleExlyWebhook = async (req, res) => {
           status: 'active'
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // 2. Sync lead into Unified Contact Hub (race condition safe via mergeContact)

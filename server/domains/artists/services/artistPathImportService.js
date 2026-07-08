@@ -144,7 +144,7 @@ async function upsertArtistPathRow(rawRow, { source = 'artist_path_sheet', sheet
         tenantId,
       },
     },
-    { upsert: true, new: true, bypassTenant: true }
+    { upsert: true, returnDocument: 'after', bypassTenant: true }
   );
 
   await PersonIdentityService.linkSource(resolved.personId, 'artist_path', doc._id, mergedAnswers);

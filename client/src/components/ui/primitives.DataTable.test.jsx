@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { DataTable } from './primitives.jsx';
 
 vi.mock('../../hooks/useBreakpoint', () => ({
@@ -48,5 +48,25 @@ describe('DataTable', () => {
     expect(shell).toBeInTheDocument();
     expect(shell).toHaveClass('overflow-visible');
     expect(shell.style.maxHeight).toBe('');
+  });
+
+  it('supports row selection checkboxes', () => {
+    const onChange = vi.fn();
+    render(
+      <DataTable
+        columns={[{ header: 'Name', key: 'name' }]}
+        data={[{ _id: 'a', name: 'Ada' }, { _id: 'b', name: 'Bob' }]}
+        paginated={false}
+        selectable
+        selectedIds={[]}
+        onSelectedIdsChange={onChange}
+        getRowId={(row) => row._id}
+      />,
+    );
+
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(boxes[1]);
+    expect(onChange).toHaveBeenCalled();
   });
 });

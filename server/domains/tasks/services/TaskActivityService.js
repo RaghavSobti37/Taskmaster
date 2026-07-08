@@ -384,7 +384,7 @@ const bumpMentionReceipts = async (taskId, recipientIds, actorId, session) => {
         $inc: { unreadCount: 1 },
         $set: { lastMentionAt: now },
       },
-      { upsert: true, session, new: true }
+      { upsert: true, session, returnDocument: 'after' }
     );
   }
 };

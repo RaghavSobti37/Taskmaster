@@ -13,6 +13,7 @@ import { canReviewTask } from '../../utils/taskReview';
 import { normalizeTasks } from '../../utils/normalizeTask';
 import { invalidateTaskDomain } from '../../lib/queryInvalidation';
 import { useAuth } from '../../contexts/AuthContext';
+import { enqueueBackgroundMutation } from '../../lib/backgroundMutationQueue';
 
 const fetchTasks = async ({ includeOldCompleted = false } = {}) => {
   const params = includeOldCompleted ? { includeOldCompleted: '1' } : undefined;
@@ -276,7 +277,19 @@ export const useUpdateTask = () => {
       if (!updatedTask?._id) return;
       syncUpdatedTaskToQueries(queryClient, updatedTask);
     },
-    onError: (err, _variables, context) => {
+    onError: (err, variables, context) => {
+      const status = err?.response?.status ?? 0;
+      const retryable = [0, 502, 503, 504].includes(status) || err?.code === 'ERR_NETWORK';
+      if (retryable && variables?.id) {
+        enqueueBackgroundMutation(
+          async () => {
+            const res = await axios.put(`/api/tasks/${variables.id}`, variables.data);
+            syncUpdatedTaskToQueries(queryClient, res.data);
+            invalidateTaskDomain(queryClient);
+          },
+          { label: 'task-update', maxRetries: 3 },
+        );
+      }
       restoreTaskQuerySnapshots(queryClient, context?.snapshots);
       globalToast.addToast({
         title: 'Update failed',

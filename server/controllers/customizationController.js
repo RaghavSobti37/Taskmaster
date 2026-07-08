@@ -148,7 +148,7 @@ exports.saveDashboardPreset = async (req, res, next) => {
         },
         ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     const presetObj = preset.toObject ? preset.toObject() : preset;
@@ -192,7 +192,7 @@ exports.loadSavedLayout = async (req, res, next) => {
         department: saved.department || 'custom',
         updatedAt: new Date(),
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     const presetObj = preset.toObject ? preset.toObject() : preset;
@@ -226,7 +226,7 @@ exports.loadDepartmentPreset = async (req, res, next) => {
         },
         ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     res.json(preset);
@@ -265,7 +265,7 @@ exports.updateElementVisibility = async (req, res, next) => {
           updatedAt: new Date()
         }
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!preset) {
@@ -300,7 +300,7 @@ exports.reorderDashboardElements = async (req, res, next) => {
         elements: sortedElements,
         updatedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.json(preset);
@@ -397,7 +397,7 @@ exports.saveShortcutPreferences = async (req, res, next) => {
         $set: { bindings: sanitized, updatedAt: new Date() },
         ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     const overrides = doc.bindings || {};
@@ -425,7 +425,7 @@ exports.resetShortcutPreferences = async (req, res, next) => {
         $set: { bindings: {}, updatedAt: new Date() },
         ...(tenantId ? { $setOnInsert: { userId, tenantId } } : { $setOnInsert: { userId } }),
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     await deleteCache(shortcutCacheKey(userId, tenantId));

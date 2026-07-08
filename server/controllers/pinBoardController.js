@@ -36,7 +36,7 @@ exports.updatePin = async (req, res) => {
     const pin = await PinBoardNote.findByIdAndUpdate(
       req.params.id,
       { $set: { title: req.body.title, content: req.body.content, updatedBy: req.user._id } },
-      { new: true }
+      { returnDocument: 'after' }
     )
       .populate('createdBy', 'name avatar')
       .populate('updatedBy', 'name avatar');

@@ -482,7 +482,7 @@ async function updateLead(user, leadId, body) {
     lockedBy: user._id.toString(),
     lockedAt: new Date(),
   }, {
-    new: true,
+    returnDocument: 'after',
     userId: user._id,
     userRole: getDepartmentSlug(user),
   });
@@ -563,7 +563,7 @@ async function addNote(user, leadId, text) {
         date: new Date(),
       },
     },
-  }, { new: true });
+  }, { returnDocument: 'after' });
 
   await auditService.logNoteAdded(leadId, user, text);
   broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
@@ -590,7 +590,7 @@ async function createEmi(leadId, body) {
 
 async function updateEmi(emiId, body) {
   const updates = pick(body, ALLOWED_EMI_FIELDS);
-  const emi = await EMI.findByIdAndUpdate(emiId, updates, { new: true });
+  const emi = await EMI.findByIdAndUpdate(emiId, updates, { returnDocument: 'after' });
   return { emi };
 }
 

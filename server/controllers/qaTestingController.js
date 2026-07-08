@@ -191,7 +191,7 @@ exports.cancelTest = async (req, res, next) => {
     const testRun = await QATestRun.findOneAndUpdate(
       { _id: testRunId },
       { status: 'cancelled', completedAt: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!testRun) {

@@ -281,7 +281,6 @@ const HUB_CHILD_PATHS = new Set([
   '/admin/users',
   '/admin/teams',
   '/admin/roles',
-  '/admin',
   '/admin/media-list',
   '/admin/lead-audits',
   '/admin/crm-stats',
@@ -316,6 +315,7 @@ const HUB_PATHS = [
   { path: '/office', label: 'Office' },
   { path: '/management', label: 'Management' },
   { path: '/admin/console', label: 'Admin' },
+  { path: '/admin', label: 'Data Hub' },
 ];
 
 function mapPages(pages) {

@@ -161,19 +161,52 @@ router.post('/push/subscribe', protect, validateBody(pushSubscribeBody), async (
     logger.error('Push', 'Failed to save subscription', { error: error.message, userId: req.user?._id });
     res.status(500).json({ error: 'Failed to save subscription' });
   }
-});
+});router.get('/push/subscriptions', protect, async (req, res) => {
+    try {
+      const user = await User.findById(req.user._id).select('pushSubscriptions').lean();
+      const subs = (user?.pushSubscriptions || []).map((sub) => ({
+        endpoint: sub.endpoint,
+        userAgent: sub.userAgent || '',
+        createdAt: sub.createdAt,
+        deviceLabel: normalizeDeviceLabel(sub.userAgent || ''),
+      }));
+      res.json({ subscriptions: subs, total: subs.length });
+    } catch (error) {
+      logger.error('Push', 'Failed to list subscriptions', { error: error.message, userId: req.user?._id });
+      res.status(500).json({ error: 'Failed to list subscriptions' });
+    }
+  });
 
-router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), async (req, res) => {
-  try {
-    const { endpoint } = req.body;
-    await User.findByIdAndUpdate(req.user._id, {
-      $pull: { pushSubscriptions: { endpoint } }
-    });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to remove subscription' });
+  function normalizeDeviceLabel(userAgent) {
+    const ua = String(userAgent).toLowerCase();
+    let browser = 'Unknown';
+    if (ua.includes('edg/')) browser = 'Edge';
+    else if (ua.includes('chrome/') || ua.includes('crios/')) browser = 'Chrome';
+    else if (ua.includes('firefox/') || ua.includes('fxios/')) browser = 'Firefox';
+    else if (ua.includes('safari/') && !ua.includes('chrome/') && !ua.includes('crios/')) browser = 'Safari';
+    else if (ua.includes('opr/') || ua.includes('opera')) browser = 'Opera';
+
+    let os = '';
+    if (ua.includes('android')) os = 'Android';
+    else if (ua.includes('iphone') || ua.includes('ipad')) os = 'iOS';
+    else if (ua.includes('windows')) os = 'Windows';
+    else if (ua.includes('macintosh') || ua.includes('mac os')) os = 'macOS';
+    else if (ua.includes('linux')) os = 'Linux';
+
+    return os ? `${browser} on ${os}` : browser;
   }
-});
+
+  router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), async (req, res) => {
+    try {
+      const { endpoint } = req.body;
+      await User.findByIdAndUpdate(req.user._id, {
+        $pull: { pushSubscriptions: { endpoint } }
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to remove subscription' });
+    }
+  });
 
 router.get('/', protect, async (req, res) => {
   try {

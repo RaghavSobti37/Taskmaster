@@ -51,7 +51,6 @@ async function notifyRepForFollowup(lead, rep, { title, message }) {
     type: 'reminder',
     relatedLeadId: lead._id,
     actionUrl: buildLeadActionUrl(lead._id),
-    sendEmail: true,
     iconType: 'system',
   });
 }

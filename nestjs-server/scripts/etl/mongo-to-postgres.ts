@@ -730,7 +730,7 @@ const COLLECTIONS: CollectionDef[] = [
       actionUrl: toStr(doc.actionUrl, ''),
       actorId: toId(doc.actorId),
       iconType: toStr(doc.iconType, 'system'),
-      emailSent: toBool(doc.emailSent),
+      emailSent: false,
       createdAt: toDate(doc.createdAt) ?? new Date(),
     }),
     filterBatch: async (prisma, batch) => {

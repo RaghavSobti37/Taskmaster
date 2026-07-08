@@ -242,7 +242,6 @@ async function processArtistEnquiryLogic(data) {
           message: `${normalized.name} — ${artistProject}`,
           relatedLeadId: leadId,
           actionUrl: buildLeadActionUrl(lead._id),
-          sendEmail: true,
         }).catch(() => {});
       }
     } catch (err) {

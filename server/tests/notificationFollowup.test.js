@@ -32,7 +32,6 @@ describe('followup rep notifications', () => {
       type: 'reminder',
       relatedLeadId: 'lead-1',
       actionUrl: '/followups?highlight=lead-1',
-      sendEmail: true,
     }));
   });
 

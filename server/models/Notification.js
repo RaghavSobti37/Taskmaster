@@ -17,7 +17,6 @@ const notificationSchema = new mongoose.Schema({
   actionUrl: { type: String, default: '' },
   actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   iconType: { type: String, enum: ['system', 'task', 'user'], default: 'system' },
-  emailSent: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

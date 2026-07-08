@@ -1514,27 +1514,6 @@
     "components": []
   },
   {
-    "file": "client/src/pages/emails/EmailsAnalyticsPage.jsx",
-    "routes": [
-      "/emails/analytics"
-    ],
-    "lines": 59,
-    "defaultExport": "function",
-    "namedExports": [],
-    "hooks": [
-      "useCumulativeAnalytics",
-      "useDeferredQueryEnabled",
-      "useMailStats",
-      "useState"
-    ],
-    "apis": [],
-    "components": [
-      "MailCumulativeAnalyticsPanel",
-      "MailLocationLeadsModal",
-      "MailStatsSummary"
-    ]
-  },
-  {
     "file": "client/src/pages/emails/EmailsCampaignsPage.jsx",
     "routes": [
       "/emails/campaigns"
@@ -1559,7 +1538,7 @@
     "routes": [
       "/emails"
     ],
-    "lines": 115,
+    "lines": 109,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

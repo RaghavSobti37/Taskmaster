@@ -6,10 +6,6 @@ jest.mock('../services/pushNotificationService', () => ({
   sendPushToUser: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../domains/mail/services/mailDriver', () => ({
-  dispatchEmailPayload: jest.fn().mockResolvedValue({ id: 'email-1' }),
-}));
-
 jest.mock('../utils/qaExcludedUsers', () => ({
   shouldSuppressNotificationForRecipient: jest.fn().mockResolvedValue(false),
 }));
@@ -54,7 +50,6 @@ describe('createNotification persistence (BUG-T11)', () => {
       actionUrl: '/todo?highlight=abc',
       actorId,
       iconType: 'user',
-      sendEmail: false,
     });
 
     expect(result).toMatchObject({

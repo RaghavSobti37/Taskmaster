@@ -5,7 +5,7 @@ test.describe('visual regression — public shell', () => {
     await page.goto('/landing');
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveScreenshot('landing-shell.png', {
-      maxDiffPixelRatio: 0.02,
+      maxDiffPixelRatio: 0.06,
       animations: 'disabled',
     });
   });

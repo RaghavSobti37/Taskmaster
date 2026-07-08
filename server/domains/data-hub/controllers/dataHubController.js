@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const DataHubService = require('../../../services/DataHubService');
 const { getDataHubRuntimeFlags, isDataHubReconcileEnabled } = require('../../../utils/dataHubFlags');
 const {
@@ -11,11 +12,13 @@ const logger = require('../../../utils/logger');
 const { getCache, setCache } = require('../../../services/cacheService');
 const {
   importAisensyCampaignCsv,
-  listCampaignSummaries,
   inferCampaignNameFromFilename,
   inferStatusFromFilename,
 } = require('../../../services/aisensyCampaignImportService');
-const { registerWhatsappCampaign } = require('../../../services/aisensyCampaignSyncService');
+const { registerWhatsappCampaign, listCampaignSummaries, listCampaignOutcomeUsers } = require('../../../services/aisensyCampaignSyncService');
+const { syncAisensyCampaignCatalog } = require('../../../services/aisensyCampaignCatalogSyncService');
+const { importAisensyExportsFromDirectories } = require('../../../services/aisensyCampaignOutcomesSyncService');
+const { assertProdDataTarget } = require('../../../utils/assertProdDataTarget');
 const { runWithContext } = require('../../../utils/tenantContext');
 const { resolveDefaultTenantId } = require('../../../utils/defaultTenant');
 
@@ -254,6 +257,47 @@ exports.listCampaignOutcomes = async (req, res) => {
   }
 };
 
+exports.syncAisensyCampaignCatalog = async (req, res) => {
+  try {
+    assertProdDataTarget();
+    const tenantId = await resolveDefaultTenantId();
+    const catalogStats = await runWithContext({ tenantId }, () => syncAisensyCampaignCatalog({ dryRun: false }));
+    const outcomeStats = await runWithContext({ tenantId }, () => importAisensyExportsFromDirectories({ dryRun: false }));
+    res.json({
+      message: 'AiSensy catalog + per-user outcomes synced (CSV exports from Downloads / AISENSY_EXPORT_DIR)',
+      database: mongoose.connection?.name,
+      catalog: catalogStats,
+      outcomes: outcomeStats,
+      stats: {
+        campaignsUpserted: catalogStats?.upserted ?? 0,
+        outcomeRowsImported: outcomeStats?.imported ?? 0,
+        exportFiles: outcomeStats?.filesFound ?? 0,
+      },
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    logger.error('dataHubController', 'syncAisensyCampaignCatalog', { error: error.message });
+    res.status(status).json({ error: error.message || 'AiSensy sync failed', code: error.code });
+  }
+};
+
+exports.getCampaignOutcomeRecipients = async (req, res) => {
+  try {
+    const campaignName = decodeURIComponent(String(req.params.campaignName || '').trim());
+    if (!campaignName) {
+      return res.status(400).json({ error: 'campaignName required' });
+    }
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 50;
+    const status = req.query.status ? String(req.query.status) : undefined;
+    const result = await listCampaignOutcomeUsers({ campaignName, page, limit, status });
+    res.json(result);
+  } catch (error) {
+    logger.error('dataHubController', 'getCampaignOutcomeRecipients', { error: error.message });
+    res.status(500).json({ error: 'Failed to list campaign recipients' });
+  }
+};
+
 exports.importCampaignOutcomes = async (req, res) => {
   try {
     if (!req.file?.path) {
@@ -297,5 +341,19 @@ exports.registerWhatsappCampaign = async (req, res) => {
   } catch (error) {
     logger.error('dataHubController', 'registerWhatsappCampaign', { error: error.message });
     res.status(500).json({ error: error.message || 'Registration failed' });
+  }
+};
+
+exports.bulkDeletePeople = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    const result = await DataHubService.deletePeople(ids);
+    res.json({
+      message: `Removed ${result.deleted} ${result.deleted === 1 ? 'person' : 'people'} from Data Hub`,
+      ...result,
+    });
+  } catch (error) {
+    logger.error('dataHubController', 'bulkDeletePeople', { error: error.message });
+    res.status(500).json({ error: error.message || 'Bulk delete failed' });
   }
 };

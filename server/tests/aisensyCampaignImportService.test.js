@@ -34,4 +34,33 @@ describe('aisensyCampaignImportService', () => {
     );
     expect(mapped.status).toBe('delivered');
   });
+
+  it('maps read audience row using read/delivered timestamps', () => {
+    const mapped = mapAisensyRow(
+      {
+        Name: 'Kavach Joshi',
+        'Mobile Number': '+919875543210',
+        'Sent At': 'Jun 16, 2026, 12:56 PM',
+        'Delivered At': 'Jun 16, 2026, 12:56 PM',
+        'Read At': 'Jun 16, 2026, 4:04 PM',
+      },
+      { defaultStatus: 'read' }
+    );
+    expect(mapped.status).toBe('read');
+    expect(mapped.phone).toBe('9875543210');
+  });
+
+  it('maps clicked audience row when link clicked timestamp present', () => {
+    const mapped = mapAisensyRow(
+      {
+        Name: 'Surabhhi Saahu',
+        'Mobile Number': '+919875088750',
+        'Sent At': 'Jun 16, 2026, 12:55 PM',
+        'Link Clicked At': 'Jun 16, 2026, 3:01 PM',
+        'Read At': 'Jun 16, 2026, 3:01 PM',
+      },
+      { defaultStatus: 'clicked' }
+    );
+    expect(mapped.status).toBe('clicked');
+  });
 });

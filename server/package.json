@@ -75,7 +75,11 @@
     "sync:person-hub:prod": "node scripts/rebuildPersonHub.js --prod --sync-only",
     "export:datahub:db-minus-havells": "node scripts/exportDbMinusHavellsCsv.js --prod",
     "import:aisensy-campaign:dry-run": "node scripts/importAisensyCampaignCsv.js --prod",
-    "import:aisensy-campaign:prod": "node scripts/importAisensyCampaignCsv.js --prod --execute"
+    "import:aisensy-campaign:prod": "node scripts/importAisensyCampaignCsv.js --prod --execute",
+    "sync:aisensy-catalog": "node scripts/syncAisensyCampaignCatalog.js",
+    "sync:aisensy-catalog:prod": "node scripts/syncAisensyCampaignCatalog.js --prod --execute",
+    "sync:aisensy-outcomes": "node scripts/syncAisensyCampaignOutcomes.js",
+    "sync:aisensy-outcomes:prod": "node scripts/syncAisensyCampaignOutcomes.js --prod --execute"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",

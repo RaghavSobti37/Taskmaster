@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { formatDisplayDateTime } from '../../utils/dateDisplay';
-import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX, Copy } from 'lucide-react';
+import { RefreshCw, BarChart3, Star, Database, TrendingUp, UserX, Copy, Trash2, MessageSquare } from 'lucide-react';
 import { DataTable, Button, Badge } from '../../components/ui/primitives';
 import StatusBadge from '../../components/ui/StatusBadge';
 import ListPageLayout from '../../components/ui/ListPageLayout';
@@ -10,6 +10,7 @@ import { countActiveFilters, countPendingFilterChanges } from '../../components/
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import { buildDataHubOverviewCharts } from '../../utils/dataHubAnalyticsCharts';
 import DataHubOpsMenu from '../../components/dataHub/DataHubOpsMenu';
+import DataHubCampaignOutcomes from '../../components/dataHub/DataHubCampaignOutcomes';
 import {
   useDataHubFolders,
   useDataHubPeople,
@@ -19,6 +20,7 @@ import {
   useDataHubSyncStatus,
   useDataHubBackups,
   useDataHubProductionBackup,
+  useDataHubBulkDeletePeople,
   DATA_HUB_REFRESH_MS,
 } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -100,6 +102,7 @@ export function DataHubContent() {
   const [draftPageSize, setDraftPageSize] = useState(savedFilters.pageSize);
   const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(savedFilters.showAnalytics);
+  const [showCampaigns, setShowCampaigns] = useState(false);
   const [appliedEmailStatus, setAppliedEmailStatus] = useState(savedFilters.emailStatusFilter);
   const [draftEmailStatus, setDraftEmailStatus] = useState(savedFilters.emailStatusFilter);
   const [appliedSortField, setAppliedSortField] = useState(savedFilters.sortField || 'lastActivity');
@@ -134,6 +137,7 @@ export function DataHubContent() {
   const reconcileMutation = useDataHubReconcile();
   const rebuildHubMutation = useDataHubRebuildPersonHub();
   const backupMutation = useDataHubProductionBackup();
+  const bulkDeleteMutation = useDataHubBulkDeletePeople();
   const { data: syncStatus } = useDataHubSyncStatus({ enabled: deferDataHubSecondary });
   const reconcileEnabled = syncStatus?.reconcileEnabled !== false;
   const localDevMode = Boolean(syncStatus?.localDevMode);
@@ -616,6 +620,28 @@ export function DataHubContent() {
     }
   }, [selectedPersonIds, peopleData?.data, toast]);
 
+  const handleBulkDeletePeople = useCallback(async () => {
+    if (!selectedPersonIds.length) return;
+    const count = selectedPersonIds.length;
+    const ok = await confirm({
+      title: 'Remove from Data Hub',
+      message: `Delete ${count} ${count === 1 ? 'person' : 'people'} from the hub? Source records stay — reconcile may bring them back.`,
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await bulkDeleteMutation.mutateAsync([...selectedPersonIds]);
+      if (selectedPersonId && selectedPersonIds.includes(selectedPersonId)) {
+        setSelectedPersonId(null);
+      }
+      setSelectedPersonIds([]);
+      toast.success(`Removed ${count} ${count === 1 ? 'person' : 'people'}`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Delete failed');
+    }
+  }, [selectedPersonIds, confirm, bulkDeleteMutation, selectedPersonId, toast]);
+
   return (
     <>
       <ListPageLayout
@@ -650,6 +676,16 @@ export function DataHubContent() {
         )}
         toolbarActions={(
           <>
+            <Button
+              variant={showCampaigns ? 'secondary' : 'ghost'}
+              size="sm"
+              className="!px-2.5 whitespace-nowrap"
+              onClick={() => setShowCampaigns(!showCampaigns)}
+              title={showCampaigns ? 'Hide WhatsApp campaign outcomes' : 'Show WhatsApp campaign outcomes'}
+            >
+              <MessageSquare size={14} />
+              Campaigns
+            </Button>
             <Button
               variant={showAnalytics ? 'secondary' : 'ghost'}
               size="sm"
@@ -691,6 +727,8 @@ export function DataHubContent() {
           </p>
         )}
 
+        <DataHubCampaignOutcomes open={showCampaigns} onClose={() => setShowCampaigns(false)} />
+
         <p className="tm-widget-label text-[var(--color-text-muted)] -mt-1 mb-2 tabular-nums">
           {activeFolderLabel} · {total.toLocaleString()} {total === 1 ? 'person' : 'people'}
         </p>
@@ -702,6 +740,14 @@ export function DataHubContent() {
             </span>
             <Button size="sm" variant="secondary" onClick={handleBulkCopyEmails}>
               <Copy size={14} /> Copy emails
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={handleBulkDeletePeople}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              <Trash2 size={14} /> Delete
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setSelectedPersonIds([])}>
               Clear

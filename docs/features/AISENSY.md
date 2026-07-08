@@ -35,17 +35,29 @@ These flows call AiSensy by **campaign name** (must exist as approved templates 
 
 Set defaults in **AiSensy integration Settings** or keep env `AISENSY_DEFAULT_CAMPAIGN`.
 
-## Legacy env vars (optional fallback)
+## Env (server `.env`)
 
-If not using Connected Apps, server still reads:
+| Variable | Role |
+|----------|------|
+| `AISENSY_API_KEY` | JWT campaign key — send API + `campaign-details` |
+| `AISENSY_PROJECT_ID` | Project id (JWT `id` field, not `clientId`) |
+| `AISENSY_PROJECT_API_PWD` | Manage → Project API password (`X-AiSensy-Project-API-Pwd`) |
 
-- `AISENSY_API_KEY`
-- `AISENSY_WEBHOOK_VERIFY_TOKEN`
-- `AISENSY_WEBHOOK_SECRET`
-- `AISENSY_DEFAULT_CAMPAIGN`
-
-Connected Apps credentials take priority per tenant.
+Connected Apps stores tenant `AISENSY_API_KEY` equivalent; project API vars are server-side for catalog sync.
 
 ## Data Hub
 
 Outbound sends + webhook events sync to **Data Hub → Mail / WhatsApp** inlets.
+
+## Syncing existing campaign data
+
+CoreKnot does **not** pull a full campaign history list from AiSensy’s API. Use one of these paths:
+
+| Path | When | How |
+|------|------|-----|
+| **Project API catalog** | All campaign metadata | Data Hub → **Sync AiSensy catalog** or `npm run sync:aisensy-catalog:prod --prefix server -- --execute` |
+| **Webhooks (ongoing)** | After connect | Configure AiSensy callback → `POST /api/webhooks/aisensy`. New delivery events sync to CRM tags + Data Hub. |
+| **CSV import (historical)** | One-time backfill | Export failed/delivered/read CSV from AiSensy → **Data Hub** → **Import WA Campaign**, or CLI: `npm run import:aisensy-campaign:prod --prefix server` with `--file=... --execute`. Campaign name inferred from filename when omitted. |
+| **Outbound from CoreKnot** | New sends | Flows using `sendAiSensyMessage` log sends + outcomes automatically. |
+
+See also [`CAMPAIGN_DATA_SYNC.md`](./CAMPAIGN_DATA_SYNC.md) for Exly + AiSensy overview.

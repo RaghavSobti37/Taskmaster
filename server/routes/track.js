@@ -27,6 +27,45 @@ function isAntiSpamBot(userAgent) {
   return isEmailLinkScanner(userAgent);
 }
 
+const escapeHtmlAttr = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[char]));
+
+const decodeRedirectParam = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== 'string' || !raw.trim()) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
+const resolveSafeTrackedRedirectUrl = (destinationUrl, fallbackRedirect) => {
+  const fallback = (() => {
+    try {
+      const parsed = new URL(fallbackRedirect || 'http://localhost:5173');
+      return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : 'http://localhost:5173/';
+    } catch {
+      return 'http://localhost:5173/';
+    }
+  })();
+
+  const decoded = decodeRedirectParam(destinationUrl).trim();
+  if (!decoded) return fallback;
+
+  try {
+    const parsed = new URL(decoded, fallback);
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich = false, clickGeo = false } = {}) => {
   const ip = extractClientIp(req);
 
@@ -186,19 +225,21 @@ router.get('/click/:clickId', async (req, res) => {
     const destinationUrl = req.query.redirect;
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const fallbackRedirect = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const finalUrl = destinationUrl ? decodeURIComponent(destinationUrl) : fallbackRedirect;
+    const finalUrl = resolveSafeTrackedRedirectUrl(destinationUrl, fallbackRedirect);
+    const finalUrlAttr = escapeHtmlAttr(finalUrl);
+    const finalUrlScript = JSON.stringify(finalUrl);
 
     // 1. Instantly return HTML redirection content
     res.send(`
       <!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="0; url=${finalUrl}">
+          <meta http-equiv="refresh" content="0; url=${finalUrlAttr}">
           <title>Redirecting...</title>
         </head>
         <body>
-          <script>window.location.href = "${finalUrl}";</script>
-          <p>If you are not redirected automatically, <a href="${finalUrl}">click here</a>.</p>
+          <script>window.location.href = ${finalUrlScript};</script>
+          <p>If you are not redirected automatically, <a href="${finalUrlAttr}">click here</a>.</p>
         </body>
       </html>
     `);
@@ -474,3 +515,8 @@ router.post('/unsubscribe', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.__private = {
+  decodeRedirectParam,
+  escapeHtmlAttr,
+  resolveSafeTrackedRedirectUrl,
+};

@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-08
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-09
 
 ---
 
@@ -1658,10 +1658,13 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 184 |
+| **Lines** | 267 |
 | **Hooks** | `useCallback`, `useEffect`, `useState` |
 
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+**API endpoints:**
+
+- `/api/notifications/push/subscriptions`
+- `/api/notifications/push/unsubscribe`
 #### `client/src/pages/settings/tabs/OrganizationTab.jsx`
 
 | Field | Value |

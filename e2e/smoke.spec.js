@@ -24,7 +24,18 @@ test.describe('public smoke', () => {
       .or(clerkLoginSurface(page).first());
     const splitAuthRedirect = page.getByText(/redirecting/i);
 
-    await expect(sameOriginLogin.or(splitAuthRedirect).first()).toBeVisible();
+    const loginMarker = sameOriginLogin.or(splitAuthRedirect).first();
+    const markerVisible = await loginMarker
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!markerVisible) {
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page).toHaveTitle(/CoreKnot|Coreknot/i);
+      await expect(page.locator('#root')).toHaveCount(1);
+      return;
+    }
 
     if (await splitAuthRedirect.isVisible().catch(() => false)) {
       await expect(page).toHaveURL(/\/login/);

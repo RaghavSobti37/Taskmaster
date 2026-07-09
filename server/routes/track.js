@@ -361,7 +361,12 @@ router.get('/click/:clickId', async (req, res) => {
 const { handleTrackResendWebhook } = require('../domains/mail/webhooks/resendWebhookHandler');
 
 // Unified Resend Webhook Handler (Opens, Clicks, Bounces, Delivered)
-router.post('/webhooks/resend', handleTrackResendWebhook);
+router.post('/webhooks/resend', (req, res, next) => {
+  if (req.baseUrl === '/api/track') {
+    return res.status(404).send('Not Found');
+  }
+  return handleTrackResendWebhook(req, res, next);
+});
 
 
 // Public list for unsubscribe page (slug, name, domain only)

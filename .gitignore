@@ -15,6 +15,7 @@ server/data/*.csv
 .cursor/multiagent/*-ledger.json
 .cursor/agent_memory.json
 .cursor/loop-engineering/*-ledger.json
+.cursor/verify-runs/
 .cursor/healing-loop/artifacts/
 .local/
 .data/

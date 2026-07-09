@@ -2014,7 +2014,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/authConnectRoutes.js`
 - `server/routes/authRoutes.js`
 - `server/routes/calendarRoutes.js`
-- `server/routes/campaignRoutes.js`
 - `server/routes/contactRoutes.js`
 - `server/routes/crmRoutes.js`
 - `server/routes/crmStatsRoutes.js`
@@ -2032,7 +2031,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
 - `server/routes/logRoutes.js`
-- `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
 - `server/routes/mediaContactRoutes.js`
 - `server/routes/newsletterRoutes.js`
@@ -2058,7 +2056,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/scimRoutes.js`
 - `server/routes/searchRoutes.js`
 - `server/routes/securityAuditRoutes.js`
-- `server/routes/sesRoutes.js`
 - `server/routes/subscriptionRoutes.js`
 - `server/routes/supabaseAdminRoutes.js`
 - `server/routes/syncRoutes.js`
@@ -2067,7 +2064,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/teamRoutes.js`
 - `server/routes/tenantAdminRoutes.js`
 - `server/routes/tenantRoutes.js`
-- `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
 - `server/routes/webhookRoutes.js`

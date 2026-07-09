@@ -124,14 +124,6 @@
     {
       "from": "admin/audit-log",
       "to": "/admin/console"
-    },
-    {
-      "from": "workspace/emails",
-      "to": "/emails"
-    },
-    {
-      "from": "workspace/emails/create",
-      "to": "/emails/create"
     }
   ],
   "rows": [

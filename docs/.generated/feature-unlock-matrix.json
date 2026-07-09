@@ -5,10 +5,7 @@
       "key": "resend",
       "label": "Email campaigns",
       "defaultOnCreate": false,
-      "gatedPaths": [
-        "/emails",
-        "/campaign"
-      ]
+      "gatedPaths": []
     },
     {
       "key": "google",
@@ -54,15 +51,6 @@
       "defaultOnCreate": false,
       "gatedPaths": [
         "/admin/ops-hub"
-      ]
-    },
-    {
-      "key": "dataHub",
-      "label": "Data Hub",
-      "defaultOnCreate": true,
-      "gatedPaths": [
-        "/admin",
-        "/data-hub"
       ]
     },
     {

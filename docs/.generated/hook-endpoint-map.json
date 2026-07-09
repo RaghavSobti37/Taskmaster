@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08",
+  "generatedAt": "2026-07-09",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
@@ -1863,8 +1863,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -1903,8 +1901,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -1940,8 +1936,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -1980,8 +1974,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -2017,8 +2009,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -2057,8 +2047,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -3120,75 +3108,6 @@
       "endpoints": [
         "/api/admin/crm-stats",
         "/api/admin/crm-stats/trends"
-      ],
-      "network": true
-    },
-    "useCumulativeAnalytics": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
       ],
       "network": true
     },
@@ -4303,8 +4222,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4336,8 +4253,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -4826,8 +4741,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4859,8 +4772,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -4902,8 +4813,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4942,8 +4851,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -4980,8 +4887,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -5013,8 +4918,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -5879,8 +5782,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -5919,8 +5820,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -6051,8 +5950,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6091,8 +5988,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -6128,8 +6023,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6168,8 +6061,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -6350,8 +6241,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6383,8 +6272,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -6590,8 +6477,6 @@
         {
           "file": "client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6630,8 +6515,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",

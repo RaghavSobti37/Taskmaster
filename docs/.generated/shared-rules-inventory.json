@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08",
+  "generatedAt": "2026-07-09",
   "modules": [
     {
       "file": "shared/artistAnalyticsSheetMappings.js",
@@ -51,8 +51,12 @@
       "file": "shared/emailStreams.cjs",
       "exports": [
         "DEFAULT_EMAIL_STREAMS",
+        "RESEND_VERIFIED_DOMAINS",
         "ROOT_DOMAIN",
         "domainForSlug",
+        "domainFromEmail",
+        "isVerifiedResendDomain",
+        "isVerifiedResendEmail",
         "listEmailStreamsForApi",
         "normalizeEmailStream"
       ]

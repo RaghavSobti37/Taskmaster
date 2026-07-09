@@ -124,8 +124,7 @@ function LoginPageView({
 
   return (
     <>
-      <AuthMarketingShell subtitle={loginCopy.subtitle} asideLinks={asideLinks}>
-        <h1 className="sr-only">CoreKnot login</h1>
+      <AuthMarketingShell title="CoreKnot" subtitle={loginCopy.subtitle} asideLinks={asideLinks}>
         {!clerkReady ? (
           <p className="text-sm text-red-200 text-center">
             Clerk is not configured. Set <code className="text-xs">VITE_CLERK_PUBLISHABLE_KEY</code> in client env.

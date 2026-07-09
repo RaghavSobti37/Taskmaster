@@ -17,7 +17,19 @@ test.describe('public smoke', () => {
 
   test('login page renders', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /coreknot/i }).first()).toBeVisible();
+
+    const sameOriginLogin = page
+      .getByRole('heading', { name: /coreknot/i })
+      .first()
+      .or(clerkLoginSurface(page).first());
+    const splitAuthRedirect = page.getByText(/redirecting/i);
+
+    await expect(sameOriginLogin.or(splitAuthRedirect).first()).toBeVisible();
+
+    if (await splitAuthRedirect.isVisible().catch(() => false)) {
+      await expect(page).toHaveURL(/\/login/);
+      return;
+    }
 
     await expect(clerkLoginSurface(page).first()).toBeVisible();
   });

@@ -92,4 +92,18 @@ describe('Resend webhook tenant helpers', () => {
     expect(result.url).toBe('https://example.com');
     expect(result.locationObj).toBeNull();
   });
+
+  it('does not write a second webhook response after Express has sent one', () => {
+    const { __private } = require('../domains/mail/webhooks/resendWebhookHandler');
+    const send = jest.fn();
+    const status = jest.fn(() => ({ send }));
+
+    expect(__private.sendWebhookResponse({ headersSent: true, writableEnded: false, status }, 500, 'Server Error'))
+      .toBe(false);
+    expect(status).not.toHaveBeenCalled();
+
+    expect(__private.sendWebhookResponse({ headersSent: false, writableEnded: true, status }, 500, 'Server Error'))
+      .toBe(false);
+    expect(status).not.toHaveBeenCalled();
+  });
 });

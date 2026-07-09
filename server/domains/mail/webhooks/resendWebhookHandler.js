@@ -25,6 +25,14 @@ const logger = require('../../../utils/logger');
 
 const WEBHOOK_BYPASS = bypassOptions('RESEND_WEBHOOK');
 
+function sendWebhookResponse(res, status, body) {
+  if (res.headersSent || res.writableEnded) {
+    return false;
+  }
+  res.status(status).send(body);
+  return true;
+}
+
 async function resolveDefaultTenantId() {
   const Tenant = require('../../../models/Tenant');
   const tenant = await Tenant.findOne({}).select('_id').setOptions(WEBHOOK_BYPASS).lean();
@@ -443,10 +451,10 @@ async function handleTrackResendWebhook(req, res) {
       }, mailEventTenantId);
     }
 
-    res.status(200).send('Webhook processed');
+    sendWebhookResponse(res, 200, 'Webhook processed');
   } catch (err) {
     console.error('Resend Webhook Error:', err);
-    res.status(500).send('Server Error');
+    sendWebhookResponse(res, 500, 'Server Error');
   }
 }
 
@@ -740,10 +748,10 @@ async function handleApiResendWebhook(req, res) {
       }, mailEventTenantId);
     }
 
-    res.status(200).send('SUCCESS');
+    sendWebhookResponse(res, 200, 'SUCCESS');
   } catch (err) {
     console.error('Error in Resend webhook processing:', err);
-    res.status(500).send('SERVER_ERROR');
+    sendWebhookResponse(res, 500, 'SERVER_ERROR');
   }
 }
 
@@ -755,5 +763,6 @@ module.exports = {
     scheduleUpdateEmailTags,
     extractResendEngagement,
     resolveResendEngagementGeo,
+    sendWebhookResponse,
   },
 };

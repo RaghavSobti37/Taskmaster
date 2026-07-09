@@ -13,7 +13,7 @@
     "test": "node --test src/*.test.js"
   },
   "dependencies": {
-    "@powersync/web": "^1.24.0"
+    "@powersync/web": "^1.38.7"
   },
   "peerDependencies": {
     "react": "^18.0.0"

@@ -1,13 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const mailAnalyticsController = require('../domains/mail/controllers/mailAnalyticsController');
 const { protect } = require('../middleware/authMiddleware');
 const { getTenantId } = require('../utils/tenantContext');
 const { comparePeriods } = require('../services/analytics/comparisonEngine');
 const { getSparkline } = require('../services/analytics/sparklineService');
 const logger = require('../utils/logger');
 
-router.get('/geo-campaign', protect, mailAnalyticsController.getGeoCampaignAnalytics);
+router.get('/geo-campaign', protect, (_req, res) => {
+  res.status(410).json({
+    error: 'Campaign analytics moved to Auto Mailer',
+    service: 'auto-mailer',
+  });
+});
 
 router.get('/compare', protect, async (req, res) => {
   try {

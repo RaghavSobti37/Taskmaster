@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const Artist = require('../../../models/Artist');
 const ArtistMembership = require('../../../models/ArtistMembership');
 const User = require('../../../models/User');
-const { dispatchEmailPayload } = require('../../../domains/mail/services/mailDriver');
+const { dispatchEmailPayload } = require('../../../services/mailDriver');
 
 const isUserOnArtistTeam = (user, team = []) => {
   if (!user) return false;

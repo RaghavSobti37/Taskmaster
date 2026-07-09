@@ -14,7 +14,6 @@ const requireBookCallAuth = (req, res, next) => {
 
 router.use(webhookRateLimit);
 
-const { handleApiResendWebhook } = require('../domains/mail/webhooks/resendWebhookHandler');
 const { handleClerkWebhook } = require('../domains/auth/webhooks/clerkWebhookHandler');
 const {
   handleAisensyWebhookVerify,
@@ -107,6 +106,11 @@ router.post('/instagram', (req, res) => {
   }
 });
 
-router.post('/resend', handleApiResendWebhook);
+router.post('/resend', (_req, res) => {
+  res.status(410).json({
+    error: 'Resend campaign webhooks moved to Auto Mailer',
+    service: 'auto-mailer',
+  });
+});
 
 module.exports = router;

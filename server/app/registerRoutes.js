@@ -33,8 +33,8 @@ const API_DOMAINS = [
   'auth', 'projects', 'tasks', 'users', 'logs', 'teams', 'artists',
   'gamification', 'gamification-admin', 'qa', 'customization', 'crm', 'assets',
   'google', 'proxy', 'dashboard', 'calendar', 'departments', 'schedule',
-  'notifications', 'notes', 'search', 'pinboard', 'mail', 'ses', 'tsc',
-  'data-hub', 'artist-path', 'track', 'campaigns', 'analytics', 'webhooks',
+  'notifications', 'notes', 'search', 'pinboard', 'tsc',
+  'artist-path', 'analytics', 'webhooks',
   'integrations', 'office-assets', 'subscriptions', 'org-accounts', 'contacts',
   'exly', 'newsletter', 'finance', 'attendance', 'announcements', 'admin',
   'uploadthing',
@@ -157,7 +157,6 @@ function registerRoutes(app) {
 
   // --- Webhooks & tracking (public, rate-limited) ---
   app.use('/api/public/forms', require('../routes/publicFormRoutes'));
-  app.use(require('../routes/track'));
   app.post('/api/crm/unsubscribe', crmUnsubscribeLimiter, asyncHandler(async (req, res) => {
     const { email, reason, tenantSlug, orgSlug } = req.body;
     if (!email || typeof email !== 'string') {
@@ -207,14 +206,8 @@ function registerRoutes(app) {
   app.use('/api/notes', require('../routes/noteRoutes'));
   app.use('/api/search', require('../routes/searchRoutes'));
   app.use('/api/pinboard', require('../routes/pinBoardRoutes'));
-  const mailRoutes = require('../domains/mail/routes');
-  app.use('/api/mail', mailRoutes.mail);
-  app.use('/api/ses', require('../routes/sesRoutes'));
   app.use('/api/tsc', require('../routes/tscRoutes'));
-  app.use('/api/data-hub', require('../domains/data-hub/routes'));
   app.use('/api/artist-path', require('../domains/artists/pathRoutes'));
-  app.use('/api/track', require('../routes/track'));
-  app.use('/api/campaigns', mailRoutes.campaigns);
   app.use('/api/analytics', require('../routes/analyticsRoutes'));
   app.use('/api/webhooks', require('../routes/webhookRoutes'));
   app.use('/api/integrations', require('../domains/integrations-hub/integrationHubRoutes'));
@@ -223,7 +216,6 @@ function registerRoutes(app) {
   app.use('/api/org-accounts', require('../routes/orgAccountRoutes'));
   app.use('/api/contacts', require('../routes/contactRoutes'));
   app.use('/api/exly', require('../domains/integrations/exlyRoutes'));
-  app.use('/api/newsletter', require('../routes/newsletterRoutes'));
   app.use('/api/finance', require('../routes/financeRoutes'));
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));

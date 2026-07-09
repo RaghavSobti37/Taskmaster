@@ -63,7 +63,6 @@ const ArtistPublicProfile = lazyWithRetry(() => import('./pages/artists/ArtistPu
 const ArtistMembershipRoute = lazyWithRetry(() => import('./components/ArtistMembershipRoute'));
 const ArtistMembershipAccept = lazyWithRetry(() => import('./pages/artists/workspace/ArtistMembershipAccept'));
 const UnsubscribePage = lazyWithRetry(() => import('./pages/Unsubscribe'));
-const CampaignDetails = lazyWithRetry(() => import('./pages/CampaignDetails'));
 const WorkflowCanvas = lazyWithRetry(() => import('./pages/productivity/WorkflowCanvas'));
 const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssetsPage'));
 const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
@@ -78,16 +77,6 @@ const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
-const EmailHubLayout = lazyWithRetry(() => import('./pages/emails/EmailHubLayout'));
-const EmailsOverviewPage = lazyWithRetry(() => import('./pages/emails/EmailsOverviewPage'));
-const EmailsCampaignsPage = lazyWithRetry(() => import('./pages/emails/EmailsCampaignsPage'));
-const EmailsTemplatesPage = lazyWithRetry(() => import('./pages/emails/EmailsTemplatesPage'));
-const EmailsProfilesPage = lazyWithRetry(() => import('./pages/emails/EmailsProfilesPage'));
-const EmailsStreamsPage = lazyWithRetry(() => import('./pages/emails/EmailsStreamsPage'));
-const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterPage'));
-const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
-const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
-const CreateCampaignPage = lazyWithRetry(() => import('./pages/workspace/CreateCampaignPage'));
 const OrgChoosePage = lazyWithRetry(() => import('./pages/auth/OrgChoosePage'));
 const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
@@ -430,25 +419,6 @@ function App() {
               <Route element={<PageRoute page="admin_project_analytics" />}>
                 <Route path="admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
-              <Route element={<PageRoute page="emails" />}>
-                <Route element={<FeatureUnlockRoute featureKey="resend" />}>
-                  <Route path="campaign/:campaignId" element={<CampaignDetails />} />
-                  <Route element={<EmailHubLayout />}>
-                    <Route path="emails" element={<EmailsOverviewPage />} />
-                    <Route path="emails/campaigns" element={<EmailsCampaignsPage />} />
-                    <Route path="emails/templates" element={<EmailsTemplatesPage />} />
-                    <Route path="emails/profiles" element={<EmailsProfilesPage />} />
-                    <Route path="emails/streams" element={<EmailsStreamsPage />} />
-                    <Route path="emails/newsletter" element={<NewsletterPage />} />
-                    <Route path="emails/newsletter/curate" element={<NewsletterCuratePage />} />
-                    <Route path="emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
-                  </Route>
-                  <Route path="emails/create" element={<CreateCampaignPage />} />
-                </Route>
-              </Route>
-              <Route path="workspace/emails" element={<OrgNavigate to="/emails" replace />} />
-              <Route path="workspace/emails/create" element={<OrgNavigate to="/emails/create" replace />} />
-
               <Route element={<PageRoute page="artists" />}>
                 <Route element={<FeatureUnlockRoute featureKey="artistOs" />}>
                   <Route path="artists/portfolio" element={<PortfolioDashboard />} />
@@ -483,8 +453,6 @@ function App() {
                 <Route path="/features/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/workflows/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/developers/*" element={<LegacyOrgPathRedirect />} />
-                <Route path="/emails/*" element={<LegacyOrgPathRedirect />} />
-                <Route path="/campaign/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/upgrade" element={<LegacyOrgPathRedirect />} />
               </>
             )}

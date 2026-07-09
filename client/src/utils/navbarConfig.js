@@ -85,16 +85,6 @@ export const HUB_CONFIG = {
         description: 'Define permissions and role assignments',
       },
       {
-        id: 'data-hub',
-        label: 'Data Hub',
-        path: '/admin',
-        key: 'admin_data',
-        icon: 'Database',
-        section: 'content',
-        accent: 'teal',
-        description: 'Browse and manage core data records',
-      },
-      {
         id: 'media-list',
         label: 'Media List',
         path: '/admin/media-list',
@@ -307,7 +297,6 @@ const TOOLS_PATHS = [
   { path: '/notes', label: 'Notes' },
   { path: '/assets', label: 'Assets' },
   { path: '/schedule', label: 'Schedule' },
-  { path: '/emails', label: 'Emails' },
 ];
 
 const HUB_PATHS = [
@@ -315,7 +304,6 @@ const HUB_PATHS = [
   { path: '/office', label: 'Office' },
   { path: '/management', label: 'Management' },
   { path: '/admin/console', label: 'Admin' },
-  { path: '/admin', label: 'Data Hub' },
 ];
 
 function mapPages(pages) {
@@ -367,7 +355,6 @@ const LEGACY_PATH_ZONE = {
   '/assets': 'tools',
   '/schedule': 'tools',
   '/logs': 'tools',
-  '/emails': 'tools',
   '/attendance': 'primary',
   '/equipment': 'hubs',
   '/contacts': 'hubs',
@@ -380,7 +367,6 @@ const LEGACY_PATH_ZONE = {
   '/artists': 'hubs',
   '/admin/users': 'hubs',
   '/admin/teams': 'hubs',
-  '/admin': 'hubs',
   '/admin/exly-campaigns': 'hubs',
   '/admin/scripts': 'hubs',
   '/admin/gamification': 'hubs',
@@ -405,7 +391,6 @@ const PATH_TO_PAGE_KEY = {
   '/notes': 'notes',
   '/assets': 'assets',
   '/schedule': 'schedule',
-  '/emails': 'emails',
   '/settings': 'settings',
   '/office-assets': 'office_assets',
   '/features': 'features',

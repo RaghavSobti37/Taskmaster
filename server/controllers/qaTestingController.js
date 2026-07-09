@@ -4,7 +4,6 @@ const { purgeQaTestData } = require('../services/qa/qaTestData');
 const { buildFullReport } = require('../services/qa/qaReporting');
 const { generateAllPageManifests } = require('../services/qa/qaUiDiscovery');
 const { getAllActions, getRoleDefs } = require('../services/qa/qaActionRegistry');
-const DataHubService = require('../services/DataHubService');
 const logger = require('../utils/logger');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 
@@ -304,7 +303,6 @@ exports.purgeAllTestData = async (req, res, next) => {
     const swept = await purgeQaTestData();
     const phoneRepair = await repairCorruptLeadPhones();
     const xpRecalc = await GamificationService.recalculateUsersFromAudit(swept.affectedUserIds || []);
-    DataHubService.clearFolderCache();
     res.json({
       success: true,
       message: `Purged ${swept.deleted.tasks} QA tasks, ${swept.deleted.dailyLogs || 0} daily log entries, ${swept.deleted.xpAudits} XP audit rows, ${swept.deleted.users} probe users, and related CRM/logs. Re-synced XP for ${xpRecalc.updatedUsers} user(s). Repaired ${phoneRepair.repaired} corrupt phones.`,

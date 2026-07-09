@@ -14,7 +14,6 @@ const Lead = require('../models/Lead');
 const Contact = require('../models/Contact');
 const FinanceDocument = require('../models/FinanceDocument');
 const { purgeQaTestData, purgeQaRunArtifacts } = require('./qa/qaTestData');
-const DataHubService = require('./DataHubService');
 const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
 const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
 const { buildIntegrationTestCases } = require('./qa/qaIntegrationTests');
@@ -840,7 +839,6 @@ class QATestingService {
         purgeQaTestData(),
         repairCorruptLeadPhones(),
       ]);
-      DataHubService.clearFolderCache();
       cleanupResults.deleted.leads += swept.deleted.leads;
       cleanupResults.deleted.contacts += swept.deleted.contacts;
       cleanupResults.deleted.audits = swept.deleted.audits;

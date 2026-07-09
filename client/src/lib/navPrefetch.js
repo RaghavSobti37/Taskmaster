@@ -27,7 +27,6 @@ const DEFAULT_TODO_PARAMS = {
 const ROUTE_CHUNK_LOADERS = {
   '/projects': () => import('../pages/projects/ProjectsView'),
   '/crm': () => import('../pages/crm/LeadsPage'),
-  '/emails': () => import('../pages/emails/EmailHubLayout'),
 };
 
 function prefetchRouteChunk(path) {
@@ -122,13 +121,6 @@ export function prefetchNavRoute(path, userId, user = null) {
       ['crm', 'stats', statsParams],
       async () => (await axios.get('/api/crm/stats', { params: statsParams })).data,
     );
-    return;
-  }
-
-  if (path === '/emails' || path.startsWith('/emails')) {
-    prefetchRouteChunk('/emails');
-    prefetchOnce('mail-campaigns', ['mail', 'campaigns'], async () => (await axios.get('/api/campaigns')).data);
-    prefetchOnce('mail-stats', ['mail', 'stats'], async () => (await axios.get('/api/mail/stats')).data);
     return;
   }
 

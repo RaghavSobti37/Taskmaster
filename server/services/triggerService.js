@@ -38,30 +38,8 @@ const triggerClient = new ClientConstructor({
   apiUrl: process.env.TRIGGER_API_URL || 'https://api.trigger.dev',
 });
 
-// 1. Background Mail Campaign Dispatch Task
-triggerClient.defineJob({
-  id: 'mail-dispatch-job',
-  name: 'Mail Campaign Dispatch',
-  version: '1.0.0',
-  trigger: eventTrigger({
-    name: 'mail.dispatch',
-  }),
-  run: async (payload, io, ctx) => {
-    const logInfo = io?.logger?.info ? (msg) => io.logger.info(msg) : (msg) => logger.info('Job', msg);
-    const logError = io?.logger?.error ? (msg) => io.logger.error(msg) : (msg) => logger.error('Job', msg);
-    
-    await logInfo(`Starting email dispatch for campaign ${payload.campaignId}`);
-    try {
-      const { processEmailJob } = require('./emailProcessor');
-      await processEmailJob(payload);
-      await logInfo(`Successfully processed email to ${payload.email}`);
-      return { status: 'completed', email: payload.email };
-    } catch (err) {
-      await logError(`Error processing email to ${payload.email}: ${err.message}`);
-      throw err;
-    }
-  },
-});
+// 1. Campaign email dispatch moved to auto-mailer (services/campaignEmailQueue.js)
+//    Campaign dispatch trigger removed: processEmailJob was deleted from CoreKnot
 
 // 2. Scheduled Daily Analytics Rollup
 triggerClient.defineJob({
@@ -82,25 +60,8 @@ triggerClient.defineJob({
   },
 });
 
-const triggerEmailCampaign = async (jobData) => {
-  if (process.env.CAMPAIGN_USE_TRIGGER !== 'true') return false;
-  if (triggerApiKey && triggerApiKey !== 'tr_mock_api_key' && TriggerClientRef) {
-    try {
-      await triggerClient.sendEvent({
-        name: 'mail.dispatch',
-        payload: jobData,
-      });
-      logger.info('Trigger.dev', `Queued event mail.dispatch for ${jobData.email}`);
-      return true;
-    } catch (err) {
-      logger.warn('Trigger.dev', 'sendEvent failed — memory queue fallback', { error: err.message });
-      return false;
-    }
-  }
-  return false;
-};
+// triggerEmailCampaign removed — campaign dispatch is now in auto-mailer
 
 module.exports = {
   triggerClient,
-  triggerEmailCampaign,
 };

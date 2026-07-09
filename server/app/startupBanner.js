@@ -4,12 +4,10 @@ const logger = require('../utils/logger');
 const { getApiDomainManifest } = require('./registerRoutes');
 const { CRON_JOBS, QUEUE_WORKERS } = require('../jobs/registry');
 const { isRedisAvailable } = require('../services/backgroundQueue');
-const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('../utils/trackingUrls');
 const { validateUploadthingCredentials } = require('../utils/uploadthingCredentials');
 const { isSupabaseEnabled, getSupabaseConfig } = require('../config/supabase');
 
 let printed = false;
-let trackingWarnShown = false;
 
 function formatDomainList(domains, max = 8) {
   if (domains.length <= max) return domains.join(', ');
@@ -51,14 +49,6 @@ function printStartupBanner({ jobsStarted = [], jobsSkipped = 0 } = {}) {
       ')',
   );
 
-  const trackingBase = resolveTrackingApiBaseUrl();
-  logger.info('BOOT', `Mail tracking base: ${trackingBase}`);
-  const trackingWarn = getTrackingDbMismatchWarning();
-  if (trackingWarn && !trackingWarnShown) {
-    trackingWarnShown = true;
-    logger.warn('MAIL', trackingWarn);
-  }
-
   if (isSupabaseEnabled()) {
     const sb = getSupabaseConfig();
     logger.info('BOOT', `Supabase: enabled — ${sb.url}`);
@@ -81,7 +71,7 @@ function printStartupBanner({ jobsStarted = [], jobsSkipped = 0 } = {}) {
 
 function resetStartupBannerForTests() {
   printed = false;
-  trackingWarnShown = false;
+  
 }
 
 module.exports = { printStartupBanner, resetStartupBannerForTests };

@@ -77,20 +77,6 @@ const QUEUE_WORKERS = [
     queue: 'domain-sync',
     description: 'Event-driven hybrid domain sync (ownership-routed writers)',
   },
-  {
-    id: 'campaign-email',
-    module: '../workers/campaignEmailWorker',
-    init: 'initCampaignEmailWorker',
-    queue: 'campaign-email',
-    description: 'Background campaign email dispatch (BullMQ)',
-  },
-  {
-    id: 'tenant-invite-email',
-    module: '../workers/tenantInviteEmailWorker',
-    init: 'initTenantInviteEmailWorker',
-    queue: 'TenantInviteEmailQueue',
-    description: 'Org-create wizard invite emails (BullMQ)',
-  },
 ];
 
 function listJobs() {

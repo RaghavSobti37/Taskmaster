@@ -8,7 +8,6 @@ const ORG_FEATURE_KEYS = [
   'artistOs',
   'integrations',
   'opsHub',
-  'dataHub',
   'enterpriseApi',
 ];
 
@@ -17,7 +16,7 @@ const ORG_FEATURE_CATALOG = {
     label: 'Email campaigns',
     description: 'Campaigns, templates, streams, and email analytics.',
     defaultOnCreate: false,
-    gatedPaths: ['/emails', '/campaign'],
+    gatedPaths: [],
   },
   google: {
     label: 'Google integrations',
@@ -54,12 +53,6 @@ const ORG_FEATURE_CATALOG = {
     description: 'Operations hub tools and workflows.',
     defaultOnCreate: false,
     gatedPaths: ['/admin/ops-hub'],
-  },
-  dataHub: {
-    label: 'Data Hub',
-    description: 'Data hub admin surface and records.',
-    defaultOnCreate: true,
-    gatedPaths: ['/admin', '/data-hub'],
   },
   enterpriseApi: {
     label: 'Enterprise API',

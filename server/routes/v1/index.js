@@ -6,12 +6,10 @@ const { protect, requirePageAccess } = require('../../middleware/authMiddleware'
 const { getMe } = require('../../domains/auth/controllers/authController');
 const SystemHealthService = require('../../services/SystemHealthService');
 const { apiOk, apiError } = require('../../utils/apiResponse');
-const dataHubController = require('../../domains/data-hub/controllers/dataHubController');
 const { getProjects } = require('../../domains/projects/controllers/projectController');
 const crmController = require('../../domains/crm/controllers/crmController');
 
 const router = express.Router();
-const dataHubAccess = requirePageAccess('admin_data');
 const projectsAccess = requirePageAccess('projects');
 const leadsAccess = requirePageAccess('leads');
 
@@ -36,8 +34,6 @@ router.get('/health', (_req, res) => {
 });
 
 router.get('/auth/me', protect, getMe);
-
-router.get('/data-hub/sync-status', protect, dataHubAccess, dataHubController.getSyncStatus);
 
 router.get('/projects', protect, projectsAccess, getProjects);
 router.get('/crm/leads', protect, leadsAccess, crmController.getLeads);

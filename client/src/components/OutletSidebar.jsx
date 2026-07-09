@@ -13,7 +13,6 @@ import {
   FolderArchive,
   NotebookPen,
   StickyNote,
-  Mail,
   ClipboardCheck,
   ChevronDown,
   X,
@@ -24,7 +23,6 @@ import {
   Building2,
   CircleDollarSign,
   Shield,
-  Database,
 } from 'lucide-react';
 import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,8 +45,6 @@ import { TOUR_ATTR_BY_PATH } from '../constants/onboardingSteps';
 import { brand } from '../constants/marketingContent';
 
 const LEGACY_PAGE_PATHS = {
-  '/workspace/emails': '/emails',
-  '/workspace/emails/create': '/emails/create',
   '/management/equipment': '/equipment',
   '/management/contacts': '/contacts',
   '/office/subscriptions': '/subscriptions',
@@ -75,7 +71,6 @@ const PAGE_CONFIG = {
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
   '/notes': { icon: StickyNote, label: 'Notes', accessKey: 'notes' },
-  '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
   '/crm': {
     icon: UserPlus,
@@ -102,13 +97,6 @@ const PAGE_CONFIG = {
     matchPaths: ['/admin/console', '/admin/users', '/admin/platform-settings', '/admin/teams', '/admin/roles', '/admin/artist-path', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control', '/admin/media-list', '/admin/lead-audits', '/admin/crm-stats'],
     end: true,
   },
-  '/admin': {
-    icon: Database,
-    label: 'Data Hub',
-    accessKey: 'admin_data',
-    matchPaths: ['/admin', '/data-hub'],
-    end: true,
-  },
 };
 
 const canShowNavPage = (user, path) => {
@@ -126,15 +114,13 @@ const NAV_ICON_TONES = {
   '/logs': { chip: 'rgba(249, 115, 22, 0.16)', icon: '#fb923c' },
   '/assets': { chip: 'rgba(6, 182, 212, 0.16)', icon: '#22d3ee' },
   '/schedule': { chip: 'rgba(99, 102, 241, 0.16)', icon: '#818cf8' },
-  '/emails': { chip: 'rgba(14, 165, 233, 0.16)', icon: '#38bdf8' },
   '/crm': { chip: 'rgba(16, 185, 129, 0.16)', icon: '#34d399' },
   '/office': { chip: 'rgba(20, 184, 166, 0.16)', icon: '#2dd4bf' },
   '/management': { chip: 'rgba(234, 179, 8, 0.16)', icon: '#facc15' },
   '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
-  '/admin': { chip: 'rgba(16, 185, 129, 0.16)', icon: '#34d399' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId, featureLock, onLockedClick, shortcut }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, iconTone, tourId, featureLock = null, onLockedClick = undefined, shortcut }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
@@ -233,7 +219,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
   );
 };
 
-const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true }) => {
+const NavGroup = ({ title, icon: Icon = null, children, collapsed, isMobile, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const iconOnly = collapsed && !isMobile;
   return (

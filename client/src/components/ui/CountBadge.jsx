@@ -25,7 +25,7 @@ export default function CountBadge({
   variant = 'rose',
   className = '',
   pulse = false,
-  title,
+  title = undefined,
 }) {
   const n = Number(count) || 0;
   if (n <= 0) return null;

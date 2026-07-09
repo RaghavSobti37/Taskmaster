@@ -116,7 +116,7 @@ function LoginPageView({
     );
   }
 
-  if (uiState === 'BOOT_LOADING' || uiState === 'ESTABLISHING' || uiState === 'REDIRECTING') {
+  if (uiState === 'ESTABLISHING' || uiState === 'REDIRECTING') {
     return <BootScreen onRefresh={() => retryBoot()} />;
   }
 

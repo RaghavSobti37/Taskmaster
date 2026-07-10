@@ -1504,6 +1504,18 @@
     ]
   },
   {
+    "file": "client/src/pages/emails/AutoMailerRedirectPage.jsx",
+    "routes": [],
+    "lines": 56,
+    "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useMemo"
+    ],
+    "apis": [],
+    "components": []
+  },
+  {
     "file": "client/src/pages/emails/EmailHubLayout.jsx",
     "routes": [],
     "lines": 29,
@@ -2683,7 +2695,7 @@
   {
     "file": "client/src/pages/settings/tabs/NotificationsTab.jsx",
     "routes": [],
-    "lines": 184,
+    "lines": 267,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2691,7 +2703,10 @@
       "useEffect",
       "useState"
     ],
-    "apis": [],
+    "apis": [
+      "/api/notifications/push/subscriptions",
+      "/api/notifications/push/unsubscribe"
+    ],
     "components": []
   },
   {

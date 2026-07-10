@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-09
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-10
 
 ---
 
@@ -787,6 +787,16 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/campaigns/${campaignApiId}/recipients/export?${params}`
+#### `client/src/pages/emails/AutoMailerRedirectPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `function` |
+| **Lines** | 56 |
+| **Hooks** | `useMemo` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/emails/EmailHubLayout.jsx`
 
 | Field | Value |
@@ -1658,10 +1668,13 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 184 |
+| **Lines** | 267 |
 | **Hooks** | `useCallback`, `useEffect`, `useState` |
 
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+**API endpoints:**
+
+- `/api/notifications/push/subscriptions`
+- `/api/notifications/push/unsubscribe`
 #### `client/src/pages/settings/tabs/OrganizationTab.jsx`
 
 | Field | Value |
@@ -2011,7 +2024,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/authConnectRoutes.js`
 - `server/routes/authRoutes.js`
 - `server/routes/calendarRoutes.js`
-- `server/routes/campaignRoutes.js`
 - `server/routes/contactRoutes.js`
 - `server/routes/crmRoutes.js`
 - `server/routes/crmStatsRoutes.js`
@@ -2029,7 +2041,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
 - `server/routes/logRoutes.js`
-- `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
 - `server/routes/mediaContactRoutes.js`
 - `server/routes/newsletterRoutes.js`
@@ -2055,7 +2066,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/scimRoutes.js`
 - `server/routes/searchRoutes.js`
 - `server/routes/securityAuditRoutes.js`
-- `server/routes/sesRoutes.js`
 - `server/routes/subscriptionRoutes.js`
 - `server/routes/supabaseAdminRoutes.js`
 - `server/routes/syncRoutes.js`
@@ -2064,7 +2074,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/teamRoutes.js`
 - `server/routes/tenantAdminRoutes.js`
 - `server/routes/tenantRoutes.js`
-- `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
 - `server/routes/webhookRoutes.js`

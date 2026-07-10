@@ -1,0 +1,108 @@
+{
+  "spreadsheetId": "1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A",
+  "exportedAt": "2026-06-25T08:28:27.334Z",
+  "sheets": [
+    {
+      "sheetName": "Awards & Summits",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Awards & Summits.csv",
+      "filename": "Awards & Summits.csv",
+      "rowCount": 100
+    },
+    {
+      "sheetName": "Master Database",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Master Database.csv",
+      "filename": "Master Database.csv",
+      "rowCount": 294
+    },
+    {
+      "sheetName": "Maharashtra Colleges - Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Maharashtra Colleges - Harshika.csv",
+      "filename": "Maharashtra Colleges - Harshika.csv",
+      "rowCount": 183
+    },
+    {
+      "sheetName": "Private Shows - Akash",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Private Shows - Akash.csv",
+      "filename": "Private Shows - Akash.csv",
+      "rowCount": 149
+    },
+    {
+      "sheetName": "For YUGM- Kabir Cafe Performace data - harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\For YUGM- Kabir Cafe Performace data - harshika.csv",
+      "filename": "For YUGM- Kabir Cafe Performace data - harshika.csv",
+      "rowCount": 17
+    },
+    {
+      "sheetName": "Kabir Cafe, Agnee, Parvaaz data - RS",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Kabir Cafe, Agnee, Parvaaz data - RS.csv",
+      "filename": "Kabir Cafe, Agnee, Parvaaz data - RS.csv",
+      "rowCount": 56
+    },
+    {
+      "sheetName": "ICCR/ State Govt. Contact Details - RS",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\ICCR- State Govt. Contact Details - RS.csv",
+      "filename": "ICCR- State Govt. Contact Details - RS.csv",
+      "rowCount": 21
+    },
+    {
+      "sheetName": "Event Management Companies - Deepank Soni",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Event Management Companies - Deepank Soni.csv",
+      "filename": "Event Management Companies - Deepank Soni.csv",
+      "rowCount": 554
+    },
+    {
+      "sheetName": "nashik city Sponcer - Akash & Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\nashik city Sponcer - Akash & Harshika.csv",
+      "filename": "nashik city Sponcer - Akash & Harshika.csv",
+      "rowCount": 121
+    },
+    {
+      "sheetName": "Govt. Cultural Department - RS",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Govt. Cultural Department - RS.csv",
+      "filename": "Govt. Cultural Department - RS.csv",
+      "rowCount": 63
+    },
+    {
+      "sheetName": "Music Festivals - Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Music Festivals - Harshika.csv",
+      "filename": "Music Festivals - Harshika.csv",
+      "rowCount": 2
+    },
+    {
+      "sheetName": "Live Gig Venue - Deepank",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Live Gig Venue - Deepank.csv",
+      "filename": "Live Gig Venue - Deepank.csv",
+      "rowCount": 123
+    },
+    {
+      "sheetName": "Art Festivals - Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Art Festivals - Harshika.csv",
+      "filename": "Art Festivals - Harshika.csv",
+      "rowCount": 50
+    },
+    {
+      "sheetName": "Storytelling Events- Deepank ",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Storytelling Events- Deepank.csv",
+      "filename": "Storytelling Events- Deepank.csv",
+      "rowCount": 49
+    },
+    {
+      "sheetName": "Music Event Venues - Deepank",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Music Event Venues - Deepank.csv",
+      "filename": "Music Event Venues - Deepank.csv",
+      "rowCount": 49
+    },
+    {
+      "sheetName": "Brands for Music Collaborations - Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Brands for Music Collaborations - Harshika.csv",
+      "filename": "Brands for Music Collaborations - Harshika.csv",
+      "rowCount": 49
+    },
+    {
+      "sheetName": "Colleges for Artist Performances - Harshika",
+      "filePath": "c:\\Users\\ragha\\OneDrive\\Desktop\\TSC Platform\\coreknot\\Taskmaster\\server\\data\\crm-sheet-import\\1ZOHoK4hPBGJXrdEvwSv7vgwBO_I7UbmPKceHOBLKP4A\\Colleges for Artist Performances - Harshika.csv",
+      "filename": "Colleges for Artist Performances - Harshika.csv",
+      "rowCount": 49
+    }
+  ]
+}

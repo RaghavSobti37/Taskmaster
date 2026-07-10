@@ -1,0 +1,447 @@
+{
+  "generatedAt": "2026-07-08T11:28:42.549Z",
+  "baseUrl": "http://127.0.0.1:4173",
+  "auth": "none",
+  "routes": [
+    {
+      "path": "/",
+      "name": "Landing",
+      "slug": "home",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "http://127.0.0.1:4173/",
+        "fetchTime": "2026-07-08T11:25:10.463Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/login",
+      "name": "Login",
+      "slug": "login",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:13.288Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/register",
+      "name": "Register",
+      "slug": "register",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:22.282Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/forgot-password",
+      "name": "Forgot password",
+      "slug": "forgot-password",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:31.420Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/reset-password",
+      "name": "Reset password",
+      "slug": "reset-password",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:39.634Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/relegends",
+      "name": "OTP verification",
+      "slug": "relegends",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:48.806Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/auth/google/success",
+      "name": "Google OAuth success",
+      "slug": "auth_google_success",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:27:57.837Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/oauth/meta/callback",
+      "name": "Meta OAuth callback",
+      "slug": "oauth_meta_callback",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:28:06.968Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/privacy",
+      "name": "Privacy policy",
+      "slug": "privacy",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:28:16.073Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/userdata",
+      "name": "User data deletion",
+      "slug": "userdata",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:28:25.121Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "path": "/unsubscribe",
+      "name": "Unsubscribe",
+      "slug": "unsubscribe",
+      "scores": {
+        "performance": null,
+        "accessibility": null,
+        "best-practices": null,
+        "seo": null
+      },
+      "redirected": false,
+      "error": null,
+      "insights": {
+        "finalUrl": "chrome-error://chromewebdata/",
+        "fetchTime": "2026-07-08T11:28:34.240Z",
+        "metrics": {
+          "first-contentful-paint": {
+            "score": null
+          },
+          "largest-contentful-paint": {
+            "score": null
+          },
+          "total-blocking-time": {
+            "score": null
+          },
+          "cumulative-layout-shift": {
+            "score": null
+          },
+          "speed-index": {
+            "score": null
+          },
+          "interactive": {
+            "score": null
+          }
+        },
+        "opportunities": [],
+        "accessibilityFailures": [],
+        "diagnostics": []
+      }
+    }
+  ]
+}

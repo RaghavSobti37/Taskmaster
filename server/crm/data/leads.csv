@@ -1,3 +1,0 @@
-row_id,created_at,source,name,email,phone,location,interest,status,assigned_to,last_contact,next_followup,notes,budget,priority,locked_by,locked_at,is_junk
-1,2026-05-13T00:00:00Z,Website,John Doe,john@example.com,9876543210,Mumbai,Academy,New,sr06,2026-05-12T10:00:00Z,2026-05-14T10:00:00Z,Interested in IP,50000,High,,,false
-2,2026-05-13T01:00:00Z,Referral,Jane Smith,jane@example.com,9876543211,Delhi,IP Catalogue,Contacted,sr07,2026-05-12T11:00:00Z,2026-05-15T10:00:00Z,Wants bulk license,200000,Urgent,,,false

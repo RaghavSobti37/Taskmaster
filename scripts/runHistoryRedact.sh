@@ -14,6 +14,9 @@ fi
 
 MSG_CB="$(cat "$ROOT/scripts/historyMessageCallback.py")"
 CMT_CB="$(cat "$ROOT/scripts/historyCommitCallback.py")"
+RESTORE_SCRIPT="$(mktemp "${TMPDIR:-/tmp}/coreknot-restore-audit-needles.XXXXXX.js")"
+cp "$ROOT/scripts/restoreAuditNeedles.js" "$RESTORE_SCRIPT"
+trap 'rm -f "$RESTORE_SCRIPT"' EXIT
 
 echo "==> filter-repo: blobs + messages + author metadata"
 rm -rf .git/filter-repo 2>/dev/null || true
@@ -25,7 +28,7 @@ git filter-repo \
   --force
 
 echo "==> restore audit needles (filter-repo redacts security tooling literals too)"
-node scripts/restoreAuditNeedles.js
+COREKNOT_REDACTION_ROOT="$ROOT" node "$RESTORE_SCRIPT"
 
 git reflog expire --expire=now --all
 git gc --prune=now --aggressive

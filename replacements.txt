@@ -1,5 +1,18 @@
-***REMOVED***
-***REMOVED***
+literal:taskmaster-jfw0.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:coreknot-api.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:coreknot-api-staging.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:coreknot-nest-staging.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:raghavraj@theshakticollective.in==>REDACTED_ADMIN@example.com
+literal:raghavsobti37@gmail.com==>redacted@example.com
+literal:raghav@gmail.com==>redacted@example.com
+literal:harshika@theshakticollective.in==>redacted-staff@example.com
+literal:deepank@theshakticollective.in==>redacted-staff@example.com
+literal:aryaman@theshakticollective.in==>redacted-staff@example.com
+literal:rohith@theshakticollective.in==>redacted-staff@example.com
+literal:github.com/RaghavSobti37==>github.com/YOUR_ORG
+literal:RaghavSobti37/CoreKnot==>YOUR_ORG/CoreKnot
+literal:RaghavSobti37/Taskmaster==>YOUR_ORG/Taskmaster
+literal:raghavsobti37_db_user==>REDACTED_DB_USER
 regex:whsec_[A-Za-z0-9]+==>whsec_REDACTED
 regex:AIzaSy[A-Za-z0-9_\-]{30,40}==>AIzaSyREDACTED
 regex:mongodb\+srv://[^ \t\r\n'"`]+==>mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/

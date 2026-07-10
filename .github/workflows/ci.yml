@@ -81,7 +81,7 @@ jobs:
       - name: Build for preview
         run: npm run build --workspace=CoreKnot-client
       - name: Lighthouse public a11y gate (≥90)
-        working-directory: client
+        working-directory: Taskmaster/client
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 &
           PREVIEW_PID=$!

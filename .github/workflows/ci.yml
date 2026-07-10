@@ -32,7 +32,7 @@ jobs:
       - name: Locked zone guard
         run: node scripts/check-locked-zones.mjs origin/main
       - name: Tenant bypass static suite
-        run: node server/scripts/runQaSuite3Static.js
+        run: node Taskmaster/server/scripts/runQaSuite3Static.js
       - name: Jest
         run: npm test --workspace=coreknot-server -- --coverage
         env:

@@ -94,3 +94,8 @@ nestjs-server/generated/
 nestjs-server/dist/
 tscacademy_logo.png
 .env*
+
+# Safety: catch any accidental recreation of pre-restructuring root paths
+/client/
+/server/
+/packages/

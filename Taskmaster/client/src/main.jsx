@@ -38,7 +38,6 @@ import ClerkAppProvider from './components/providers/ClerkAppProvider';
 import ClerkAuthEffects from './components/auth/ClerkAuthEffects';
 import LocalFirstRoot from './components/pwa/LocalFirstRoot';
 import PostHogAnalytics from './components/analytics/PostHogAnalytics';
-import { Analytics } from '@vercel/analytics/react';
 import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react';
 /** Local-only UI feedback tool — compile-time false in production builds. */
 const AgentationDev = __AGENTATION_ENABLED__
@@ -168,7 +167,6 @@ const appTree = (
                       <PostHogAnalytics />
                     </LocalFirstRoot>
                     <CookieBanner />
-                    {import.meta.env.PROD ? <Analytics /> : null}
                     {AgentationDev ? (
                       <Suspense fallback={null}>
                         <AgentationDev />

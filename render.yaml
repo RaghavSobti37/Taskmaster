@@ -37,6 +37,8 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: warn
+      - key: COREKNOT_LIGHTWEIGHT
+        value: "true"
       - key: MONGODB_URI_PROD
         sync: false
       - key: JWT_SECRET
@@ -168,6 +170,8 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: info
+      - key: COREKNOT_LIGHTWEIGHT
+        value: "true"
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET

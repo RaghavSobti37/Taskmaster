@@ -66,8 +66,6 @@ const SORT_OPTIONS = [
   { value: 'name:asc', label: 'Name (A–Z)' },
 ];
 
-const AUTO_SYNC_MS = DATA_HUB_REFRESH_MS;
-
 const DataHubPersonDetail = lazy(() => import('../../components/dataHub/DataHubPersonDetail'));
 
 function formatLastSynced(date) {
@@ -166,8 +164,7 @@ export function DataHubContent() {
     if (!recentlySynced) {
       runIncrementalSync();
     }
-    const id = setInterval(runIncrementalSync, AUTO_SYNC_MS);
-    return () => clearInterval(id);
+    return undefined;
   }, [runIncrementalSync, syncStatus?.lastSyncedAt, reconcileEnabled]);
 
   const peopleParams = useMemo(() => ({

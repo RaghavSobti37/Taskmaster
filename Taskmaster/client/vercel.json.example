@@ -47,10 +47,6 @@
       "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/$1"
     },
     {
-      "source": "/socket.io/(.*)",
-      "destination": "https://YOUR-RENDER-SERVICE.onrender.com/socket.io/$1"
-    },
-    {
       "source": "/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)",
       "destination": "/index.html"
     }

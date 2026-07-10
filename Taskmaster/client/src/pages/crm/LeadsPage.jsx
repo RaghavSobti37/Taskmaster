@@ -30,7 +30,7 @@ import LeadArtistJourneySection from '../../components/crm/LeadArtistJourneySect
 import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
 import { isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
-import { isLockedByOther, formatLockToast, closeLeadEditor } from '../../utils/crmLeadLock';
+import { isLockedByOther, formatLockToast, closeLeadEditor, releaseLeadLock } from '../../utils/crmLeadLock';
 import { buildLeadsActiveFilterChips } from '../../utils/activeFilterChips';
 
 const CRM_LEADS_FILTERS_KEY = 'crm-leads-filters';
@@ -134,30 +134,26 @@ export default function LeadsPage() {
   }, [debouncedSearch, filters]);
 
   React.useEffect(() => {
-    if (selectedLead) {
-      const loaded = buildLeadEditState(selectedLead);
-      setEditLeadData(loaded);
-      setEditBaseline(loaded);
-      applyLeadValidation(loaded);
-
-      // Fetch audit trail for the selected lead
-      axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
-        .then(res => setLeadLogs(res.data))
-        .catch(() => setLeadLogs([]));
-
-      const heartbeat = window.setInterval(() => {
-        if (document.visibilityState !== 'visible') return;
-        axios.post(`/api/crm/leads/${selectedLead._id}/lock-heartbeat`, null, {
-          headers: { 'x-skip-toast': 'true' },
-        }).catch(() => {});
-      }, 30_000);
-
-      return () => window.clearInterval(heartbeat);
+    if (!selectedLead) {
+      setLeadLogs([]);
+      setFieldErrors({});
+      setEditBaseline(null);
+      return undefined;
     }
-    setLeadLogs([]);
-    setFieldErrors({});
-    setEditBaseline(null);
-    return undefined;
+
+    const leadId = selectedLead._id;
+    const loaded = buildLeadEditState(selectedLead);
+    setEditLeadData(loaded);
+    setEditBaseline(loaded);
+    applyLeadValidation(loaded);
+
+    axios.get(`/api/crm/leads/${leadId}/audit`)
+      .then((res) => setLeadLogs(res.data))
+      .catch(() => setLeadLogs([]));
+
+    return () => {
+      releaseLeadLock(leadId);
+    };
   }, [selectedLead]);
 
   const hasLeadChanges = leadEditHasChanges(editLeadData, editBaseline);

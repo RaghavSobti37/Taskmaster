@@ -3,8 +3,13 @@ import { postHogPersonPropertiesForUser } from '@shared/posthogInternalUsers';
 import { hasAnalyticsConsent } from './cookieConsent';
 import { shouldCapturePostHog } from '../config/posthog';
 
-/** Same-origin proxy path — must match vercel.json + vite dev proxy. */
+/** Same-origin proxy path when VITE_POSTHOG_USE_PROXY=true — else direct PostHog host. */
 export const POSTHOG_PROXY_PATH = '/ph';
+
+const isPostHogProxyEnabled = () => {
+  const flag = import.meta.env.VITE_POSTHOG_USE_PROXY?.trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+};
 
 let initialized = false;
 
@@ -50,8 +55,8 @@ export const initPostHog = () => {
 
   const remoteHost = import.meta.env.VITE_POSTHOG_HOST?.trim() || 'https://us.i.posthog.com';
   const region = resolveRegion(remoteHost);
-  // ponytail: same-origin /ph proxy in prod + dev — ad blockers kill direct us.i.posthog.com
-  const apiHost = POSTHOG_PROXY_PATH;
+  // ponytail: direct PostHog by default — /ph Vercel edge proxy only when VITE_POSTHOG_USE_PROXY
+  const apiHost = isPostHogProxyEnabled() ? POSTHOG_PROXY_PATH : remoteHost;
 
   posthog.init(token, {
     api_host: apiHost,

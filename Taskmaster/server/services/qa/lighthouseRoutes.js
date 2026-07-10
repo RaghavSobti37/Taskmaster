@@ -48,8 +48,6 @@ const PROTECTED_ROUTES = [
   { path: '/admin/scripts', name: 'Admin scripts' },
   { path: '/admin/gamification', name: 'Gamification' },
   { path: '/admin/project-analytics', name: 'Project analytics' },
-  { path: '/emails', name: 'Emails' },
-  { path: '/emails/create', name: 'Create campaign' },
   { path: '/artists', name: 'Artists' },
   { path: '/finance', name: 'Finance' },
   { path: '/announcements', name: 'Announcements' },

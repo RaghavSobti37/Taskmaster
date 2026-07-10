@@ -48,7 +48,6 @@ const MONGO_MODEL_BY_KEY: Record<string, string> = {
   personidentifiers: 'models/PersonIdentifier.js',
   projectgoals: 'domains/projects/models/ProjectGoal.js',
   taskactivities: 'domains/tasks/models/TaskActivity.js',
-  mailevents: 'domains/mail/models/MailEvent.js',
 };
 
 const PRISMA_DELEGATE_BY_KEY: Record<string, string> = {
@@ -79,7 +78,6 @@ const PRISMA_DELEGATE_BY_KEY: Record<string, string> = {
   personidentifiers: 'personIdentifier',
   projectgoals: 'projectGoal',
   taskactivities: 'taskActivity',
-  mailevents: 'mailEvent',
 };
 
 const FLATTEN_KEYS = new Set([

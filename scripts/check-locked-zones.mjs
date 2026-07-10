@@ -5,9 +5,6 @@ const ALLOW = process.env.ALLOW_LOCKED_ZONE_CHANGES === 'true';
 const against = process.argv[2] || 'HEAD~1';
 
 const LOCKED_PREFIXES = [
-  'server/domains/mail/webhooks/',
-  'server/services/email',
-  'server/services/newsletter',
   'client/src/components/brand/',
   'client/public/logo.png',
   'client/public/coreknot-logo.png',

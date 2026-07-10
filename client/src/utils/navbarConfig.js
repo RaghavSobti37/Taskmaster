@@ -293,6 +293,7 @@ const PRIMARY_PATHS = [
 
 const TOOLS_PATHS = [
   { path: '/calendar', label: 'Calendar' },
+  { path: '/emails', label: 'Emails' },
   { path: '/logs', label: 'Daily Logs' },
   { path: '/notes', label: 'Notes' },
   { path: '/assets', label: 'Assets' },
@@ -349,6 +350,7 @@ export const DEFAULT_NAVBAR_GROUPS = [
 const LEGACY_PATH_ZONE = {
   '/dashboard': 'primary',
   '/calendar': 'tools',
+  '/emails': 'tools',
   '/todo': 'primary',
   '/inbox': 'primary',
   '/projects': 'primary',
@@ -387,6 +389,7 @@ const PATH_TO_PAGE_KEY = {
   '/inbox': 'inbox',
   '/attendance': 'attendance',
   '/calendar': 'calendar',
+  '/emails': 'emails',
   '/logs': 'logs',
   '/notes': 'notes',
   '/assets': 'assets',

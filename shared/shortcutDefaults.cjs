@@ -12,6 +12,7 @@ const NAV_ROUTES = [
   { suffix: 'attendance', label: 'Attendance', path: '/attendance', keys: ['g', 'a'] },
   { suffix: 'settings', label: 'Settings', path: '/settings', keys: ['g', 's'] },
   { suffix: 'calendar', label: 'Calendar', path: '/calendar', keys: ['g', 'c'] },
+  { suffix: 'emails', label: 'Emails', path: '/emails', keys: ['g', 'e'] },
   { suffix: 'crm', label: 'CRM', path: '/crm', keys: ['g', 'l'] },
   { suffix: 'followups', label: 'Follow-ups', path: '/crm?tab=followups', keys: ['g', 'f'] },
   { suffix: 'management', label: 'Management', path: '/management', keys: ['g', 'm'] },

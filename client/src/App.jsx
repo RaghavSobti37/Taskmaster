@@ -102,6 +102,7 @@ const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
 const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
 const ManagementHub = lazyWithRetry(() => import('./pages/hubs/ManagementHub'));
 const AdminConsole = lazyWithRetry(() => import('./pages/hubs/AdminConsole'));
+const AutoMailerRedirectPage = lazyWithRetry(() => import('./pages/emails/AutoMailerRedirectPage'));
 const MainLayout = lazyWithRetry(() => import('./components/MainLayout'));
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
@@ -301,6 +302,9 @@ function App() {
               <Route element={<PageRoute page="admin_developers" />}>
                 <Route path="developers" element={<DevelopersPage />} />
               </Route>
+              <Route element={<PageRoute page="emails" />}>
+                <Route path="emails" element={<AutoMailerRedirectPage />} />
+              </Route>
               <Route path="org/settings" element={<OrgNavigate to="/settings?tab=organization" replace />} />
               <Route path="data-hub" element={<OrgNavigate to="/admin" replace />} />
 
@@ -453,6 +457,7 @@ function App() {
                 <Route path="/features/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/workflows/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/developers/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/emails/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/upgrade" element={<LegacyOrgPathRedirect />} />
               </>
             )}

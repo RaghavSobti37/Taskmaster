@@ -4,6 +4,7 @@ import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
   Briefcase,
+  Mail,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
@@ -72,6 +73,7 @@ const PAGE_CONFIG = {
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
   '/notes': { icon: StickyNote, label: 'Notes', accessKey: 'notes' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
+  '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
   '/crm': {
     icon: UserPlus,
     label: 'CRM',
@@ -111,6 +113,7 @@ const NAV_ICON_TONES = {
   '/inbox': { chip: 'rgba(244, 63, 94, 0.16)', icon: '#fb7185' },
   '/attendance': { chip: 'rgba(245, 158, 11, 0.18)', icon: '#fbbf24' },
   '/calendar': { chip: 'rgba(168, 85, 247, 0.16)', icon: '#c084fc' },
+  '/emails': { chip: 'rgba(14, 165, 233, 0.16)', icon: '#38bdf8' },
   '/logs': { chip: 'rgba(249, 115, 22, 0.16)', icon: '#fb923c' },
   '/assets': { chip: 'rgba(6, 182, 212, 0.16)', icon: '#22d3ee' },
   '/schedule': { chip: 'rgba(99, 102, 241, 0.16)', icon: '#818cf8' },

@@ -18,7 +18,6 @@ const pageConfigReplacement = `const PAGE_CONFIG = {
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
-  '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
   '/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
   '/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
@@ -53,7 +52,7 @@ const navBlockTargetEnd = `</nav>`;
 const navBlockReplacement = `<nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
           {(navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
             { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
-            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/emails'}] },
+            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}] },
             { id: 'office', title: 'Office', visible: true, pages: [{path: '/equipment'}, {path: '/contacts'}, {path: '/attendance'}] },
             { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
             { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/announcements'}, {path: '/ops-logs'}, {path: '/artists'}] },

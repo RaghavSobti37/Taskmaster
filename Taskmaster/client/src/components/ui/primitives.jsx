@@ -1,0 +1,958 @@
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { createPortal } from 'react-dom';
+import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Spinner } from './Spinner';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useInputErrorShake, useSlidingTabs } from '../../hooks/transitions';
+import NumberPopIn from './NumberPopIn';
+import DeltaBadge from './DeltaBadge';
+import { useIsMobile } from '../../hooks/useBreakpoint';
+import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
+import { coerceTableRows } from '../../utils/coerceTableRows';
+import TableSkeleton from './TableSkeleton';
+
+/** Default rows per page for DataTable and TablePagination */
+export const DEFAULT_TABLE_PAGE_SIZE = 10;
+
+export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
+  const variants = {
+    rect: 'rounded-[var(--radius-atomic)]',
+    circle: 'rounded-full',
+    text: 'rounded-md h-3 w-full'
+  };
+
+  return (
+    <div
+      className={`tm-skeleton animate-pulse bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] ${variants[variant]} ${className}`}
+      style={{ width, height }}
+      aria-hidden
+    />
+  );
+};
+
+export const Button = ({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  title,
+  'aria-label': ariaLabel,
+  type = 'button',
+  ...props
+}) => {
+  const childArray = React.Children.toArray(children);
+  const childText = childArray
+    .filter((c) => typeof c === 'string' || typeof c === 'number')
+    .join('')
+    .trim();
+  const isIconOnly =
+    childArray.length > 0 &&
+    !childText &&
+    childArray.every((c) => React.isValidElement(c));
+  const accessibleName = ariaLabel || (isIconOnly ? title : undefined);
+
+  const variants = {
+    primary: 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)] hover:opacity-90 active:scale-[0.98]',
+    secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
+    ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
+    danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
+    mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10',
+    success: 'bg-[var(--color-pastel-mint-text)] text-white border border-[var(--color-pastel-mint-text)] hover:opacity-90',
+  };
+
+  const sizes = {
+    xs: 'px-2 py-1 text-[10px]',
+    sm: 'px-3 py-1.5 text-xs',
+    md: 'px-4 py-2 text-sm',
+    lg: 'px-6 py-3 text-base'
+  };
+
+  return (
+    <button
+      type={type}
+      aria-label={accessibleName}
+      title={title}
+      className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+export const Card = ({ children, className = '', hover = false, variant = 'flat', divided = false, ...props }) => {
+  const variants = {
+    flat: 'bg-[var(--color-bg-surface)]',
+    subtle: 'bg-[var(--color-bg-surface)] border-t border-[var(--color-bg-border)]',
+    surface: 'bg-[var(--color-bg-surface)]',
+    secondary: 'bg-[var(--color-bg-secondary)]',
+  };
+
+  return (
+    <div 
+      className={`rounded-[var(--radius-atomic)] transition-colors ${variants[variant] || variants.flat} ${divided ? 'border-t border-[var(--color-bg-border)]' : ''} ${hover ? 'hover:bg-[var(--color-bg-secondary)] cursor-pointer' : ''} ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
+  <div
+    className={`mx-auto tm-page-container min-w-0 max-w-full overflow-x-clip ${className}`}
+    style={{ maxWidth }}
+  >
+    {children}
+  </div>
+);
+
+export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => {
+  const { barRef, pillRef, movePill } = useSlidingTabs('[aria-selected="true"]');
+
+  useLayoutEffect(() => {
+    movePill(true);
+  }, [activeTab, tabs.length, movePill]);
+
+  return (
+    <div
+      ref={barRef}
+      role="tablist"
+      className={`t-tabs tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}
+    >
+      <div ref={pillRef} className="t-tabs-pill" aria-hidden />
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`t-tab inline-flex items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${
+            activeTab === tab.id
+              ? 'is-active text-[var(--color-action-primary)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+          }`}
+        >
+          <span>{tab.label}</span>
+          {tab.badge > 0 && (
+            <span
+              className={`flex h-4 min-w-4 px-1 items-center justify-center rounded-full text-[8px] font-bold tabular-nums ${
+                tab.badgeVariant === 'warning'
+                  ? 'bg-amber-500 text-[var(--color-bg-primary)]'
+                  : tab.badgeVariant === 'overdue'
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)]'
+              }`}
+            >
+              {tab.badge > 99 ? '99+' : tab.badge}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/** Wraps a single form control so it sizes correctly in flex/grid layouts. */
+const FormField = ({ children, className = '' }) => (
+  <div className={`w-full min-w-0 shrink-0 ${className}`}>{children}</div>
+);
+
+/** Responsive field layout — flex-based to avoid CSS grid min-content collapse. */
+export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
+  const childArray = React.Children.toArray(children).filter(Boolean);
+  if (columns <= 1) {
+    return <div className={`flex flex-col gap-6 w-full ${className}`}>{childArray}</div>;
+  }
+  return (
+    <div
+      className={`grid w-full gap-6 grid-cols-1 md:[grid-template-columns:repeat(2,minmax(0,1fr))] ${className}`}
+    >
+      {childArray.map((child, i) => (
+        <div key={i} className="w-full min-w-0">
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const Input = React.forwardRef(({
+  label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props
+}, ref) => {
+  const textareaRef = useRef(null);
+  const inputRef = useRef(null);
+  const fieldRef = multiline ? textareaRef : inputRef;
+  const { wrapRef, clearError } = useInputErrorShake(error, fieldRef);
+  const fieldStyles = variant === 'ghost'
+    ? 'bg-transparent border-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] focus:border-transparent'
+    : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)]';
+
+  const syncTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !multiline || !autoGrow) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [multiline, autoGrow]);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [props.value, syncTextareaHeight]);
+
+  const assignTextareaRef = useCallback((node) => {
+    textareaRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+
+  const assignInputRef = useCallback((node) => {
+    inputRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+
+  const handleChange = (e) => {
+    if (error) clearError();
+    onChange?.(e);
+    if (multiline && autoGrow) syncTextareaHeight();
+  };
+
+  return (
+  <div ref={wrapRef} className="t-input-wrap flex flex-col gap-2 w-full min-w-0">
+    {label && (
+      <label className="block tm-section-label">
+        {label}
+      </label>
+    )}
+    <div className="relative isolate w-full min-w-0 overflow-hidden">
+      {Icon && !multiline && (
+        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]" />
+      )}
+      {multiline ? (
+        <textarea
+          ref={assignTextareaRef}
+          rows={rows}
+          onChange={handleChange}
+          aria-invalid={error ? 'true' : undefined}
+          className={`mobile-form-control t-input block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
+            autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
+          } ${fieldStyles} ${
+            error ? 'border-rose-500 focus:border-rose-500' : ''
+          } ${className}`}
+          {...props}
+        />
+      ) : (
+        <input
+          ref={assignInputRef}
+          onChange={handleChange}
+          aria-invalid={error ? 'true' : undefined}
+          className={`mobile-form-control t-input block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
+            error ? 'border-rose-500 focus:border-rose-500' : ''
+          } ${className}`}
+          {...props}
+        />
+      )}
+      {endAdornment && !multiline && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center">
+          {endAdornment}
+        </div>
+      )}
+    </div>
+    {error && <p className="t-error-msg text-[10px] font-bold text-rose-400">{error}</p>}
+    {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
+  </div>
+  );
+});
+Input.displayName = 'Input';
+
+export const Badge = ({ children, variant = 'info', className = '' }) => {
+  const variants = {
+    success: 'badge-mint',
+    complete: 'badge-mint',
+    converted: 'badge-mint',
+    warning: 'badge-apricot',
+    'in-progress': 'badge-apricot',
+    danger: 'badge-rose',
+    overdue: 'badge-rose',
+    hot: 'badge-rose',
+    high: 'badge-apricot',
+    critical: 'badge-rose',
+    medium: 'badge-medium',
+    info: 'badge-slate',
+    neutral: 'badge-slate',
+    fresh: 'badge-slate',
+    low: 'badge-slate'
+  };
+
+  return (
+    <span className={`badge-pastel ${variants[variant] || 'badge-slate'} ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+export const InfoButton = ({ text }) => {
+  const tipId = React.useId();
+
+  return (
+    <span className="t-tt-wrap inline-flex items-center ml-1.5 align-middle">
+      <button
+        type="button"
+        className="t-tt-trigger w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-mono font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-action-primary)] hover:text-[var(--color-bg-primary)] transition-colors cursor-help focus:outline-none"
+        aria-describedby={tipId}
+      >
+        i
+      </button>
+      <span className="t-tt" id={tipId} role="tooltip">
+        {text}
+      </span>
+    </span>
+  );
+};
+
+export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, highlights = [], children, onClick, className = '', active = false, delta }) => (
+    <div
+      onClick={onClick}
+      className={`tm-stat-shell p-4 flex flex-col gap-2 h-full ${active ? 'ring-1 ring-[var(--color-action-primary)]' : ''} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} ${className}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {Icon && (
+            <Icon size={13} strokeWidth={2.5} className="text-[var(--color-action-primary)] shrink-0" aria-hidden />
+          )}
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none truncate">
+            {label}
+            {info && <InfoButton text={info} />}
+          </span>
+        </div>
+        {subValue && <Badge variant={variant} className="!py-0 !px-1.5 !text-[9px] shrink-0">{subValue}</Badge>}
+      </div>
+      <div className="flex items-end justify-between gap-2 mt-auto">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">
+            <NumberPopIn value={value} />
+          </span>
+          {delta && (
+            <DeltaBadge value={delta.value} direction={delta.direction} />
+          )}
+        </div>
+        <div className="flex-shrink-0 flex items-center justify-end">
+          {children}
+        </div>
+      </div>
+      {highlights.length > 0 && (
+        <ul className="space-y-0.5 border-t border-[var(--color-bg-border)] pt-2">
+          {highlights.map((item) => (
+            <li
+              key={item.name}
+              className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-wide text-[var(--color-text-muted)]"
+            >
+              <span className="truncate normal-case">{item.name}</span>
+              <span className="font-bold tabular-nums text-[var(--color-text-primary)] shrink-0">{item.count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+);
+
+export const TablePagination = ({
+  pageSize = DEFAULT_TABLE_PAGE_SIZE,
+  currentPage,
+  totalPages,
+  totalItems,
+  rowCount = 0,
+  onPageChange,
+  onPageSizeChange,
+}) => {
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
+
+  return (
+    <div className="shrink-0 p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1">
+        <span>Show</span>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            onPageSizeChange(Number(e.target.value));
+            onPageChange(1);
+          }}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-[11px] font-bold outline-none text-[var(--color-text-primary)]"
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+        <span>entries</span>
+        <span className="text-[10px] font-bold opacity-60 sm:ml-2">
+          (Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems})
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1">
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          First
+        </button>
+        <button
+          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Prev
+        </button>
+        <span className="px-3 text-xs text-[var(--color-text-primary)]">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Next
+        </button>
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Last
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const DataTable = ({ 
+  columns, 
+  data = [], 
+  onRowClick,
+  getRowId,
+  getRowClassName,
+  className = '', 
+  defaultPageSize = DEFAULT_TABLE_PAGE_SIZE,
+  paginated = true,
+  serverSide = false,
+  totalItems: customTotalItems,
+  totalPages: customTotalPages,
+  currentPage: customCurrentPage,
+  onPageChange,
+  onPageSizeChange,
+  pageSize: customPageSize,
+  emptyTitle = 'No results',
+  emptyDescription = 'Nothing matches your filters yet.',
+  isLoading = false,
+  fitWidth = false,
+  sortState: controlledSortState,
+  onSortChange,
+  mobileRowRender,
+  mobileRowClassName = '',
+  rowEstimateSize = 52,
+  tableMaxHeight: _tableMaxHeight,
+  virtualize = false,
+  density = 'default',
+  selectable = false,
+  selectedIds = [],
+  onSelectedIdsChange,
+  isRowSelectable = () => true,
+}) => {
+  const tableRows = useMemo(() => coerceTableRows(data), [data]);
+
+  const [localSortState, setLocalSortState] = useState(null);
+  const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
+  const setSortState = onSortChange || setLocalSortState;
+
+  const sortedData = useMemo(() => {
+    if (serverSide || !sortState?.key || !sortState.direction) return tableRows;
+    const col = columns.find((c) => (c.sortKey || c.key) === sortState.key);
+    const getVal = (row) => {
+      if (col?.sortFn) return col.sortFn(row);
+      if (col?.key) return row[col.key];
+      return row[sortState.key];
+    };
+    const dir = sortState.direction === 'asc' ? 1 : -1;
+    return [...tableRows].sort((a, b) => compareSortValues(getVal(a), getVal(b)) * dir);
+  }, [tableRows, sortState, serverSide, columns]);
+
+  const handleSortClick = useCallback(
+    (col) => {
+      const key = col.sortKey || col.key;
+      if (!key || col.sortable === false) return;
+      const nextDir = nextSortDirection(sortState, key, key);
+      setSortState(nextDir ? { key, direction: nextDir } : null);
+    },
+    [sortState, setSortState]
+  );
+
+  const [localCurrentPage, setLocalCurrentPage] = useState(1);
+  const [localPageSize, setLocalPageSize] = useState(defaultPageSize);
+
+  const currentPage = serverSide ? (customCurrentPage || 1) : localCurrentPage;
+  const pageSize = serverSide ? (customPageSize || defaultPageSize) : localPageSize;
+
+  const tableData = sortedData;
+  const totalItems = serverSide ? (customTotalItems || 0) : tableData.length;
+  const totalPages = Math.max(
+    1,
+    serverSide ? (customTotalPages || 1) : (Math.ceil(totalItems / pageSize) || 1),
+  );
+
+  const handlePageChange = useCallback(
+    (nextPage) => {
+      const clamped = Math.min(Math.max(nextPage, 1), totalPages);
+      if (serverSide) {
+        onPageChange?.(clamped);
+      } else {
+        setLocalCurrentPage(clamped);
+      }
+    },
+    [serverSide, onPageChange, totalPages],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (size) => {
+      if (serverSide) {
+        onPageSizeChange?.(size);
+      } else {
+        setLocalPageSize(size);
+        setLocalCurrentPage(1);
+      }
+    },
+    [serverSide, onPageSizeChange],
+  );
+
+  // Reset page when data changes (only client-side)
+  useEffect(() => {
+    if (!serverSide) {
+      setLocalCurrentPage(1);
+    }
+  }, [tableData.length, serverSide]);
+
+  useEffect(() => {
+    if (!serverSide) {
+      setLocalCurrentPage(1);
+    }
+  }, [sortState?.key, sortState?.direction, serverSide]);
+
+  // Clamp server-side page when result set shrinks (filters, deletes, etc.)
+  useEffect(() => {
+    if (!serverSide || !onPageChange || !customCurrentPage) return;
+    if (customCurrentPage > totalPages) {
+      onPageChange(totalPages);
+    }
+  }, [serverSide, customCurrentPage, totalPages, onPageChange]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = serverSide ? Math.min(startIndex + tableData.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = paginated && !serverSide ? tableData.slice(startIndex, endIndex) : tableData;
+  const showEmpty = !isLoading && paginatedData.length === 0;
+
+  const selectedIdSet = useMemo(() => new Set((selectedIds || []).map(String)), [selectedIds]);
+  const selectablePageRows = useMemo(
+    () => paginatedData.filter((row) => isRowSelectable(row) && getRowId?.(row)),
+    [paginatedData, isRowSelectable, getRowId],
+  );
+  const allPageSelected = selectablePageRows.length > 0
+    && selectablePageRows.every((row) => selectedIdSet.has(String(getRowId(row))));
+  const somePageSelected = selectablePageRows.some((row) => selectedIdSet.has(String(getRowId(row))));
+
+  const toggleRowSelection = (rowId, checked) => {
+    if (!onSelectedIdsChange || rowId == null) return;
+    const id = String(rowId);
+    const next = new Set(selectedIdSet);
+    if (checked) next.add(id);
+    else next.delete(id);
+    onSelectedIdsChange([...next]);
+  };
+
+  const togglePageSelection = (checked) => {
+    if (!onSelectedIdsChange) return;
+    const next = new Set(selectedIdSet);
+    selectablePageRows.forEach((row) => {
+      const id = String(getRowId(row));
+      if (checked) next.add(id);
+      else next.delete(id);
+    });
+    onSelectedIdsChange([...next]);
+  };
+
+  const parentRef = useRef();
+
+  const useRowVirtualizer = virtualize && paginatedData.length > 0;
+  const rowVirtualizer = useVirtualizer({
+    count: useRowVirtualizer ? paginatedData.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => rowEstimateSize,
+    overscan: 8,
+  });
+
+  const isMobile = useIsMobile();
+  const mobileColumns = columns.filter((c) => !c.mobileHidden);
+  const primaryCol = columns.find((c) => c.mobilePrimary) || mobileColumns[0];
+  const detailColumns = mobileColumns.filter((c) => c !== primaryCol && !c.mobileAction);
+  const actionColumns = columns.filter((c) => c.mobileAction);
+
+  const isComfortable = density === 'comfortable';
+  const thCellPad = isComfortable ? 'px-4 py-3 lg:px-5 lg:py-3' : 'px-4 py-3';
+  const tdCellPad = isComfortable ? 'px-4 py-3 lg:px-5 lg:py-3' : 'px-4 py-3';
+  const tableDensityClass = isComfortable ? 'data-table--comfortable' : '';
+
+  return (
+    <div className={`w-full flex flex-col ${className}`}>
+      <div ref={parentRef} className="data-table-shell w-full overflow-visible">
+        <table
+          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'} ${tableDensityClass}`}
+        >
+          <thead className="border-b border-[var(--color-bg-border)]">
+            <tr>
+              {selectable && (
+                <th className={`${thCellPad} w-10`}>
+                  <input
+                    type="checkbox"
+                    className="rounded border-[var(--color-bg-border)]"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allPageSelected && somePageSelected;
+                    }}
+                    onChange={(e) => togglePageSelection(e.target.checked)}
+                    aria-label="Select all on page"
+                  />
+                </th>
+              )}
+              {columns.map((col, i) => {
+                const sortKey = col.sortKey || col.key;
+                const sortable = Boolean(sortKey && col.sortable !== false);
+                const active = Boolean(
+                  sortState?.key && sortKey && sortState.key === sortKey && sortState.direction
+                );
+                const SortIcon = active
+                  ? sortState.direction === 'asc'
+                    ? ArrowUp
+                    : ArrowDown
+                  : ArrowUpDown;
+                const alignClass = col.align === 'right' || col.numeric ? 'text-right' : '';
+                return (
+                  <th
+                    key={i}
+                    className={`${thCellPad} tm-widget-label whitespace-nowrap leading-normal overflow-visible ${alignClass} ${col.headerClassName || ''} ${
+                      sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
+                    }`}
+                    onClick={sortable ? () => handleSortClick(col) : undefined}
+                    aria-sort={
+                      active
+                        ? (sortState.direction === 'asc' ? 'ascending' : 'descending')
+                        : 'none'
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.header}
+                      {col.info && <InfoButton text={col.info} />}
+                      {sortable && (
+                        <SortIcon
+                          size={12}
+                          className={active ? 'text-[var(--color-action-primary)]' : 'opacity-40'}
+                        />
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="p-0">
+                  <TableSkeleton rows={6} className="border-0 rounded-none" />
+                </td>
+              </tr>
+            ) : showEmpty ? (
+              <tr>
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="p-0">
+                  <div className="py-12 px-4 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]" aria-hidden>
+                      <span className="text-lg font-bold">∅</span>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{emptyTitle}</p>
+                    {emptyDescription && (
+                      <p className="mt-2 text-xs text-[var(--color-text-muted)] max-w-sm mx-auto">{emptyDescription}</p>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ) : useRowVirtualizer ? (
+              <>
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} aria-hidden />
+            )}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = paginatedData[virtualRow.index];
+              const rowId = getRowId?.(row);
+              const rowKey = rowId ?? virtualRow.index;
+              return (
+                <tr
+                  key={rowKey}
+                  data-highlight-id={rowId || undefined}
+                  onClick={(e) => {
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    onRowClick?.(row);
+                  }}
+                  className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
+                  style={{ height: `${virtualRow.size}px` }}
+                >
+                  {selectable && (
+                    <td className={`${tdCellPad} w-10`} onClick={(e) => e.stopPropagation()}>
+                      {isRowSelectable(row) && rowId != null ? (
+                        <input
+                          type="checkbox"
+                          className="rounded border-[var(--color-bg-border)]"
+                          checked={selectedIdSet.has(String(rowId))}
+                          onChange={(e) => toggleRowSelection(rowId, e.target.checked)}
+                          aria-label="Select row"
+                        />
+                      ) : null}
+                    </td>
+                  )}
+                  {columns.map((col, j) => {
+                    const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
+                    return (
+                    <td
+                      key={j}
+                      className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                    >
+                      {col.render ? col.render(row) : row[col.key]}
+                    </td>
+                  );})}
+                </tr>
+              );
+            })}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} aria-hidden />
+            )}
+              </>
+            ) : (
+              paginatedData.map((row, i) => {
+                const rowId = getRowId?.(row);
+                const rowKey = rowId ?? i;
+                return (
+                  <tr
+                    key={rowKey}
+                    data-highlight-id={rowId || undefined}
+                    onClick={(e) => {
+                      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                      onRowClick?.(row);
+                    }}
+                    className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
+                  >
+                    {selectable && (
+                      <td className={`${tdCellPad} w-10`} onClick={(e) => e.stopPropagation()}>
+                        {isRowSelectable(row) && rowId != null ? (
+                          <input
+                            type="checkbox"
+                            className="rounded border-[var(--color-bg-border)]"
+                            checked={selectedIdSet.has(String(rowId))}
+                            onChange={(e) => toggleRowSelection(rowId, e.target.checked)}
+                            aria-label="Select row"
+                          />
+                        ) : null}
+                      </td>
+                    )}
+                    {columns.map((col, j) => {
+                      const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
+                      return (
+                        <td
+                          key={j}
+                          className={`${tdCellPad} text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                        >
+                          {col.render ? col.render(row) : row[col.key]}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+
+        {/* Mobile Responsive Card Stack (< lg) */}
+        <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
+          {isLoading ? (
+            <div className="p-0">
+              <TableSkeleton rows={5} className="border-0 rounded-none" />
+            </div>
+          ) : showEmpty ? (
+            <div className="px-4 py-12 text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]" aria-hidden>
+                <span className="text-lg font-bold">∅</span>
+              </div>
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">{emptyTitle}</p>
+              {emptyDescription && <p className="mt-2 text-xs text-[var(--color-text-muted)]">{emptyDescription}</p>}
+            </div>
+          ) : paginatedData.map((row, i) => (
+            <div
+              key={getRowId?.(row) ?? i}
+              data-highlight-id={getRowId?.(row) || undefined}
+              onClick={(e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                onRowClick?.(row);
+              }}
+              className={`tm-data-row cursor-pointer min-w-0 ${mobileRowClassName}`.trim()}
+            >
+              {mobileRowRender ? (
+                mobileRowRender(row)
+              ) : (
+                <>
+                  {primaryCol && (
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-[var(--color-text-primary)] min-w-0">
+                        {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
+                      </div>
+                      {primaryCol.mobileSubtitle && (
+                        <div className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
+                          {typeof primaryCol.mobileSubtitle === 'function'
+                            ? primaryCol.mobileSubtitle(row)
+                            : row[primaryCol.mobileSubtitle]}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {detailColumns.length > 0 && (
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--color-bg-border)] pt-2 lg:mt-2.5 lg:gap-y-2.5 lg:pt-2.5">
+                      {detailColumns.map((col, j) => (
+                        <div
+                          key={j}
+                          className={`min-w-0 ${col.mobileFullWidth ? 'col-span-2' : ''}`}
+                        >
+                          <dt className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider leading-none mb-1">
+                            {col.header}
+                          </dt>
+                          <dd className="text-sm text-[var(--color-text-primary)] min-w-0 break-words leading-snug">
+                            {col.render ? col.render(row) : row[col.key]}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                  {actionColumns.length > 0 && (
+                    <div
+                      className="mt-2 flex items-center justify-end gap-1.5 lg:mt-2.5 lg:gap-2 lg:pt-2.5 lg:border-t lg:border-[var(--color-bg-border)]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {actionColumns.map((col, j) => (
+                        <div key={j} className="shrink-0">
+                          {col.render ? col.render(row) : row[col.key]}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {paginated && totalItems > 0 && (
+        <TablePagination
+          pageSize={pageSize}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          rowCount={serverSide ? data.length : Math.min(pageSize, totalItems - startIndex)}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      )}
+    </div>
+  );
+};
+
+export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)]' }) => (
+  <div className="w-full h-1 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
+    <div
+      className={`h-full ${color}`}
+      style={{
+        width: `${progress}%`,
+        transition: 'width var(--duration-fast) var(--ease-smooth-out)',
+      }}
+    />
+  </div>
+);
+
+export const Switch = ({ checked, onChange, disabled = false, className = '' }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={() => !disabled && onChange(!checked)}
+    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-text-muted)]'} ${className}`}
+  >
+    <span
+      className={`pointer-events-none block h-4 w-4 rounded-full bg-[var(--color-bg-surface)] shadow-sm ring-0 transition-transform duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`}
+    />
+  </button>
+);
+
+const ACCORDION_CHEVRON = (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <path
+      d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z"
+      fill="currentColor"
+      fillRule="evenodd"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+export const Accordion = ({ items, className = '' }) => {
+  const [openIndex, setOpenIndex] = useState(null);
+
+  return (
+    <div className={`space-y-2 w-full ${className}`}>
+      {items.map((item, i) => {
+        const open = openIndex === i;
+        return (
+          <div
+            key={i}
+            className="t-acc border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden bg-[var(--color-bg-surface)]"
+            data-open={open ? 'true' : 'false'}
+          >
+            <button
+              type="button"
+              onClick={() => setOpenIndex(open ? null : i)}
+              aria-expanded={open}
+              className="t-acc-head w-full flex items-center justify-between p-4 text-sm font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none text-left"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">{item.title}</span>
+                {item.subtitle && (
+                  <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mt-0.5 truncate">
+                    {item.subtitle}
+                  </span>
+                )}
+              </span>
+              <span className="t-acc-chevron text-[var(--color-text-muted)] shrink-0 ml-2">
+                {ACCORDION_CHEVRON}
+              </span>
+            </button>
+            <div className="t-acc-panel">
+              <div className="t-acc-panel-inner p-4 pt-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)]">
+                {item.content}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};

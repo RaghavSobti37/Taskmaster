@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Scans client/src/pages and emits docs/.generated/page-inventory.json
+ * Scans Taskmaster/client/src/pages and emits docs/.generated/page-inventory.json
  * Used by COREKNOT_MASTER.md generation.
  */
 import fs from 'fs';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const pagesDir = path.join(root, 'client/src/pages');
+const pagesDir = path.join(root, 'Taskmaster/client/src/pages');
 
 function walk(dir, files = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
@@ -103,7 +103,6 @@ const ROUTE_MAP = {
   'pages/emails/EmailsCampaignsPage.jsx': ['/emails/campaigns'],
   'pages/emails/EmailsTemplatesPage.jsx': ['/emails/templates'],
   'pages/emails/EmailsProfilesPage.jsx': ['/emails/profiles'],
-  'pages/emails/EmailsAnalyticsPage.jsx': ['/emails/analytics'],
   'pages/emails/EmailsStreamsPage.jsx': ['/emails/streams'],
   'pages/workspace/NewsletterPage.jsx': ['/emails/newsletter'],
   'pages/workspace/NewsletterCuratePage.jsx': ['/emails/newsletter/curate'],
@@ -121,7 +120,7 @@ const files = walk(pagesDir);
 const results = [];
 
 for (const abs of files.sort()) {
-  const rel = path.relative(path.join(root, 'client/src'), abs).replace(/\\/g, '/');
+  const rel = path.relative(path.join(root, 'Taskmaster/client/src'), abs).replace(/\\/g, '/');
   const content = fs.readFileSync(abs, 'utf8');
   const apis = [...new Set([...content.matchAll(apiRe)].map((m) => m[1]))].sort();
   const hooks = [...new Set([...content.matchAll(hookRe)].map((m) => m[1]))]
@@ -134,7 +133,7 @@ for (const abs of files.sort()) {
   const defaultMatch = content.match(/export\s+default\s+([A-Za-z0-9_]+)/);
   const comps = [...new Set([...content.matchAll(importCompRe)].map((m) => m[1]))].sort();
   results.push({
-    file: `client/src/${rel}`,
+    file: `Taskmaster/client/src/${rel}`,
     routes: ROUTE_MAP[rel] || [],
     lines: content.split('\n').length,
     defaultExport: defaultMatch ? defaultMatch[1] : null,

@@ -1,0 +1,178 @@
+const Lead = require('../models/Lead');
+const backgroundQueue = require('../../../services/backgroundQueue');
+const followupCache = require('../../../services/followupCache');
+const ContactService = require('../../../services/ContactService');
+const { parse } = require('date-fns');
+const { validateDate } = require('../../../utils/sanitizer');
+const { normalizeAndValidateLeadFields } = require('../../../utils/leadValidation');
+const { normalizePersonRecord, applyPersonFieldsTo } = require('../../../utils/personNormalization');
+const { broadcastRealtimeEvent } = require('../../../config/realtime');
+const { isBookedCallSource } = require('../../../../shared/dataInlets');
+const { CRM_TYPES } = require('../../../../shared/artistCrmTaxonomy');
+
+/** @typedef {import('@coreknot/contracts/crm').CreateLeadBody} CreateLeadBody */
+/** @typedef {import('@coreknot/contracts/crm').UpdateLeadBody} UpdateLeadBody */
+
+class LeadService {
+  /** @param {CreateLeadBody} rawLeadData */
+  async createLead(rawLeadData) {
+    const sanitizedData = this.sanitizeAndNormalize(rawLeadData);
+    const requirePhone = sanitizedData.crmType !== CRM_TYPES.ARTIST;
+    const errors = normalizeAndValidateLeadFields(sanitizedData, { requireName: true, requirePhone });
+    if (errors.length) {
+      const err = new Error(errors[0]);
+      err.statusCode = 400;
+      throw err;
+    }
+    const newLead = await Lead.create(sanitizedData);
+    
+    // Explicit Side-Effects
+    await backgroundQueue.queueHolySheetSync(newLead._id);
+    await backgroundQueue.queueCsvBackup();
+    await followupCache.cacheFollowup(newLead).catch(() => {});
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: newLead._id, action: 'create' });
+    await this.syncToContactHub(newLead);
+
+    return newLead;
+  }
+
+  async syncToContactHub(lead) {
+    if (!lead) return;
+    let inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+    let source = inletKey === 'booked_calls' ? 'booked_calls' : 'crm';
+    if (lead.crmType === CRM_TYPES.ARTIST) {
+      inletKey = 'artist_crm';
+      source = 'artist_crm';
+    }
+    await ContactService.mergeContact({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      city: lead.city,
+      leadStatus: lead.leadStatus,
+      leadQuality: lead.leadQuality,
+      emailStatus: lead.emailStatus,
+      unsubscribed: lead.unsubscribed,
+      unsubscribeReason: lead.unsubscribeReason,
+      recordId: lead._id,
+      summary: {
+        source: lead.source,
+        leadStatus: lead.leadStatus,
+        callStatus: lead.callStatus,
+        nextFollowupDate: lead.nextFollowupDate,
+        nextFollowupTime: lead.nextFollowupTime,
+      },
+      inletKey,
+    }, source);
+  }
+
+  applyFollowupReminderResets(updateData, existingLead) {
+    if (!existingLead) return updateData;
+    const set = updateData.$set || updateData;
+    const dateChanged = set.nextFollowupDate !== undefined
+      && set.nextFollowupDate !== existingLead.nextFollowupDate;
+    const timeChanged = set.nextFollowupTime !== undefined
+      && set.nextFollowupTime !== existingLead.nextFollowupTime;
+    if (!dateChanged && !timeChanged) return updateData;
+
+    const patch = { reminderSent: false };
+    if (set.nextFollowupDate) {
+      try {
+        const newDate = parse(set.nextFollowupDate, 'dd-MM-yyyy', new Date());
+        const oldDate = existingLead.nextFollowupDate
+          ? parse(existingLead.nextFollowupDate, 'dd-MM-yyyy', new Date())
+          : null;
+        if (!isNaN(newDate.getTime()) && (!oldDate || isNaN(oldDate.getTime()) || newDate >= oldDate)) {
+          patch.notifiedOverdue = false;
+        }
+      } catch (_) {
+        patch.notifiedOverdue = false;
+      }
+    } else {
+      patch.notifiedOverdue = false;
+    }
+
+    if (updateData.$set) {
+      return { ...updateData, $set: { ...updateData.$set, ...patch } };
+    }
+    return { ...updateData, ...patch };
+  }
+
+  /** @param {UpdateLeadBody} updateData */
+  async updateLead(query, updateData) {
+    const existingLead = await Lead.findOne(query).select('nextFollowupDate nextFollowupTime reminderSent notifiedOverdue');
+    const withResets = this.applyFollowupReminderResets(updateData, existingLead);
+    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(withResets);
+    const updatedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, { returnDocument: 'after' });
+    
+    if (updatedLead) {
+      await backgroundQueue.queueHolySheetSync(updatedLead._id);
+      await backgroundQueue.queueCsvBackup();
+      await followupCache.cacheFollowup(updatedLead).catch(() => {});
+      broadcastRealtimeEvent('leads', 'lead_change', { leadId: updatedLead._id, action: 'update' });
+      await this.syncToContactHub(updatedLead).catch(() => {});
+    }
+
+    return updatedLead;
+  }
+
+  async upsertLead(query, updateData, session = null) {
+    const existingLead = await Lead.findOne(query).select('nextFollowupDate nextFollowupTime reminderSent notifiedOverdue');
+    const withResets = this.applyFollowupReminderResets(updateData, existingLead);
+    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(withResets);
+    
+    // Add $setOnInsert sanitization if present
+    if (sanitizedUpdate.$setOnInsert) {
+      const cleanOnInsert = this.sanitizeAndNormalize(sanitizedUpdate.$setOnInsert);
+      sanitizedUpdate.$setOnInsert = cleanOnInsert;
+    }
+    
+    const options = { upsert: true, returnDocument: 'after', runValidators: true };
+    if (session) options.session = session;
+    
+    const upsertedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, options);
+    
+    if (upsertedLead && !session) { // Defer side-effects if using session until commit
+      await backgroundQueue.queueHolySheetSync(upsertedLead._id);
+      await backgroundQueue.queueCsvBackup();
+      await followupCache.cacheFollowup(upsertedLead).catch(() => {});
+      await this.syncToContactHub(upsertedLead).catch(() => {});
+    }
+
+    return upsertedLead;
+  }
+
+  async triggerSideEffects(leadId) {
+    if (!leadId) return;
+    await backgroundQueue.queueHolySheetSync(leadId);
+    await backgroundQueue.queueCsvBackup();
+    try {
+      const lead = await Lead.findById(leadId);
+      if (lead) await followupCache.cacheFollowup(lead);
+    } catch(err) {}
+  }
+
+  sanitizeAndNormalize(data) {
+    const clean = { ...data };
+    const normalized = normalizePersonRecord(clean, { tryRepairPhone: true });
+    applyPersonFieldsTo(clean, normalized);
+    if (clean.nextFollowupDate && !validateDate(clean.nextFollowupDate)) {
+      clean.nextFollowupDate = '';
+    }
+    return clean;
+  }
+
+  sanitizeAndNormalizeUpdate(update) {
+    if (!update) return update;
+    const clean = { ...update };
+    const set = clean.$set || clean;
+    const normalized = normalizePersonRecord(set, { tryRepairPhone: true });
+    applyPersonFieldsTo(set, normalized);
+    if (set.nextFollowupDate && !validateDate(set.nextFollowupDate)) {
+      set.nextFollowupDate = '';
+    }
+    return clean;
+  }
+}
+
+module.exports = new LeadService();

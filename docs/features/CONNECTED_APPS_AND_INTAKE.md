@@ -85,7 +85,6 @@ Credentials are stored encrypted on `TenantIntegration` (tenant-scoped). Never l
 - **Category:** Intake  
 - **Connect:** CoreKnot provisions URL + HMAC secret (shown once)  
 - **Use:** Server POST with `X-CoreKnot-Signature` (HMAC-SHA256 body)  
-- **Plan:** `webhook_in` — lowered plan minimum so more orgs can enable intake early
 
 ### 3.5 AiSensy (WhatsApp)
 
@@ -162,8 +161,9 @@ Configure in **Settings → Developers** (outbound events). Event names: `TENANT
 
 ## 7. Feature unlocks & permissions
 
-- Integration hub gated by org feature flags in `shared/orgFeatures.js` / `OrgContext`.  
-- Page keys: `pagePermissions.js` (client + server must agree).  
+**Billing / plan paywalls are disabled** — all Connected Apps providers can be connected on any org plan (`shared/planLimits.js`, `integrationService.js`). Plan tiers remain informational for future billing only.
+
+- Integration hub still respects **page permissions** (`pagePermissions.js`) and org **feature toggles** (`featureUnlocks` in Settings → Organization) when an admin explicitly disables a module.  
 - Generated matrix: `docs/.generated/feature-unlock-matrix.json`.  
 - **Removed:** `knowledge-engine` feature key and `admin_knowledge_engine` page permission.
 

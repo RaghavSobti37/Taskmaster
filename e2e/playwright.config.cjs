@@ -15,6 +15,8 @@ module.exports = defineConfig({
   testDir: __dirname,
   testMatch: ['**/*.spec.js', '**/*.smoke.js'],
   timeout: 60_000,
+  // ponytail: one baseline — no -linux/-win32 suffix drift
+  snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,

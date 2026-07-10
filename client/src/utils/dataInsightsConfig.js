@@ -13,7 +13,6 @@ export const PAGE_INSIGHTS_CONFIG = {
   '/admin/ops-hub': { tier: DATA_INSIGHTS_TIERS.L, panelColumns: 2, chartColumns: 2 },
   '/artists/portfolio': { tier: DATA_INSIGHTS_TIERS.L, panelColumns: 3, chartColumns: 2 },
   '/crm': { tier: DATA_INSIGHTS_TIERS.M, panelColumns: 2, chartColumns: 1, clientRowLimit: 100 },
-  '/emails/analytics': { tier: DATA_INSIGHTS_TIERS.L, panelColumns: 2, chartColumns: 2 },
   '/attendance': { tier: DATA_INSIGHTS_TIERS.M, panelColumns: 2, chartColumns: 1 },
   '/logs': { tier: DATA_INSIGHTS_TIERS.M, panelColumns: 2, chartColumns: 1 },
   '/admin/gamification': { tier: DATA_INSIGHTS_TIERS.S, panelColumns: 1 },

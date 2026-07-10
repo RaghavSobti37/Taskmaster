@@ -1,0 +1,72 @@
+/**
+ * App routes for QA Lighthouse audits (keep in sync with client/scripts/lighthouse-routes.mjs).
+ */
+
+const PUBLIC_ROUTES = [
+  { path: '/', name: 'Landing' },
+  { path: '/login', name: 'Login' },
+  { path: '/register', name: 'Register' },
+  { path: '/forgot-password', name: 'Forgot password' },
+  { path: '/reset-password', name: 'Reset password' },
+  { path: '/relegends', name: 'OTP verification' },
+  { path: '/auth/google/success', name: 'Google OAuth success' },
+  { path: '/oauth/meta/callback', name: 'Meta OAuth callback' },
+  { path: '/privacy', name: 'Privacy policy' },
+  { path: '/userdata', name: 'User data deletion' },
+  { path: '/unsubscribe', name: 'Unsubscribe' },
+];
+
+const PROTECTED_ROUTES = [
+  { path: '/dashboard', name: 'Dashboard' },
+  { path: '/projects', name: 'Projects' },
+  { path: '/projects/new', name: 'New project' },
+  { path: '/calendar', name: 'Calendar' },
+  { path: '/settings', name: 'Settings' },
+  { path: '/logs', name: 'Daily logs' },
+  { path: '/attendance', name: 'Attendance' },
+  { path: '/attendance/all', name: 'Attendance (all)' },
+  { path: '/schedule', name: 'Schedule' },
+  { path: '/inbox', name: 'Inbox' },
+  { path: '/todo', name: 'Todo' },
+  { path: '/components', name: 'Components showcase' },
+  { path: '/equipment', name: 'Equipment' },
+  { path: '/contacts', name: 'Contacts' },
+  { path: '/subscriptions', name: 'Subscriptions' },
+  { path: '/assets', name: 'Assets' },
+  { path: '/office-assets', name: 'Office assets' },
+  { path: '/leads', name: 'Leads' },
+  { path: '/followups', name: 'Follow-ups' },
+  { path: '/features', name: 'Features' },
+  { path: '/workflows', name: 'Workflows' },
+  { path: '/bookings', name: 'Bookings' },
+  { path: '/admin', name: 'Admin CRM' },
+  { path: '/admin/control', name: 'Admin panel' },
+  { path: '/admin/qa', name: 'QA testing' },
+  { path: '/admin/users', name: 'Admin users' },
+  { path: '/admin/teams', name: 'Admin teams' },
+  { path: '/admin/exly-campaigns', name: 'Exly campaigns' },
+  { path: '/admin/scripts', name: 'Admin scripts' },
+  { path: '/admin/gamification', name: 'Gamification' },
+  { path: '/admin/project-analytics', name: 'Project analytics' },
+  { path: '/artists', name: 'Artists' },
+  { path: '/finance', name: 'Finance' },
+  { path: '/announcements', name: 'Announcements' },
+];
+
+function getAllLighthouseRoutes() {
+  const seen = new Set();
+  return [...PUBLIC_ROUTES, ...PROTECTED_ROUTES].filter((r) => {
+    if (seen.has(r.path)) return false;
+    seen.add(r.path);
+    return true;
+  });
+}
+
+const PUBLIC_PATHS = new Set(PUBLIC_ROUTES.map((r) => r.path));
+
+module.exports = {
+  PUBLIC_ROUTES,
+  PROTECTED_ROUTES,
+  PUBLIC_PATHS,
+  getAllLighthouseRoutes,
+};

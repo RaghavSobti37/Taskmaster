@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-07
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-10
 
 ---
 
@@ -195,7 +195,7 @@ _Total page files: 140. Each entry lists route, exports, hooks, components, and 
 
 ### Authentication & legal
 
-#### `client/src/pages/auth/ForgotPasswordPage.jsx`
+#### `Taskmaster/client/src/pages/auth/ForgotPasswordPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -204,7 +204,7 @@ _Total page files: 140. Each entry lists route, exports, hooks, components, and 
 | **Lines** | 11 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/auth/GoogleSuccessPage.jsx`
+#### `Taskmaster/client/src/pages/auth/GoogleSuccessPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -215,7 +215,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `BootScreen` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/auth/LoginPage.jsx`
+#### `Taskmaster/client/src/pages/auth/LoginPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -227,7 +227,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignInBlock`, `InstallGuideModal` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/auth/MetaOAuthCallback.jsx`
+#### `Taskmaster/client/src/pages/auth/MetaOAuthCallback.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -239,7 +239,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/artists/${state}/auth/meta/callback`
-#### `client/src/pages/auth/OrgChoosePage.jsx`
+#### `Taskmaster/client/src/pages/auth/OrgChoosePage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -251,7 +251,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `AuthMarketingShell`, `BootScreen` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/auth/RegisterPage.jsx`
+#### `Taskmaster/client/src/pages/auth/RegisterPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -265,7 +265,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/auth/access-request`
-#### `client/src/pages/auth/ResetPasswordPage.jsx`
+#### `Taskmaster/client/src/pages/auth/ResetPasswordPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -274,7 +274,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 11 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/LandingPage.jsx`
+#### `Taskmaster/client/src/pages/LandingPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -286,7 +286,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `BootScreen`, `BrandLogo`, `LandingDashboardPreview`, `WithClerkWhenConfigured` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/legal/PrivacyPolicy.jsx`
+#### `Taskmaster/client/src/pages/legal/PrivacyPolicy.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -296,7 +296,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `BrandLogo`, `MarketingPageBackground`, `MarketingThemeToggle` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/legal/TermsOfService.jsx`
+#### `Taskmaster/client/src/pages/legal/TermsOfService.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -305,7 +305,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 24 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/legal/UserDataDeletion.jsx`
+#### `Taskmaster/client/src/pages/legal/UserDataDeletion.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -319,7 +319,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/crm/unsubscribe`
 - `/api/webhooks/meta-data-deletion/${encodeURIComponent(code)}`
-#### `client/src/pages/Unsubscribe.jsx`
+#### `Taskmaster/client/src/pages/Unsubscribe.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -327,7 +327,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 178 |
 | **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
-| **Data hooks** | `usePublicEmailStreams` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `usePublicEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 **API endpoints:**
 
@@ -335,7 +335,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Dashboard & productivity
 
-#### `client/src/pages/artists/PortfolioDashboard.jsx`
+#### `Taskmaster/client/src/pages/artists/PortfolioDashboard.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -346,7 +346,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `usePortfolioSummary` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/calendar/CalendarView.jsx`
+#### `Taskmaster/client/src/pages/calendar/CalendarView.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -360,7 +360,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/calendar/seed-music-content`
-#### `client/src/pages/Dashboard.jsx`
+#### `Taskmaster/client/src/pages/Dashboard.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -372,7 +372,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `BrandedLoadingPanel`, `DashboardTierLayout`, `OrgOnboardingChecklist` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/inbox/InboxPage.jsx`
+#### `Taskmaster/client/src/pages/inbox/InboxPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -380,11 +380,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `InboxPage` |
 | **Lines** | 316 |
 | **Hooks** | `useAuth`, `useCallback`, `useClearAllNotifications`, `useConfirm`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMarkAllNotificationsRead`, `useMarkNotificationRead`, `useMemo`, `useNavigate`, `useNotifications`, `useState`, `useStatusCounts` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClearAllNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMarkAllNotificationsRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useMarkNotificationRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClearAllNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMarkAllNotificationsRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useMarkNotificationRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts |
 | **Key components** | `CountBadge`, `DataListRow`, `EmptyState`, `ListPageLayout`, `PageLoadGuard`, `PageSkeleton`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/notes/NoteEditorPage.jsx`
+#### `Taskmaster/client/src/pages/notes/NoteEditorPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -396,7 +396,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `NoteRichEditor`, `SaveNoteDialog` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/notes/NotesPage.jsx`
+#### `Taskmaster/client/src/pages/notes/NotesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -404,11 +404,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 236 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useMemo`, `useNavigate`, `useState`, `useUserNotes` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useUserNotes` → /api/notes, /api/notes/${id}, /api/pinboard |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useUserNotes` → /api/notes, /api/notes/${id}, /api/pinboard |
 | **Key components** | `NoteComposer`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/productivity/DailyLogPage.jsx`
+#### `Taskmaster/client/src/pages/productivity/DailyLogPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -416,11 +416,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `DailyLogPage` |
 | **Lines** | 688 |
 | **Hooks** | `useActivityGrid`, `useAttendance`, `useAuth`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useDeleteLog`, `useEffect`, `useLogs`, `useMemo`, `useNavigate`, `useProjects`, `useSearchParams`, `useState`, `useSystemToast`, `useTasks`, `useUpdateLog`, `useUserDirectory`, `useWorkspaces` |
-| **Data hooks** | `useActivityGrid` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useLogs` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${taskId} · `useUpdateLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Data hooks** | `useActivityGrid` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useLogs` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${taskId} · `useUpdateLog` → /api/logs, /api/logs/${id}, /api/logs/activity-grid · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `DailyLogActivityCalendar`, `DailyLogEntryModal`, `DailyLogTimeline`, `DataOverviewSection` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/productivity/WorkflowCanvas.jsx`
+#### `Taskmaster/client/src/pages/productivity/WorkflowCanvas.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -432,7 +432,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `QueryErrorBanner` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/schedule/SchedulePage.jsx`
+#### `Taskmaster/client/src/pages/schedule/SchedulePage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -445,7 +445,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `EmptyState`, `ListPageLayout`, `ScheduleDayViewControl`, `ScheduleGrid`, `ScheduleMobileList`, `ScheduleSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/DashboardCustomizationTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/DashboardCustomizationTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -458,7 +458,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/customization/dashboard/preset`
-#### `client/src/pages/todo/TodoPage.jsx`
+#### `Taskmaster/client/src/pages/todo/TodoPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -466,7 +466,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `TodoPage` |
 | **Lines** | 768 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjects`, `useQueryClient`, `useState`, `useSystemToast`, `useTaskCategoryOptions`, `useTodoTasks`, `useUserDirectory`, `useWorkspaces` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTaskCategoryOptions` → /api/departments/task-types, /api/tasks/${task?._id} · `useTodoTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${task?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTaskCategoryOptions` → /api/departments/task-types, /api/tasks/${task?._id} · `useTodoTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${task?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `CompletedTaskRollbackButton`, `FlashHighlightListener`, `ListCard`, `ListPageLayout`, `MentionTitle`, `PageLoadGuard`, `PageSkeleton`, `SearchInput`, `TaskMentionBadge`, `VirtualTaskList` |
 
 **API endpoints:**
@@ -475,7 +475,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Projects & workspaces
 
-#### `client/src/pages/projects/ProjectAnalyticsPage.jsx`
+#### `Taskmaster/client/src/pages/projects/ProjectAnalyticsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -487,7 +487,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ProjectAnalyticsContent`, `ProjectReportRangeControls` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/projects/ProjectCreate.jsx`
+#### `Taskmaster/client/src/pages/projects/ProjectCreate.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -495,7 +495,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `ProjectCreate` |
 | **Lines** | 281 |
 | **Hooks** | `useCallback`, `useEffect`, `useNavigate`, `useQueryClient`, `useRef`, `useSearchParams`, `useState`, `useToast` |
-| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `NexusDropdown`, `RoleOptionBoxes`, `WorkspaceSelect` |
 
 **API endpoints:**
@@ -503,13 +503,13 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/projects`
 - `/api/projects/workspaces/${encodeURIComponent(workspace)}`
 - `/api/users/team`
-#### `client/src/pages/projects/ProjectDetail.jsx`
+#### `Taskmaster/client/src/pages/projects/ProjectDetail.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /projects/:id |
 | **Default export** | `ProjectDetail` |
-| **Lines** | 576 |
+| **Lines** | 584 |
 | **Hooks** | `useAuth`, `useCallback`, `useDeferredQueryEnabled`, `useDeleteTask`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useParams`, `useProject`, `useProjectHoursSummary`, `useProjectTasks`, `useQueryClient`, `useReviewTasks`, `useSchedule`, `useState`, `useSystemToast`, `useUpdateTask`, `useUserDirectory`, `useWorkspaces` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTask` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useProject` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useProjectHoursSummary` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useProjectTasks` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useSchedule` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useUpdateTask` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/tasks · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `ProjectAssets`, `ProjectFinance`, `ProjectGoalsPanel`, `ProjectGoalsStrip`, `ProjectKanban`, `ProjectList`, `ProjectSettingsModal`, `ProjectTeam`, `ScheduleGrid`, `ScheduleSkeleton`, `TaskCompletionModal`, `TaskCreateModal`, `TaskDetailModal` |
@@ -519,7 +519,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/projects/${id}`
 - `/api/projects/${id}/remove-member`
 - `/api/tasks/${taskId}`
-#### `client/src/pages/projects/ProjectsView.jsx`
+#### `Taskmaster/client/src/pages/projects/ProjectsView.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -536,7 +536,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/projects/${id}`
 - `/api/projects/workspaces`
 - `/api/projects/workspaces/${group.name}`
-#### `client/src/pages/projects/WorkspaceSettings.jsx`
+#### `Taskmaster/client/src/pages/projects/WorkspaceSettings.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -554,7 +554,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### CRM & sales
 
-#### `client/src/pages/crm/ArtistBookingEnquiriesPage.jsx`
+#### `Taskmaster/client/src/pages/crm/ArtistBookingEnquiriesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -562,11 +562,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 135 |
 | **Hooks** | `useAuth`, `useDebounce`, `useLiveLeads`, `useMemo`, `useState` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/crm/ExlyBookingsPage.jsx`
+#### `Taskmaster/client/src/pages/crm/ExlyBookingsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -576,7 +576,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ExlyDataContent` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/crm/FollowupsPage.jsx`
+#### `Taskmaster/client/src/pages/crm/FollowupsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -584,7 +584,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 816 |
 | **Hooks** | `useAuth`, `useCRMConfig`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUpdateLead` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `LeadLockIndicator`, `PhoneNumberFields` |
 
 **API endpoints:**
@@ -592,25 +592,26 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/crm/leads/${selectedLead._id}/audit`
 - `/api/crm/leads/${selectedLead._id}/lock-heartbeat`
 - `/api/crm/leads/${selectedLead._id}/notes`
-#### `client/src/pages/crm/LeadsPage.jsx`
+#### `Taskmaster/client/src/pages/crm/LeadsPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | (tab: leads) |
 | **Default export** | `function` |
-| **Lines** | 1311 |
+| **Lines** | 1353 |
 | **Hooks** | `useArtistImportSheets`, `useArtistReps`, `useAuth`, `useCRMConfig`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateLead`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useLeadDetail`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useRef`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUnsavedChanges`, `useUpdateLead` |
-| **Data hooks** | `useArtistImportSheets` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useArtistReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeadDetail` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
+| **Data hooks** | `useArtistImportSheets` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useArtistReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeadDetail` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `ArtistCrmImportPanel`, `LeadArtistJourneySection`, `LeadLockIndicator`, `LeadRowActions`, `PhoneNumberFields` |
 
 **API endpoints:**
 
 - `/api/crm/leads/${highlightId}`
+- `/api/crm/leads/${id}`
 - `/api/crm/leads/${selectedLead._id}`
 - `/api/crm/leads/${selectedLead._id}/audit`
 - `/api/crm/leads/${selectedLead._id}/lock-heartbeat`
 - `/api/crm/leads/${selectedLead._id}/notes`
-#### `client/src/pages/hubs/CrmHub.jsx`
+#### `Taskmaster/client/src/pages/hubs/CrmHub.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -624,7 +625,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Office hub
 
-#### `client/src/pages/hubs/OfficeHub.jsx`
+#### `Taskmaster/client/src/pages/hubs/OfficeHub.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -633,7 +634,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 19 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/management/ContactsPage.jsx`
+#### `Taskmaster/client/src/pages/management/ContactsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -648,7 +649,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/contacts`
 - `/api/contacts/${editingContact._id}`
-#### `client/src/pages/management/EquipmentPage.jsx`
+#### `Taskmaster/client/src/pages/management/EquipmentPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -663,7 +664,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/office-assets`
 - `/api/office-assets/${editingAsset._id}`
-#### `client/src/pages/office/OfficeAssetsPage.jsx`
+#### `Taskmaster/client/src/pages/office/OfficeAssetsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -682,7 +683,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/office-assets`
 - `/api/office-assets/${editingAsset._id}`
 - `/api/office-assets/${id}`
-#### `client/src/pages/office/SubscriptionsPage.jsx`
+#### `Taskmaster/client/src/pages/office/SubscriptionsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -701,7 +702,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Management hub
 
-#### `client/src/pages/artists/ArtistsCollection.jsx`
+#### `Taskmaster/client/src/pages/artists/ArtistsCollection.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -712,16 +713,16 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtists` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useCreateArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncArtistStats` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/finance/FinancePage.jsx`
+#### `Taskmaster/client/src/pages/finance/FinancePage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | (tab: finance) |
 | **Default export** | `FinancePage` |
-| **Lines** | 1314 |
+| **Lines** | 1378 |
 | **Hooks** | `useAuth`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useMutation`, `useQuery`, `useQueryClient`, `useSearchParams`, `useState`, `useUsdInrRate`, `useWorkspaces` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useUsdInrRate` → /api/exly/config, /api/exly/dashboard-stats, /api/exly/offerings · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
-| **Key components** | `FinanceDocumentPreview`, `NeedsAttentionAccordion`, `UploadDocumentModal`, `UsdInrAmountFields` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useUsdInrRate` → /api/exly/config, /api/exly/dashboard-stats, /api/exly/offerings · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Key components** | `FinanceAssignProjectsBanner`, `FinanceDocumentPreview`, `NeedsAttentionAccordion`, `UploadDocumentModal`, `UsdInrAmountFields` |
 
 **API endpoints:**
 
@@ -736,7 +737,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/finance/pending`
 - `/api/finance?${params}`
 - `/api/projects`
-#### `client/src/pages/hubs/ManagementHub.jsx`
+#### `Taskmaster/client/src/pages/hubs/ManagementHub.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -745,7 +746,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 21 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/management/AnnouncementsPage.jsx`
+#### `Taskmaster/client/src/pages/management/AnnouncementsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -757,7 +758,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `WorkspaceProjectFields` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/management/AttendancePage.jsx`
+#### `Taskmaster/client/src/pages/management/AttendancePage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -772,7 +773,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Email & campaigns
 
-#### `client/src/pages/CampaignDetails.jsx`
+#### `Taskmaster/client/src/pages/CampaignDetails.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -780,13 +781,23 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 853 |
 | **Hooks** | `useCallback`, `useCampaignAnalytics`, `useCampaignDetails`, `useCampaignRecipients`, `useEffect`, `useLocation`, `useMailProfiles`, `useMemo`, `useNavigate`, `useParams`, `useResendCampaign`, `useResendFilteredCampaign`, `useState`, `useStopCampaign`, `useToast` |
-| **Data hooks** | `useCampaignAnalytics` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useCampaignDetails` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useCampaignRecipients` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useResendCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useResendFilteredCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useStopCampaign` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useCampaignAnalytics` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useCampaignDetails` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useCampaignRecipients` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useResendCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useResendFilteredCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useStopCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `RegisteredLocationBarChart`, `ResendFromEmailPicker` |
 
 **API endpoints:**
 
 - `/api/campaigns/${campaignApiId}/recipients/export?${params}`
-#### `client/src/pages/emails/EmailHubLayout.jsx`
+#### `Taskmaster/client/src/pages/emails/AutoMailerRedirectPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `function` |
+| **Lines** | 56 |
+| **Hooks** | `useMemo` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `Taskmaster/client/src/pages/emails/EmailHubLayout.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -795,19 +806,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 29 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsAnalyticsPage.jsx`
-
-| Field | Value |
-| --- | --- |
-| **Route(s)** | /emails/analytics |
-| **Default export** | `function` |
-| **Lines** | 59 |
-| **Hooks** | `useCumulativeAnalytics`, `useDeferredQueryEnabled`, `useMailStats`, `useState` |
-| **Data hooks** | `useCumulativeAnalytics` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
-| **Key components** | `MailCumulativeAnalyticsPanel`, `MailLocationLeadsModal`, `MailStatsSummary` |
-
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsCampaignsPage.jsx`
+#### `Taskmaster/client/src/pages/emails/EmailsCampaignsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -815,23 +814,23 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 50 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMailProfiles`, `useNavigate`, `useScanBounces`, `useToast` |
-| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useScanBounces` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useScanBounces` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `MailCampaignList` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsOverviewPage.jsx`
+#### `Taskmaster/client/src/pages/emails/EmailsOverviewPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails |
 | **Default export** | `function` |
-| **Lines** | 115 |
+| **Lines** | 109 |
 | **Hooks** | `useDeferredQueryEnabled`, `useMailCampaigns`, `useMailStats`, `useNavigate` |
-| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailCampaigns` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailCampaigns` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics |
 | **Key components** | `MailCampaignList`, `MailStatsSummary` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsProfilesPage.jsx`
+#### `Taskmaster/client/src/pages/emails/EmailsProfilesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -839,11 +838,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 32 |
 | **Hooks** | `useMailProfiles` |
-| **Data hooks** | `useMailProfiles` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
+| **Data hooks** | `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} |
 | **Key components** | `MailProfilesPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsStreamsPage.jsx`
+#### `Taskmaster/client/src/pages/emails/EmailsStreamsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -851,10 +850,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 33 |
 | **Hooks** | `useEmailStreams` |
-| **Data hooks** | `useEmailStreams` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns |
+| **Data hooks** | `useEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/emails/EmailsTemplatesPage.jsx`
+#### `Taskmaster/client/src/pages/emails/EmailsTemplatesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -865,7 +864,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `MailTemplateStudio` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/workspace/CreateCampaignPage.jsx`
+#### `Taskmaster/client/src/pages/workspace/CreateCampaignPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -876,7 +875,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `CampaignWizardShell` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/workspace/NewsletterCuratePage.jsx`
+#### `Taskmaster/client/src/pages/workspace/NewsletterCuratePage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -884,11 +883,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `NewsletterCuratePage` |
 | **Lines** | 62 |
 | **Hooks** | `useAuth`, `useCurrentNewsletterIssue`, `useNavigate`, `useNewsletterCategories`, `useNewsletterIssue`, `useSearchParams` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 | **Key components** | `NewsletterCuratorPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/workspace/NewsletterPage.jsx`
+#### `Taskmaster/client/src/pages/workspace/NewsletterPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -900,7 +899,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `NewsletterLinkForm`, `NewsletterWeekBoard` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/workspace/NewsletterSendPage.jsx`
+#### `Taskmaster/client/src/pages/workspace/NewsletterSendPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -915,7 +914,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Artist OS & workspace
 
-#### `client/src/pages/artists/ArtistDetail.jsx`
+#### `Taskmaster/client/src/pages/artists/ArtistDetail.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -927,7 +926,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ArtistEditDrawer`, `ArtistShareModal`, `ClaimWorkspaceBanner` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/ArtistOSLayout.jsx`
+#### `Taskmaster/client/src/pages/artists/ArtistOSLayout.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -935,11 +934,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 112 |
 | **Hooks** | `useEffect`, `useMemo`, `useSearchParams` |
-| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 | **Key components** | `ArtistProductHint`, `PageSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/ArtistPublicProfile.jsx`
+#### `Taskmaster/client/src/pages/artists/ArtistPublicProfile.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -954,7 +953,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/artists/public/${slug}`
 - `/api/artists/public/${slug}/inquiry`
-#### `client/src/pages/artists/artistTabLoaders.js`
+#### `Taskmaster/client/src/pages/artists/artistTabLoaders.js`
 
 | Field | Value |
 | --- | --- |
@@ -964,7 +963,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Named exports** | `getLazyArtistOsTab`, `getLazyArtistWorkspaceTab`, `ARTIST_OS_TAB_LOADERS`, `ARTIST_WORKSPACE_TAB_LOADERS` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistAnalyticsTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistAnalyticsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -972,10 +971,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 328 |
 | **Hooks** | `useArtistAnalytics`, `useArtistOsScores`, `useCallback`, `useEffect`, `useMemo`, `useSearchParams`, `useState`, `useTimeRange` |
-| **Data hooks** | `useArtistAnalytics` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useArtistAnalytics` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistCalendarTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistCalendarTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -986,7 +985,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsCalendar` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistCalendarEvent` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistCommandCenter.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistCommandCenter.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -995,7 +994,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 27 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistConnectOnboarding.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistConnectOnboarding.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1006,7 +1005,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistContentTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistContentTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1017,7 +1016,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsAssets` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useDeleteArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistAsset` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistContractsTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistContractsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1028,7 +1027,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsContracts` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistContract` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistDocumentsTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistDocumentsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1037,10 +1036,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 69 |
 | **Named exports** | `getArtistDocumentsDescription` |
 | **Hooks** | `useArtistOsDocuments`, `useSearchParams` |
-| **Data hooks** | `useArtistOsDocuments` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useArtistOsDocuments` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistDocumentsTab.test.js`
+#### `Taskmaster/client/src/pages/artists/os/ArtistDocumentsTab.test.js`
 
 | Field | Value |
 | --- | --- |
@@ -1049,7 +1048,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 19 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistDocumentsTab.test.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistDocumentsTab.test.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1058,7 +1057,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 44 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistFinanceTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistFinanceTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1069,7 +1068,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsFinance` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistFinanceEntry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistGigsTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistGigsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1080,7 +1079,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsGigs` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistGig` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistGig` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistInquiriesTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistInquiriesTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1091,7 +1090,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistInquiry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistInquiry` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistNotesTab.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistNotesTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1102,7 +1101,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsNotes` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistNote` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/artistOsConstants.js`
+#### `Taskmaster/client/src/pages/artists/os/artistOsConstants.js`
 
 | Field | Value |
 | --- | --- |
@@ -1112,7 +1111,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Named exports** | `ARTIST_OS_TABS`, `CALENDAR_EVENT_COLORS`, `BOOKING_PIPELINE_STAGES`, `INQUIRY_STATUSES`, `ASSET_TYPES`, `EXPENSE_CATEGORIES`, `REVENUE_CATEGORIES`, `formatInr` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistOsQueryShell.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistOsQueryShell.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1121,7 +1120,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 27 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistOsQueryShell.test.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistOsQueryShell.test.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1130,7 +1129,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 41 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/os/ArtistOverviewPanel.jsx`
+#### `Taskmaster/client/src/pages/artists/os/ArtistOverviewPanel.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1141,7 +1140,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsCalendar` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsContent` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsGigs` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsOverview` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsTimeline` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useConnectionHealth` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useConnectionHub` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncPlatformConnection` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistBookingsTab.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistBookingsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1152,7 +1151,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistMembershipAccept.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistMembershipAccept.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1160,10 +1159,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 139 |
 | **Hooks** | `useAcceptArtistMembership`, `useEffect`, `useNavigate`, `useParams`, `useRef`, `useSearchParams`, `useState` |
-| **Data hooks** | `useAcceptArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useAcceptArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistReleasesTab.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistReleasesTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1174,7 +1173,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistOsReleases` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useCreateArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useDeleteArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useUpdateArtistRelease` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistTeamTab.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistTeamTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1185,7 +1184,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistMemberships` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useInviteArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useRemoveArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useUpdateArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/artistWorkspaceConstants.js`
+#### `Taskmaster/client/src/pages/artists/workspace/artistWorkspaceConstants.js`
 
 | Field | Value |
 | --- | --- |
@@ -1195,7 +1194,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Named exports** | `ARTIST_WORKSPACE_TABS`, `ARTIST_WORKSPACE_NAV`, `DEFAULT_WORKSPACE_TAB` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistWorkspaceDetail.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistWorkspaceDetail.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1206,7 +1205,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistWorkspaceLayout.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistWorkspaceLayout.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1214,10 +1213,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 155 |
 | **Hooks** | `useEffect`, `useMemo`, `useSearchParams` |
-| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistWorkspaceNoAccess.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistWorkspaceNoAccess.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1226,7 +1225,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 37 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/ArtistWorkspaceShell.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/ArtistWorkspaceShell.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1234,10 +1233,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 151 |
 | **Hooks** | `useArtist`, `useArtistMembership`, `useAuth`, `useMemo`, `useParams`, `useSearchParams`, `useState` |
-| **Data hooks** | `useArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useArtistMembership` → /api/artists/${artistId}, /api/artists/${artistId}/members, /api/artists/${artistId}/members/${membershipId} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/tabs/ArtistWorkspaceHome.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/tabs/ArtistWorkspaceHome.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1246,7 +1245,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 26 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/artists/workspace/tabs/ArtistWorkspaceSettings.jsx`
+#### `Taskmaster/client/src/pages/artists/workspace/tabs/ArtistWorkspaceSettings.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1260,7 +1259,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Assets
 
-#### `client/src/pages/assets/AssetsHubLayout.jsx`
+#### `Taskmaster/client/src/pages/assets/AssetsHubLayout.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1271,7 +1270,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/assets/AssetsPage.jsx`
+#### `Taskmaster/client/src/pages/assets/AssetsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1279,7 +1278,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AssetsPage` |
 | **Lines** | 871 |
 | **Hooks** | `useAssets`, `useAuth`, `useCallback`, `useCreateAsset`, `useDeferredQueryEnabled`, `useDeleteAsset`, `useEffect`, `useGoogleAccounts`, `useMemo`, `useProjects`, `useQueryClient`, `useSearchParams`, `useState`, `useUnlinkGoogleAccount`, `useUnsavedChanges`, `useUpdateAsset`, `useWorkspaces` |
-| **Data hooks** | `useAssets` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useGoogleAccounts` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useUnlinkGoogleAccount` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Data hooks** | `useAssets` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useGoogleAccounts` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useUnlinkGoogleAccount` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateAsset` → /api/assets, /api/assets/${id}, /api/auth/google?state=link_${user?._id} · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `MentionTextarea`, `ProjectMultiSelect` |
 
 **API endpoints:**
@@ -1287,7 +1286,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/auth/google?state=link_${user?._id}`
 - `/api/google/accounts/manual`
 - `/api/google/accounts/simulate`
-#### `client/src/pages/assets/OrgAccountsPage.jsx`
+#### `Taskmaster/client/src/pages/assets/OrgAccountsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1309,7 +1308,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Admin & Data Hub
 
-#### `client/src/pages/admin/AdminCRM.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminCRM.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1318,7 +1317,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 7 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminExly.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminExly.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1328,7 +1327,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ExlyDataContent` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminGamification.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminGamification.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1343,7 +1342,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/gamification-admin/config`
 - `/api/gamification-admin/recalculate-all-levels`
 - `/api/gamification-admin/rules`
-#### `client/src/pages/admin/AdminPanel.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminPanel.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1351,11 +1350,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminPanel` |
 | **Lines** | 483 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateTeam`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteTeam`, `useDeleteUser`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useSearchParams`, `useState`, `useTeams`, `useToast`, `useUpdateUser`, `useUserDirectory` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useTeams` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useTeams` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminUserGridCard`, `ClerkDashboardUsersButton`, `MonthlyReportPanel`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminPlatformSettings.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminPlatformSettings.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1369,19 +1368,19 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/admin/platform-settings`
-#### `client/src/pages/admin/AdminProjectAnalyticsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminProjectAnalyticsPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /admin/project-analytics |
 | **Default export** | `AdminProjectAnalyticsPage` |
-| **Lines** | 446 |
-| **Hooks** | `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjectReportRangeState`, `useProjects`, `useProjectsAnalyticsSummary`, `useRef`, `useSearchParams`, `useState` |
-| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useProjectsAnalyticsSummary` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Lines** | 503 |
+| **Hooks** | `useCallback`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjectReportRangeState`, `useProjects`, `useProjectsAnalyticsSummary`, `useRef`, `useSearchParams`, `useState` |
+| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useProjectsAnalyticsSummary` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 | **Key components** | `ProjectAnalyticsContent`, `ProjectAnalyticsKpiGrid`, `ProjectReportRangeControls` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminRolesPage.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminRolesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1393,7 +1392,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `OrgRolesPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminScriptsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminScriptsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1409,7 +1408,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/admin/queues/status`
 - `/api/admin/scripts`
 - `/api/admin/scripts/${scriptId}/run`
-#### `client/src/pages/admin/AdminTeamsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminTeamsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1421,7 +1420,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `AdminBulkActionBar`, `DepartmentsPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/AdminTenantSsoPage.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminTenantSsoPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1436,7 +1435,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/admin/tenants`
 - `/api/admin/tenants/${tenant._id}`
-#### `client/src/pages/admin/AdminUsers.jsx`
+#### `Taskmaster/client/src/pages/admin/AdminUsers.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1444,11 +1443,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminUsers` |
 | **Lines** | 565 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateUser`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteUser`, `useDepartments`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useState`, `useUpdateUser`, `useUserDirectory` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useMailStats` → /api/analytics/cumulative, /api/analytics/location-leads, /api/campaigns · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminBulkActionBar`, `AdminUserGridCard`, `ClerkDashboardUsersButton`, `CreateUserModal`, `MonthlyReportPanel`, `PagePermissionsEditor`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/ArtistPathPage.jsx`
+#### `Taskmaster/client/src/pages/admin/ArtistPathPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1456,11 +1455,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 110 |
 | **Hooks** | `useArtistPathPeople`, `useArtistPathSync`, `useDebounce`, `useState`, `useToast` |
-| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `ArtistPathCardGrid`, `ArtistProductHint`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/CrmStatsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/CrmStatsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1471,20 +1470,20 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCrmStats` → /api/admin/crm-stats, /api/admin/crm-stats/trends · `useCrmStatsTrends` → /api/admin/crm-stats, /api/admin/crm-stats/trends |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/DataHubPage.jsx`
+#### `Taskmaster/client/src/pages/admin/DataHubPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 715 |
+| **Lines** | 796 |
 | **Named exports** | `DataHubContent` |
-| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
-| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
-| **Key components** | `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
+| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubBulkDeletePeople`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBulkDeletePeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Key components** | `DataHubCampaignOutcomes`, `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/ExlyCampaignsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/ExlyCampaignsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1495,7 +1494,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `ExlyDataContent`, `MasterclassFunnelPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/LeadAuditsPage.jsx`
+#### `Taskmaster/client/src/pages/admin/LeadAuditsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1509,7 +1508,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/crm/leads/audit-logs/purge`
-#### `client/src/pages/admin/MediaListPage.jsx`
+#### `Taskmaster/client/src/pages/admin/MediaListPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1524,7 +1523,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/admin/media-contacts`
 - `/api/admin/media-contacts/filters`
-#### `client/src/pages/admin/OpsHubPage.jsx`
+#### `Taskmaster/client/src/pages/admin/OpsHubPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1532,11 +1531,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 305 |
 | **Hooks** | `useAuth`, `useCreateOpsEntity`, `useDebounce`, `useEffect`, `useMemo`, `useOpsHubAnalytics`, `useOpsHubEntities`, `useOpsHubEntity`, `useOpsHubTaxonomy`, `useOpsHubWeekly`, `useSearchParams`, `useState`, `useToast` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateOpsEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id}, /api/crm/leads/${selectedLead._id}/audit · `useOpsHubAnalytics` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntities` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubTaxonomy` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubWeekly` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateOpsEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useOpsHubAnalytics` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntities` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubTaxonomy` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubWeekly` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `OpsEntityDetail`, `OpsHubAnalyticsPanel`, `OpsMondayBoard`, `PageToolbar`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/admin/QATestingPage.jsx`
+#### `Taskmaster/client/src/pages/admin/QATestingPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1558,13 +1557,13 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/qa/resolve/${testRunId}/${testCaseId}`
 - `/api/qa/results/${latestRunId}`
 - `/api/qa/start`
-#### `client/src/pages/hubs/AdminConsole.jsx`
+#### `Taskmaster/client/src/pages/hubs/AdminConsole.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /admin/console |
 | **Default export** | `function` |
-| **Lines** | 344 |
+| **Lines** | 347 |
 | **Hooks** | `useAdminConsoleSummary`, `useAuth`, `useCallback`, `useMemo`, `useNavigate`, `useState`, `useTenantUnlocks` |
 | **Data hooks** | `useAdminConsoleSummary` → /api/admin/console/summary · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
 | **Key components** | `DataListRow`, `DataOverviewSection`, `PageHeader` |
@@ -1573,7 +1572,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Settings
 
-#### `client/src/pages/settings/DevelopersPage.jsx`
+#### `Taskmaster/client/src/pages/settings/DevelopersPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1591,7 +1590,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/enterprise/webhooks`
 - `/api/enterprise/webhooks/${id}`
 - `/api/openapi.json`
-#### `client/src/pages/settings/SettingsPage.jsx`
+#### `Taskmaster/client/src/pages/settings/SettingsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1599,11 +1598,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `SettingsPage` |
 | **Lines** | 185 |
 | **Hooks** | `useAuth`, `useEffect`, `useNavigate`, `useSearchParams`, `useState` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 | **Key components** | `PageSkeleton` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/AttendanceTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/AttendanceTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1614,7 +1613,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useAttendance` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/IntegrationsTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/IntegrationsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1622,10 +1621,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 193 |
 | **Hooks** | `useConnectIntegration`, `useDisconnectIntegration`, `useIntegrationHealth`, `useIntegrationProviders`, `useIntegrationSync`, `useMemo`, `usePatchIntegrationMetadata`, `useSearchParams`, `useState` |
-| **Data hooks** | `useConnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useDisconnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationHealth` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationProviders` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationSync` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `usePatchIntegrationMetadata` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} |
+| **Data hooks** | `useConnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useDisconnectIntegration` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationHealth` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationProviders` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useIntegrationSync` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `usePatchIntegrationMetadata` → /api/enterprise/webhooks/deliveries, /api/integrations/${provider}/connect, /api/integrations/connections · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/InvoiceTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/InvoiceTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1638,7 +1637,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/finance/submit-invoice`
-#### `client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1652,7 +1651,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/customization/shortcuts`
 - `/api/customization/shortcuts/reset`
-#### `client/src/pages/settings/tabs/LeaveTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/LeaveTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1663,17 +1662,20 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useApplyLeave` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useLeaveRequests` → /api/attendance, /api/attendance/${id}/approve, /api/attendance/check |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/NotificationsTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/NotificationsTab.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 184 |
+| **Lines** | 267 |
 | **Hooks** | `useCallback`, `useEffect`, `useState` |
 
-_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/OrganizationTab.jsx`
+**API endpoints:**
+
+- `/api/notifications/push/subscriptions`
+- `/api/notifications/push/unsubscribe`
+#### `Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1687,7 +1689,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/tenants/memberships`
 - `/api/tenants/select`
-#### `client/src/pages/settings/tabs/ProfileTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1702,7 +1704,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 - `/api/auth/change-required-password`
 - `/api/teams`
 - `/api/users/profile`
-#### `client/src/pages/settings/tabs/ProgressTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/ProgressTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1713,7 +1715,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Data hooks** | `useGamificationHistory` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown · `useGamificationMissions` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown · `useGamificationProgress` → /api/gamification/history, /api/gamification/leaderboard, /api/gamification/leaderboard/${userId}/breakdown |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/settings/tabs/SessionsTab.jsx`
+#### `Taskmaster/client/src/pages/settings/tabs/SessionsTab.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1731,7 +1733,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 ### Marketing, dev & misc
 
-#### `client/src/pages/dev/ComponentsShowcase.jsx`
+#### `Taskmaster/client/src/pages/dev/ComponentsShowcase.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1742,7 +1744,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `AppErrorPage`, `FluidRibbonLoaderGallery` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/hubs/TabHubLayout.jsx`
+#### `Taskmaster/client/src/pages/hubs/TabHubLayout.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1750,11 +1752,11 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 83 |
 | **Hooks** | `useAuth`, `useEffect`, `useMemo`, `useSearchParams`, `useTenantUnlocks` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${selectedLead._id} · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
 | **Key components** | `HubPageLayout`, `ModuleSubnav` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/hubs/TabHubLayout.test.jsx`
+#### `Taskmaster/client/src/pages/hubs/TabHubLayout.test.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1763,7 +1765,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 58 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/management/DocumentsPage.jsx`
+#### `Taskmaster/client/src/pages/management/DocumentsPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1777,7 +1779,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/org-documents/${row._id}/file`
-#### `client/src/pages/management/DocumentsPage.test.jsx`
+#### `Taskmaster/client/src/pages/management/DocumentsPage.test.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1786,7 +1788,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 82 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/marketing/FeaturesPage.jsx`
+#### `Taskmaster/client/src/pages/marketing/FeaturesPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1796,7 +1798,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Hooks** | `useMemo` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/NotFoundPage.jsx`
+#### `Taskmaster/client/src/pages/NotFoundPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1807,7 +1809,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Key components** | `EmptyState` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/OrgCreateProgress.jsx`
+#### `Taskmaster/client/src/pages/org/create/OrgCreateProgress.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1816,7 +1818,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 44 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/OrgLogoPicker.jsx`
+#### `Taskmaster/client/src/pages/org/create/OrgLogoPicker.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1826,7 +1828,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Hooks** | `useRef` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/steps/StepFeatures.jsx`
+#### `Taskmaster/client/src/pages/org/create/steps/StepFeatures.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1835,7 +1837,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 69 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/steps/StepIdentity.jsx`
+#### `Taskmaster/client/src/pages/org/create/steps/StepIdentity.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1844,7 +1846,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 75 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/steps/StepInvites.jsx`
+#### `Taskmaster/client/src/pages/org/create/steps/StepInvites.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1853,7 +1855,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 87 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/steps/StepProfile.jsx`
+#### `Taskmaster/client/src/pages/org/create/steps/StepProfile.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1862,7 +1864,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 87 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/create/steps/StepReview.jsx`
+#### `Taskmaster/client/src/pages/org/create/steps/StepReview.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1871,7 +1873,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 81 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/CreateOrganizationPage.jsx`
+#### `Taskmaster/client/src/pages/org/CreateOrganizationPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1883,7 +1885,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/tenants/create`
-#### `client/src/pages/org/OrgCreateSuccessPage.jsx`
+#### `Taskmaster/client/src/pages/org/OrgCreateSuccessPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1893,7 +1895,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Hooks** | `useCallback`, `useEffect`, `useLocation`, `useNavigate`, `useRef` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
-#### `client/src/pages/org/OrgPickerPage.jsx`
+#### `Taskmaster/client/src/pages/org/OrgPickerPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -1907,7 +1909,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 
 - `/api/tenants/memberships`
 - `/api/tenants/select`
-#### `client/src/pages/org/TenantInviteAcceptPage.jsx`
+#### `Taskmaster/client/src/pages/org/TenantInviteAcceptPage.jsx`
 
 | Field | Value |
 | --- | --- |
@@ -2022,7 +2024,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/authConnectRoutes.js`
 - `server/routes/authRoutes.js`
 - `server/routes/calendarRoutes.js`
-- `server/routes/campaignRoutes.js`
 - `server/routes/contactRoutes.js`
 - `server/routes/crmRoutes.js`
 - `server/routes/crmStatsRoutes.js`
@@ -2040,7 +2041,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
 - `server/routes/logRoutes.js`
-- `server/routes/mailRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
 - `server/routes/mediaContactRoutes.js`
 - `server/routes/newsletterRoutes.js`
@@ -2066,7 +2066,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/scimRoutes.js`
 - `server/routes/searchRoutes.js`
 - `server/routes/securityAuditRoutes.js`
-- `server/routes/sesRoutes.js`
 - `server/routes/subscriptionRoutes.js`
 - `server/routes/supabaseAdminRoutes.js`
 - `server/routes/syncRoutes.js`
@@ -2075,7 +2074,6 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/teamRoutes.js`
 - `server/routes/tenantAdminRoutes.js`
 - `server/routes/tenantRoutes.js`
-- `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
 - `server/routes/webhookRoutes.js`

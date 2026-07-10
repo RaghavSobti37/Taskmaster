@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-07-07",
+  "generatedAt": "2026-07-10",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -29,7 +29,7 @@
     "useActivityGrid": {
       "files": [
         {
-          "file": "client/src/hooks/queries/logs.js",
+          "file": "Taskmaster/client/src/hooks/queries/logs.js",
           "endpoints": [
             "/api/logs",
             "/api/logs/${id}",
@@ -50,7 +50,7 @@
     "useAdminConsoleSummary": {
       "files": [
         {
-          "file": "client/src/hooks/useAdminConsoleSummary.js",
+          "file": "Taskmaster/client/src/hooks/useAdminConsoleSummary.js",
           "endpoints": [
             "/api/admin/console/summary"
           ],
@@ -65,7 +65,7 @@
     "useAdminRoles": {
       "files": [
         {
-          "file": "client/src/hooks/queries/adminRoles.js",
+          "file": "Taskmaster/client/src/hooks/queries/adminRoles.js",
           "endpoints": [
             "/api/admin/roles",
             "/api/admin/roles/${id}"
@@ -82,7 +82,7 @@
     "useAnnouncementTargets": {
       "files": [
         {
-          "file": "client/src/hooks/queries/announcements.js",
+          "file": "Taskmaster/client/src/hooks/queries/announcements.js",
           "endpoints": [
             "/api/announcements",
             "/api/announcements/${id}",
@@ -101,7 +101,7 @@
     "useAnnouncements": {
       "files": [
         {
-          "file": "client/src/hooks/queries/announcements.js",
+          "file": "Taskmaster/client/src/hooks/queries/announcements.js",
           "endpoints": [
             "/api/announcements",
             "/api/announcements/${id}",
@@ -120,7 +120,7 @@
     "useApplyLeave": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -157,7 +157,7 @@
     "useApproveAttendance": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -194,7 +194,7 @@
     "useApproveLeaveRequest": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -231,7 +231,7 @@
     "useArtist": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -270,7 +270,7 @@
     "useArtistAnalytics": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -309,7 +309,7 @@
     "useArtistDashboard": {
       "files": [
         {
-          "file": "client/src/hooks/useArtistDashboard.js",
+          "file": "Taskmaster/client/src/hooks/useArtistDashboard.js",
           "endpoints": [],
           "network": false
         }
@@ -320,7 +320,7 @@
     "useArtistImportSheets": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -337,9 +337,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -371,7 +372,7 @@
     "useArtistMembership": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -396,7 +397,7 @@
     "useArtistMemberships": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -421,7 +422,7 @@
     "useArtistOsAssets": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -468,7 +469,7 @@
     "useArtistOsCalendar": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -515,7 +516,7 @@
     "useArtistOsContent": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -562,7 +563,7 @@
     "useArtistOsContracts": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -609,7 +610,7 @@
     "useArtistOsDocuments": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -656,7 +657,7 @@
     "useArtistOsFinance": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -703,7 +704,7 @@
     "useArtistOsGigs": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -750,7 +751,7 @@
     "useArtistOsInquiries": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -797,7 +798,7 @@
     "useArtistOsNotes": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -844,7 +845,7 @@
     "useArtistOsOverview": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -891,7 +892,7 @@
     "useArtistOsReleases": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -938,7 +939,7 @@
     "useArtistOsScores": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -985,7 +986,7 @@
     "useArtistOsTimeline": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -1032,7 +1033,7 @@
     "useArtistPathPeople": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistPath.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistPath.js",
           "endpoints": [
             "/api/artist-path/people",
             "/api/artist-path/people/${personId}",
@@ -1051,7 +1052,7 @@
     "useArtistPathSync": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistPath.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistPath.js",
           "endpoints": [
             "/api/artist-path/people",
             "/api/artist-path/people/${personId}",
@@ -1070,7 +1071,7 @@
     "useArtistReps": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -1087,9 +1088,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1121,14 +1123,14 @@
     "useArtists": {
       "files": [
         {
-          "file": "client/src/components/project/ProjectGoalsPanel.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectGoalsPanel.jsx",
           "endpoints": [
             "/api/projects/${projectId}/goals"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -1168,7 +1170,7 @@
     "useAssets": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -1178,7 +1180,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -1201,7 +1203,7 @@
     "useAttendance": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -1238,7 +1240,7 @@
     "useAttendanceCheck": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -1275,7 +1277,7 @@
     "useAttendanceRosterUsers": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -1312,28 +1314,28 @@
     "useAuth": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/artists/ClaimWorkspaceBanner.jsx",
+          "file": "Taskmaster/client/src/components/artists/ClaimWorkspaceBanner.jsx",
           "endpoints": [
             "/api/artists/${artistId}/claim"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/auth/ClerkSessionBridge.jsx",
+          "file": "Taskmaster/client/src/components/auth/ClerkSessionBridge.jsx",
           "endpoints": [
             "/api/auth/clerk-establish"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/emails/wizard/StepPreflight.jsx",
+          "file": "Taskmaster/client/src/components/emails/wizard/StepPreflight.jsx",
           "endpoints": [
             "/api/mail/preview",
             "/api/mail/test-campaign"
@@ -1341,7 +1343,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/org/OrgOnboardingChecklist.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgOnboardingChecklist.jsx",
           "endpoints": [
             "/api/tenants/${tenantId}/onboarding",
             "/api/tenants/${tenantId}/unlocks"
@@ -1349,7 +1351,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/org/OrgSwitcher.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgSwitcher.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -1357,21 +1359,21 @@
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectGoalsPanel.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectGoalsPanel.jsx",
           "endpoints": [
             "/api/projects/${projectId}/goals"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectGoalsStrip.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectGoalsStrip.jsx",
           "endpoints": [
             "/api/projects/${projectId}/goals"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectTeam.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectTeam.jsx",
           "endpoints": [
             "/api/projects/${project._id}/kra",
             "/api/projects/${project._id}/kra/${kraModal.member._id}",
@@ -1382,14 +1384,14 @@
           "network": true
         },
         {
-          "file": "client/src/components/project/WorkspaceGoalsPanel.jsx",
+          "file": "Taskmaster/client/src/components/project/WorkspaceGoalsPanel.jsx",
           "endpoints": [
             "/api/projects/workspaces/${encoded}/goals"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/TaskDetailModal.jsx",
+          "file": "Taskmaster/client/src/components/TaskDetailModal.jsx",
           "endpoints": [
             "/api/tasks/${task._id}",
             "/api/tasks/${taskId}/activity"
@@ -1397,21 +1399,21 @@
           "network": true
         },
         {
-          "file": "client/src/contexts/AuthContext.jsx",
+          "file": "Taskmaster/client/src/contexts/AuthContext.jsx",
           "endpoints": [
             "/api/auth/logout"
           ],
           "network": true
         },
         {
-          "file": "client/src/contexts/DateFormatContext.jsx",
+          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
           "endpoints": [
             "/api/users/profile"
           ],
           "network": true
         },
         {
-          "file": "client/src/features/workspace/hooks/useWorkspaceTasks.js",
+          "file": "Taskmaster/client/src/features/workspace/hooks/useWorkspaceTasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${taskId}"
@@ -1419,7 +1421,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -1431,7 +1433,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/calendar.js",
+          "file": "Taskmaster/client/src/hooks/queries/calendar.js",
           "endpoints": [
             "/api/calendar",
             "/api/calendar/${id}",
@@ -1441,7 +1443,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/notifications.js",
+          "file": "Taskmaster/client/src/hooks/queries/notifications.js",
           "endpoints": [
             "/api/notifications",
             "/api/notifications/${id}/read",
@@ -1450,38 +1452,39 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useStatusCounts.js",
+          "file": "Taskmaster/client/src/hooks/useStatusCounts.js",
           "endpoints": [
             "/api/notifications/status-counts"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useTenantUnlocks.js",
+          "file": "Taskmaster/client/src/hooks/useTenantUnlocks.js",
           "endpoints": [
             "/api/tenants/${tenantId}/unlocks"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/admin/LeadAuditsPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/LeadAuditsPage.jsx",
           "endpoints": [
             "/api/crm/leads/audit-logs/purge"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -1490,21 +1493,21 @@
           "network": true
         },
         {
-          "file": "client/src/pages/auth/RegisterPage.jsx",
+          "file": "Taskmaster/client/src/pages/auth/RegisterPage.jsx",
           "endpoints": [
             "/api/auth/access-request"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/calendar/CalendarView.jsx",
+          "file": "Taskmaster/client/src/pages/calendar/CalendarView.jsx",
           "endpoints": [
             "/api/calendar/seed-music-content"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1513,9 +1516,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1524,7 +1528,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -1541,7 +1545,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/org/OrgPickerPage.jsx",
+          "file": "Taskmaster/client/src/pages/org/OrgPickerPage.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -1549,7 +1553,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/org/TenantInviteAcceptPage.jsx",
+          "file": "Taskmaster/client/src/pages/org/TenantInviteAcceptPage.jsx",
           "endpoints": [
             "/api/invites/${token}",
             "/api/invites/${token}/accept"
@@ -1557,7 +1561,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -1566,7 +1570,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -1576,7 +1580,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/WorkspaceSettings.jsx",
+          "file": "Taskmaster/client/src/pages/projects/WorkspaceSettings.jsx",
           "endpoints": [
             "/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}",
             "/api/users/team"
@@ -1584,14 +1588,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
           "endpoints": [
             "/api/customization/dashboard/preset"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
           "endpoints": [
             "/api/customization/shortcuts",
             "/api/customization/shortcuts/reset"
@@ -1599,7 +1603,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -1607,7 +1611,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
           "endpoints": [
             "/api/auth/change-required-password",
             "/api/teams",
@@ -1616,7 +1620,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/SessionsTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/SessionsTab.jsx",
           "endpoints": [
             "/api/auth/sessions",
             "/api/auth/sessions/${jti}",
@@ -1625,7 +1629,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -1652,6 +1656,7 @@
         "/api/calendar/${id}",
         "/api/calendar/seed-music-content",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1700,6 +1705,7 @@
         "/api/tasks/${task?._id}",
         "/api/tasks/${taskId}",
         "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}",
         "/api/teams",
         "/api/tenants/${tenantId}/onboarding",
         "/api/tenants/${tenantId}/unlocks",
@@ -1713,7 +1719,7 @@
     "useCRMConfig": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -1730,7 +1736,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1739,9 +1745,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1773,7 +1780,7 @@
     "useCRMStats": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -1790,9 +1797,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -1824,7 +1832,7 @@
     "useCalendarEvents": {
       "files": [
         {
-          "file": "client/src/hooks/queries/calendar.js",
+          "file": "Taskmaster/client/src/hooks/queries/calendar.js",
           "endpoints": [
             "/api/calendar",
             "/api/calendar/${id}",
@@ -1834,7 +1842,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/calendar/CalendarView.jsx",
+          "file": "Taskmaster/client/src/pages/calendar/CalendarView.jsx",
           "endpoints": [
             "/api/calendar/seed-music-content"
           ],
@@ -1853,10 +1861,8 @@
     "useCampaignAnalytics": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -1887,7 +1893,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -1895,8 +1901,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -1930,10 +1934,8 @@
     "useCampaignDetails": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -1964,7 +1966,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -1972,8 +1974,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -2007,10 +2007,8 @@
     "useCampaignRecipients": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -2041,7 +2039,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -2049,8 +2047,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -2084,7 +2080,7 @@
     "useClearAllNotifications": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notifications.js",
+          "file": "Taskmaster/client/src/hooks/queries/notifications.js",
           "endpoints": [
             "/api/notifications",
             "/api/notifications/${id}/read",
@@ -2103,14 +2099,14 @@
     "useClerk": {
       "files": [
         {
-          "file": "client/src/components/auth/ClerkSessionBridge.jsx",
+          "file": "Taskmaster/client/src/components/auth/ClerkSessionBridge.jsx",
           "endpoints": [
             "/api/auth/clerk-establish"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/org/OrgSwitcher.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgSwitcher.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -2128,14 +2124,14 @@
     "useClerkAuth": {
       "files": [
         {
-          "file": "client/src/components/auth/ClerkSessionBridge.jsx",
+          "file": "Taskmaster/client/src/components/auth/ClerkSessionBridge.jsx",
           "endpoints": [
             "/api/auth/clerk-establish"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/org/OrgSwitcher.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgSwitcher.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -2143,7 +2139,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/auth/RegisterPage.jsx",
+          "file": "Taskmaster/client/src/pages/auth/RegisterPage.jsx",
           "endpoints": [
             "/api/auth/access-request"
           ],
@@ -2161,14 +2157,14 @@
     "useConfirm": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectFinance.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectFinance.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance?${params}"
@@ -2176,12 +2172,12 @@
           "network": true
         },
         {
-          "file": "client/src/contexts/confirmContext.js",
+          "file": "Taskmaster/client/src/contexts/confirmContext.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/admin/AdminGamification.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminGamification.jsx",
           "endpoints": [
             "/api/gamification-admin/config",
             "/api/gamification-admin/recalculate-all-levels",
@@ -2190,14 +2186,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/LeadAuditsPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/LeadAuditsPage.jsx",
           "endpoints": [
             "/api/crm/leads/audit-logs/purge"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/admin/QATestingPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/QATestingPage.jsx",
           "endpoints": [
             "/api/crm/leads/cleanup-test-data",
             "/api/qa/cancel/${testRunId}",
@@ -2213,7 +2209,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/OrgAccountsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/OrgAccountsPage.jsx",
           "endpoints": [
             "/api/org-accounts",
             "/api/org-accounts/${account._id}",
@@ -2225,7 +2221,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2234,9 +2230,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2245,7 +2242,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -2262,14 +2259,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/office/OfficeAssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/OfficeAssetsPage.jsx",
           "endpoints": [
             "/api/contacts",
             "/api/contacts/${editingContact._id}",
@@ -2281,7 +2278,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/SubscriptionsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/SubscriptionsPage.jsx",
           "endpoints": [
             "/api/subscriptions",
             "/api/subscriptions/${editing._id}",
@@ -2290,7 +2287,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -2305,6 +2302,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2356,7 +2354,7 @@
     "useConnectIntegration": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -2385,7 +2383,7 @@
     "useConnectionHealth": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -2424,7 +2422,7 @@
     "useConnectionHub": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -2463,7 +2461,7 @@
     "useCreateAnnouncement": {
       "files": [
         {
-          "file": "client/src/hooks/queries/announcements.js",
+          "file": "Taskmaster/client/src/hooks/queries/announcements.js",
           "endpoints": [
             "/api/announcements",
             "/api/announcements/${id}",
@@ -2482,7 +2480,7 @@
     "useCreateArtist": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -2521,7 +2519,7 @@
     "useCreateArtistAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2568,7 +2566,7 @@
     "useCreateArtistCalendarEvent": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2615,7 +2613,7 @@
     "useCreateArtistContract": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2662,7 +2660,7 @@
     "useCreateArtistFinanceEntry": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2709,7 +2707,7 @@
     "useCreateArtistGig": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2756,7 +2754,7 @@
     "useCreateArtistInquiry": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2803,7 +2801,7 @@
     "useCreateArtistNote": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2850,7 +2848,7 @@
     "useCreateArtistRelease": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -2897,7 +2895,7 @@
     "useCreateAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -2907,7 +2905,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -2930,7 +2928,7 @@
     "useCreateLead": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -2947,9 +2945,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -2981,7 +2980,7 @@
     "useCreateOpsEntity": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -3006,7 +3005,7 @@
     "useCreateOrgDocument": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgDocuments.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgDocuments.js",
           "endpoints": [
             "/api/org-documents",
             "/api/org-documents/${id}"
@@ -3014,7 +3013,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
@@ -3031,7 +3030,7 @@
     "useCreateTeam": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -3056,7 +3055,7 @@
     "useCreateUser": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -3081,7 +3080,7 @@
     "useCrmStats": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crmStats.js",
+          "file": "Taskmaster/client/src/hooks/queries/crmStats.js",
           "endpoints": [
             "/api/admin/crm-stats",
             "/api/admin/crm-stats/trends"
@@ -3098,7 +3097,7 @@
     "useCrmStatsTrends": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crmStats.js",
+          "file": "Taskmaster/client/src/hooks/queries/crmStats.js",
           "endpoints": [
             "/api/admin/crm-stats",
             "/api/admin/crm-stats/trends"
@@ -3112,79 +3111,10 @@
       ],
       "network": true
     },
-    "useCumulativeAnalytics": {
-      "files": [
-        {
-          "file": "client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
     "useCurrentNewsletterIssue": {
       "files": [
         {
-          "file": "client/src/hooks/queries/newsletter.js",
+          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
           "endpoints": [
             "/api/newsletter/articles",
             "/api/newsletter/articles/${id}",
@@ -3219,7 +3149,7 @@
     "useDashboardPreset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dashboard.js",
+          "file": "Taskmaster/client/src/hooks/queries/dashboard.js",
           "endpoints": [
             "/api/customization/dashboard/preset",
             "/api/dashboard/attendance-overview?timeframe=${timeframe}",
@@ -3231,7 +3161,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
           "endpoints": [
             "/api/customization/dashboard/preset"
           ],
@@ -3251,7 +3181,7 @@
     "useDashboardSummary": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dashboard.js",
+          "file": "Taskmaster/client/src/hooks/queries/dashboard.js",
           "endpoints": [
             "/api/customization/dashboard/preset",
             "/api/dashboard/attendance-overview?timeframe=${timeframe}",
@@ -3276,7 +3206,7 @@
     "useDashboardTaskActions": {
       "files": [
         {
-          "file": "client/src/hooks/useDashboardTaskActions.js",
+          "file": "Taskmaster/client/src/hooks/useDashboardTaskActions.js",
           "endpoints": [
             "/api/tasks/${taskId}"
           ],
@@ -3291,17 +3221,18 @@
     "useDashboardTasks": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -3319,14 +3250,15 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useDataHubAnalytics": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3335,6 +3267,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3350,6 +3283,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3359,7 +3293,7 @@
     "useDataHubBackups": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3368,6 +3302,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3383,6 +3318,42 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
+        "/api/data-hub/rebuild-person-hub",
+        "/api/data-hub/reconcile",
+        "/api/data-hub/sync-status"
+      ],
+      "network": true
+    },
+    "useDataHubBulkDeletePeople": {
+      "files": [
+        {
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
+          "endpoints": [
+            "/api/data-hub/analytics",
+            "/api/data-hub/backup",
+            "/api/data-hub/backup/progress",
+            "/api/data-hub/backups",
+            "/api/data-hub/folders",
+            "/api/data-hub/people",
+            "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
+            "/api/data-hub/rebuild-person-hub",
+            "/api/data-hub/reconcile",
+            "/api/data-hub/sync-status"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/data-hub/analytics",
+        "/api/data-hub/backup",
+        "/api/data-hub/backup/progress",
+        "/api/data-hub/backups",
+        "/api/data-hub/folders",
+        "/api/data-hub/people",
+        "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3392,7 +3363,7 @@
     "useDataHubFolders": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3401,6 +3372,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3416,6 +3388,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3425,7 +3398,7 @@
     "useDataHubPeople": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3434,6 +3407,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3449,6 +3423,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3458,7 +3433,7 @@
     "useDataHubProductionBackup": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3467,6 +3442,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3482,6 +3458,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3491,7 +3468,7 @@
     "useDataHubRebuildPersonHub": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3500,6 +3477,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3515,6 +3493,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3524,7 +3503,7 @@
     "useDataHubReconcile": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3533,6 +3512,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3548,6 +3528,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3557,7 +3538,7 @@
     "useDataHubSyncStatus": {
       "files": [
         {
-          "file": "client/src/hooks/queries/dataHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
           "endpoints": [
             "/api/data-hub/analytics",
             "/api/data-hub/backup",
@@ -3566,6 +3547,7 @@
             "/api/data-hub/folders",
             "/api/data-hub/people",
             "/api/data-hub/people/${id}",
+            "/api/data-hub/people/bulk-delete",
             "/api/data-hub/rebuild-person-hub",
             "/api/data-hub/reconcile",
             "/api/data-hub/sync-status"
@@ -3581,6 +3563,7 @@
         "/api/data-hub/folders",
         "/api/data-hub/people",
         "/api/data-hub/people/${id}",
+        "/api/data-hub/people/bulk-delete",
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
@@ -3590,14 +3573,14 @@
     "useDateFormat": {
       "files": [
         {
-          "file": "client/src/contexts/DateFormatContext.jsx",
+          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
           "endpoints": [
             "/api/users/profile"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
           "endpoints": [
             "/api/auth/change-required-password",
             "/api/teams",
@@ -3616,28 +3599,29 @@
     "useDebounce": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useDebounce.js",
+          "file": "Taskmaster/client/src/hooks/useDebounce.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/hooks/useUnifiedSearch.js",
+          "file": "Taskmaster/client/src/hooks/useUnifiedSearch.js",
           "endpoints": [
             "/api/search"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3646,7 +3630,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -3655,6 +3639,7 @@
       ],
       "endpoints": [
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3668,19 +3653,19 @@
     "useDeferredQueryEnabled": {
       "files": [
         {
-          "file": "client/src/hooks/useDeferredQuery.js",
+          "file": "Taskmaster/client/src/hooks/useDeferredQuery.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/admin/AdminPlatformSettings.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminPlatformSettings.jsx",
           "endpoints": [
             "/api/admin/platform-settings"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/admin/AdminScriptsPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminScriptsPage.jsx",
           "endpoints": [
             "/api/admin/queues/status",
             "/api/admin/scripts",
@@ -3689,7 +3674,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/MediaListPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/MediaListPage.jsx",
           "endpoints": [
             "/api/admin/media-contacts",
             "/api/admin/media-contacts/filters"
@@ -3697,7 +3682,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/QATestingPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/QATestingPage.jsx",
           "endpoints": [
             "/api/crm/leads/cleanup-test-data",
             "/api/qa/cancel/${testRunId}",
@@ -3713,7 +3698,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -3722,7 +3707,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/OrgAccountsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/OrgAccountsPage.jsx",
           "endpoints": [
             "/api/org-accounts",
             "/api/org-accounts/${account._id}",
@@ -3734,14 +3719,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/calendar/CalendarView.jsx",
+          "file": "Taskmaster/client/src/pages/calendar/CalendarView.jsx",
           "endpoints": [
             "/api/calendar/seed-music-content"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3750,9 +3735,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3761,7 +3747,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -3778,7 +3764,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/EquipmentPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/EquipmentPage.jsx",
           "endpoints": [
             "/api/office-assets",
             "/api/office-assets/${editingAsset._id}"
@@ -3786,7 +3772,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/OfficeAssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/OfficeAssetsPage.jsx",
           "endpoints": [
             "/api/contacts",
             "/api/contacts/${editingContact._id}",
@@ -3798,7 +3784,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -3807,7 +3793,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -3817,7 +3803,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -3837,6 +3823,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -3884,7 +3871,7 @@
     "useDeleteAnnouncement": {
       "files": [
         {
-          "file": "client/src/hooks/queries/announcements.js",
+          "file": "Taskmaster/client/src/hooks/queries/announcements.js",
           "endpoints": [
             "/api/announcements",
             "/api/announcements/${id}",
@@ -3903,7 +3890,7 @@
     "useDeleteArtistAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -3950,7 +3937,7 @@
     "useDeleteArtistRelease": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -3997,7 +3984,7 @@
     "useDeleteAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -4007,7 +3994,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -4030,7 +4017,7 @@
     "useDeleteLog": {
       "files": [
         {
-          "file": "client/src/hooks/queries/logs.js",
+          "file": "Taskmaster/client/src/hooks/queries/logs.js",
           "endpoints": [
             "/api/logs",
             "/api/logs/${id}",
@@ -4051,7 +4038,7 @@
     "useDeleteNote": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notes.js",
+          "file": "Taskmaster/client/src/hooks/queries/notes.js",
           "endpoints": [
             "/api/notes",
             "/api/notes/${id}",
@@ -4072,7 +4059,7 @@
     "useDeleteOrgDocument": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgDocuments.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgDocuments.js",
           "endpoints": [
             "/api/org-documents",
             "/api/org-documents/${id}"
@@ -4080,7 +4067,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
@@ -4097,17 +4084,18 @@
     "useDeleteTask": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -4122,14 +4110,15 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useDeleteTeam": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -4154,7 +4143,7 @@
     "useDeleteUser": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -4179,7 +4168,7 @@
     "useDepartments": {
       "files": [
         {
-          "file": "client/src/hooks/queries/departments.js",
+          "file": "Taskmaster/client/src/hooks/queries/departments.js",
           "endpoints": [
             "/api/departments",
             "/api/departments/${departmentId}/monthly-report",
@@ -4202,7 +4191,7 @@
     "useDisconnectIntegration": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -4231,10 +4220,8 @@
     "useEmailStreams": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4266,8 +4253,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -4300,7 +4285,7 @@
     "useGamificationHistory": {
       "files": [
         {
-          "file": "client/src/hooks/queries/gamification.js",
+          "file": "Taskmaster/client/src/hooks/queries/gamification.js",
           "endpoints": [
             "/api/gamification/history",
             "/api/gamification/leaderboard",
@@ -4325,7 +4310,7 @@
     "useGamificationMissions": {
       "files": [
         {
-          "file": "client/src/hooks/queries/gamification.js",
+          "file": "Taskmaster/client/src/hooks/queries/gamification.js",
           "endpoints": [
             "/api/gamification/history",
             "/api/gamification/leaderboard",
@@ -4350,7 +4335,7 @@
     "useGamificationProgress": {
       "files": [
         {
-          "file": "client/src/hooks/queries/gamification.js",
+          "file": "Taskmaster/client/src/hooks/queries/gamification.js",
           "endpoints": [
             "/api/gamification/history",
             "/api/gamification/leaderboard",
@@ -4375,7 +4360,7 @@
     "useGoogleAccounts": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -4385,7 +4370,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -4408,7 +4393,7 @@
     "useIntegrationHealth": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -4437,7 +4422,7 @@
     "useIntegrationProviders": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -4466,7 +4451,7 @@
     "useIntegrationSync": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -4495,7 +4480,7 @@
     "useInviteArtistMembership": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -4520,12 +4505,12 @@
     "useIsMobile": {
       "files": [
         {
-          "file": "client/src/hooks/useBreakpoint.js",
+          "file": "Taskmaster/client/src/hooks/useBreakpoint.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
           "endpoints": [
             "/api/customization/dashboard/preset"
           ],
@@ -4540,7 +4525,7 @@
     "useLeadAudits": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -4557,7 +4542,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/LeadAuditsPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/LeadAuditsPage.jsx",
           "endpoints": [
             "/api/crm/leads/audit-logs/purge"
           ],
@@ -4583,7 +4568,7 @@
     "useLeadDetail": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -4600,9 +4585,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -4634,7 +4620,7 @@
     "useLeaveRequests": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -4671,7 +4657,7 @@
     "useLiveLeads": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -4688,7 +4674,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -4697,9 +4683,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -4731,7 +4718,7 @@
     "useLogs": {
       "files": [
         {
-          "file": "client/src/hooks/queries/logs.js",
+          "file": "Taskmaster/client/src/hooks/queries/logs.js",
           "endpoints": [
             "/api/logs",
             "/api/logs/${id}",
@@ -4752,10 +4739,8 @@
     "useMailCampaigns": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4787,8 +4772,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -4821,17 +4804,15 @@
     "useMailProfiles": {
       "files": [
         {
-          "file": "client/src/components/newsletter/NewsletterSendWizard.jsx",
+          "file": "Taskmaster/client/src/components/newsletter/NewsletterSendWizard.jsx",
           "endpoints": [
             "/api/exly/offerings"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4862,7 +4843,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -4870,8 +4851,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -4906,10 +4885,8 @@
     "useMailStats": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -4941,8 +4918,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -4975,7 +4950,7 @@
     "useMarkAllNotificationsRead": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notifications.js",
+          "file": "Taskmaster/client/src/hooks/queries/notifications.js",
           "endpoints": [
             "/api/notifications",
             "/api/notifications/${id}/read",
@@ -4994,7 +4969,7 @@
     "useMarkNotificationRead": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notifications.js",
+          "file": "Taskmaster/client/src/hooks/queries/notifications.js",
           "endpoints": [
             "/api/notifications",
             "/api/notifications/${id}/read",
@@ -5013,7 +4988,7 @@
     "useMyReimbursements": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -5031,7 +5006,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/InvoiceTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/InvoiceTab.jsx",
           "endpoints": [
             "/api/finance/submit-invoice"
           ],
@@ -5058,7 +5033,7 @@
     "useNewsletterCategories": {
       "files": [
         {
-          "file": "client/src/hooks/queries/newsletter.js",
+          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
           "endpoints": [
             "/api/newsletter/articles",
             "/api/newsletter/articles/${id}",
@@ -5093,7 +5068,7 @@
     "useNewsletterIssue": {
       "files": [
         {
-          "file": "client/src/hooks/queries/newsletter.js",
+          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
           "endpoints": [
             "/api/newsletter/articles",
             "/api/newsletter/articles/${id}",
@@ -5128,7 +5103,7 @@
     "useNote": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notes.js",
+          "file": "Taskmaster/client/src/hooks/queries/notes.js",
           "endpoints": [
             "/api/notes",
             "/api/notes/${id}",
@@ -5149,7 +5124,7 @@
     "useNotifications": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notifications.js",
+          "file": "Taskmaster/client/src/hooks/queries/notifications.js",
           "endpoints": [
             "/api/notifications",
             "/api/notifications/${id}/read",
@@ -5158,7 +5133,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/useStatusCounts.js",
+          "file": "Taskmaster/client/src/hooks/useStatusCounts.js",
           "endpoints": [
             "/api/notifications/status-counts"
           ],
@@ -5176,7 +5151,7 @@
     "useOffboardOrganization": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgSettings.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgSettings.js",
           "endpoints": [
             "/api/enterprise/offboard",
             "/api/tenants/${tenantId}/settings"
@@ -5184,7 +5159,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -5203,7 +5178,7 @@
     "useOpsHubAnalytics": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -5228,7 +5203,7 @@
     "useOpsHubEntities": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -5253,7 +5228,7 @@
     "useOpsHubEntity": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -5278,7 +5253,7 @@
     "useOpsHubTaxonomy": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -5303,7 +5278,7 @@
     "useOpsHubWeekly": {
       "files": [
         {
-          "file": "client/src/hooks/queries/opsHub.js",
+          "file": "Taskmaster/client/src/hooks/queries/opsHub.js",
           "endpoints": [
             "/api/ops-hub/analytics",
             "/api/ops-hub/entities",
@@ -5328,7 +5303,7 @@
     "useOrgDocuments": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgDocuments.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgDocuments.js",
           "endpoints": [
             "/api/org-documents",
             "/api/org-documents/${id}"
@@ -5336,7 +5311,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
@@ -5353,14 +5328,14 @@
     "useOrgOptional": {
       "files": [
         {
-          "file": "client/src/components/org/OrgFeatureToggles.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgFeatureToggles.jsx",
           "endpoints": [
             "/api/tenants/${tenantId}/features"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/org/OrgOnboardingChecklist.jsx",
+          "file": "Taskmaster/client/src/components/org/OrgOnboardingChecklist.jsx",
           "endpoints": [
             "/api/tenants/${tenantId}/onboarding",
             "/api/tenants/${tenantId}/unlocks"
@@ -5368,21 +5343,21 @@
           "network": true
         },
         {
-          "file": "client/src/contexts/OrgContext.jsx",
+          "file": "Taskmaster/client/src/contexts/OrgContext.jsx",
           "endpoints": [
             "/api/orgs/${encodeURIComponent(orgSlug)}/context"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useTenantUnlocks.js",
+          "file": "Taskmaster/client/src/hooks/useTenantUnlocks.js",
           "endpoints": [
             "/api/tenants/${tenantId}/unlocks"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -5403,7 +5378,7 @@
     "useOrgSettings": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgSettings.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgSettings.js",
           "endpoints": [
             "/api/enterprise/offboard",
             "/api/tenants/${tenantId}/settings"
@@ -5411,7 +5386,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -5430,7 +5405,7 @@
     "usePatchIntegrationMetadata": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -5459,14 +5434,14 @@
     "usePlatformExclusions": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -5492,7 +5467,7 @@
     "usePortfolioSummary": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -5531,7 +5506,7 @@
     "useProject": {
       "files": [
         {
-          "file": "client/src/hooks/queries/projects.js",
+          "file": "Taskmaster/client/src/hooks/queries/projects.js",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -5543,7 +5518,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -5567,7 +5542,7 @@
     "useProjectHoursSummary": {
       "files": [
         {
-          "file": "client/src/hooks/queries/schedule.js",
+          "file": "Taskmaster/client/src/hooks/queries/schedule.js",
           "endpoints": [
             "/api/projects/${projectId}/hours-summary",
             "/api/projects/${projectId}/workload",
@@ -5576,7 +5551,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -5598,7 +5573,7 @@
     "useProjectReportRangeState": {
       "files": [
         {
-          "file": "client/src/hooks/useProjectReportRangeState.js",
+          "file": "Taskmaster/client/src/hooks/useProjectReportRangeState.js",
           "endpoints": [],
           "network": false
         }
@@ -5609,17 +5584,18 @@
     "useProjectTasks": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -5634,14 +5610,15 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useProjects": {
       "files": [
         {
-          "file": "client/src/components/CalendarEntryModal.jsx",
+          "file": "Taskmaster/client/src/components/CalendarEntryModal.jsx",
           "endpoints": [
             "/api/calendar",
             "/api/calendar/${initialData._id}"
@@ -5649,7 +5626,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/TaskDetailModal.jsx",
+          "file": "Taskmaster/client/src/components/TaskDetailModal.jsx",
           "endpoints": [
             "/api/tasks/${task._id}",
             "/api/tasks/${taskId}/activity"
@@ -5657,7 +5634,7 @@
           "network": true
         },
         {
-          "file": "client/src/features/workspace/hooks/useWorkspaceTasks.js",
+          "file": "Taskmaster/client/src/features/workspace/hooks/useWorkspaceTasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${taskId}"
@@ -5665,7 +5642,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/projects.js",
+          "file": "Taskmaster/client/src/hooks/queries/projects.js",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -5677,7 +5654,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/QATestingPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/QATestingPage.jsx",
           "endpoints": [
             "/api/crm/leads/cleanup-test-data",
             "/api/qa/cancel/${testRunId}",
@@ -5693,7 +5670,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -5702,7 +5679,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -5712,14 +5689,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/InvoiceTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/InvoiceTab.jsx",
           "endpoints": [
             "/api/finance/submit-invoice"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -5761,7 +5738,7 @@
     "useProjectsAnalyticsSummary": {
       "files": [
         {
-          "file": "client/src/hooks/queries/projects.js",
+          "file": "Taskmaster/client/src/hooks/queries/projects.js",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -5786,7 +5763,7 @@
     "usePublicArtist": {
       "files": [
         {
-          "file": "client/src/pages/artists/ArtistPublicProfile.jsx",
+          "file": "Taskmaster/client/src/pages/artists/ArtistPublicProfile.jsx",
           "endpoints": [
             "/api/artists/public/${slug}",
             "/api/artists/public/${slug}/inquiry"
@@ -5803,10 +5780,8 @@
     "usePublicEmailStreams": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -5837,7 +5812,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/Unsubscribe.jsx",
+          "file": "Taskmaster/client/src/pages/Unsubscribe.jsx",
           "endpoints": [
             "/api/track/unsubscribe"
           ],
@@ -5845,8 +5820,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -5880,7 +5853,7 @@
     "useQAProgress": {
       "files": [
         {
-          "file": "client/src/pages/admin/QATestingPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/QATestingPage.jsx",
           "endpoints": [
             "/api/crm/leads/cleanup-test-data",
             "/api/qa/cancel/${testRunId}",
@@ -5913,7 +5886,7 @@
     "useRejectLeaveRequest": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -5950,7 +5923,7 @@
     "useRemoveArtistMembership": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -5975,10 +5948,8 @@
     "useResendCampaign": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6009,7 +5980,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -6017,8 +5988,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -6052,10 +6021,8 @@
     "useResendFilteredCampaign": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6086,7 +6053,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -6094,8 +6061,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -6129,7 +6094,7 @@
     "useResetAttendance": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -6166,17 +6131,18 @@
     "useReviewTasks": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -6185,7 +6151,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -6204,14 +6170,15 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useSalesReps": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -6228,7 +6195,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6237,9 +6204,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6271,10 +6239,8 @@
     "useScanBounces": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6306,8 +6272,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${id}",
         "/api/campaigns/${id}/analytics",
@@ -6340,7 +6304,7 @@
     "useSchedule": {
       "files": [
         {
-          "file": "client/src/hooks/queries/schedule.js",
+          "file": "Taskmaster/client/src/hooks/queries/schedule.js",
           "endpoints": [
             "/api/projects/${projectId}/hours-summary",
             "/api/projects/${projectId}/workload",
@@ -6349,7 +6313,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -6371,7 +6335,7 @@
     "useSearchParams": {
       "files": [
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -6380,7 +6344,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6389,9 +6353,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6400,7 +6365,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -6417,7 +6382,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectCreate.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectCreate.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/workspaces/${encodeURIComponent(workspace)}",
@@ -6426,7 +6391,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/Unsubscribe.jsx",
+          "file": "Taskmaster/client/src/pages/Unsubscribe.jsx",
           "endpoints": [
             "/api/track/unsubscribe"
           ],
@@ -6436,6 +6401,7 @@
       "endpoints": [
         "/api/auth/google?state=link_${user?._id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6462,14 +6428,14 @@
     "useShortcutPreferences": {
       "files": [
         {
-          "file": "client/src/hooks/useShortcutPreferences.js",
+          "file": "Taskmaster/client/src/hooks/useShortcutPreferences.js",
           "endpoints": [
             "/api/customization/shortcuts"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
           "endpoints": [
             "/api/customization/shortcuts",
             "/api/customization/shortcuts/reset"
@@ -6486,14 +6452,14 @@
     "useStatusCounts": {
       "files": [
         {
-          "file": "client/src/hooks/useStatusCounts.js",
+          "file": "Taskmaster/client/src/hooks/useStatusCounts.js",
           "endpoints": [
             "/api/notifications/status-counts"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/calendar/CalendarView.jsx",
+          "file": "Taskmaster/client/src/pages/calendar/CalendarView.jsx",
           "endpoints": [
             "/api/calendar/seed-music-content"
           ],
@@ -6509,10 +6475,8 @@
     "useStopCampaign": {
       "files": [
         {
-          "file": "client/src/hooks/queries/mail.js",
+          "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/analytics/cumulative",
-            "/api/analytics/location-leads",
             "/api/campaigns",
             "/api/campaigns/${id}",
             "/api/campaigns/${id}/analytics",
@@ -6543,7 +6507,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
@@ -6551,8 +6515,6 @@
         }
       ],
       "endpoints": [
-        "/api/analytics/cumulative",
-        "/api/analytics/location-leads",
         "/api/campaigns",
         "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/campaigns/${id}",
@@ -6586,7 +6548,7 @@
     "useSyncArtistStats": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -6625,7 +6587,7 @@
     "useSyncPlatformConnection": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -6664,7 +6626,7 @@
     "useSystemToast": {
       "files": [
         {
-          "file": "client/src/components/CalendarEntryModal.jsx",
+          "file": "Taskmaster/client/src/components/CalendarEntryModal.jsx",
           "endpoints": [
             "/api/calendar",
             "/api/calendar/${initialData._id}"
@@ -6672,7 +6634,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/TaskDetailModal.jsx",
+          "file": "Taskmaster/client/src/components/TaskDetailModal.jsx",
           "endpoints": [
             "/api/tasks/${task._id}",
             "/api/tasks/${taskId}/activity"
@@ -6680,26 +6642,26 @@
           "network": true
         },
         {
-          "file": "client/src/contexts/QuickAddContext.jsx",
+          "file": "Taskmaster/client/src/contexts/QuickAddContext.jsx",
           "endpoints": [
             "/api/tasks/bug"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useDashboardTaskActions.js",
+          "file": "Taskmaster/client/src/hooks/useDashboardTaskActions.js",
           "endpoints": [
             "/api/tasks/${taskId}"
           ],
           "network": true
         },
         {
-          "file": "client/src/lib/systemLogBridge.js",
+          "file": "Taskmaster/client/src/lib/systemLogBridge.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/admin/QATestingPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/QATestingPage.jsx",
           "endpoints": [
             "/api/crm/leads/cleanup-test-data",
             "/api/qa/cancel/${testRunId}",
@@ -6715,7 +6677,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -6724,7 +6686,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -6757,14 +6719,14 @@
     "useTaskCategoryOptions": {
       "files": [
         {
-          "file": "client/src/hooks/useTaskCategoryOptions.js",
+          "file": "Taskmaster/client/src/hooks/useTaskCategoryOptions.js",
           "endpoints": [
             "/api/departments/task-types"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -6780,12 +6742,13 @@
     "useTasks": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         }
@@ -6794,14 +6757,15 @@
         "/api/tasks",
         "/api/tasks/${id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useTeams": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -6826,7 +6790,7 @@
     "useTenantUnlocks": {
       "files": [
         {
-          "file": "client/src/hooks/useTenantUnlocks.js",
+          "file": "Taskmaster/client/src/hooks/useTenantUnlocks.js",
           "endpoints": [
             "/api/tenants/${tenantId}/unlocks"
           ],
@@ -6841,7 +6805,7 @@
     "useTimeRange": {
       "files": [
         {
-          "file": "client/src/contexts/TimeRangeContext.jsx",
+          "file": "Taskmaster/client/src/contexts/TimeRangeContext.jsx",
           "endpoints": [],
           "network": false
         }
@@ -6852,14 +6816,14 @@
     "useToast": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/crm/ArtistCrmImportPanel.jsx",
+          "file": "Taskmaster/client/src/components/crm/ArtistCrmImportPanel.jsx",
           "endpoints": [
             "/api/crm/artist/assignees",
             "/api/crm/artist/preview",
@@ -6868,7 +6832,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/emails/wizard/StepPreflight.jsx",
+          "file": "Taskmaster/client/src/components/emails/wizard/StepPreflight.jsx",
           "endpoints": [
             "/api/mail/preview",
             "/api/mail/test-campaign"
@@ -6876,7 +6840,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/emails/wizard/useCampaignAudience.js",
+          "file": "Taskmaster/client/src/components/emails/wizard/useCampaignAudience.js",
           "endpoints": [
             "/api/crm/leads",
             "/api/mail/audience/engagement",
@@ -6885,33 +6849,33 @@
           "network": true
         },
         {
-          "file": "client/src/components/newsletter/NewsletterSendWizard.jsx",
+          "file": "Taskmaster/client/src/components/newsletter/NewsletterSendWizard.jsx",
           "endpoints": [
             "/api/exly/offerings"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/opsHub/OpsLinksWidget.jsx",
+          "file": "Taskmaster/client/src/components/opsHub/OpsLinksWidget.jsx",
           "endpoints": [
             "/api/ops-hub/entities"
           ],
           "network": true
         },
         {
-          "file": "client/src/lib/systemLogBridge.js",
+          "file": "Taskmaster/client/src/lib/systemLogBridge.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/admin/AdminPlatformSettings.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminPlatformSettings.jsx",
           "endpoints": [
             "/api/admin/platform-settings"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/admin/AdminTenantSsoPage.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminTenantSsoPage.jsx",
           "endpoints": [
             "/api/admin/tenants",
             "/api/admin/tenants/${tenant._id}"
@@ -6919,7 +6883,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/OrgAccountsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/OrgAccountsPage.jsx",
           "endpoints": [
             "/api/org-accounts",
             "/api/org-accounts/${account._id}",
@@ -6931,21 +6895,21 @@
           "network": true
         },
         {
-          "file": "client/src/pages/calendar/CalendarView.jsx",
+          "file": "Taskmaster/client/src/pages/calendar/CalendarView.jsx",
           "endpoints": [
             "/api/calendar/seed-music-content"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/CampaignDetails.jsx",
+          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
           "endpoints": [
             "/api/campaigns/${campaignApiId}/recipients/export?${params}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6954,9 +6918,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -6965,7 +6930,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectCreate.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectCreate.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/workspaces/${encodeURIComponent(workspace)}",
@@ -6974,7 +6939,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -6995,6 +6960,7 @@
         "/api/crm/artist/upload",
         "/api/crm/leads",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7022,17 +6988,18 @@
     "useTodoTasks": {
       "files": [
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -7044,14 +7011,15 @@
         "/api/tasks/${id}",
         "/api/tasks/${task?._id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useUndoAttendanceCheck": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -7088,7 +7056,7 @@
     "useUnlinkGoogleAccount": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -7098,7 +7066,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -7121,26 +7089,26 @@
     "useUnsavedChanges": {
       "files": [
         {
-          "file": "client/src/components/admin/MailTemplateStudio.jsx",
+          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
           "endpoints": [
             "/api/mail/preview"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/ProjectSettingsModal.jsx",
+          "file": "Taskmaster/client/src/components/ProjectSettingsModal.jsx",
           "endpoints": [
             "/api/projects/${project._id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/hooks/useUnsavedChanges.js",
+          "file": "Taskmaster/client/src/hooks/useUnsavedChanges.js",
           "endpoints": [],
           "network": false
         },
         {
-          "file": "client/src/pages/admin/AdminGamification.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminGamification.jsx",
           "endpoints": [
             "/api/gamification-admin/config",
             "/api/gamification-admin/recalculate-all-levels",
@@ -7149,14 +7117,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/admin/AdminPlatformSettings.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminPlatformSettings.jsx",
           "endpoints": [
             "/api/admin/platform-settings"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -7165,7 +7133,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/OrgAccountsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/OrgAccountsPage.jsx",
           "endpoints": [
             "/api/org-accounts",
             "/api/org-accounts/${account._id}",
@@ -7177,9 +7145,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7188,7 +7157,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -7205,7 +7174,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/ContactsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/ContactsPage.jsx",
           "endpoints": [
             "/api/contacts",
             "/api/contacts/${editingContact._id}"
@@ -7213,14 +7182,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/management/EquipmentPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/EquipmentPage.jsx",
           "endpoints": [
             "/api/office-assets",
             "/api/office-assets/${editingAsset._id}"
@@ -7228,7 +7197,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/OfficeAssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/OfficeAssetsPage.jsx",
           "endpoints": [
             "/api/contacts",
             "/api/contacts/${editingContact._id}",
@@ -7240,7 +7209,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/SubscriptionsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/SubscriptionsPage.jsx",
           "endpoints": [
             "/api/subscriptions",
             "/api/subscriptions/${editing._id}",
@@ -7249,7 +7218,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/WorkspaceSettings.jsx",
+          "file": "Taskmaster/client/src/pages/projects/WorkspaceSettings.jsx",
           "endpoints": [
             "/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}",
             "/api/users/team"
@@ -7257,14 +7226,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/DashboardCustomizationTab.jsx",
           "endpoints": [
             "/api/customization/dashboard/preset"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/KeyboardShortcutsTab.jsx",
           "endpoints": [
             "/api/customization/shortcuts",
             "/api/customization/shortcuts/reset"
@@ -7272,7 +7241,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/ProfileTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
           "endpoints": [
             "/api/auth/change-required-password",
             "/api/teams",
@@ -7289,6 +7258,7 @@
         "/api/contacts/${editingContact._id}",
         "/api/contacts/${id}",
         "/api/crm/leads/${highlightId}",
+        "/api/crm/leads/${id}",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7336,7 +7306,7 @@
     "useUpdateArtist": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artists.js",
+          "file": "Taskmaster/client/src/hooks/queries/artists.js",
           "endpoints": [
             "/api/artists",
             "/api/artists/${artistId}/connections/${connectionId}/primary",
@@ -7375,7 +7345,7 @@
     "useUpdateArtistAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -7422,7 +7392,7 @@
     "useUpdateArtistGig": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -7469,7 +7439,7 @@
     "useUpdateArtistInquiry": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -7516,7 +7486,7 @@
     "useUpdateArtistMembership": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistMembers.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistMembers.js",
           "endpoints": [
             "/api/artists/${artistId}",
             "/api/artists/${artistId}/members",
@@ -7541,7 +7511,7 @@
     "useUpdateArtistRelease": {
       "files": [
         {
-          "file": "client/src/hooks/queries/artistOs.js",
+          "file": "Taskmaster/client/src/hooks/queries/artistOs.js",
           "endpoints": [
             "/api/artists/${artistId}/os/analytics/scores",
             "/api/artists/${artistId}/os/assets",
@@ -7588,7 +7558,7 @@
     "useUpdateAsset": {
       "files": [
         {
-          "file": "client/src/hooks/queries/assets.js",
+          "file": "Taskmaster/client/src/hooks/queries/assets.js",
           "endpoints": [
             "/api/assets",
             "/api/assets/${id}",
@@ -7598,7 +7568,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -7621,7 +7591,7 @@
     "useUpdateLead": {
       "files": [
         {
-          "file": "client/src/hooks/queries/crm.js",
+          "file": "Taskmaster/client/src/hooks/queries/crm.js",
           "endpoints": [
             "/api/crm/artist/import-sheets",
             "/api/crm/config",
@@ -7638,7 +7608,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/FollowupsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7647,9 +7617,10 @@
           "network": true
         },
         {
-          "file": "client/src/pages/crm/LeadsPage.jsx",
+          "file": "Taskmaster/client/src/pages/crm/LeadsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${highlightId}",
+            "/api/crm/leads/${id}",
             "/api/crm/leads/${selectedLead._id}",
             "/api/crm/leads/${selectedLead._id}/audit",
             "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
@@ -7681,7 +7652,7 @@
     "useUpdateLog": {
       "files": [
         {
-          "file": "client/src/hooks/queries/logs.js",
+          "file": "Taskmaster/client/src/hooks/queries/logs.js",
           "endpoints": [
             "/api/logs",
             "/api/logs/${id}",
@@ -7702,7 +7673,7 @@
     "useUpdateNote": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notes.js",
+          "file": "Taskmaster/client/src/hooks/queries/notes.js",
           "endpoints": [
             "/api/notes",
             "/api/notes/${id}",
@@ -7723,7 +7694,7 @@
     "useUpdateOrgDocument": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgDocuments.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgDocuments.js",
           "endpoints": [
             "/api/org-documents",
             "/api/org-documents/${id}"
@@ -7731,7 +7702,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/management/DocumentsPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/DocumentsPage.jsx",
           "endpoints": [
             "/api/org-documents/${row._id}/file"
           ],
@@ -7748,7 +7719,7 @@
     "useUpdateOrgSettings": {
       "files": [
         {
-          "file": "client/src/hooks/queries/orgSettings.js",
+          "file": "Taskmaster/client/src/hooks/queries/orgSettings.js",
           "endpoints": [
             "/api/enterprise/offboard",
             "/api/tenants/${tenantId}/settings"
@@ -7756,7 +7727,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/OrganizationTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/OrganizationTab.jsx",
           "endpoints": [
             "/api/tenants/memberships",
             "/api/tenants/select"
@@ -7775,7 +7746,7 @@
     "useUpdateProject": {
       "files": [
         {
-          "file": "client/src/hooks/queries/projects.js",
+          "file": "Taskmaster/client/src/hooks/queries/projects.js",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -7787,7 +7758,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -7811,7 +7782,7 @@
     "useUpdateTask": {
       "files": [
         {
-          "file": "client/src/components/TaskDetailModal.jsx",
+          "file": "Taskmaster/client/src/components/TaskDetailModal.jsx",
           "endpoints": [
             "/api/tasks/${task._id}",
             "/api/tasks/${taskId}/activity"
@@ -7819,17 +7790,18 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/tasks.js",
+          "file": "Taskmaster/client/src/hooks/queries/tasks.js",
           "endpoints": [
             "/api/tasks",
             "/api/tasks/${id}",
             "/api/tasks/${taskId}",
-            "/api/tasks/${taskId}/activity"
+            "/api/tasks/${taskId}/activity",
+            "/api/tasks/${variables.id}"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -7845,14 +7817,15 @@
         "/api/tasks/${id}",
         "/api/tasks/${task._id}",
         "/api/tasks/${taskId}",
-        "/api/tasks/${taskId}/activity"
+        "/api/tasks/${taskId}/activity",
+        "/api/tasks/${variables.id}"
       ],
       "network": true
     },
     "useUpdateUser": {
       "files": [
         {
-          "file": "client/src/hooks/queries/admin.js",
+          "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
             "/api/departments/users/${userId}",
@@ -7877,7 +7850,7 @@
     "useUpsertAttendance": {
       "files": [
         {
-          "file": "client/src/hooks/queries/attendance.js",
+          "file": "Taskmaster/client/src/hooks/queries/attendance.js",
           "endpoints": [
             "/api/attendance",
             "/api/attendance/${id}/approve",
@@ -7914,7 +7887,7 @@
     "useUsdInrRate": {
       "files": [
         {
-          "file": "client/src/components/admin/ExlyDataContent.jsx",
+          "file": "Taskmaster/client/src/components/admin/ExlyDataContent.jsx",
           "endpoints": [
             "/api/exly/config",
             "/api/exly/dashboard-stats",
@@ -7929,7 +7902,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectFinance.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectFinance.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance?${params}"
@@ -7937,7 +7910,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/useUsdInrRate.js",
+          "file": "Taskmaster/client/src/hooks/useUsdInrRate.js",
           "endpoints": [
             "/api/finance/usd-inr-rate",
             "/api/subscriptions/usd-inr-rate"
@@ -7945,7 +7918,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -7962,7 +7935,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/SubscriptionsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/SubscriptionsPage.jsx",
           "endpoints": [
             "/api/subscriptions",
             "/api/subscriptions/${editing._id}",
@@ -8003,14 +7976,14 @@
     "useUserDirectory": {
       "files": [
         {
-          "file": "client/src/components/mentions/MentionTitle.jsx",
+          "file": "Taskmaster/client/src/components/mentions/MentionTitle.jsx",
           "endpoints": [
             "/api/assets"
           ],
           "network": true
         },
         {
-          "file": "client/src/components/project/ProjectTeam.jsx",
+          "file": "Taskmaster/client/src/components/project/ProjectTeam.jsx",
           "endpoints": [
             "/api/projects/${project._id}/kra",
             "/api/projects/${project._id}/kra/${kraModal.member._id}",
@@ -8021,7 +7994,7 @@
           "network": true
         },
         {
-          "file": "client/src/components/TaskDetailModal.jsx",
+          "file": "Taskmaster/client/src/components/TaskDetailModal.jsx",
           "endpoints": [
             "/api/tasks/${task._id}",
             "/api/tasks/${taskId}/activity"
@@ -8029,7 +8002,7 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/queries/logs.js",
+          "file": "Taskmaster/client/src/hooks/queries/logs.js",
           "endpoints": [
             "/api/logs",
             "/api/logs/${id}",
@@ -8039,21 +8012,21 @@
           "network": true
         },
         {
-          "file": "client/src/hooks/useMentionAutocomplete.js",
+          "file": "Taskmaster/client/src/hooks/useMentionAutocomplete.js",
           "endpoints": [
             "/api/assets"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/admin/AdminPlatformSettings.jsx",
+          "file": "Taskmaster/client/src/pages/admin/AdminPlatformSettings.jsx",
           "endpoints": [
             "/api/admin/platform-settings"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/management/EquipmentPage.jsx",
+          "file": "Taskmaster/client/src/pages/management/EquipmentPage.jsx",
           "endpoints": [
             "/api/office-assets",
             "/api/office-assets/${editingAsset._id}"
@@ -8061,7 +8034,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/office/OfficeAssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/office/OfficeAssetsPage.jsx",
           "endpoints": [
             "/api/contacts",
             "/api/contacts/${editingContact._id}",
@@ -8073,7 +8046,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -8082,7 +8055,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],
@@ -8119,7 +8092,7 @@
     "useUserNotes": {
       "files": [
         {
-          "file": "client/src/hooks/queries/notes.js",
+          "file": "Taskmaster/client/src/hooks/queries/notes.js",
           "endpoints": [
             "/api/notes",
             "/api/notes/${id}",
@@ -8140,7 +8113,7 @@
     "useWebhookDeliveries": {
       "files": [
         {
-          "file": "client/src/hooks/queries/integrations.js",
+          "file": "Taskmaster/client/src/hooks/queries/integrations.js",
           "endpoints": [
             "/api/enterprise/webhooks/deliveries",
             "/api/integrations/${provider}/connect",
@@ -8154,7 +8127,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/DevelopersPage.jsx",
+          "file": "Taskmaster/client/src/pages/settings/DevelopersPage.jsx",
           "endpoints": [
             "/api/enterprise/api-keys",
             "/api/enterprise/usage",
@@ -8185,7 +8158,7 @@
     "useWorkspaces": {
       "files": [
         {
-          "file": "client/src/hooks/queries/projects.js",
+          "file": "Taskmaster/client/src/hooks/queries/projects.js",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -8197,7 +8170,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/assets/AssetsPage.jsx",
+          "file": "Taskmaster/client/src/pages/assets/AssetsPage.jsx",
           "endpoints": [
             "/api/auth/google?state=link_${user?._id}",
             "/api/google/accounts/manual",
@@ -8206,7 +8179,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/finance/FinancePage.jsx",
+          "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
           "endpoints": [
             "/api/finance/${id}",
             "/api/finance/${id}/approve",
@@ -8223,7 +8196,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectDetail.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectDetail.jsx",
           "endpoints": [
             "/api/projects/${id}",
             "/api/projects/${id}/remove-member",
@@ -8232,7 +8205,7 @@
           "network": true
         },
         {
-          "file": "client/src/pages/projects/ProjectsView.jsx",
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
           "endpoints": [
             "/api/projects",
             "/api/projects/${id}",
@@ -8242,14 +8215,14 @@
           "network": true
         },
         {
-          "file": "client/src/pages/settings/tabs/InvoiceTab.jsx",
+          "file": "Taskmaster/client/src/pages/settings/tabs/InvoiceTab.jsx",
           "endpoints": [
             "/api/finance/submit-invoice"
           ],
           "network": true
         },
         {
-          "file": "client/src/pages/todo/TodoPage.jsx",
+          "file": "Taskmaster/client/src/pages/todo/TodoPage.jsx",
           "endpoints": [
             "/api/tasks/${task?._id}"
           ],

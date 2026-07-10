@@ -92,6 +92,7 @@ node scripts/generate-master-doc.mjs
 | Integration Hub | [`features/INTEGRATION_HUB.md`](./features/INTEGRATION_HUB.md) |
 | Website Forms | [`features/WEBSITE_FORMS.md`](./features/WEBSITE_FORMS.md) |
 | AiSensy (WhatsApp) | [`features/AISENSY.md`](./features/AISENSY.md) |
+| Campaign sync (AiSensy + Exly) | [`features/CAMPAIGN_DATA_SYNC.md`](./features/CAMPAIGN_DATA_SYNC.md) |
 | Artist OS | [`features/artist-os.md`](./features/artist-os.md) |
 | Data Hub vision | [`features/DATA_HUB_PRODUCT_VISION.md`](./features/DATA_HUB_PRODUCT_VISION.md) |
 | Integration catalog | [`features/INTEGRATION_DATA_CATALOG.md`](./features/INTEGRATION_DATA_CATALOG.md) |

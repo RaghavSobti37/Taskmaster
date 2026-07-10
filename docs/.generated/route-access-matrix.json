@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07",
+  "generatedAt": "2026-07-10",
   "redirects": [
     {
       "from": "/relegends",
@@ -124,14 +124,6 @@
     {
       "from": "admin/audit-log",
       "to": "/admin/console"
-    },
-    {
-      "from": "workspace/emails",
-      "to": "/emails"
-    },
-    {
-      "from": "workspace/emails/create",
-      "to": "/emails/create"
     }
   ],
   "rows": [

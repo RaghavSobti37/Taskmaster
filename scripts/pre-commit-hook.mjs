@@ -29,6 +29,6 @@ function runStep(index, total, label, npmArgs) {
 }
 
 runStep(1, 2, 'audit:exposure (secrets in staged files)', ['run', 'audit:exposure']);
-runStep(2, 2, 'eslint client (full tree — usually 30–60s)', ['run', 'lint', '--prefix', 'client', '--', '--quiet']);
+runStep(2, 2, 'eslint client (full tree — usually 30–60s)', ['run', 'lint', '--prefix', 'Taskmaster/client', '--', '--quiet']);
 
 process.stdout.write('\n[pre-commit] all checks passed — creating commit…\n\n');

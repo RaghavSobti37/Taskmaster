@@ -1,0 +1,1837 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for server/utils/healthPageHtml.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">server/utils</a> healthPageHtml.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">83.83% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>140/167</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">57.79% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>126/218</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>28/28</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">87.07% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>128/147</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a>
+<a name='L317'></a><a href='#L317'>317</a>
+<a name='L318'></a><a href='#L318'>318</a>
+<a name='L319'></a><a href='#L319'>319</a>
+<a name='L320'></a><a href='#L320'>320</a>
+<a name='L321'></a><a href='#L321'>321</a>
+<a name='L322'></a><a href='#L322'>322</a>
+<a name='L323'></a><a href='#L323'>323</a>
+<a name='L324'></a><a href='#L324'>324</a>
+<a name='L325'></a><a href='#L325'>325</a>
+<a name='L326'></a><a href='#L326'>326</a>
+<a name='L327'></a><a href='#L327'>327</a>
+<a name='L328'></a><a href='#L328'>328</a>
+<a name='L329'></a><a href='#L329'>329</a>
+<a name='L330'></a><a href='#L330'>330</a>
+<a name='L331'></a><a href='#L331'>331</a>
+<a name='L332'></a><a href='#L332'>332</a>
+<a name='L333'></a><a href='#L333'>333</a>
+<a name='L334'></a><a href='#L334'>334</a>
+<a name='L335'></a><a href='#L335'>335</a>
+<a name='L336'></a><a href='#L336'>336</a>
+<a name='L337'></a><a href='#L337'>337</a>
+<a name='L338'></a><a href='#L338'>338</a>
+<a name='L339'></a><a href='#L339'>339</a>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a>
+<a name='L348'></a><a href='#L348'>348</a>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a>
+<a name='L355'></a><a href='#L355'>355</a>
+<a name='L356'></a><a href='#L356'>356</a>
+<a name='L357'></a><a href='#L357'>357</a>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a>
+<a name='L361'></a><a href='#L361'>361</a>
+<a name='L362'></a><a href='#L362'>362</a>
+<a name='L363'></a><a href='#L363'>363</a>
+<a name='L364'></a><a href='#L364'>364</a>
+<a name='L365'></a><a href='#L365'>365</a>
+<a name='L366'></a><a href='#L366'>366</a>
+<a name='L367'></a><a href='#L367'>367</a>
+<a name='L368'></a><a href='#L368'>368</a>
+<a name='L369'></a><a href='#L369'>369</a>
+<a name='L370'></a><a href='#L370'>370</a>
+<a name='L371'></a><a href='#L371'>371</a>
+<a name='L372'></a><a href='#L372'>372</a>
+<a name='L373'></a><a href='#L373'>373</a>
+<a name='L374'></a><a href='#L374'>374</a>
+<a name='L375'></a><a href='#L375'>375</a>
+<a name='L376'></a><a href='#L376'>376</a>
+<a name='L377'></a><a href='#L377'>377</a>
+<a name='L378'></a><a href='#L378'>378</a>
+<a name='L379'></a><a href='#L379'>379</a>
+<a name='L380'></a><a href='#L380'>380</a>
+<a name='L381'></a><a href='#L381'>381</a>
+<a name='L382'></a><a href='#L382'>382</a>
+<a name='L383'></a><a href='#L383'>383</a>
+<a name='L384'></a><a href='#L384'>384</a>
+<a name='L385'></a><a href='#L385'>385</a>
+<a name='L386'></a><a href='#L386'>386</a>
+<a name='L387'></a><a href='#L387'>387</a>
+<a name='L388'></a><a href='#L388'>388</a>
+<a name='L389'></a><a href='#L389'>389</a>
+<a name='L390'></a><a href='#L390'>390</a>
+<a name='L391'></a><a href='#L391'>391</a>
+<a name='L392'></a><a href='#L392'>392</a>
+<a name='L393'></a><a href='#L393'>393</a>
+<a name='L394'></a><a href='#L394'>394</a>
+<a name='L395'></a><a href='#L395'>395</a>
+<a name='L396'></a><a href='#L396'>396</a>
+<a name='L397'></a><a href='#L397'>397</a>
+<a name='L398'></a><a href='#L398'>398</a>
+<a name='L399'></a><a href='#L399'>399</a>
+<a name='L400'></a><a href='#L400'>400</a>
+<a name='L401'></a><a href='#L401'>401</a>
+<a name='L402'></a><a href='#L402'>402</a>
+<a name='L403'></a><a href='#L403'>403</a>
+<a name='L404'></a><a href='#L404'>404</a>
+<a name='L405'></a><a href='#L405'>405</a>
+<a name='L406'></a><a href='#L406'>406</a>
+<a name='L407'></a><a href='#L407'>407</a>
+<a name='L408'></a><a href='#L408'>408</a>
+<a name='L409'></a><a href='#L409'>409</a>
+<a name='L410'></a><a href='#L410'>410</a>
+<a name='L411'></a><a href='#L411'>411</a>
+<a name='L412'></a><a href='#L412'>412</a>
+<a name='L413'></a><a href='#L413'>413</a>
+<a name='L414'></a><a href='#L414'>414</a>
+<a name='L415'></a><a href='#L415'>415</a>
+<a name='L416'></a><a href='#L416'>416</a>
+<a name='L417'></a><a href='#L417'>417</a>
+<a name='L418'></a><a href='#L418'>418</a>
+<a name='L419'></a><a href='#L419'>419</a>
+<a name='L420'></a><a href='#L420'>420</a>
+<a name='L421'></a><a href='#L421'>421</a>
+<a name='L422'></a><a href='#L422'>422</a>
+<a name='L423'></a><a href='#L423'>423</a>
+<a name='L424'></a><a href='#L424'>424</a>
+<a name='L425'></a><a href='#L425'>425</a>
+<a name='L426'></a><a href='#L426'>426</a>
+<a name='L427'></a><a href='#L427'>427</a>
+<a name='L428'></a><a href='#L428'>428</a>
+<a name='L429'></a><a href='#L429'>429</a>
+<a name='L430'></a><a href='#L430'>430</a>
+<a name='L431'></a><a href='#L431'>431</a>
+<a name='L432'></a><a href='#L432'>432</a>
+<a name='L433'></a><a href='#L433'>433</a>
+<a name='L434'></a><a href='#L434'>434</a>
+<a name='L435'></a><a href='#L435'>435</a>
+<a name='L436'></a><a href='#L436'>436</a>
+<a name='L437'></a><a href='#L437'>437</a>
+<a name='L438'></a><a href='#L438'>438</a>
+<a name='L439'></a><a href='#L439'>439</a>
+<a name='L440'></a><a href='#L440'>440</a>
+<a name='L441'></a><a href='#L441'>441</a>
+<a name='L442'></a><a href='#L442'>442</a>
+<a name='L443'></a><a href='#L443'>443</a>
+<a name='L444'></a><a href='#L444'>444</a>
+<a name='L445'></a><a href='#L445'>445</a>
+<a name='L446'></a><a href='#L446'>446</a>
+<a name='L447'></a><a href='#L447'>447</a>
+<a name='L448'></a><a href='#L448'>448</a>
+<a name='L449'></a><a href='#L449'>449</a>
+<a name='L450'></a><a href='#L450'>450</a>
+<a name='L451'></a><a href='#L451'>451</a>
+<a name='L452'></a><a href='#L452'>452</a>
+<a name='L453'></a><a href='#L453'>453</a>
+<a name='L454'></a><a href='#L454'>454</a>
+<a name='L455'></a><a href='#L455'>455</a>
+<a name='L456'></a><a href='#L456'>456</a>
+<a name='L457'></a><a href='#L457'>457</a>
+<a name='L458'></a><a href='#L458'>458</a>
+<a name='L459'></a><a href='#L459'>459</a>
+<a name='L460'></a><a href='#L460'>460</a>
+<a name='L461'></a><a href='#L461'>461</a>
+<a name='L462'></a><a href='#L462'>462</a>
+<a name='L463'></a><a href='#L463'>463</a>
+<a name='L464'></a><a href='#L464'>464</a>
+<a name='L465'></a><a href='#L465'>465</a>
+<a name='L466'></a><a href='#L466'>466</a>
+<a name='L467'></a><a href='#L467'>467</a>
+<a name='L468'></a><a href='#L468'>468</a>
+<a name='L469'></a><a href='#L469'>469</a>
+<a name='L470'></a><a href='#L470'>470</a>
+<a name='L471'></a><a href='#L471'>471</a>
+<a name='L472'></a><a href='#L472'>472</a>
+<a name='L473'></a><a href='#L473'>473</a>
+<a name='L474'></a><a href='#L474'>474</a>
+<a name='L475'></a><a href='#L475'>475</a>
+<a name='L476'></a><a href='#L476'>476</a>
+<a name='L477'></a><a href='#L477'>477</a>
+<a name='L478'></a><a href='#L478'>478</a>
+<a name='L479'></a><a href='#L479'>479</a>
+<a name='L480'></a><a href='#L480'>480</a>
+<a name='L481'></a><a href='#L481'>481</a>
+<a name='L482'></a><a href='#L482'>482</a>
+<a name='L483'></a><a href='#L483'>483</a>
+<a name='L484'></a><a href='#L484'>484</a>
+<a name='L485'></a><a href='#L485'>485</a>
+<a name='L486'></a><a href='#L486'>486</a>
+<a name='L487'></a><a href='#L487'>487</a>
+<a name='L488'></a><a href='#L488'>488</a>
+<a name='L489'></a><a href='#L489'>489</a>
+<a name='L490'></a><a href='#L490'>490</a>
+<a name='L491'></a><a href='#L491'>491</a>
+<a name='L492'></a><a href='#L492'>492</a>
+<a name='L493'></a><a href='#L493'>493</a>
+<a name='L494'></a><a href='#L494'>494</a>
+<a name='L495'></a><a href='#L495'>495</a>
+<a name='L496'></a><a href='#L496'>496</a>
+<a name='L497'></a><a href='#L497'>497</a>
+<a name='L498'></a><a href='#L498'>498</a>
+<a name='L499'></a><a href='#L499'>499</a>
+<a name='L500'></a><a href='#L500'>500</a>
+<a name='L501'></a><a href='#L501'>501</a>
+<a name='L502'></a><a href='#L502'>502</a>
+<a name='L503'></a><a href='#L503'>503</a>
+<a name='L504'></a><a href='#L504'>504</a>
+<a name='L505'></a><a href='#L505'>505</a>
+<a name='L506'></a><a href='#L506'>506</a>
+<a name='L507'></a><a href='#L507'>507</a>
+<a name='L508'></a><a href='#L508'>508</a>
+<a name='L509'></a><a href='#L509'>509</a>
+<a name='L510'></a><a href='#L510'>510</a>
+<a name='L511'></a><a href='#L511'>511</a>
+<a name='L512'></a><a href='#L512'>512</a>
+<a name='L513'></a><a href='#L513'>513</a>
+<a name='L514'></a><a href='#L514'>514</a>
+<a name='L515'></a><a href='#L515'>515</a>
+<a name='L516'></a><a href='#L516'>516</a>
+<a name='L517'></a><a href='#L517'>517</a>
+<a name='L518'></a><a href='#L518'>518</a>
+<a name='L519'></a><a href='#L519'>519</a>
+<a name='L520'></a><a href='#L520'>520</a>
+<a name='L521'></a><a href='#L521'>521</a>
+<a name='L522'></a><a href='#L522'>522</a>
+<a name='L523'></a><a href='#L523'>523</a>
+<a name='L524'></a><a href='#L524'>524</a>
+<a name='L525'></a><a href='#L525'>525</a>
+<a name='L526'></a><a href='#L526'>526</a>
+<a name='L527'></a><a href='#L527'>527</a>
+<a name='L528'></a><a href='#L528'>528</a>
+<a name='L529'></a><a href='#L529'>529</a>
+<a name='L530'></a><a href='#L530'>530</a>
+<a name='L531'></a><a href='#L531'>531</a>
+<a name='L532'></a><a href='#L532'>532</a>
+<a name='L533'></a><a href='#L533'>533</a>
+<a name='L534'></a><a href='#L534'>534</a>
+<a name='L535'></a><a href='#L535'>535</a>
+<a name='L536'></a><a href='#L536'>536</a>
+<a name='L537'></a><a href='#L537'>537</a>
+<a name='L538'></a><a href='#L538'>538</a>
+<a name='L539'></a><a href='#L539'>539</a>
+<a name='L540'></a><a href='#L540'>540</a>
+<a name='L541'></a><a href='#L541'>541</a>
+<a name='L542'></a><a href='#L542'>542</a>
+<a name='L543'></a><a href='#L543'>543</a>
+<a name='L544'></a><a href='#L544'>544</a>
+<a name='L545'></a><a href='#L545'>545</a>
+<a name='L546'></a><a href='#L546'>546</a>
+<a name='L547'></a><a href='#L547'>547</a>
+<a name='L548'></a><a href='#L548'>548</a>
+<a name='L549'></a><a href='#L549'>549</a>
+<a name='L550'></a><a href='#L550'>550</a>
+<a name='L551'></a><a href='#L551'>551</a>
+<a name='L552'></a><a href='#L552'>552</a>
+<a name='L553'></a><a href='#L553'>553</a>
+<a name='L554'></a><a href='#L554'>554</a>
+<a name='L555'></a><a href='#L555'>555</a>
+<a name='L556'></a><a href='#L556'>556</a>
+<a name='L557'></a><a href='#L557'>557</a>
+<a name='L558'></a><a href='#L558'>558</a>
+<a name='L559'></a><a href='#L559'>559</a>
+<a name='L560'></a><a href='#L560'>560</a>
+<a name='L561'></a><a href='#L561'>561</a>
+<a name='L562'></a><a href='#L562'>562</a>
+<a name='L563'></a><a href='#L563'>563</a>
+<a name='L564'></a><a href='#L564'>564</a>
+<a name='L565'></a><a href='#L565'>565</a>
+<a name='L566'></a><a href='#L566'>566</a>
+<a name='L567'></a><a href='#L567'>567</a>
+<a name='L568'></a><a href='#L568'>568</a>
+<a name='L569'></a><a href='#L569'>569</a>
+<a name='L570'></a><a href='#L570'>570</a>
+<a name='L571'></a><a href='#L571'>571</a>
+<a name='L572'></a><a href='#L572'>572</a>
+<a name='L573'></a><a href='#L573'>573</a>
+<a name='L574'></a><a href='#L574'>574</a>
+<a name='L575'></a><a href='#L575'>575</a>
+<a name='L576'></a><a href='#L576'>576</a>
+<a name='L577'></a><a href='#L577'>577</a>
+<a name='L578'></a><a href='#L578'>578</a>
+<a name='L579'></a><a href='#L579'>579</a>
+<a name='L580'></a><a href='#L580'>580</a>
+<a name='L581'></a><a href='#L581'>581</a>
+<a name='L582'></a><a href='#L582'>582</a>
+<a name='L583'></a><a href='#L583'>583</a>
+<a name='L584'></a><a href='#L584'>584</a>
+<a name='L585'></a><a href='#L585'>585</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">59x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const os = require('os');
+const path = require('path');
+const { config } = require('../config');
+const { getSnapshot: getRequestMetrics } = require('./healthRequestMetrics');
+const { getRecent, syncProbeEvents } = require('./healthEventLog');
+const { getRuntimeSnapshot } = require('./healthRuntimeMetrics');
+const { formatDisplayDateTime } = require('../../shared/dateDisplay');
+&nbsp;
+const PKG_VERSION = (() =&gt; {
+  try {
+    return require(path.join(__dirname, '..', 'package.json')).version || <span class="branch-1 cbranch-no" title="branch not covered" >'0.0.0';</span>
+  } catch {
+<span class="cstat-no" title="statement not covered" >    return '0.0.0';</span>
+  }
+})();
+&nbsp;
+function escapeHtml(s) {
+  return String(s ?? <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>
+    .replace(/&amp;/g, '&amp;amp;')
+    .replace(/&lt;/g, '&amp;lt;')
+    .replace(/&gt;/g, '&amp;gt;')
+    .replace(/"/g, '&amp;quot;');
+}
+&nbsp;
+function jsonForTextarea(obj) {
+  return JSON.stringify(obj, null, 2).replace(/&lt;\/textarea/gi, '&lt;\\/textarea');
+}
+&nbsp;
+function wantsHealthHtml(req) {
+  if (req.query.format === 'json' || req.query.raw === '1') return false;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (req.query.format === 'html' || req.query.view === 'dashboard') <span class="cstat-no" title="statement not covered" >return true;</span>
+  const accept = String(req.headers.accept || '');
+  if (!accept || accept === '*/*') return false;
+  return accept.includes('text/html') &amp;&amp; !accept.includes('application/json');
+}
+&nbsp;
+function wantsDashboardJson(req) {
+  return req.query.dashboard === '1' || req.query.format === 'dashboard';
+}
+&nbsp;
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (d &gt; 0) <span class="cstat-no" title="statement not covered" >return `${d}d ${h}h`;</span>
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (h &gt; 0) <span class="cstat-no" title="statement not covered" >return `${h}h ${m}m`;</span>
+  return `${m}m`;
+}
+&nbsp;
+function formatStartedAt(uptimeSeconds) {
+  const started = new Date(Date.now() - uptimeSeconds * 1000);
+  return formatDisplayDateTime(started);
+}
+&nbsp;
+function depStatus(ok, state) {
+  const s = String(state || <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>.toLowerCase();
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (s === 'not_configured' || s === 'skipped_local') {
+<span class="cstat-no" title="statement not covered" >    return { dot: 'ok', label: s === 'skipped_local' ? 'Skipped (dev)' : 'Not configured' };</span>
+  }
+  if (ok) return { dot: 'ok', label: 'Connected' };
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (s.includes('connect') || s.includes('retry') || s === 'unavailable' || <span class="branch-3 cbranch-no" title="branch not covered" >s === 'error')</span> {
+    return { dot: 'warn', label: 'Reconnecting' };
+  }
+<span class="cstat-no" title="statement not covered" >  return { dot: 'bad', label: 'Unavailable' };</span>
+}
+&nbsp;
+function computeHealthScore(detail, probe) {
+  const scores = [];
+  for (const svc of probe?.services || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span> {
+    if (svc.id === 'mongodb') scores.push(svc.status === 'ok' ? 100 : <span class="branch-1 cbranch-no" title="branch not covered" >0)</span>;
+    else if (svc.id === 'redis') {
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (svc.state === 'not_configured') <span class="cstat-no" title="statement not covered" >scores.push(100);</span>
+      else scores.push(svc.status === 'ok' ? <span class="branch-0 cbranch-no" title="branch not covered" >100 </span>: svc.status === 'degraded' ? 65 : <span class="branch-1 cbranch-no" title="branch not covered" >20)</span>;
+    } else if (svc.status === 'ok') scores.push(100);
+    else <span class="cstat-no" title="statement not covered" ><span class="missing-if-branch" title="else path not taken" >E</span>if (svc.status === 'degraded') <span class="cstat-no" title="statement not covered" >scores.push(70);</span></span>
+    else <span class="cstat-no" title="statement not covered" >scores.push(25);</span>
+  }
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (scores.length) {
+    return Math.round(scores.reduce((a, b) =&gt; a + b, 0) / scores.length);
+  }
+  const deps = <span class="cstat-no" title="statement not covered" >detail.dependencies || {};</span>
+  const flags = <span class="cstat-no" title="statement not covered" >[deps.mongodb?.ok, deps.uploadthing?.ok, deps.supabase?.ok !== false];</span>
+  const hit = <span class="cstat-no" title="statement not covered" >flags.filter(Boolean).length;</span>
+<span class="cstat-no" title="statement not covered" >  return Math.round((hit / flags.length) * 100);</span>
+}
+&nbsp;
+function overallHero(detail, probe, score) {
+  const probeStatus = probe?.status;
+  const apiStatus = detail.status;
+&nbsp;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (apiStatus === 'FAIL' || probeStatus === 'down') {
+<span class="cstat-no" title="statement not covered" >    return { dot: 'bad', title: 'OUTAGE', subtitle: detail.reason || 'Critical systems are unavailable.' };</span>
+  }
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (probeStatus === 'degraded' || <span class="branch-1 cbranch-no" title="branch not covered" >score &lt; 85)</span> {
+    return { dot: 'warn', title: 'DEGRADED', subtitle: 'Some dependencies need attention.' };
+  }
+<span class="cstat-no" title="statement not covered" >  if (apiStatus === 'STARTING') {</span>
+<span class="cstat-no" title="statement not covered" >    return { dot: 'warn', title: 'STARTING', subtitle: 'API is booting — dependencies are being checked.' };</span>
+  }
+<span class="cstat-no" title="statement not covered" >  return { dot: 'ok', title: 'OPERATIONAL', subtitle: 'All critical systems are functioning normally.' };</span>
+}
+&nbsp;
+function buildDependencyRows(detail, probe) {
+  const probeById = Object.fromEntries((probe?.services || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>.map((s) =&gt; [s.id, s]));
+  const deps = detail.dependencies || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  const rows = [];
+&nbsp;
+  const mongoProbe = probeById.mongodb;
+  const mongo = deps.mongodb || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  rows.push({
+    name: 'MongoDB',
+    status: depStatus(mongo.ok, mongo.state),
+    detail: mongoProbe?.latencyMs != null
+      ? `Replica Healthy · ${mongoProbe.latencyMs} ms`
+      : (<span class="branch-1 cbranch-no" title="branch not covered" >mongo.state || '—')</span>,
+  });
+&nbsp;
+  const sbProbe = probeById.supabase;
+  const sb = deps.supabase || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  const sbState = sbProbe?.state || <span class="branch-1 cbranch-no" title="branch not covered" >sb.state;</span>
+  rows.push({
+    name: 'Supabase',
+    status: depStatus(sbProbe?.status === 'ok' || <span class="branch-1 cbranch-no" title="branch not covered" >sb.ok,</span> sbState),
+    detail: sbProbe?.detail || <span class="branch-1 cbranch-no" title="branch not covered" >sbProbe?.error </span>|| (<span class="branch-2 cbranch-no" title="branch not covered" >sbProbe?.latencyMs != null ? `${sbProbe.latencyMs} ms` : sb.state)</span>,
+  });
+&nbsp;
+  const redisProbe = probeById.redis;
+  const redis = deps.redis || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  const redisState = redisProbe?.state || <span class="branch-1 cbranch-no" title="branch not covered" >redis.state;</span>
+  let redisDetail = redisProbe?.detail || redisProbe?.error;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!redisDetail) {
+<span class="cstat-no" title="statement not covered" >    if (redisState === 'not_configured') <span class="cstat-no" title="statement not covered" >redisDetail = 'In-memory queue fallback';</span></span>
+    else <span class="cstat-no" title="statement not covered" >if (redis.ok || redisProbe?.status === 'ok') {</span>
+<span class="cstat-no" title="statement not covered" >      redisDetail = redisProbe?.latencyMs != null ? `${redisProbe.latencyMs} ms` : 'Connected';</span>
+    } else {
+<span class="cstat-no" title="statement not covered" >      redisDetail = 'Retry in progress';</span>
+    }
+  }
+  rows.push({
+    name: 'Redis',
+    status: depStatus(redis.ok || redisState === 'not_configured', redisState),
+    detail: redisDetail,
+  });
+&nbsp;
+  const ut = deps.uploadthing || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  rows.push({
+    name: 'UploadThing',
+    status: depStatus(ut.ok, ut.state),
+    detail: ut.ok
+      ? `Ready · ${process.env.UPLOADTHING_REGION || process.env.RENDER_REGION || 'auto'}`
+      : (<span class="branch-1 cbranch-no" title="branch not covered" >ut.reason || ut.state)</span>,
+  });
+&nbsp;
+  const resendProbe = probeById.resend;
+  rows.push({
+    name: 'Email (Resend)',
+    status: depStatus(resendProbe?.status === 'ok', resendProbe?.state),
+    detail: resendProbe?.detail || resendProbe?.error
+      || (resendProbe?.latencyMs != null ? `${resendProbe.latencyMs} ms` : (<span class="branch-1 cbranch-no" title="branch not covered" >resendProbe?.status === 'ok' ? 'Operational' : 'Not configured')</span>),
+  });
+&nbsp;
+  const bullProbe = probeById.bullmq;
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (bullProbe) {
+    rows.push({
+      name: 'Job Queues',
+      status: depStatus(bullProbe.status === 'ok', bullProbe.state),
+      detail: bullProbe.detail || <span class="branch-1 cbranch-no" title="branch not covered" >bullProbe.error </span>|| <span class="branch-2 cbranch-no" title="branch not covered" >bullProbe.state,</span>
+    });
+  }
+&nbsp;
+  return rows;
+}
+&nbsp;
+function collectWarnings(detail, probe) {
+  const warnings = [];
+  const redisProbe = probe?.services?.find((s) =&gt; s.id === 'redis');
+  const redis = detail.dependencies?.redis;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (redisProbe?.status === 'down' || (redis &amp;&amp; !redis.ok &amp;&amp; redis.state !== 'not_configured')) {
+<span class="cstat-no" title="statement not covered" >    warnings.push('Redis is currently unavailable. Queue processing may be delayed.');</span>
+  }
+  for (const svc of probe?.services || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span> {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (svc.status === 'down') {
+<span class="cstat-no" title="statement not covered" >      warnings.push(`${svc.label} is down: ${svc.error || svc.state}`);</span>
+    } else if (svc.status === 'degraded' &amp;&amp; svc.error) {
+      warnings.push(`${svc.label}: ${svc.error}`);
+    }
+  }
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (detail.status === 'FAIL' &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >detail.reason)</span> <span class="cstat-no" title="statement not covered" >warnings.push(detail.reason);</span>
+  return warnings;
+}
+&nbsp;
+function buildSparklinePath(values, width, height) {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!values.length) <span class="cstat-no" title="statement not covered" >return `M0,${height / 2} L${width},${height / 2}`;</span>
+  const max = Math.max(...values, 1);
+  const step = width / Math.max(values.length - 1, 1);
+  return values
+    .map((v, i) =&gt; {
+      const x = i * step;
+      const y = height - (v / max) * (height - 8) - 4;
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+&nbsp;
+function buildDashboardData(detail, probe) {
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (probe) syncProbeEvents(probe);
+&nbsp;
+  const metrics = getRequestMetrics();
+  const runtime = getRuntimeSnapshot();
+  const build = detail.build || <span class="branch-1 cbranch-no" title="branch not covered" >{};</span>
+  const branch = (process.env.RENDER_GIT_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || 'local').trim();
+  const region = (process.env.RENDER_REGION || process.env.AWS_REGION || process.env.VERCEL_REGION || 'local').trim();
+  const envLabel = build.deployTier || config.COREKNOT_DEPLOY_TIER || config.NODE_ENV || <span class="branch-3 cbranch-no" title="branch not covered" >'development';</span>
+  const score = computeHealthScore(detail, probe);
+  const hero = overallHero(detail, probe, score);
+&nbsp;
+  const avgLatency = metrics.avgLatencyMs;
+  const p95Latency = metrics.p95LatencyMs;
+&nbsp;
+  return {
+    checkedAt: new Date().toISOString(),
+    detail,
+    probe,
+    hero,
+    score,
+    metrics: {
+      requestsPerMin: metrics.requestsPerMin,
+      errorRatePct: metrics.errorRatePct,
+      avgLatencyMs: avgLatency,
+      p95LatencyMs: p95Latency,
+      sampleCount: metrics.requestsPerMin,
+      latencySeries: metrics.latencySeries,
+    },
+    uptime: formatUptime(detail.uptimeSeconds || <span class="branch-1 cbranch-no" title="branch not covered" >0)</span>,
+    uptimeSeconds: detail.uptimeSeconds || <span class="branch-1 cbranch-no" title="branch not covered" >0,</span>
+    dependencies: buildDependencyRows(detail, probe),
+    warnings: collectWarnings(detail, probe),
+    runtime,
+    deployment: {
+      environment: envLabel,
+      branch,
+      commit: (build.commitSha || 'local').slice(0, 7),
+      version: `v${PKG_VERSION}`,
+      node: process.version.replace('v', ''),
+      region,
+      started: formatStartedAt(detail.uptimeSeconds || <span class="branch-1 cbranch-no" title="branch not covered" >0)</span>,
+      service: build.service || null,
+    },
+    events: getRecent(12),
+    sparkPath: buildSparklinePath(metrics.latencySeries, 320, 72),
+    hasLatencyData: metrics.latencySeries.length &gt; 0,
+  };
+}
+&nbsp;
+function buildSnapshot(detail, probe, basePayload) {
+  const dashboard = buildDashboardData(detail, probe);
+  return { ...dashboard, jsonPayload: { ...basePayload, dashboard } };
+}
+&nbsp;
+function renderHeapBreakdown(heap) {
+  const totalRss = heap.rss || <span class="branch-1 cbranch-no" title="branch not covered" >1;</span>
+  const stackBar = heap.segments.map((s) =&gt; {
+    const w = Math.max(2, Math.round((s.bytes / totalRss) * 100));
+    return `&lt;div class="heap-seg" style="width:${w}%;background:${s.color}" title="${escapeHtml(s.label)}: ${s.mb} MB"&gt;&lt;/div&gt;`;
+  }).join('');
+&nbsp;
+  const rows = heap.segments.map((s) =&gt; `
+    &lt;div class="heap-row"&gt;
+      &lt;span class="heap-swatch" style="background:${s.color}"&gt;&lt;/span&gt;
+      &lt;span class="heap-name"&gt;${escapeHtml(s.label)}&lt;/span&gt;
+      &lt;span class="heap-mb"&gt;${s.mb} MB&lt;/span&gt;
+      &lt;span class="heap-pct"&gt;${s.pctOfRss}% RSS&lt;/span&gt;
+    &lt;/div&gt;`).join('');
+&nbsp;
+  const heapBarUsed = heap.heapUsedPct;
+&nbsp;
+  return `
+    &lt;div class="heap-panel"&gt;
+      &lt;div class="section-title"&gt;Heap Memory Breakdown&lt;/div&gt;
+      &lt;p class="heap-summary"&gt;${heap.heapUsedMb} MB used of ${heap.heapTotalMb} MB V8 heap (${heap.heapUsedPct}%) · RSS ${heap.rssMb} MB / ${heap.systemTotalMb} MB system&lt;/p&gt;
+      &lt;div class="heap-stack" aria-label="RSS memory composition"&gt;${stackBar}&lt;/div&gt;
+      &lt;div class="heap-legend"&gt;${rows}&lt;/div&gt;
+      &lt;div class="section-title" style="margin-top:16px"&gt;V8 Heap Allocation&lt;/div&gt;
+      &lt;div class="bar-row"&gt;
+        &lt;span class="bar-label"&gt;Heap&lt;/span&gt;
+        &lt;div class="bar-track"&gt;&lt;div class="bar-fill" style="width:${heapBarUsed}%"&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;span class="bar-val"&gt;${heapBarUsed}%&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class="heap-alloc-grid"&gt;
+        &lt;div&gt;&lt;span class="deploy-key"&gt;heapUsed&lt;/span&gt;&lt;span class="deploy-val"&gt;${heap.heapUsedMb} MB&lt;/span&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;span class="deploy-key"&gt;heapFree&lt;/span&gt;&lt;span class="deploy-val"&gt;${heap.heapFreeMb} MB&lt;/span&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;span class="deploy-key"&gt;external&lt;/span&gt;&lt;span class="deploy-val"&gt;${heap.externalMb} MB&lt;/span&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;span class="deploy-key"&gt;arrayBuffers&lt;/span&gt;&lt;span class="deploy-val"&gt;${heap.arrayBuffersMb} MB&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;`;
+}
+&nbsp;
+function renderHealthPage(snapshot) {
+  const s = snapshot;
+  const jsonSafe = escapeHtml(JSON.stringify(s.jsonPayload, null, 2));
+  const envBadge = escapeHtml(String(s.deployment.environment).toUpperCase());
+  const heapHtml = renderHeapBreakdown(s.runtime.heap);
+&nbsp;
+  const depHtml = s.dependencies.map((d) =&gt; `
+    &lt;div class="dep-row"&gt;
+      &lt;div class="dep-main"&gt;
+        &lt;span class="pulse pulse-${d.status.dot}"&gt;&lt;/span&gt;
+        &lt;span class="dep-name"&gt;${escapeHtml(d.name)}&lt;/span&gt;
+        &lt;span class="dep-state"&gt;${escapeHtml(d.status.label)}&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class="dep-detail"&gt;${escapeHtml(d.detail)}&lt;/div&gt;
+    &lt;/div&gt;`).join('');
+&nbsp;
+  const renderEvents = (events) =&gt; (events.length ? events : <span class="branch-1 cbranch-no" title="branch not covered" >[{ at: new Date().toISOString(), level: 'ok', message: 'Awaiting events' }])</span>
+    .map((ev) =&gt; {
+      const t = new Date(ev.at).toLocaleTimeString('en-GB', { hour12: false });
+      const lvl = ev.level === 'warn' ? 'warn' : ev.level === 'bad' ? <span class="branch-0 cbranch-no" title="branch not covered" >'bad' </span>: 'ok';
+      return `&lt;div class="event-row"&gt;&lt;span class="event-time"&gt;${escapeHtml(t)}&lt;/span&gt;&lt;span class="pulse pulse-${lvl}"&gt;&lt;/span&gt;&lt;span&gt;${escapeHtml(ev.message)}&lt;/span&gt;&lt;/div&gt;`;
+    }).join('');
+&nbsp;
+  const eventsHtml = renderEvents(s.events);
+&nbsp;
+  const warningsHtml = s.warnings.length
+    ? s.warnings.map((w) =&gt; `&lt;div class="warning-item"&gt;⚠ ${escapeHtml(w)}&lt;/div&gt;`).join('')
+    : <span class="branch-1 cbranch-no" title="branch not covered" >'&lt;div class="warning-ok"&gt;No active warnings.&lt;/div&gt;';</span>
+&nbsp;
+  const bar = (label, pct, suffix = '%') =&gt; {
+    const display = pct == null ? <span class="branch-0 cbranch-no" title="branch not covered" >'—' </span>: `${pct}${suffix}`;
+    const width = pct == null ? <span class="branch-0 cbranch-no" title="branch not covered" >0 </span>: Math.min(100, pct);
+    return `
+    &lt;div class="bar-row"&gt;
+      &lt;span class="bar-label"&gt;${label}&lt;/span&gt;
+      &lt;div class="bar-track"&gt;&lt;div class="bar-fill" style="width:${width}%"&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;span class="bar-val"&gt;${display}&lt;/span&gt;
+    &lt;/div&gt;`;
+  };
+&nbsp;
+  const latencyDisplay = typeof s.metrics.avgLatencyMs === 'number' ? `${s.metrics.avgLatencyMs} ms` : <span class="branch-1 cbranch-no" title="branch not covered" >'—';</span>
+  const p95Display = s.metrics.p95LatencyMs != null ? `${s.metrics.p95LatencyMs} ms` : <span class="branch-1 cbranch-no" title="branch not covered" >'—';</span>
+  const chartNote = s.hasLatencyData ? '' : <span class="branch-1 cbranch-no" title="branch not covered" >'&lt;p class="chart-empty"&gt;No API traffic in the last 60s — chart updates as requests arrive.&lt;/p&gt;';</span>
+&nbsp;
+  return `&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8" /&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1" /&gt;
+  &lt;title&gt;CoreKnot · System Health&lt;/title&gt;
+  &lt;style&gt;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0B0F13;color:#eef0f3;min-height:100vh;line-height:1.45}
+    .page{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+    .header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid #252830}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-0.02em}
+    .brand-logo{width:32px;height:32px;border-radius:22%;overflow:hidden;flex-shrink:0;display:inline-flex;box-shadow:inset 0 1px 0 rgb(255 255 255 / 0.12),0 2px 8px rgb(0 0 0 / 0.12)}
+    .brand-logo img{width:100%;height:100%;display:block}
+    .header-actions{display:flex;align-items:center;gap:16px;font-size:11px;color:#7a808a}
+    .header-actions button{background:transparent;border:1px solid #252830;color:#eef0f3;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .header-actions button:hover:not(:disabled){border-color:#126d5e;color:#126d5e}
+    .header-actions button:disabled{cursor:wait;opacity:.7}
+    .header-actions button.is-loading .refresh-icon{display:inline-block;animation:refresh-spin .7s linear infinite}
+    @keyframes refresh-spin{to{transform:rotate(360deg)}}
+    .auto-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+    .auto-dot{width:8px;height:8px;border-radius:50%;background:#126d5e;box-shadow:0 0 0 3px rgba(18,109,94,.25)}
+    .auto-dot.off{background:#7a808a;box-shadow:none}
+    .section-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7a808a;margin-bottom:12px}
+    .hero{margin:20px 0;padding:20px;border:1px solid #252830;border-radius:14px;background:#0f1012;position:relative}
+    .env-pill{position:absolute;top:16px;right:16px;font-size:9px;font-weight:700;letter-spacing:.1em;padding:4px 8px;border-radius:6px;background:#141519;border:1px solid #252830;color:#7ab8aa}
+    .hero-status{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.08em;margin-bottom:6px}
+    .hero-sub{font-size:13px;color:#7a808a}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:16px 0 20px}
+    .metric-card{background:#0f1012;border:1px solid #252830;border-radius:12px;padding:14px 16px}
+    .metric-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a808a;margin-bottom:8px}
+    .metric-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:#eef0f3}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:800px){.grid-2{grid-template-columns:1fr}}
+    .panel{background:#0f1012;border:1px solid #252830;border-radius:14px;padding:16px;min-height:180px}
+    .dep-row{padding:12px 0;border-bottom:1px solid #1a1c22}
+    .dep-row:last-child{border-bottom:none}
+    .dep-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .dep-name{font-weight:600;font-size:13px;flex:1}
+    .dep-state{font-size:11px;color:#7ab8aa;font-weight:600}
+    .dep-detail{font-size:11px;color:#7a808a;margin-top:4px;padding-left:20px}
+    .chart-wrap{background:#141519;border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid #1a1c22}
+    .chart-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a808a;text-align:center;margin-bottom:8px}
+    .chart-empty{font-size:10px;color:#7a808a;text-align:center;margin-top:6px}
+    .chart-svg{width:100%;height:72px;display:block}
+    .chart-line{fill:none;stroke:#126d5e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .bar-row{display:grid;grid-template-columns:72px 1fr 40px;align-items:center;gap:10px;margin-bottom:10px;font-size:11px}
+    .bar-label{color:#7a808a;font-weight:600}
+    .bar-track{height:8px;background:#141519;border-radius:4px;overflow:hidden;border:1px solid #1a1c22}
+    .bar-fill{height:100%;background:linear-gradient(90deg,#083d3a,#126d5e);border-radius:4px;transition:width .4s ease}
+    .bar-val{text-align:right;font-variant-numeric:tabular-nums;color:#eef0f3;font-weight:600}
+    .perf-stats{font-size:11px;color:#7a808a;margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
+    .deploy-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:12px}
+    .deploy-key{color:#7a808a;font-weight:600}
+    .deploy-val{color:#eef0f3;font-variant-numeric:tabular-nums}
+    .event-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 0;border-bottom:1px solid #1a1c22}
+    .event-row:last-child{border-bottom:none}
+    .event-time{color:#7a808a;font-variant-numeric:tabular-nums;min-width:64px}
+    .tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 16px;padding:12px 0;border-top:1px solid #252830}
+    .tab{background:transparent;border:none;color:#7a808a;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-radius:8px;cursor:pointer}
+    .tab.active{color:#126d5e;background:rgba(18,109,94,.12)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+    .warnings{margin-top:16px;padding:16px;border:1px solid #252830;border-radius:14px;background:#0f1012}
+    .warning-item{font-size:12px;color:#b56f1c;margin-bottom:8px}
+    .warning-ok{font-size:12px;color:#7ab8aa}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .actions button{background:#141519;border:1px solid #252830;color:#eef0f3;border-radius:8px;padding:8px 14px;font-size:11px;font-weight:600;cursor:pointer}
+    .actions button:hover{border-color:#126d5e;color:#126d5e}
+    .toast{position:fixed;bottom:20px;right:20px;background:#126d5e;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+    .toast.show{opacity:1}
+    pre.json{background:#070809;border:1px solid #252830;border-radius:12px;padding:16px;font-size:11px;line-height:1.5;overflow:auto;max-height:480px;color:#7ab8aa}
+    .pulse{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+    .pulse-ok{background:#126d5e;box-shadow:0 0 0 0 rgba(18,109,94,.5);animation:pulse-ok 2s infinite}
+    .pulse-warn{background:#b56f1c;animation:pulse-warn 1.5s infinite}
+    .pulse-bad{background:#88281c;animation:pulse-bad 1.2s infinite}
+    @keyframes pulse-ok{0%,100%{box-shadow:0 0 0 0 rgba(18,109,94,.45)}50%{box-shadow:0 0 0 6px rgba(18,109,94,0)}}
+    @keyframes pulse-warn{0%,100%{opacity:1}50%{opacity:.55}}
+    @keyframes pulse-bad{0%,100%{opacity:1}50%{opacity:.4}}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .diag-row{font-size:12px;padding:8px 0;border-bottom:1px solid #1a1c22;display:flex;justify-content:space-between;gap:12px}
+    .heap-panel{margin-top:0}
+    .heap-summary{font-size:11px;color:#7a808a;margin-bottom:12px}
+    .heap-stack{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid #252830;margin-bottom:14px}
+    .heap-seg{min-width:2px}
+    .heap-row{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid #1a1c22}
+    .heap-row:last-child{border-bottom:none}
+    .heap-swatch{width:12px;height:12px;border-radius:3px}
+    .heap-name{color:#eef0f3}
+    .heap-mb{color:#7ab8aa;font-variant-numeric:tabular-nums}
+    .heap-pct{color:#7a808a;font-variant-numeric:tabular-nums;text-align:right}
+    .heap-alloc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:10px;font-size:12px}
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class="page"&gt;
+    &lt;header class="header"&gt;
+      &lt;div class="brand"&gt;
+        &lt;span class="brand-logo" role="img" aria-label="CoreKnot"&gt;
+          &lt;img src="/api/health/brand-mark.svg" alt="" width="32" height="32" /&gt;
+        &lt;/span&gt;
+        &lt;span&gt;CoreKnot&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class="header-actions"&gt;
+        &lt;span&gt;SYSTEM HEALTH&lt;/span&gt;
+        &lt;button type="button" id="btn-refresh"&gt;&lt;span class="refresh-icon" aria-hidden="true"&gt;⟳&lt;/span&gt;&lt;span class="refresh-label"&gt;Refresh&lt;/span&gt;&lt;/button&gt;
+        &lt;label class="auto-toggle" id="auto-toggle"&gt;
+          &lt;span class="auto-dot" id="auto-dot"&gt;&lt;/span&gt;
+          &lt;span&gt;Auto&lt;/span&gt;
+        &lt;/label&gt;
+        &lt;span id="last-updated"&gt;Last Updated: —&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+&nbsp;
+    &lt;nav class="tabs" aria-label="Health views"&gt;
+      &lt;button class="tab active" data-tab="overview"&gt;Overview&lt;/button&gt;
+      &lt;button class="tab" data-tab="metrics"&gt;Metrics&lt;/button&gt;
+      &lt;button class="tab" data-tab="logs"&gt;Logs&lt;/button&gt;
+      &lt;button class="tab" data-tab="json"&gt;Raw JSON&lt;/button&gt;
+      &lt;button class="tab" data-tab="diagnostics"&gt;Diagnostics&lt;/button&gt;
+    &lt;/nav&gt;
+&nbsp;
+    &lt;div id="panel-overview" class="tab-panel active"&gt;
+      &lt;section class="hero"&gt;
+        &lt;span class="env-pill" id="env-pill"&gt;${envBadge}&lt;/span&gt;
+        &lt;div class="hero-status" id="hero-status"&gt;&lt;span class="pulse pulse-${s.hero.dot}" id="hero-dot"&gt;&lt;/span&gt; &lt;span id="hero-title"&gt;${escapeHtml(s.hero.title)}&lt;/span&gt;&lt;/div&gt;
+        &lt;p class="hero-sub" id="hero-sub"&gt;${escapeHtml(s.hero.subtitle)}&lt;/p&gt;
+      &lt;/section&gt;
+&nbsp;
+      &lt;div class="metrics"&gt;
+        &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Health Score&lt;/div&gt;&lt;div class="metric-value" id="m-score"&gt;${s.score}%&lt;/div&gt;&lt;/div&gt;
+        &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;API Latency&lt;/div&gt;&lt;div class="metric-value" id="m-latency"&gt;${latencyDisplay}&lt;/div&gt;&lt;/div&gt;
+        &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Uptime&lt;/div&gt;&lt;div class="metric-value" id="m-uptime"&gt;${escapeHtml(s.uptime)}&lt;/div&gt;&lt;/div&gt;
+        &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Requests/min&lt;/div&gt;&lt;div class="metric-value" id="m-rpm"&gt;${s.metrics.requestsPerMin}&lt;/div&gt;&lt;/div&gt;
+        &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Error Rate&lt;/div&gt;&lt;div class="metric-value" id="m-err"&gt;${s.metrics.errorRatePct.toFixed(2)}%&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+&nbsp;
+      &lt;div class="grid-2"&gt;
+        &lt;div class="panel"&gt;
+          &lt;div class="section-title"&gt;Dependencies&lt;/div&gt;
+          &lt;div id="dep-list"&gt;${depHtml}&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="panel"&gt;
+          &lt;div class="section-title"&gt;Performance&lt;/div&gt;
+          &lt;div class="chart-wrap"&gt;
+            &lt;div class="chart-label"&gt;API Response (last 60s)&lt;/div&gt;
+            &lt;svg class="chart-svg" viewBox="0 0 320 72" preserveAspectRatio="none"&gt;&lt;path class="chart-line" id="spark-path" d="${s.sparkPath}"/&gt;&lt;/svg&gt;
+            ${chartNote}
+          &lt;/div&gt;
+          &lt;div id="perf-bars"&gt;
+            ${bar('CPU', s.runtime.cpuPct)}
+            ${bar('Memory', s.runtime.memPct)}
+            ${bar('Heap', s.runtime.heapPct)}
+            ${bar('Disk', s.runtime.diskPct)}
+          &lt;/div&gt;
+          &lt;div class="perf-stats"&gt;
+            &lt;span&gt;Avg Response: &lt;strong id="avg-resp"&gt;${latencyDisplay === '—' ? <span class="branch-0 cbranch-no" title="branch not covered" >'—' </span>: latencyDisplay.replace(' ', '')}&lt;/strong&gt;&lt;/span&gt;
+            &lt;span&gt;P95 Response: &lt;strong id="p95-resp"&gt;${p95Display === '—' ? <span class="branch-0 cbranch-no" title="branch not covered" >'—' </span>: p95Display.replace(' ', '')}&lt;/strong&gt;&lt;/span&gt;
+            &lt;span&gt;Samples: &lt;strong id="sample-count"&gt;${s.metrics.sampleCount}&lt;/strong&gt;&lt;/span&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+&nbsp;
+      &lt;div class="grid-2" style="margin-top:16px"&gt;
+        &lt;div class="panel"&gt;
+          &lt;div class="section-title"&gt;Deployment&lt;/div&gt;
+          &lt;div class="deploy-grid" id="deploy-grid"&gt;
+            &lt;span class="deploy-key"&gt;Environment&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.environment)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Branch&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.branch)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Commit&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.commit)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Version&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.version)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Node&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.node)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Region&lt;/span&gt;&lt;span class="deploy-val"&gt;${escapeHtml(s.deployment.region)}&lt;/span&gt;
+            &lt;span class="deploy-key"&gt;Started&lt;/span&gt;&lt;span class="deploy-val" id="deploy-started"&gt;${escapeHtml(s.deployment.started)}&lt;/span&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="panel"&gt;
+          &lt;div class="section-title"&gt;Recent Health Events&lt;/div&gt;
+          &lt;div id="event-list"&gt;${eventsHtml}&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+&nbsp;
+    &lt;div id="panel-metrics" class="tab-panel"&gt;
+      &lt;div class="panel" style="margin-bottom:16px"&gt;
+        &lt;div class="section-title"&gt;Runtime Metrics&lt;/div&gt;
+        &lt;div class="metrics-grid" id="runtime-metrics"&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Heap Used&lt;/div&gt;&lt;div class="metric-value" id="rm-heap-used"&gt;${s.runtime.heap.heapUsedMb} MB&lt;/div&gt;&lt;/div&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;RSS&lt;/div&gt;&lt;div class="metric-value" id="rm-rss"&gt;${s.runtime.heap.rssMb} MB&lt;/div&gt;&lt;/div&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Load (1m)&lt;/div&gt;&lt;div class="metric-value" id="rm-load"&gt;${s.runtime.load1m}&lt;/div&gt;&lt;/div&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;CPUs&lt;/div&gt;&lt;div class="metric-value"&gt;${s.runtime.cpuCount}&lt;/div&gt;&lt;/div&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;System Free&lt;/div&gt;&lt;div class="metric-value" id="rm-sys-free"&gt;${s.runtime.heap.systemFreeMb} MB&lt;/div&gt;&lt;/div&gt;
+          &lt;div class="metric-card"&gt;&lt;div class="metric-label"&gt;Disk Used&lt;/div&gt;&lt;div class="metric-value" id="rm-disk"&gt;${s.runtime.disk?.usedPct != null ? `${s.runtime.disk.usedPct}%` : <span class="branch-1 cbranch-no" title="branch not covered" >'—'}</span>&lt;/div&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="panel" id="heap-breakdown"&gt;${heapHtml}&lt;/div&gt;
+    &lt;/div&gt;
+&nbsp;
+    &lt;div id="panel-logs" class="tab-panel"&gt;
+      &lt;div class="panel"&gt;&lt;div class="section-title"&gt;Event Log&lt;/div&gt;&lt;div id="event-list-full"&gt;${eventsHtml}&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&nbsp;
+    &lt;div id="panel-json" class="tab-panel"&gt;
+      &lt;pre class="json" id="raw-json"&gt;${jsonSafe}&lt;/pre&gt;
+    &lt;/div&gt;
+&nbsp;
+    &lt;div id="panel-diagnostics" class="tab-panel"&gt;
+      &lt;div class="panel"&gt;
+        &lt;div class="section-title"&gt;Diagnostics&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;API Status&lt;/span&gt;&lt;span id="diag-status"&gt;${escapeHtml(s.detail.status)}&lt;/span&gt;&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;Probe Status&lt;/span&gt;&lt;span id="diag-probe"&gt;${escapeHtml(s.probe?.status || <span class="branch-1 cbranch-no" title="branch not covered" >'—')</span>}&lt;/span&gt;&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;PID&lt;/span&gt;&lt;span&gt;${process.pid}&lt;/span&gt;&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;Platform&lt;/span&gt;&lt;span&gt;${escapeHtml(process.platform)} ${escapeHtml(process.arch)}&lt;/span&gt;&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;Probe checked&lt;/span&gt;&lt;span id="diag-checked"&gt;${escapeHtml(s.probe?.checkedAt || <span class="branch-1 cbranch-no" title="branch not covered" >'—')</span>}&lt;/span&gt;&lt;/div&gt;
+        &lt;div class="diag-row"&gt;&lt;span&gt;Disk path&lt;/span&gt;&lt;span&gt;${escapeHtml(s.runtime.disk?.path || <span class="branch-1 cbranch-no" title="branch not covered" >'—')</span>}&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+&nbsp;
+    &lt;section class="warnings"&gt;
+      &lt;div class="section-title"&gt;System Warnings&lt;/div&gt;
+      &lt;div id="warnings"&gt;${warningsHtml}&lt;/div&gt;
+      &lt;div class="actions"&gt;
+        &lt;button type="button" id="btn-retry"&gt;Retry Connection&lt;/button&gt;
+        &lt;button type="button" id="btn-download"&gt;Download Report&lt;/button&gt;
+        &lt;button type="button" id="btn-copy"&gt;Copy Diagnostics&lt;/button&gt;
+        &lt;button type="button" id="btn-json-tab"&gt;View JSON&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+  &lt;div class="toast" id="toast"&gt;&lt;/div&gt;
+  &lt;textarea id="health-data" hidden readonly aria-hidden="true"&gt;${jsonForTextarea(s.jsonPayload)}&lt;/textarea&gt;
+  &lt;script src="/api/health/dashboard.js" defer&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;`;
+}
+&nbsp;
+module.exports = {
+  wantsHealthHtml,
+  wantsDashboardJson,
+  buildDashboardData,
+  buildSnapshot,
+  renderHealthPage,
+};
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-07-09T05:12:18.549Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

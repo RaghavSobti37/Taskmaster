@@ -1,0 +1,433 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for server/services/backupNotificationService.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">server/services</a> backupNotificationService.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">21.27% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>10/47</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/52</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">23.25% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>10/43</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { dispatchEmailPayload } = require('./mailDriver');
+const logger = require('../utils/logger');
+&nbsp;
+const formatBytes = <span class="fstat-no" title="function not covered" >(b</span>ytes) =&gt; {
+<span class="cstat-no" title="statement not covered" >  if (!bytes) <span class="cstat-no" title="statement not covered" >return '0 B';</span></span>
+  const units = <span class="cstat-no" title="statement not covered" >['B', 'KB', 'MB', 'GB'];</span>
+  let size = <span class="cstat-no" title="statement not covered" >bytes;</span>
+  let unitIndex = <span class="cstat-no" title="statement not covered" >0;</span>
+<span class="cstat-no" title="statement not covered" >  while (size &gt;= 1024 &amp;&amp; unitIndex &lt; units.length - 1) {</span>
+<span class="cstat-no" title="statement not covered" >    size /= 1024;</span>
+<span class="cstat-no" title="statement not covered" >    unitIndex += 1;</span>
+  }
+<span class="cstat-no" title="statement not covered" >  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;</span>
+};
+&nbsp;
+const getNotifyEmail = <span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {
+  const { resolveBackupNotifyEmails } = <span class="cstat-no" title="statement not covered" >require('../utils/platformNotificationRecipients');</span>
+  const emails = <span class="cstat-no" title="statement not covered" >await resolveBackupNotifyEmails();</span>
+<span class="cstat-no" title="statement not covered" >  return emails.join(', ');</span>
+};
+&nbsp;
+const getFromEmail = <span class="fstat-no" title="function not covered" >()</span> =&gt; {
+  const raw = <span class="cstat-no" title="statement not covered" >(process.env.BACKUP_FROM_EMAIL || 'noreply@theshakticollective.in').trim();</span>
+<span class="cstat-no" title="statement not covered" >  if (raw.includes('&lt;') &amp;&amp; raw.includes('&gt;')) <span class="cstat-no" title="statement not covered" >return raw;</span></span>
+<span class="cstat-no" title="statement not covered" >  return `"CoreKnot Backups" &lt;${raw}&gt;`;</span>
+};
+&nbsp;
+const formatOriginalDbSize = <span class="fstat-no" title="function not covered" >(r</span>esult) =&gt; {
+<span class="cstat-no" title="statement not covered" >  if (!result.sourceTotalSizeBytes &amp;&amp; !result.sourceDataSizeBytes) <span class="cstat-no" title="statement not covered" >return '—';</span></span>
+  const data = <span class="cstat-no" title="statement not covered" >formatBytes(result.sourceDataSizeBytes || 0);</span>
+  const indexes = <span class="cstat-no" title="statement not covered" >formatBytes(result.sourceIndexSizeBytes || 0);</span>
+  const total = <span class="cstat-no" title="statement not covered" >formatBytes(result.sourceTotalSizeBytes || 0);</span>
+  const dbName = <span class="cstat-no" title="statement not covered" >result.sourceDatabase ? ` (${result.sourceDatabase})` : '';</span>
+<span class="cstat-no" title="statement not covered" >  return `${total}${dbName} — data ${data}, indexes ${indexes}`;</span>
+};
+&nbsp;
+const buildSuccessHtml = <span class="fstat-no" title="function not covered" >(r</span>esult) =&gt; {
+  const collectionRows = <span class="cstat-no" title="statement not covered" >(result.collections || [])</span>
+    .map(
+<span class="fstat-no" title="function not covered" >      (c</span>ol) =&gt;
+<span class="cstat-no" title="statement not covered" >        `&lt;tr&gt;&lt;td&gt;${col.collectionName}&lt;/td&gt;&lt;td&gt;${col.documentCount}&lt;/td&gt;&lt;td&gt;${formatBytes(col.compressedBytes)}&lt;/td&gt;&lt;/tr&gt;`</span>
+    )
+    .join('');
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return `</span>
+    &lt;div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;"&gt;
+      &lt;h2 style="color:#10b981;margin:0 0 12px;font-size:20px;font-weight:600;"&gt;Daily backup succeeded&lt;/h2&gt;
+      &lt;p style="margin:0 0 16px;line-height:1.6;"&gt;Production database backup completed successfully.&lt;/p&gt;
+      &lt;table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;"&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Snapshot date (IST)&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.date}&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Original DB size&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${formatOriginalDbSize(result)}&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Backup database&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.backupDatabase}&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Collections&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.collectionCount}&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Compressed backup size&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${formatBytes(result.totalBytes)}&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Duration&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${Math.round((result.durationMs || 0) / 1000)}s&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Retention&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;Last ${result.retentionCount ?? result.retentionDays ?? 2} snapshots&lt;/td&gt;&lt;/tr&gt;
+      &lt;/table&gt;
+      ${
+        collectionRows
+          ? `&lt;h3 style="color:#2dd4bf;font-size:15px;font-weight:600;margin:20px 0 12px;"&gt;Collections&lt;/h3&gt;
+             &lt;table style="border-collapse:collapse;width:100%;font-size:14px;"&gt;
+               &lt;thead&gt;&lt;tr&gt;&lt;th align="left" style="padding:6px 0;color:#94a3b8;"&gt;Collection&lt;/th&gt;&lt;th align="left" style="padding:6px 0;color:#94a3b8;"&gt;Documents&lt;/th&gt;&lt;th align="left" style="padding:6px 0;color:#94a3b8;"&gt;Size&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+               &lt;tbody&gt;${collectionRows}&lt;/tbody&gt;
+             &lt;/table&gt;`
+          : ''
+      }
+      &lt;p style="color:#64748b;font-size:13px;margin:16px 0 0;"&gt;Older snapshots are auto-deleted after ${result.retentionCount ?? result.retentionDays ?? 2} backups are kept.&lt;/p&gt;
+    &lt;/div&gt;
+  `;
+};
+&nbsp;
+const buildFailureHtml = <span class="fstat-no" title="function not covered" >(r</span>esult) =&gt; <span class="cstat-no" title="statement not covered" >`</span>
+  &lt;div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;"&gt;
+    &lt;h2 style="color:#f87171;margin:0 0 12px;font-size:20px;font-weight:600;"&gt;Daily backup failed&lt;/h2&gt;
+    &lt;p style="margin:0 0 16px;line-height:1.6;"&gt;Production database backup did not complete.&lt;/p&gt;
+    &lt;table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;"&gt;
+      &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Snapshot date (IST)&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.date || 'unknown'}&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Backup database&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.backupDatabase || 'coreknot_backups'}&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Error&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${result.error || 'Unknown error'}&lt;/td&gt;&lt;/tr&gt;
+      &lt;tr&gt;&lt;td style="padding:6px 0;color:#94a3b8;"&gt;&lt;strong&gt;Duration&lt;/strong&gt;&lt;/td&gt;&lt;td style="padding:6px 0;color:#f8fafc;"&gt;${Math.round((result.durationMs || 0) / 1000)}s&lt;/td&gt;&lt;/tr&gt;
+    &lt;/table&gt;
+    &lt;p style="color:#64748b;font-size:13px;margin:0;"&gt;Check Render cron logs for coreknot-daily-backup.&lt;/p&gt;
+  &lt;/div&gt;
+`;
+&nbsp;
+const notifyBackupResult = <span class="fstat-no" title="function not covered" >as</span>ync (result) =&gt; {
+  const to = <span class="cstat-no" title="statement not covered" >await getNotifyEmail();</span>
+<span class="cstat-no" title="statement not covered" >  if (!to) {</span>
+<span class="cstat-no" title="statement not covered" >    logger.warn('BackupNotify', 'No BACKUP_NOTIFY_EMAIL or ADMIN_EMAIL configured; skipping email');</span>
+<span class="cstat-no" title="statement not covered" >    return { sent: false, reason: 'missing_recipient' };</span>
+  }
+&nbsp;
+  const subject = <span class="cstat-no" title="statement not covered" >result.success</span>
+    ? `[CoreKnot] Backup succeeded — ${result.date}`
+    : `[CoreKnot] Backup FAILED — ${result.date || 'unknown date'}`;
+&nbsp;
+  const html = <span class="cstat-no" title="statement not covered" >result.success ? buildSuccessHtml(result) : buildFailureHtml(result);</span>
+  const from = <span class="cstat-no" title="statement not covered" >getFromEmail();</span>
+&nbsp;
+  const sendResult = <span class="cstat-no" title="statement not covered" >await dispatchEmailPayload({ to, subject, html, from });</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  logger.info('BackupNotify', `Backup notification sent to ${to}`, {</span>
+    success: result.success,
+    resendId: sendResult?.id,
+    sourceTotalSizeBytes: result.sourceTotalSizeBytes,
+  });
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return { sent: true, to, resendId: sendResult?.id };</span>
+};
+&nbsp;
+module.exports = {
+  notifyBackupResult,
+  getNotifyEmail,
+  getFromEmail,
+  formatOriginalDbSize,
+};
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-07-09T05:12:18.549Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

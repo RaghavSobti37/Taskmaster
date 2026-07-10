@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-09
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-10
 
 ---
 
@@ -190,7 +190,7 @@ Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organ
 
 ## 3. Page catalog by domain
 
-_Total page files: 139. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 140. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -787,6 +787,16 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 **API endpoints:**
 
 - `/api/campaigns/${campaignApiId}/recipients/export?${params}`
+#### `client/src/pages/emails/AutoMailerRedirectPage.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `function` |
+| **Lines** | 56 |
+| **Hooks** | `useMemo` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `client/src/pages/emails/EmailHubLayout.jsx`
 
 | Field | Value |

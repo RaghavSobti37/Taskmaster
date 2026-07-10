@@ -425,7 +425,7 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 796,
+    "lines": 793,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
@@ -1406,7 +1406,7 @@
     "routes": [
       "(tab: followups)"
     ],
-    "lines": 816,
+    "lines": 814,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1426,8 +1426,8 @@
       "useUpdateLead"
     ],
     "apis": [
+      "/api/crm/leads/${leadId}/audit",
       "/api/crm/leads/${selectedLead._id}/audit",
-      "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
       "/api/crm/leads/${selectedLead._id}/notes"
     ],
     "components": [
@@ -1441,7 +1441,7 @@
     "routes": [
       "(tab: leads)"
     ],
-    "lines": 1353,
+    "lines": 1349,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1471,9 +1471,8 @@
     "apis": [
       "/api/crm/leads/${highlightId}",
       "/api/crm/leads/${id}",
+      "/api/crm/leads/${leadId}/audit",
       "/api/crm/leads/${selectedLead._id}",
-      "/api/crm/leads/${selectedLead._id}/audit",
-      "/api/crm/leads/${selectedLead._id}/lock-heartbeat",
       "/api/crm/leads/${selectedLead._id}/notes"
     ],
     "components": [

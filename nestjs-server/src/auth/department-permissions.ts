@@ -19,7 +19,7 @@ const getUserPagePermissions = (user: AuthUser): string[] => {
   if (preset === 'operations') {
     return [
       'dashboard', 'calendar', 'todo', 'inbox', 'projects', 'assets', 'schedule',
-      'logs', 'notes', 'emails', 'equipment', 'contacts', 'attendance', 'subscriptions',
+      'logs', 'notes', 'equipment', 'contacts', 'attendance', 'subscriptions',
       'finance', 'announcements',
     ];
   }

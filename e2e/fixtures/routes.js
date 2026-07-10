@@ -11,7 +11,6 @@ export const PERMISSION_ROUTES = {
   schedule: { path: '/schedule', label: 'Schedule' },
   logs: { path: '/logs', label: 'Daily Logs' },
   notes: { path: '/notes', label: 'Notes' },
-  emails: { path: '/emails', label: 'Emails' },
   attendance: { path: '/attendance', label: 'Attendance' },
 };
 
@@ -26,7 +25,6 @@ const ADMIN_PERMS = [
   'admin_scripts',
   'admin_gamification',
   'admin_project_analytics',
-  'campaigns',
 ];
 
 /** @type {Array<{ path: string, label: string, archetypes: string[] }>} */
@@ -41,7 +39,6 @@ export const LEGACY_ROUTES_BY_ARCHETYPE = [
   { path: '/notes', label: 'Notes', archetypes: ['admin', 'user', 'sales', 'ops'] },
   { path: '/assets', label: 'Assets', archetypes: ['admin', 'user', 'sales', 'ops'] },
   { path: '/schedule', label: 'Schedule', archetypes: ['admin', 'user', 'sales', 'ops'] },
-  { path: '/emails', label: 'Emails', archetypes: ['admin', 'user', 'ops'] },
   { path: '/crm', label: 'CRM', archetypes: ['admin', 'sales', 'user'] },
   { path: '/office', label: 'Office', archetypes: ['admin', 'user', 'ops'] },
   { path: '/management', label: 'Management', archetypes: ['admin', 'ops'] },

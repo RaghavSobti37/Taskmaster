@@ -1,5 +1,5 @@
-/** Paths that build/queue large payloads (campaigns, audience pulls). */
-const LONG_TIMEOUT_RE = /^\/api\/(campaigns|mail\/audience|newsletter)/i;
+/** Paths that build/queue large payloads (data hub reconcile, tenant export). */
+const LONG_TIMEOUT_RE = /^\/api\/(data-hub\/reconcile|tenant-admin\/[^/]+\/export)/i;
 
 /**
  * Abort slow HTTP requests before they wedge the event loop.

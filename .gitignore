@@ -1,11 +1,11 @@
 .env
 .env.local
 .env.*.local
-client/.env.development
-server/data/media-sheets/
-server/data/crm-sheet-import/
-server/data/*.csv
-!server/data/mediaSheetManifest.js
+Taskmaster/client/.env.development
+Taskmaster/server/data/media-sheets/
+Taskmaster/server/data/crm-sheet-import/
+Taskmaster/server/data/*.csv
+!Taskmaster/server/data/mediaSheetManifest.js
 # Ops Hub shipped — see shared/opsTaxonomy.js + /api/ops-hub
 .cursor/production-hosts.local.json
 .cursor/render-api.local.env
@@ -21,22 +21,22 @@ server/data/*.csv
 .data/
 !.env.example
 !.env.*.example
-server/.env
-server/.env.render
-client/dist
-client/lighthouse-reports/
-client/coverage/
-server/coverage/
-client/.lighthouse.env
+Taskmaster/server/.env
+Taskmaster/server/.env.render
+Taskmaster/client/dist
+Taskmaster/client/lighthouse-reports/
+Taskmaster/client/coverage/
+Taskmaster/server/coverage/
+Taskmaster/client/.lighthouse.env
 test-results/
 playwright-report/
 e2e/.auth/
 node_modules
-server/ut7test/
-client/package-lock.json
-server/package-lock.json
+Taskmaster/server/ut7test/
+Taskmaster/client/package-lock.json
+Taskmaster/server/package-lock.json
 *.csv
-server/uploads/
+Taskmaster/server/uploads/
 *.log
 .keep-warm-state.json
 google_service_account.json
@@ -81,11 +81,11 @@ setup.cd
 *Basecamp Download (3)*
 *Basecamp Download (4)*
 *Basecamp Download (5)*
-server/backup_db.js
+Taskmaster/server/backup_db.js
 TSC_BrandBook.pdf
 vendor/
-server/reports/
-server/scripts/ocr-benchmark/
+Taskmaster/server/reports/
+Taskmaster/server/scripts/ocr-benchmark/
 eng.traineddata
 docs/workspaces_projects.txt
 .fallow/
@@ -94,3 +94,8 @@ nestjs-server/generated/
 nestjs-server/dist/
 tscacademy_logo.png
 .env*
+
+# Safety: catch any accidental recreation of pre-restructuring root paths
+/client/
+/server/
+/packages/

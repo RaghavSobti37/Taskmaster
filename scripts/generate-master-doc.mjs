@@ -15,7 +15,7 @@ const inventory = JSON.parse(
 );
 
 const PAGE_PERMISSIONS = fs.readFileSync(
-  path.join(root, 'client/src/utils/pagePermissions.js'),
+  path.join(root, 'Taskmaster/client/src/utils/pagePermissions.js'),
   'utf8',
 );
 const ARTIFACTS = generateDocArtifacts();
@@ -358,7 +358,7 @@ Membership-gated shell: \`ArtistWorkspaceShell\` → \`ArtistWorkspaceDetail\` w
 
 `;
 
-const routeFiles = fs.readdirSync(path.join(root, 'server/routes')).filter((f) => f.endsWith('.js')).sort();
+const routeFiles = fs.readdirSync(path.join(root, 'Taskmaster/server/routes')).filter((f) => f.endsWith('.js')).sort();
 const apiMounts = routeFiles.map((f) => `- \`server/routes/${f}\``).join('\n');
 
 const backendSection = `

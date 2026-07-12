@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ListPageLayout, Button, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
+import { ListPageLayout, Button, LoadingText, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import NewsletterSendWizard from '../../components/newsletter/NewsletterSendWizard';
 import { useNewsletterIssue } from '../../hooks/queries/newsletter';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,7 +19,7 @@ const NewsletterSendPage = () => {
   if (isLoading) {
     return (
       <ListPageLayout containerClassName="!py-4">
-        <p className="text-sm text-[var(--color-text-muted)]">Loading issue…</p>
+        <LoadingText className="text-sm text-[var(--color-text-muted)]">Loading issue…</LoadingText>
       </ListPageLayout>
     );
   }

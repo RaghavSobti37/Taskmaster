@@ -237,8 +237,13 @@ export function QuickAddProvider({ children }) {
             placeholder="Steps to reproduce (optional). Ctrl+Enter to submit."
           />
           <div className="flex justify-end">
-            <Button type="submit" disabled={!bugTitle.trim() || bugSubmitting}>
-              {bugSubmitting ? 'Submitting...' : 'Submit'}
+            <Button
+              type="submit"
+              disabled={!bugTitle.trim()}
+              loading={bugSubmitting}
+              loadingLabel="Submitting..."
+            >
+              Submit
             </Button>
           </div>
         </form>

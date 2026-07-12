@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Monitor, Shield, LogOut, RefreshCw } from 'lucide-react';
 import RelativeTimestamp from '../../../components/ui/RelativeTimestamp';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Badge } from '../../../components/ui';
+import { Button, Badge, LoadingText } from '../../../components/ui';
 import QueryErrorSlot from '../../../components/ui/QueryErrorSlot';
 import { globalConfirm } from '../../../contexts/confirmContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -104,7 +104,8 @@ const SessionsTab = () => {
             type="button"
             variant="outline"
             onClick={handleRevokeOthers}
-            disabled={revokeOthersMutation.isPending}
+            loading={revokeOthersMutation.isPending}
+            loadingLabel="Signing out..."
             className="gap-2"
           >
             <LogOut size={16} />
@@ -114,7 +115,7 @@ const SessionsTab = () => {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-[var(--color-text-muted)]">Loading sessions…</p>
+        <LoadingText className="text-sm text-[var(--color-text-muted)]">Loading sessions…</LoadingText>
       ) : sessions.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)]">No active sessions recorded yet. Sign in again to register this device.</p>
       ) : (
@@ -152,7 +153,8 @@ const SessionsTab = () => {
                 variant={session.current ? 'outline' : 'danger'}
                 size="sm"
                 onClick={() => handleRevoke(session)}
-                disabled={busyJti === session.jti}
+                loading={busyJti === session.jti}
+                loadingLabel={session.current ? 'Signing out...' : 'Revoking...'}
                 className="shrink-0"
               >
                 {session.current ? 'Sign out' : 'Revoke'}

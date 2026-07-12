@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { UserX } from 'lucide-react';
+import { LoadingText } from '../components/ui';
 import { usePublicEmailStreams } from '../hooks/useTaskmasterQueries';
 
 export default function UnsubscribePage() {
@@ -162,7 +163,7 @@ export default function UnsubscribePage() {
             disabled={loading || !email}
             className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50"
           >
-            {loading ? 'Processing...' : 'Confirm Unsubscribe'}
+            {loading ? <LoadingText className="text-white" spinnerSize="sm">Processing...</LoadingText> : 'Confirm Unsubscribe'}
           </button>
         </form>
 

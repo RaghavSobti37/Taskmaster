@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, ExternalLink, Shield } from 'lucide-react';
-import { Spinner } from '../../components/ui';
+import { LoadingText, Spinner } from '../../components/ui';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import BrandLogo from '../../components/brand/BrandLogo';
@@ -196,7 +196,7 @@ export default function UserDataDeletion() {
                 disabled={loading}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:opacity-95 active:opacity-90 disabled:opacity-50 text-white font-bold text-xs tracking-wider uppercase transition shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
               >
-                {loading ? 'Processing Erasure...' : 'Confirm Permanent Erasure'}
+                {loading ? <LoadingText className="text-white" spinnerSize="sm">Processing Erasure...</LoadingText> : 'Confirm Permanent Erasure'}
               </button>
             </form>
 

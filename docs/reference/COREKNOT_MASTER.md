@@ -2073,6 +2073,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/teamRoutes.js`
 - `server/routes/tenantAdminRoutes.js`
 - `server/routes/tenantRoutes.js`
+- `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
 - `server/routes/webhookRoutes.js`

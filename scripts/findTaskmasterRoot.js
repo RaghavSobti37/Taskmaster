@@ -9,6 +9,9 @@ function findTaskmasterRoot() {
     if (fs.existsSync(path.join(dir, 'client', 'scripts', 'generateVercelConfig.cjs'))) {
       return dir;
     }
+    if (fs.existsSync(path.join(dir, 'Taskmaster', 'client', 'scripts', 'generateVercelConfig.cjs'))) {
+      return dir;
+    }
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;

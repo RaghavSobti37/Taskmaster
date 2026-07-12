@@ -8,7 +8,26 @@ const path = require('path');
 const { buildVercelHeaders } = require('./vercelSecurityHeaders.cjs');
 
 const CLIENT_ROOT = path.join(__dirname, '..');
-const REPO_ROOT = path.join(CLIENT_ROOT, '..');
+
+/** Monorepo root (sites/, scripts/vercelInstall.js) — not Taskmaster/ alone. */
+const findRepoRoot = (startDir) => {
+  let dir = startDir;
+  for (let i = 0; i < 8; i += 1) {
+    if (
+      fs.existsSync(path.join(dir, 'scripts', 'vercelInstall.js'))
+      && fs.existsSync(path.join(dir, 'sites'))
+    ) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return path.join(CLIENT_ROOT, '..');
+};
+
+const REPO_ROOT = findRepoRoot(CLIENT_ROOT);
+const CLIENT_REL = path.relative(REPO_ROOT, CLIENT_ROOT).split(path.sep).join('/');
 
 const readLocalProductionApiUrl = () => {
   const localHosts = path.join(REPO_ROOT, '.cursor', 'production-hosts.local.json');
@@ -74,12 +93,10 @@ const BANNED_PROXY_HOSTS = new Set([
   'your-render-service.onrender.com',
 ]);
 
-/** Dev branch → Render only; no Vercel preview/production deploy on push. */
+/** Push does not auto-deploy — trigger deploy manually when you ship. */
 const GIT_DEPLOYMENT_CONFIG = {
   git: {
-    deploymentEnabled: {
-      dev: false,
-    },
+    deploymentEnabled: false,
   },
 };
 
@@ -399,8 +416,8 @@ const buildSitePayload = (buildCommand) => {
   return {
     ...GIT_DEPLOYMENT_CONFIG,
     buildCommand,
-    outputDirectory: '../../client/dist',
-    installCommand: 'cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js',
+    outputDirectory: `../../${CLIENT_REL}/dist`,
+    installCommand: `cd ../.. && HUSKY=0 node ${CLIENT_REL}/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js`,
     framework: null,
     ...(template.redirects ? { redirects: template.redirects } : {}),
     rewrites: [
@@ -429,8 +446,8 @@ const targets = [
 const payloadsByTarget = new Map([
   [path.join(REPO_ROOT, 'vercel.json'), payload],
   [path.join(CLIENT_ROOT, 'vercel.json'), payload],
-  [path.join(REPO_ROOT, 'sites/landing/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:landing')],
-  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload('cd ../../client && npm run vercel-build:auth')],
+  [path.join(REPO_ROOT, 'sites/landing/vercel.json'), buildSitePayload(`cd ../../${CLIENT_REL} && npm run vercel-build:landing`)],
+  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload(`cd ../../${CLIENT_REL} && npm run vercel-build:auth`)],
 ]);
 
 for (const file of targets) {
@@ -462,6 +479,8 @@ if (nestAttendanceDestination) {
 };
 
 module.exports = {
+  CLIENT_REL,
+  findRepoRoot,
   GIT_DEPLOYMENT_CONFIG,
   SPA_CATCHALL_SOURCE,
   composeRewrites,

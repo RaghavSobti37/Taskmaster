@@ -1,12 +1,10 @@
 {
   "git": {
-    "deploymentEnabled": {
-      "dev": false
-    }
+    "deploymentEnabled": false
   },
-  "buildCommand": "cd ../../client && npm run vercel-build:auth",
-  "outputDirectory": "../../client/dist",
-  "installCommand": "cd ../.. && HUSKY=0 node client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js",
+  "buildCommand": "cd ../../Taskmaster/client && npm run vercel-build:auth",
+  "outputDirectory": "../../Taskmaster/client/dist",
+  "installCommand": "cd ../.. && HUSKY=0 node Taskmaster/client/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js",
   "framework": null,
   "redirects": [
     {

@@ -1,4 +1,4 @@
-﻿const { Queue } = require('bullmq');
+const { Queue } = require('bullmq');
 const { createRedisClient, ensureRedisReady, isRedisReady } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
 

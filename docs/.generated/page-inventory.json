@@ -107,7 +107,7 @@
     "routes": [
       "/unsubscribe"
     ],
-    "lines": 178,
+    "lines": 179,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2772,7 +2772,7 @@
   {
     "file": "Taskmaster/client/src/pages/settings/tabs/SessionsTab.jsx",
     "routes": [],
-    "lines": 169,
+    "lines": 171,
     "defaultExport": "SessionsTab",
     "namedExports": [],
     "hooks": [

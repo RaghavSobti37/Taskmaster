@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-10
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-12
 
 ---
 
@@ -325,7 +325,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /unsubscribe |
 | **Default export** | `function` |
-| **Lines** | 178 |
+| **Lines** | 179 |
 | **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
 | **Data hooks** | `usePublicEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
@@ -1720,7 +1720,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `SessionsTab` |
-| **Lines** | 169 |
+| **Lines** | 171 |
 | **Hooks** | `useAuth`, `useCallback`, `useMutation`, `useQuery`, `useQueryClient`, `useState` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 

@@ -3,7 +3,7 @@ const app = require('../server');
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = path.join(__dirname, '../..');
+const repoRoot = path.join(__dirname, '../../..');
 
 describe('CI production readiness smoke', () => {
   it('health endpoint responds', async () => {

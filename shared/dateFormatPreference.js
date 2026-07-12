@@ -88,12 +88,8 @@ export const CATALOG = [
   { id: 'mdYShort', label: 'MM/DD/YY', example: PATTERN_MAP.mdYShort.example },
 ];
 
-export function regionDefaultPreference(region = 'en-IN') {
-  const r = String(region || 'en-IN');
-  if (r === 'en-US' || r.startsWith('en-US')) return 'mdY';
-  if (r === 'zh-CN' || r === 'ja-JP' || r === 'ko-KR' || r.startsWith('zh') || r.startsWith('ja') || r.startsWith('ko')) {
-    return 'Ymd';
-  }
+/** Platform standard is DD/MM/YYYY — explicit user preference overrides. */
+export function regionDefaultPreference() {
   return 'dmY';
 }
 

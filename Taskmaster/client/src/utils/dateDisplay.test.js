@@ -49,9 +49,9 @@ describe('dateDisplay', () => {
     expect(parseDobInput('07/08/2003')).toEqual({ ok: true, value: '2003-07-08' });
   });
 
-  it('auto mode follows region', () => {
+  it('auto mode defaults to DD/MM/YYYY regardless of region', () => {
     setActiveDateFormat('auto', 'en-US');
-    expect(formatDisplayDate('2026-07-08T12:00:00')).toBe('07/08/2026');
+    expect(formatDisplayDate('2026-07-08T12:00:00')).toBe('08/07/2026');
     setActiveDateFormat('auto', 'en-IN');
     expect(formatDisplayDate('2026-07-08T12:00:00')).toBe('08/07/2026');
   });

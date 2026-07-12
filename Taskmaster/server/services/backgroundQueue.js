@@ -438,8 +438,9 @@ function startAnalyticsCron() {
   }, TWELVE_HOURS);
 }
 
-// Kickoff cron (skip in Jest)
-if (!isTestEnv) {
+// Kickoff cron (skip in Jest or lightweight mode)
+const { backgroundIntervalsEnabled } = require('../utils/runtimeFlags');
+if (!isTestEnv && backgroundIntervalsEnabled()) {
   setTimeout(startAnalyticsCron, 5000);
   const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
   setInterval(async () => {

@@ -18,7 +18,24 @@ const apiDestination = 'https://api.example.onrender.com/api/$1';
 const socketDestination = 'https://api.example.onrender.com/socket.io/$1';
 const PROD_API = 'https://coreknot-api.onrender.com';
 
-test('composeRewrites places PostHog proxy before SPA catch-all', () => {
+test('composeRewrites omits PostHog proxy unless VITE_POSTHOG_USE_PROXY', () => {
+  const prev = process.env.VITE_POSTHOG_USE_PROXY;
+  delete process.env.VITE_POSTHOG_USE_PROXY;
+  const rewrites = composeRewrites(templateRewrites, apiDestination, socketDestination);
+  const phRules = rewrites.filter((rule) => String(rule.source).startsWith('/ph/'));
+  assert.equal(phRules.length, 0);
+
+  process.env.VITE_POSTHOG_USE_PROXY = 'true';
+  const withPh = composeRewrites(templateRewrites, apiDestination, socketDestination);
+  const phEnabled = withPh.filter((rule) => String(rule.source).startsWith('/ph/'));
+  assert.equal(phEnabled.length, 3);
+  if (prev === undefined) delete process.env.VITE_POSTHOG_USE_PROXY;
+  else process.env.VITE_POSTHOG_USE_PROXY = prev;
+});
+
+test('composeRewrites places PostHog proxy before SPA catch-all when enabled', () => {
+  const prev = process.env.VITE_POSTHOG_USE_PROXY;
+  process.env.VITE_POSTHOG_USE_PROXY = 'true';
   const rewrites = composeRewrites(templateRewrites, apiDestination, socketDestination);
   const catchallIdx = rewrites.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
   const firstPhIdx = rewrites.findIndex((rule) => String(rule.source).startsWith('/ph/'));
@@ -29,9 +46,13 @@ test('composeRewrites places PostHog proxy before SPA catch-all', () => {
   assert.ok(clerkIdx >= 0, 'Clerk proxy present');
   assert.ok(clerkIdx < catchallIdx, 'Clerk proxy must precede SPA catch-all');
   assert.ok(firstPhIdx < catchallIdx, 'PostHog must precede SPA catch-all');
+  if (prev === undefined) delete process.env.VITE_POSTHOG_USE_PROXY;
+  else process.env.VITE_POSTHOG_USE_PROXY = prev;
 });
 
-test('composeRewrites drops duplicate PostHog rules from template', () => {
+test('composeRewrites drops duplicate PostHog rules from template when proxy enabled', () => {
+  const prev = process.env.VITE_POSTHOG_USE_PROXY;
+  process.env.VITE_POSTHOG_USE_PROXY = 'true';
   const withDupes = [
     ...templateRewrites,
     ...buildPostHogRewrites(),
@@ -40,6 +61,8 @@ test('composeRewrites drops duplicate PostHog rules from template', () => {
   const phRules = rewrites.filter((rule) => String(rule.source).startsWith('/ph/'));
 
   assert.equal(phRules.length, 3);
+  if (prev === undefined) delete process.env.VITE_POSTHOG_USE_PROXY;
+  else process.env.VITE_POSTHOG_USE_PROXY = prev;
 });
 
 test('PostHog proxy rewrites use hungry regex so trailing-slash endpoints (/decide/, /e/) are not dropped', () => {

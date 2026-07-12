@@ -1,7 +1,9 @@
 const Lead = require('../models/Lead');
 const { broadcastRealtimeEvent } = require('../../../config/realtime');
 
-const LOCK_HEARTBEAT_MS = 60 * 1000;
+// Stale lock TTL — refreshed on PUT; no client heartbeat pings
+const LEAD_LOCK_TTL_MS = 30 * 60 * 1000;
+const LOCK_HEARTBEAT_MS = LEAD_LOCK_TTL_MS;
 
 async function releaseLeadLock(leadId, userId) {
   const lead = await Lead.findById(leadId).select('lockedBy').lean();
@@ -32,6 +34,7 @@ async function heartbeatLeadLock(leadId, userId) {
 }
 
 module.exports = {
+  LEAD_LOCK_TTL_MS,
   LOCK_HEARTBEAT_MS,
   releaseLeadLock,
   heartbeatLeadLock,

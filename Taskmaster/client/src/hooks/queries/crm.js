@@ -91,7 +91,7 @@ export const useCRMStats = (enabled = true, options = {}) => useQuery({
   queryFn: async () => (await axios.get('/api/crm/stats', { params: options.queryParams })).data,
   enabled,
   staleTime: options.staleTime ?? 1000 * 60 * 2,
-  refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
+  refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
   refetchOnMount: options.refetchOnMount,
 });
 
@@ -126,7 +126,10 @@ export const useLiveLeads = (params, enabled = true) => {
     queryKey: ['leads', params],
     queryFn: async () => (await axios.get('/api/crm/leads', { params })).data,
     enabled,
-    staleTime: 1000 * 60,
+    // ponytail: bookings/leads push via socket — no background poll
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     placeholderData: keepPreviousData,
   });
 };

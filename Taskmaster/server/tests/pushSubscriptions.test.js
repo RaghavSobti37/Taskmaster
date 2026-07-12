@@ -25,30 +25,20 @@ describe('pushSubscriptions', () => {
     )).toBe('android:chrome');
   });
 
-  test('dedupePushSubscriptions keeps newest per bucket', () => {
+  test('dedupePushSubscriptions keeps every unique endpoint in same browser bucket', () => {
     const subs = [
       sub('https://a/1', 'windows chrome old', '2024-01-01'),
       sub('https://a/2', 'windows chrome new', '2024-06-01'),
       sub('https://b/1', 'iphone safari', '2024-05-01'),
     ];
     const kept = dedupePushSubscriptions(subs);
-    expect(kept).toHaveLength(2);
-    expect(kept.map((s) => s.endpoint)).toEqual(['https://a/2', 'https://b/1']);
+    expect(kept).toHaveLength(3);
+    expect(kept.map((s) => s.endpoint)).toEqual(['https://a/2', 'https://b/1', 'https://a/1']);
   });
 
   test('dedupePushSubscriptions caps at MAX_PUSH_SUBSCRIPTIONS', () => {
-    const agents = [
-      'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0',
-      'Mozilla/5.0 (Macintosh) Safari/605.1.15',
-      'Mozilla/5.0 (iPhone) Safari/604.1',
-      'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0',
-      'Mozilla/5.0 (X11; Linux x86_64) Firefox/121.0',
-      'Mozilla/5.0 (Windows NT 10.0) Edg/120.0.0.0',
-      'Mozilla/5.0 (iPhone) CriOS/120.0.0.0',
-      'Mozilla/5.0 (Macintosh) Firefox/121.0',
-    ];
-    const subs = agents.map((ua, i) =>
-      sub(`https://x/${i}`, ua, `2024-01-${String(i + 1).padStart(2, '0')}`)
+    const subs = Array.from({ length: MAX_PUSH_SUBSCRIPTIONS + 3 }, (_, i) =>
+      sub(`https://x/${i}`, 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0', `2024-01-${String(i + 1).padStart(2, '0')}`)
     );
     expect(dedupePushSubscriptions(subs)).toHaveLength(MAX_PUSH_SUBSCRIPTIONS);
   });
@@ -62,5 +52,14 @@ describe('pushSubscriptions', () => {
     const pruned = prunePushSubscriptions(existing, incoming);
     expect(pruned).toHaveLength(2);
     expect(pruned.find((s) => s.endpoint === 'https://old/1').userAgent).toBe('windows chrome updated');
+  });
+
+  test('prunePushSubscriptions keeps multiple devices with same user agent bucket', () => {
+    const existing = [
+      sub('https://desktop/1', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0', '2024-01-01'),
+    ];
+    const incoming = sub('https://desktop/2', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0', '2024-06-01');
+    const pruned = prunePushSubscriptions(existing, incoming);
+    expect(pruned.map((s) => s.endpoint)).toEqual(['https://desktop/2', 'https://desktop/1']);
   });
 });

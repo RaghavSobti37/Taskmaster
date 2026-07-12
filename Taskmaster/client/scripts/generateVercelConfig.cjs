@@ -87,6 +87,11 @@ const POSTHOG_PROXY_PREFIX = '/ph';
 /** SPA fallback — must not match /ph/* (PostHog same-origin proxy). */
 const SPA_CATCHALL_SOURCE = '/((?!api/)(?!ph/)(?!__clerk/)(?!.*\\.[^/]+$).*)';
 
+const postHogProxyEnabled = () => {
+  const flag = String(process.env.VITE_POSTHOG_USE_PROXY || '').trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+};
+
 const resolvePostHogRegion = (host = '') => (
   String(host).toLowerCase().includes('eu') ? 'eu' : 'us'
 );
@@ -96,12 +101,10 @@ const isPostHogRewrite = (rule) => String(rule?.source || '').startsWith(`${POST
 const mapTemplateRewrites = (rules, apiDestination, socketDestination) => (
   rules
     .filter((rule) => !isPostHogRewrite(rule))
+    .filter((rule) => rule.source !== '/socket.io/(.*)')
     .map((rule) => {
       if (rule.source === '/api/(.*)') {
         return { ...rule, destination: apiDestination };
-      }
-      if (rule.source === '/socket.io/(.*)') {
-        return { ...rule, destination: socketDestination };
       }
       if (String(rule.source || '').includes('(?!api/)')) {
         return { ...rule, source: SPA_CATCHALL_SOURCE };
@@ -127,7 +130,7 @@ const buildClerkProxyRewrite = (apiDestination) => buildClerkProxyRewriteMainApp
 
 const composeRewrites = (templateRewrites, apiDestination, socketDestination, clerkProxy) => {
   const mapped = mapTemplateRewrites(templateRewrites, apiDestination, socketDestination);
-  const posthog = buildPostHogRewrites();
+  const posthog = postHogProxyEnabled() ? buildPostHogRewrites() : [];
   const clerkRewrite = clerkProxy || buildClerkProxyRewriteMainApp(apiDestination);
   const catchallIdx = mapped.findIndex((rule) => rule.source === SPA_CATCHALL_SOURCE);
   const beforeCatchall = catchallIdx === -1 ? mapped : mapped.slice(0, catchallIdx);
@@ -449,7 +452,9 @@ for (const file of targets) {
 
 if (proxyUrl) {
   console.log(`[generateVercelConfig] /api rewrite → ${apiDestination.replace('/$1', '')}`);
-  console.log(`[generateVercelConfig] /socket.io rewrite → ${socketDestination.replace('/$1', '')}`);
+  if (postHogProxyEnabled()) {
+    console.log('[generateVercelConfig] PostHog /ph proxy enabled (VITE_POSTHOG_USE_PROXY)');
+  }
 }
 if (nestAttendanceDestination) {
   console.log(`[generateVercelConfig] /api/attendance strangler → ${nestAttendanceDestination}`);
@@ -461,6 +466,7 @@ module.exports = {
   SPA_CATCHALL_SOURCE,
   composeRewrites,
   buildPostHogRewrites,
+  postHogProxyEnabled,
   buildClerkProxyRewrite,
   buildClerkProxyRewriteMainApp,
   buildClerkProxyRewriteSatellite,

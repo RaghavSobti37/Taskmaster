@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-10
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-12
 
 ---
 
@@ -325,7 +325,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /unsubscribe |
 | **Default export** | `function` |
-| **Lines** | 178 |
+| **Lines** | 179 |
 | **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
 | **Data hooks** | `usePublicEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
 
@@ -380,7 +380,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `InboxPage` |
 | **Lines** | 316 |
 | **Hooks** | `useAuth`, `useCallback`, `useClearAllNotifications`, `useConfirm`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMarkAllNotificationsRead`, `useMarkNotificationRead`, `useMemo`, `useNavigate`, `useNotifications`, `useState`, `useStatusCounts` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClearAllNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMarkAllNotificationsRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useMarkNotificationRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClearAllNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMarkAllNotificationsRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useMarkNotificationRead` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useNotifications` → /api/notifications, /api/notifications/${id}/read, /api/notifications/read-all · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts |
 | **Key components** | `CountBadge`, `DataListRow`, `EmptyState`, `ListPageLayout`, `PageLoadGuard`, `PageSkeleton`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -404,7 +404,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 236 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useMemo`, `useNavigate`, `useState`, `useUserNotes` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useUserNotes` → /api/notes, /api/notes/${id}, /api/pinboard |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useUserNotes` → /api/notes, /api/notes/${id}, /api/pinboard |
 | **Key components** | `NoteComposer`, `RelativeTimestamp` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -466,7 +466,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `TodoPage` |
 | **Lines** | 768 |
 | **Hooks** | `useAuth`, `useCallback`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjects`, `useQueryClient`, `useState`, `useSystemToast`, `useTaskCategoryOptions`, `useTodoTasks`, `useUserDirectory`, `useWorkspaces` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTaskCategoryOptions` → /api/departments/task-types, /api/tasks/${task?._id} · `useTodoTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${task?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSystemToast` → /api/calendar, /api/calendar/${initialData._id}, /api/crm/leads/cleanup-test-data · `useTaskCategoryOptions` → /api/departments/task-types, /api/tasks/${task?._id} · `useTodoTasks` → /api/tasks, /api/tasks/${id}, /api/tasks/${task?._id} · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `CompletedTaskRollbackButton`, `FlashHighlightListener`, `ListCard`, `ListPageLayout`, `MentionTitle`, `PageLoadGuard`, `PageSkeleton`, `SearchInput`, `TaskMentionBadge`, `VirtualTaskList` |
 
 **API endpoints:**
@@ -562,7 +562,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 135 |
 | **Hooks** | `useAuth`, `useDebounce`, `useLiveLeads`, `useMemo`, `useState` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -582,15 +582,15 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (tab: followups) |
 | **Default export** | `function` |
-| **Lines** | 816 |
+| **Lines** | 814 |
 | **Hooks** | `useAuth`, `useCRMConfig`, `useCallback`, `useConfirm`, `useDeferredQueryEnabled`, `useEffect`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUpdateLead` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `LeadLockIndicator`, `PhoneNumberFields` |
 
 **API endpoints:**
 
+- `/api/crm/leads/${leadId}/audit`
 - `/api/crm/leads/${selectedLead._id}/audit`
-- `/api/crm/leads/${selectedLead._id}/lock-heartbeat`
 - `/api/crm/leads/${selectedLead._id}/notes`
 #### `Taskmaster/client/src/pages/crm/LeadsPage.jsx`
 
@@ -598,18 +598,17 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (tab: leads) |
 | **Default export** | `function` |
-| **Lines** | 1353 |
+| **Lines** | 1349 |
 | **Hooks** | `useArtistImportSheets`, `useArtistReps`, `useAuth`, `useCRMConfig`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateLead`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useLeadDetail`, `useLiveLeads`, `useMemo`, `useQueryClient`, `useRef`, `useSalesReps`, `useSearchParams`, `useState`, `useToast`, `useUnsavedChanges`, `useUpdateLead` |
-| **Data hooks** | `useArtistImportSheets` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useArtistReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeadDetail` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
+| **Data hooks** | `useArtistImportSheets` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useArtistReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMConfig` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useLeadDetail` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useLiveLeads` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSalesReps` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} · `useUpdateLead` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports |
 | **Key components** | `ArtistBookingEnquiryPanel`, `ArtistCrmImportPanel`, `LeadArtistJourneySection`, `LeadLockIndicator`, `LeadRowActions`, `PhoneNumberFields` |
 
 **API endpoints:**
 
 - `/api/crm/leads/${highlightId}`
 - `/api/crm/leads/${id}`
+- `/api/crm/leads/${leadId}/audit`
 - `/api/crm/leads/${selectedLead._id}`
-- `/api/crm/leads/${selectedLead._id}/audit`
-- `/api/crm/leads/${selectedLead._id}/lock-heartbeat`
 - `/api/crm/leads/${selectedLead._id}/notes`
 #### `Taskmaster/client/src/pages/hubs/CrmHub.jsx`
 
@@ -1455,7 +1454,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 110 |
 | **Hooks** | `useArtistPathPeople`, `useArtistPathSync`, `useDebounce`, `useState`, `useToast` |
-| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `ArtistPathCardGrid`, `ArtistProductHint`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1476,10 +1475,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 796 |
+| **Lines** | 793 |
 | **Named exports** | `DataHubContent` |
 | **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubBulkDeletePeople`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
-| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBulkDeletePeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBulkDeletePeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `DataHubCampaignOutcomes`, `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1531,7 +1530,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `function` |
 | **Lines** | 305 |
 | **Hooks** | `useAuth`, `useCreateOpsEntity`, `useDebounce`, `useEffect`, `useMemo`, `useOpsHubAnalytics`, `useOpsHubEntities`, `useOpsHubEntity`, `useOpsHubTaxonomy`, `useOpsHubWeekly`, `useSearchParams`, `useState`, `useToast` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateOpsEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${selectedLead._id} · `useOpsHubAnalytics` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntities` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubTaxonomy` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubWeekly` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCreateOpsEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useOpsHubAnalytics` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntities` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubEntity` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubTaxonomy` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useOpsHubWeekly` → /api/ops-hub/analytics, /api/ops-hub/entities, /api/ops-hub/entities/${id} · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
 | **Key components** | `OpsEntityDetail`, `OpsHubAnalyticsPanel`, `OpsMondayBoard`, `PageToolbar`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1721,7 +1720,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `SessionsTab` |
-| **Lines** | 169 |
+| **Lines** | 171 |
 | **Hooks** | `useAuth`, `useCallback`, `useMutation`, `useQuery`, `useQueryClient`, `useState` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 
@@ -2074,6 +2073,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/teamRoutes.js`
 - `server/routes/tenantAdminRoutes.js`
 - `server/routes/tenantRoutes.js`
+- `server/routes/track.js`
 - `server/routes/tscRoutes.js`
 - `server/routes/userRoutes.js`
 - `server/routes/webhookRoutes.js`

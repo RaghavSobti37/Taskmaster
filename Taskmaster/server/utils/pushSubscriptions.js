@@ -1,4 +1,4 @@
-const MAX_PUSH_SUBSCRIPTIONS = 5;
+const MAX_PUSH_SUBSCRIPTIONS = 25;
 
 /** Normalize userAgent into a stable bucket (OS + browser family). */
 const normalizeUserAgentBucket = (userAgent = '') => {
@@ -23,16 +23,16 @@ const normalizeUserAgentBucket = (userAgent = '') => {
 const sortByNewest = (subs) =>
   [...subs].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-/** Keep newest subscription per userAgent bucket, then hard-cap total. */
+/** Keep newest subscription per endpoint, then hard-cap total. */
 const dedupePushSubscriptions = (subscriptions = []) => {
   const sorted = sortByNewest(subscriptions);
-  const bucketMap = new Map();
+  const endpointMap = new Map();
   const kept = [];
 
   for (const sub of sorted) {
-    const bucket = normalizeUserAgentBucket(sub.userAgent);
-    if (bucketMap.has(bucket)) continue;
-    bucketMap.set(bucket, true);
+    if (!sub?.endpoint) continue;
+    if (endpointMap.has(sub.endpoint)) continue;
+    endpointMap.set(sub.endpoint, true);
     kept.push(sub);
   }
 

@@ -123,10 +123,14 @@ class SystemHealthService {
   }
 }
 
+const { healthProbeLoopEnabled } = require('../utils/runtimeFlags');
+
 // Periodic checks — skip in Jest (setup.js syncs health after in-memory Mongo connects).
 if (process.env.NODE_ENV !== 'test') {
   seedBootEvent();
-  setInterval(SystemHealthService.checkDependencies, 15000);
+  if (healthProbeLoopEnabled()) {
+    setInterval(SystemHealthService.checkDependencies, 15000);
+  }
 }
 
 module.exports = SystemHealthService;

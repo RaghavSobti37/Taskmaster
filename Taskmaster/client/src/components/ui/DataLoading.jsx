@@ -3,7 +3,12 @@ import { Spinner } from './Spinner';
 
 /** Centered spinner for tables, panels, refetches. Phrase only when showPhrase. */
 export const DataLoading = ({ className = '', showPhrase = false }) => (
-  <div className={`flex flex-col items-center justify-center py-10 ${className}`}>
+  <div
+    className={`flex flex-col items-center justify-center py-10 ${className}`}
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+  >
     <Spinner
       size="md"
       showPhrase={showPhrase}

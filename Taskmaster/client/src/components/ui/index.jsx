@@ -42,7 +42,7 @@ export { default as PageLoadGuard } from './PageLoadGuard';
 export { default as SkeletonReveal } from './SkeletonReveal';
 export { default as TransitionCard } from './TransitionCard';
 export { DataLoading } from './DataLoading';
-export { Spinner, LoadingState } from './Spinner';
+export { Spinner, LoadingState, LoadingText } from './Spinner';
 export { LoadingPhrase } from './LoadingPhrase';
 export { default as TimeframeFilter } from './TimeframeFilter';
 // ── Dropdowns (Phase 2: consolidate into Select) ──

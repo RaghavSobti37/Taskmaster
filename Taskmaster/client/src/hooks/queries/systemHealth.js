@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const SYSTEM_HEALTH_REFRESH_MS = 120_000;
+export const SYSTEM_HEALTH_REFRESH_MS = 300_000;
 
 export const useSystemHealth = (options = {}) => {
   const enabled = options.enabled !== false;
-  const poll = options.poll !== false;
+  const poll = options.poll === true;
 
   return useQuery({
     queryKey: ['admin', 'system-health'],

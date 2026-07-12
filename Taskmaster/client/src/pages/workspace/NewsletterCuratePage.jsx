@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { ListPageLayout, Button } from '../../components/ui';
+import { ListPageLayout, Button, LoadingText } from '../../components/ui';
 import NewsletterCuratorPanel from '../../components/newsletter/NewsletterCuratorPanel';
 import {
   useCurrentNewsletterIssue,
@@ -30,7 +30,7 @@ const NewsletterCuratePage = () => {
   if (activeQuery.isLoading) {
     return (
       <ListPageLayout containerClassName="!py-4">
-        <p className="text-sm text-[var(--color-text-muted)]">Loading issue…</p>
+        <LoadingText className="text-sm text-[var(--color-text-muted)]">Loading issue…</LoadingText>
       </ListPageLayout>
     );
   }

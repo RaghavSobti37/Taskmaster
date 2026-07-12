@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const specPath = join(root, 'server', 'openapi', 'spec.json');
+const specPath = join(root, 'Taskmaster/server', 'openapi', 'spec.json');
 const spec = JSON.parse(readFileSync(specPath, 'utf8'));
 
 const version = pkg.version || '0.0.0';

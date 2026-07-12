@@ -55,6 +55,21 @@ export const Spinner = ({
   );
 };
 
+export const LoadingText = ({
+  children = 'Loading',
+  className = '',
+  spinnerSize = 'sm',
+}) => (
+  <span
+    className={`inline-flex min-w-0 items-center justify-center gap-2 ${className}`.trim()}
+    role="status"
+    aria-live="polite"
+  >
+    <Spinner size={spinnerSize} />
+    <span className="truncate">{children}</span>
+  </span>
+);
+
 /**
  * LoadingState — centered spinner; phrase only when showPhrase.
  */
@@ -64,7 +79,12 @@ export const LoadingState = ({
   phraseClassName = '',
   showPhrase = false,
 }) => (
-  <div className={`flex flex-col items-center justify-center gap-4 py-12 text-center ${className}`}>
+  <div
+    className={`flex flex-col items-center justify-center gap-4 py-12 text-center ${className}`}
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+  >
     <Spinner
       size="lg"
       variant={variant}

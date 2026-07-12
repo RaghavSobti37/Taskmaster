@@ -4,6 +4,7 @@
  */
 const User = require('../models/User');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const { LEAD_LOCK_TTL_MS } = require('../domains/crm/services/leadLockService');
 
 const checkLock = (Model) => async (req, res, next) => {
   try {
@@ -11,7 +12,7 @@ const checkLock = (Model) => async (req, res, next) => {
     const userId = req.user?._id || req.body.userId;
     if (!userId) return next();
 
-    const lockDuration = new Date(Date.now() - 60 * 1000);
+    const lockDuration = new Date(Date.now() - LEAD_LOCK_TTL_MS);
 
     const lockedLead = await Model.findOneAndUpdate(
       {

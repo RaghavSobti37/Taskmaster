@@ -15,7 +15,7 @@ describe('posthog client', () => {
     expect(isPostHogEnabled()).toBe(false);
   });
 
-  it('uses same-origin proxy path for production builds', () => {
+  it('uses direct PostHog host unless VITE_POSTHOG_USE_PROXY', () => {
     expect(POSTHOG_PROXY_PATH).toBe('/ph');
   });
 });

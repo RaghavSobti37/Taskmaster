@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Activity, RefreshCw } from 'lucide-react';
-import { Badge, Button, Spinner } from '../../../components/ui';
+import { Badge, Button, LoadingText, Spinner } from '../../../components/ui';
 import { formatDisplayDateTime } from '../../../utils/dateDisplay';
 import {
   useGamificationProgress,
@@ -127,7 +127,7 @@ export default function ProgressTab() {
               {historyLoading && (
                 <tr>
                   <td colSpan={3} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
-                    Loading XP history…
+                    <LoadingText>Loading XP history…</LoadingText>
                   </td>
                 </tr>
               )}

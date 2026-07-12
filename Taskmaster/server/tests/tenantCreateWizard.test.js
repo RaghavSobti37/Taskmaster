@@ -1,4 +1,4 @@
-jest.mock('../domains/mail/services/mailDriver', () => ({
+jest.mock('../services/mailDriver', () => ({
   dispatchEmailPayload: jest.fn().mockResolvedValue({ id: 'email-mock' }),
 }));
 
@@ -35,7 +35,7 @@ const CRMConfig = require('../domains/crm/models/CRMConfig');
 const Lead = require('../domains/crm/models/Lead');
 const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
 const { mintSessionAgent } = require('./helpers/mintTestSession');
-const { dispatchEmailPayload } = require('../domains/mail/services/mailDriver');
+const { dispatchEmailPayload } = require('../services/mailDriver');
 const { syncTenantToClerkOrganization } = require('../services/clerkOrgService');
 
 async function registerUser(stamp) {

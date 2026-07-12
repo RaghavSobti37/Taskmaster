@@ -40,6 +40,7 @@ describe('CI production readiness smoke', () => {
   it('render.yaml defines health check and staging mirror', () => {
     const yaml = fs.readFileSync(path.join(repoRoot, 'render.yaml'), 'utf8');
     expect(yaml).toContain('healthCheckPath: /api/health');
+    expect(yaml).toContain('rootDir: Taskmaster/server');
     expect(yaml).toContain('CoreKnot-api');
     expect(yaml).toContain('coreknot-api-staging');
     expect(yaml).toContain('taskmaster-redis-staging');

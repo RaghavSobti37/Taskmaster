@@ -1,4 +1,4 @@
-/** Shared email stream catalog — branded from-addresses per stream. */
+﻿/** Browser/ESM facade for the shared email stream catalog. Keep in sync with emailStreams.cjs. */
 const ROOT_DOMAIN = 'theshakticollective.in';
 const RESEND_VERIFIED_DOMAINS = [ROOT_DOMAIN];
 
@@ -49,7 +49,6 @@ const DEFAULT_EMAIL_STREAMS = [
 
 const domainForSlug = (slug) => (slug === 'main' ? ROOT_DOMAIN : `${slug}.${ROOT_DOMAIN}`);
 
-/** API/UI shape — picker expects name, domain, defaultFromEmail */
 const normalizeEmailStream = (stream, index = 0) => {
   if (!stream?.slug) return null;
   const fromEmails = Array.isArray(stream.fromEmails) ? stream.fromEmails : [];
@@ -73,11 +72,11 @@ const listEmailStreamsForApi = () => DEFAULT_EMAIL_STREAMS.map((s, i) => normali
 module.exports = {
   ROOT_DOMAIN,
   RESEND_VERIFIED_DOMAINS,
-  DEFAULT_EMAIL_STREAMS,
-  domainForSlug,
   domainFromEmail,
   isVerifiedResendDomain,
   isVerifiedResendEmail,
+  DEFAULT_EMAIL_STREAMS,
+  domainForSlug,
   normalizeEmailStream,
   listEmailStreamsForApi,
 };

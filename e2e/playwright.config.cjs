@@ -32,7 +32,7 @@ module.exports = defineConfig({
     : [
         {
           command: 'node server.js',
-          cwd: path.join(repoRoot, 'server'),
+          cwd: path.join(repoRoot, 'Taskmaster/server'),
           url: apiHealthUrl,
           reuseExistingServer: false,
           timeout: 180_000,
@@ -43,8 +43,8 @@ module.exports = defineConfig({
         },
         {
           command: usePreviewClient
-            ? 'npm run build --prefix client && npm run preview --prefix client -- --host 127.0.0.1 --port 4173 --strictPort'
-            : 'npm run dev --prefix client -- --host 127.0.0.1 --port 4173 --strictPort',
+            ? 'npm run build --prefix Taskmaster/client && npm run preview --prefix Taskmaster/client -- --host 127.0.0.1 --port 4173 --strictPort'
+            : 'npm run dev --prefix Taskmaster/client -- --host 127.0.0.1 --port 4173 --strictPort',
           cwd: repoRoot,
           url: baseURL,
           reuseExistingServer: false,

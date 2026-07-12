@@ -12,7 +12,6 @@ import { BullMQModule } from './bullmq/bullmq.module';
 import { HealthModule } from './health/health.module';
 import { AttendanceModule } from './domains/attendance/attendance.module';
 import { TasksModule } from './domains/tasks/tasks.module';
-import { MailModule } from './domains/mail/mail.module';
 import { SyncModule } from './domains/sync/sync.module';
 import { TraceMiddleware } from './common/middleware/trace.middleware';
 
@@ -30,7 +29,7 @@ export class AppModule implements NestModule {
       SyncModule,
     ];
     if (options.enableBullMQ) {
-      imports.push(BullMQModule, MailModule);
+      imports.push(BullMQModule);
     }
     return { module: AppModule, imports };
   }

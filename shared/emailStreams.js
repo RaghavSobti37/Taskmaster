@@ -1,4 +1,4 @@
-/** Browser/ESM facade for the shared email stream catalog. Keep in sync with emailStreams.cjs. */
+﻿/** Browser/ESM facade for the shared email stream catalog. Keep in sync with emailStreams.cjs. */
 export const ROOT_DOMAIN = 'theshakticollective.in';
 export const RESEND_VERIFIED_DOMAINS = [ROOT_DOMAIN];
 

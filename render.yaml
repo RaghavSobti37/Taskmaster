@@ -13,8 +13,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
+    rootDir: Taskmaster/server
+    buildCommand: cd ../.. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
@@ -37,6 +37,8 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: warn
+      - key: COREKNOT_LIGHTWEIGHT
+        value: "true"
       - key: MONGODB_URI_PROD
         sync: false
       - key: JWT_SECRET
@@ -87,8 +89,8 @@ services:
   - type: cron
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
+    rootDir: Taskmaster/server
+    buildCommand: cd ../.. && bash scripts/render-build.sh api
     startCommand: node scripts/runDailyBackup.js
     envVars:
       - key: NODE_ENV
@@ -123,8 +125,8 @@ services:
   - type: cron
     name: CoreKnot-subscription-reminders
     schedule: "30 3 * * *"
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
+    rootDir: Taskmaster/server
+    buildCommand: cd ../.. && bash scripts/render-build.sh api
     startCommand: node scripts/runSubscriptionReminders.js
     envVars:
       - key: NODE_ENV
@@ -145,8 +147,8 @@ services:
     runtime: node
     region: oregon
     plan: free
-    rootDir: server
-    buildCommand: cd .. && bash scripts/render-build.sh api
+    rootDir: Taskmaster/server
+    buildCommand: cd ../.. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
@@ -168,6 +170,8 @@ services:
         value: "true"
       - key: LOG_LEVEL
         value: info
+      - key: COREKNOT_LIGHTWEIGHT
+        value: "true"
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET

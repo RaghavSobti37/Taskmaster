@@ -14,8 +14,8 @@ describe('requestTimeoutMiddleware', () => {
     expect(res.setTimeout).toHaveBeenCalledWith(5000, expect.any(Function));
   });
 
-  it('uses long timeout for campaign routes', () => {
-    const req = { setTimeout: jest.fn(), originalUrl: '/api/campaigns?foo=1' };
+  it('uses long timeout for heavy data-hub routes', () => {
+    const req = { setTimeout: jest.fn(), originalUrl: '/api/data-hub/reconcile?foo=1' };
     const res = { setTimeout: jest.fn(), headersSent: false };
     const next = jest.fn();
 
@@ -26,7 +26,7 @@ describe('requestTimeoutMiddleware', () => {
   });
 
   it('marks timedOut and skips double json when headers already sent', () => {
-    const req = { setTimeout: jest.fn(), originalUrl: '/api/campaigns' };
+    const req = { setTimeout: jest.fn(), originalUrl: '/api/data-hub/reconcile' };
     let timeoutCb;
     const res = {
       headersSent: false,
@@ -46,8 +46,8 @@ describe('requestTimeoutMiddleware', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  it('LONG_TIMEOUT_RE matches mail audience', () => {
-    expect(LONG_TIMEOUT_RE.test('/api/mail/audience/data-hub')).toBe(true);
+  it('LONG_TIMEOUT_RE matches data-hub reconcile', () => {
+    expect(LONG_TIMEOUT_RE.test('/api/data-hub/reconcile')).toBe(true);
     expect(LONG_TIMEOUT_RE.test('/api/health')).toBe(false);
   });
 });

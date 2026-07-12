@@ -10,10 +10,10 @@ const require = createRequire(import.meta.url);
 const generatedAt = new Date().toISOString().slice(0, 10);
 
 const inventoryPath = path.join(root, 'docs/.generated/page-inventory.json');
-const pagePermissionsPath = path.join(root, 'client/src/utils/pagePermissions.js');
-const appPath = path.join(root, 'client/src/App.jsx');
-const navAccessPath = path.join(root, 'client/src/utils/navPageAccess.js');
-const navbarConfigPath = path.join(root, 'client/src/utils/navbarConfig.js');
+const pagePermissionsPath = path.join(root, 'Taskmaster/client/src/utils/pagePermissions.js');
+const appPath = path.join(root, 'Taskmaster/client/src/App.jsx');
+const navAccessPath = path.join(root, 'Taskmaster/client/src/utils/navPageAccess.js');
+const navbarConfigPath = path.join(root, 'Taskmaster/client/src/utils/navbarConfig.js');
 const sharedDir = path.join(root, 'shared');
 
 const {
@@ -169,7 +169,7 @@ function buildHookEndpointMap() {
     }
   }
 
-  const allClientFiles = walk(path.join(root, 'client/src'))
+  const allClientFiles = walk(path.join(root, 'Taskmaster/client/src'))
     .filter((f) => /\.(js|jsx|ts|tsx)$/.test(f));
   const apiRe = /['"`](\/api\/[^'"`\s]+)['"`]/g;
   const out = {};

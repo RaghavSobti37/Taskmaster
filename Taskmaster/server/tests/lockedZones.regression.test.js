@@ -3,8 +3,8 @@ const path = require('path');
 
 describe('locked zones regression', () => {
   it('EMAIL_ENGINE_LOCKED doc exists', () => {
-    const root = path.join(__dirname, '..', '..', 'docs', 'EMAIL_ENGINE_LOCKED.md');
-    const ref = path.join(__dirname, '..', '..', 'docs', 'reference', 'EMAIL_ENGINE_LOCKED.md');
+    const root = path.join(__dirname, '..', '..', '..', 'docs', 'EMAIL_ENGINE_LOCKED.md');
+    const ref = path.join(__dirname, '..', '..', '..', 'docs', 'reference', 'EMAIL_ENGINE_LOCKED.md');
     const target = fs.existsSync(ref) ? ref : root;
     expect(fs.existsSync(target)).toBe(true);
     const content = fs.readFileSync(target, 'utf8');
@@ -12,7 +12,7 @@ describe('locked zones regression', () => {
   });
 
   it('locked zone guard script exists', () => {
-    const script = path.join(__dirname, '..', '..', 'scripts', 'check-locked-zones.mjs');
+    const script = path.join(__dirname, '..', '..', '..', 'scripts', 'check-locked-zones.mjs');
     expect(fs.existsSync(script)).toBe(true);
   });
 

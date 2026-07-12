@@ -33,8 +33,8 @@ const clearCache = process.argv.includes('--clear-cache');
 
 const BUILD = {
   api: {
-    rootDir: 'server',
-    buildCommand: 'cd .. && bash scripts/render-build.sh api',
+    rootDir: 'Taskmaster/server',
+    buildCommand: 'cd ../.. && bash scripts/render-build.sh api',
     startCommand: 'npm start',
   },
   nest: {

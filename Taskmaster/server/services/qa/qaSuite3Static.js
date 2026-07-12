@@ -22,15 +22,14 @@ async function runSuite3StaticChecks() {
   const bgQueue = await readTextResolved('services/backgroundQueue.js');
   const crmSnapshot = await readTextResolved('models/CRMStatSnapshot.js');
   const financeRoutes = await readTextResolved('routes/financeRoutes.js');
-  const dataHubRoutes = await readTextResolved('routes/dataHubRoutes.js');
+  const dataHubRoutes = await readTextResolved('domains/data-hub/routes.js');
+  const folderCache = await readTextResolved('domains/data-hub/folderCache.js');
   const dataHubSvc = await readTextResolved('services/DataHubService.js');
   const artistPathHubSvc = await readTextResolved('services/artistPathHubService.js');
   const attendanceModel = await readTextResolved('models/Attendance.js');
-  const mailTemplateModel = await readTextResolved('domains/mail/models/MailTemplate.js');
   const shortcutPref = await readTextResolved('models/ShortcutPreference.js');
   const workspacePref = await readTextResolved('models/WorkspacePreference.js');
   const crmStatsSvc = await readTextResolved('domains/crm/services/crmStatsService.js');
-  const mailEventQuerySvc = await readTextResolved('domains/mail/services/mailEventQueryService.js');
   const statsWorker = await readTextResolved('workers/statsWorker.js');
 
   checks.push(
@@ -202,9 +201,9 @@ async function runSuite3StaticChecks() {
       'auth-datahub-admin-guard',
       'authorization',
       'Data Hub routes require admin middleware',
-      dataHubRoutes && dataHubRoutes.includes('admin') && dataHubRoutes.includes('protect') ? 'pass' : 'fail',
-      'dataHubRoutes uses protect + admin',
-      'routes/dataHubRoutes.js',
+      dataHubRoutes && dataHubRoutes.includes('protect') && (dataHubRoutes.includes('requirePageAccess') || dataHubRoutes.includes('admin')) ? 'pass' : 'fail',
+      'dataHub routes uses protect + admin page access',
+      'domains/data-hub/routes.js',
       'critical'
     ),
     makeCheck(
@@ -223,15 +222,6 @@ async function runSuite3StaticChecks() {
       attendanceModel && attendanceModel.includes('tenantPlugin') ? 'pass' : 'fail',
       'attendanceSchema.plugin(tenantPlugin)',
       'models/Attendance.js',
-      'high'
-    ),
-    makeCheck(
-      'auth-tenant-on-mail-template',
-      'authorization',
-      'tenantPlugin applied to MailTemplate model',
-      mailTemplateModel && mailTemplateModel.includes('tenantPlugin') ? 'pass' : 'fail',
-      'mailTemplateSchema.plugin(tenantPlugin)',
-      'domains/mail/models/MailTemplate.js',
       'high'
     ),
     makeCheck(
@@ -257,15 +247,6 @@ async function runSuite3StaticChecks() {
       'domains/crm/services/crmStatsService.js',
       'high'
     ),
-    makeCheck(
-      'auth-aggregate-with-tenant-mail',
-      'authorization',
-      'Mail event aggregations use aggregateWithTenant',
-      mailEventQuerySvc?.includes('aggregateWithTenant') ? 'pass' : 'fail',
-      'mailEventQueryService wraps MailEvent.aggregate',
-      'domains/mail/services/mailEventQueryService.js',
-      'high'
-    ),
   );
   const routeFiles = await listFiles(path.join(SERVER_ROOT, 'routes'));
   const bypassInRoutes = [];
@@ -275,6 +256,7 @@ async function runSuite3StaticChecks() {
   }
   const unexpectedBypass = bypassInRoutes.filter((f) => !BYPASS_ROUTE_ALLOWLIST.has(f));
   const svcHasBypass = (dataHubSvc && dataHubSvc.includes('bypassTenant'))
+    || (folderCache && /bypassTenant|bypassOptions/.test(folderCache))
     || (artistPathHubSvc && artistPathHubSvc.includes('bypassTenant'));
   checks.push(
     makeCheck(

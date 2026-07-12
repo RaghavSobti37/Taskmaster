@@ -37,8 +37,11 @@ export const Button = ({
   size = 'md',
   className = '',
   title,
+  loading = false,
+  loadingLabel = 'Loading',
   'aria-label': ariaLabel,
   type = 'button',
+  disabled,
   ...props
 }) => {
   const childArray = React.Children.toArray(children);
@@ -56,6 +59,7 @@ export const Button = ({
     primary: 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)] hover:opacity-90 active:scale-[0.98]',
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
+    outline: 'bg-transparent text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)]',
     danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
     mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10',
     success: 'bg-[var(--color-pastel-mint-text)] text-white border border-[var(--color-pastel-mint-text)] hover:opacity-90',
@@ -73,10 +77,17 @@ export const Button = ({
       type={type}
       aria-label={accessibleName}
       title={title}
-      className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap ${variants[variant]} ${sizes[size]} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading ? 'true' : undefined}
+      className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
-      {children}
+      {loading ? (
+        <>
+          <Spinner size={size === 'lg' ? 'md' : 'sm'} className="text-current" />
+          <span>{loadingLabel}</span>
+        </>
+      ) : children}
     </button>
   );
 };

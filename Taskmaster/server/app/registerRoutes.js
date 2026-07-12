@@ -33,8 +33,8 @@ const API_DOMAINS = [
   'auth', 'projects', 'tasks', 'users', 'logs', 'teams', 'artists',
   'gamification', 'gamification-admin', 'qa', 'customization', 'crm', 'assets',
   'google', 'proxy', 'dashboard', 'calendar', 'departments', 'schedule',
-  'notifications', 'notes', 'search', 'pinboard', 'tsc',
-  'artist-path', 'analytics', 'webhooks',
+  'notifications', 'notes', 'search', 'pinboard', 'mail', 'tsc',
+  'data-hub', 'artist-path', 'track', 'campaigns', 'analytics', 'webhooks',
   'integrations', 'office-assets', 'subscriptions', 'org-accounts', 'contacts',
   'exly', 'newsletter', 'finance', 'attendance', 'announcements', 'admin',
   'uploadthing',
@@ -206,6 +206,9 @@ function registerRoutes(app) {
   app.use('/api/notes', require('../routes/noteRoutes'));
   app.use('/api/search', require('../routes/searchRoutes'));
   app.use('/api/pinboard', require('../routes/pinBoardRoutes'));
+  app.use('/api/campaigns', require('../domains/mail/routes/campaignApiRouter'));
+  app.use('/api/data-hub', require('../domains/data-hub/routes'));
+  app.use('/api/track', require('../routes/track'));
   app.use('/api/tsc', require('../routes/tscRoutes'));
   app.use('/api/artist-path', require('../domains/artists/pathRoutes'));
   app.use('/api/analytics', require('../routes/analyticsRoutes'));
@@ -216,6 +219,7 @@ function registerRoutes(app) {
   app.use('/api/org-accounts', require('../routes/orgAccountRoutes'));
   app.use('/api/contacts', require('../routes/contactRoutes'));
   app.use('/api/exly', require('../domains/integrations/exlyRoutes'));
+  app.use('/api/newsletter', require('../routes/newsletterRoutes'));
   app.use('/api/finance', require('../routes/financeRoutes'));
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));

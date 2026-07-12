@@ -3,6 +3,7 @@ import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock, Briefcase, Link2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
+import { LoadingText } from './ui';
 import NexusDropdown from './ui/NexusDropdown';
 import WorkspaceSelect from './forms/WorkspaceSelect';
 import ProjectSelect from './forms/ProjectSelect';
@@ -368,7 +369,7 @@ const CalendarEntryModal = ({
             disabled={loading || !title}
             className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
           >
-            {loading ? 'Saving...' : <><CheckCircle2 size={18} /> {initialData ? 'Update Event' : 'Save Event'}</>}
+            {loading ? <LoadingText className="text-white" spinnerSize="sm">Saving...</LoadingText> : <><CheckCircle2 size={18} /> {initialData ? 'Update Event' : 'Save Event'}</>}
           </button>
         </ModalFooter>
       </form>

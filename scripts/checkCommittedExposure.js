@@ -28,6 +28,7 @@ const EXT_SCAN = new Set([
 const SKIP_FILES = new Set([
   'vercel.json',
   'client/vercel.json',
+  'Taskmaster/client/vercel.json',
   'sites/auth/vercel.json',
   'sites/landing/vercel.json',
   'replacements.txt',
@@ -48,7 +49,7 @@ const SKIP_FILES = new Set([
   'server/.env.render.example',
 ]);
 
-const SKIP_PATH_PREFIXES = ['server/tests/'];
+const SKIP_PATH_PREFIXES = ['server/tests/', 'Taskmaster/server/tests/'];
 
 /** Original PII / hosts only — placeholders (redacted@example.com, YOUR-RENDER-SERVICE) are OK. */
 const BLOCKED_LITERALS = [

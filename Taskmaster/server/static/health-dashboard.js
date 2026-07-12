@@ -2,9 +2,9 @@
  * Health dashboard client — external file for CSP script-src 'self' (no inline scripts).
  */
 (function healthDashboard() {
-  const REFRESH_MS = 12000;
+  const REFRESH_MS = 60_000;
   let RAW = {};
-  let autoOn = true;
+  let autoOn = false;
   let timer = null;
 
   function loadRaw() {

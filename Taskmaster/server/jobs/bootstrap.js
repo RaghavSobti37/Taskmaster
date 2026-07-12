@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const { cronJobsEnabled } = require('../utils/runtimeFlags');
 const { CRON_JOBS, QUEUE_WORKERS } = require('./registry');
 
 function resolveInitFn(entry) {
@@ -19,7 +20,12 @@ function bootstrapBackgroundJobs() {
   const started = [];
   let skipped = 0;
 
-  for (const entry of [...CRON_JOBS, ...QUEUE_WORKERS]) {
+  const cronEntries = cronJobsEnabled() ? CRON_JOBS : [];
+  if (!cronJobsEnabled() && CRON_JOBS.length) {
+    logger.info('jobs', 'Skipping in-process cron schedulers (COREKNOT_LIGHTWEIGHT or COREKNOT_DISABLE_CRON)');
+  }
+
+  for (const entry of [...cronEntries, ...QUEUE_WORKERS]) {
     const key = `${entry.module}::${entry.init}`;
     if (seen.has(key)) {
       skipped += 1;

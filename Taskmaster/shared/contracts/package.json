@@ -7,9 +7,9 @@
   "exports": {
     ".": "./index.js",
     "./crm": "./crm.js",
-    "./mail": "./mail.js",
     "./safeValues": "./safeValues.js",
-    "./attendance": "./attendance.js"
+    "./attendance": "./attendance.js",
+    "./mail": "./mail.js"
   },
   "dependencies": {
     "zod": "^4.4.3"

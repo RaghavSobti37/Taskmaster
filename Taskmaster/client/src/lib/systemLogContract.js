@@ -30,8 +30,6 @@ const ROUTE_MODULE_MAP = [
   { prefix: '/api/finance', module: MODULE.FINANCE },
   { prefix: '/api/projects', module: MODULE.PROJECTS },
   { prefix: '/api/tasks', module: MODULE.PROJECTS },
-  { prefix: '/api/mail', module: MODULE.EMAIL },
-  { prefix: '/api/campaigns', module: MODULE.EMAIL },
   { prefix: '/api/ses', module: MODULE.EMAIL },
   { prefix: '/api/auth', module: MODULE.AUTH },
   { prefix: '/api/webhooks', module: MODULE.WEBHOOK },

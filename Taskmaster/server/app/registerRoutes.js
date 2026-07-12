@@ -206,9 +206,9 @@ function registerRoutes(app) {
   app.use('/api/notes', require('../routes/noteRoutes'));
   app.use('/api/search', require('../routes/searchRoutes'));
   app.use('/api/pinboard', require('../routes/pinBoardRoutes'));
-  app.use('/api/campaigns', require('../domains/mail/routes/campaignApiRouter'));
-  app.use('/api/data-hub', require('../domains/data-hub/routes'));
-  app.use('/api/track', require('../routes/track'));
+  app.use('/api/campaigns', require('../routes/deprecatedAutoMailerRoutes'));
+  app.use('/api/data-hub', require('../routes/deprecatedAutoMailerRoutes'));
+  app.use('/api/track', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/tsc', require('../routes/tscRoutes'));
   app.use('/api/artist-path', require('../domains/artists/pathRoutes'));
   app.use('/api/analytics', require('../routes/analyticsRoutes'));

@@ -2,13 +2,17 @@ import React, { useMemo } from 'react';
 import { ExternalLink, Mail, Server, Upload } from 'lucide-react';
 import { Button } from '../../components/ui';
 
-const DEFAULT_AUTO_MAILER_URL = 'http://localhost:5001';
+const PRODUCTION_AUTO_MAILER_URL = 'https://auto-mailer-blue.vercel.app';
+
+function resolveAutoMailerUrl() {
+  const fromEnv = String(import.meta.env.VITE_AUTO_MAILER_URL || '').trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, '');
+  if (import.meta.env.DEV) return 'http://localhost:5001';
+  return PRODUCTION_AUTO_MAILER_URL;
+}
 
 export default function AutoMailerRedirectPage() {
-  const autoMailerUrl = useMemo(
-    () => (import.meta.env.VITE_AUTO_MAILER_URL || DEFAULT_AUTO_MAILER_URL).replace(/\/$/, ''),
-    [],
-  );
+  const autoMailerUrl = useMemo(() => resolveAutoMailerUrl(), []);
 
   const openAutoMailer = () => {
     window.open(autoMailerUrl, '_blank', 'noopener,noreferrer');

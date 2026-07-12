@@ -1667,7 +1667,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 267 |
+| **Lines** | 268 |
 | **Hooks** | `useCallback`, `useEffect`, `useState` |
 
 **API endpoints:**
@@ -2030,6 +2030,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/dashboardRoutes.js`
 - `server/routes/dataHubRoutes.js`
 - `server/routes/departmentRoutes.js`
+- `server/routes/deprecatedAutoMailerRoutes.js`
 - `server/routes/enterpriseRoutes.js`
 - `server/routes/exlyRoutes.js`
 - `server/routes/financeRoutes.js`

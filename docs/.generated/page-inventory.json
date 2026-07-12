@@ -2694,7 +2694,7 @@
   {
     "file": "Taskmaster/client/src/pages/settings/tabs/NotificationsTab.jsx",
     "routes": [],
-    "lines": 267,
+    "lines": 268,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

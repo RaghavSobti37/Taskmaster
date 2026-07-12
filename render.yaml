@@ -151,7 +151,7 @@ services:
     buildCommand: cd ../.. && bash scripts/render-build.sh api
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false
     branch: staging
     envVars:
       - key: HUSKY
@@ -221,7 +221,7 @@ services:
     buildCommand: cd .. && bash scripts/render-build.sh nest
     startCommand: npm run start:prod
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false
     branch: staging
     envVars:
       - key: HUSKY

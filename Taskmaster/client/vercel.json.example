@@ -72,7 +72,7 @@
     }
   ],
   "buildCommand": "npm run vercel-build",
-  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd .. && node scripts/vercelInstall.js",
+  "installCommand": "HUSKY=0 node scripts/generateVercelConfig.cjs && cd ../.. && node scripts/vercelInstall.js",
   "env": {
     "VERCEL_FORCE_NO_BUILD_CACHE": "1"
   }

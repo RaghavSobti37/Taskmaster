@@ -136,9 +136,17 @@ test('pickProxyUrl uses production when VERCEL=1 but VERCEL_ENV unset', () => {
   process.env = prev;
 });
 
-test('GIT_DEPLOYMENT_CONFIG disables Vercel deploy on dev branch', () => {
+test('CLIENT_REL points at Taskmaster/client in monorepo layout', () => {
+  const path = require('path');
+  const { CLIENT_REL, findRepoRoot } = require('./generateVercelConfig.cjs');
+  const repoRoot = findRepoRoot(path.join(__dirname, '..'));
+  assert.equal(CLIENT_REL, 'Taskmaster/client');
+  assert.ok(require('fs').existsSync(path.join(repoRoot, CLIENT_REL, 'scripts', 'generateVercelConfig.cjs')));
+});
+
+test('GIT_DEPLOYMENT_CONFIG disables all automatic Vercel git deploys', () => {
   const { GIT_DEPLOYMENT_CONFIG } = require('./generateVercelConfig.cjs');
-  assert.equal(GIT_DEPLOYMENT_CONFIG.git.deploymentEnabled.dev, false);
+  assert.equal(GIT_DEPLOYMENT_CONFIG.git.deploymentEnabled, false);
 });
 
 test('buildVercelSecurityHeaders adds preview CSP allowances', () => {

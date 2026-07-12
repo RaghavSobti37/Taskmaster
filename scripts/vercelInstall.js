@@ -15,9 +15,9 @@ const run = (args, cwd = ROOT) => {
 };
 
 if (process.platform === 'win32') {
-  spawnSync('cmd', ['/c', 'if exist node_modules rmdir /s /q node_modules & if exist client\\node_modules rmdir /s /q client\\node_modules'], { cwd: ROOT, stdio: 'inherit' });
+  spawnSync('cmd', ['/c', 'if exist node_modules rmdir /s /q node_modules & if exist Taskmaster\\client\\node_modules rmdir /s /q Taskmaster\\client\\node_modules & if exist client\\node_modules rmdir /s /q client\\node_modules'], { cwd: ROOT, stdio: 'inherit' });
 } else {
-  spawnSync('rm', ['-rf', 'node_modules', 'client/node_modules'], { cwd: ROOT, stdio: 'inherit' });
+  spawnSync('rm', ['-rf', 'node_modules', 'Taskmaster/client/node_modules', 'client/node_modules'], { cwd: ROOT, stdio: 'inherit' });
 }
 
 run(['--yes', 'npm@11', 'install', '--legacy-peer-deps', '--include=optional', '-w', 'CoreKnot-client']);

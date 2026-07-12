@@ -12,6 +12,7 @@ import {
   unsubscribeFromPush,
 } from '../../../utils/notifications';
 import { isStandaloneDisplay } from '../../../utils/displayMode';
+import { formatDisplayDate } from '../../../utils/dateDisplay';
 import { globalConfirm } from '../../../contexts/confirmContext';
 
 export default function NotificationsTab() {
@@ -208,7 +209,7 @@ export default function NotificationsTab() {
                         {device.deviceLabel}
                       </p>
                       <p className="text-xs text-[var(--color-text-muted)]">
-                        Registered {device.createdAt ? new Date(device.createdAt).toLocaleDateString() : 'recently'}
+                        Registered {device.createdAt ? formatDisplayDate(device.createdAt) : 'recently'}
                       </p>
                     </div>
                   </div>

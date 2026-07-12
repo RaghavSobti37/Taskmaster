@@ -57,10 +57,11 @@ const CalendarEntryModal = ({
       const base = defaultDate || new Date();
       const baseDate = formatDateInput(base);
       const safeStartDate = baseDate < todayKey ? todayKey : baseDate;
+      const times = defaultEventTimes(safeStartDate, todayKey);
       setStartDate(safeStartDate);
-      setStartTime('09:00');
+      setStartTime(times.start);
       setEndDate(safeStartDate);
-      setEndTime('10:00');
+      setEndTime(times.end);
       setDescription('');
       setEventType('event');
       setMeetingLink('');
@@ -78,6 +79,13 @@ const CalendarEntryModal = ({
     const next = value < todayKey ? todayKey : value;
     setStartDate(next);
     if (!endDate || endDate < next) setEndDate(next);
+    if (next === todayKey && !initialData) {
+      const times = defaultEventTimes(next, todayKey);
+      if (startTime < times.start) {
+        setStartTime(times.start);
+        setEndTime(times.end);
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -376,6 +384,18 @@ const CalendarEntryModal = ({
     </ModalShell>
   );
 };
+
+/** Same-day events default to next full IST hour so validation never rejects the default. */
+function defaultEventTimes(dateKey, todayKey) {
+  if (dateKey !== todayKey) return { start: '09:00', end: '10:00' };
+  const istHour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false })
+      .format(new Date())
+  );
+  const startHour = Math.min(istHour + 1, 22);
+  const pad = (h) => `${String(h).padStart(2, '0')}:00`;
+  return { start: pad(startHour), end: pad(startHour + 1) };
+}
 
 function formatDateInput(value) {
   if (!value) return new Date().toISOString().split('T')[0];

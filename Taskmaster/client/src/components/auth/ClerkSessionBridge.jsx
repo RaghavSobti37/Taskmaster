@@ -4,7 +4,7 @@ import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isClerkConfigured, getPinnedClerkOrganizationId } from '../../config/clerk';
-import { isAuthSite } from '../../config/siteMode';
+import { isAuthSubdomainHost } from '../../config/siteUrls';
 import { resolveLoginReturnPath } from '../../utils/loginReturnPath';
 import { navigateAfterAuth } from '../../utils/authNavigation';
 import { registerClerkSignOut } from '../../lib/clerkLogoutRegistry';
@@ -69,7 +69,7 @@ function ClerkSessionBridgeInner() {
   }, [sessionReady]);
 
   useEffect(() => {
-    if (!isAuthSite() || !user?._id || !sessionReady || redirectedRef.current) {
+    if (!isAuthSubdomainHost() || !user?._id || !sessionReady || redirectedRef.current) {
       return undefined;
     }
     const target = resolveLoginReturnPath({ search: window.location.search });
@@ -129,7 +129,7 @@ function ClerkSessionBridgeInner() {
           setActive,
           pinnedOrgId,
           activeOrgId: orgId,
-          clientOrgScope: !isAuthSite(),
+          clientOrgScope: !isAuthSubdomainHost(),
         });
         if (cancelled) return;
 

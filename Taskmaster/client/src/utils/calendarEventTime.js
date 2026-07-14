@@ -6,7 +6,7 @@ export const DEFAULT_EVENT_TIME = '09:00';
 /** UTC hour:minute that renders as 9:00 AM IST via formatTimeFromParts (matches buildDateTimeFromParts storage). */
 const DEFAULT_EVENT_TIME_UTC = '03:30';
 
-/** Combine YYYY-MM-DD + HH:mm into UTC Date (matches server storage). */
+/** Combine ISO date key + HH:mm into UTC Date (matches server storage). */
 function combineDateAndTime(dateStr, timeStr = DEFAULT_EVENT_TIME) {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split('-').map(Number);

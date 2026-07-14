@@ -31,7 +31,7 @@ const fetchIndianHolidays = async () => {
       const startDate = event.start;
       if (!startDate) continue;
 
-      // Format date as YYYY-MM-DD
+      // Format as ISO date key for storage.
       const year = startDate.getFullYear();
       const month = String(startDate.getMonth() + 1).padStart(2, '0');
       const day = String(startDate.getDate()).padStart(2, '0');

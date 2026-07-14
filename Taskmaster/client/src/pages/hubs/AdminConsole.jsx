@@ -34,6 +34,7 @@ import { FEATURE_UNLOCK_BY_PATH } from '../../utils/navPageAccess';
 import { useTenantUnlocks } from '../../hooks/useTenantUnlocks';
 import { useAdminConsoleSummary } from '../../hooks/useAdminConsoleSummary';
 import { getRenderLogTarget, openRenderLogs } from '../../config/renderLogs';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 
 const SECTION_COLLAPSE_KEY = 'admin-console-sections-collapsed';
 
@@ -74,11 +75,7 @@ function readCollapsedSections() {
 
 function formatActivityTime(ts) {
   if (!ts) return '';
-  try {
-    return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '';
-  }
+  return formatDisplayDateTime(ts, { emptyLabel: '' });
 }
 
 function AdminConsoleTile({ tile, setupStatus, onNavigate }) {
@@ -344,4 +341,4 @@ export default function AdminConsole() {
     </PageContainer>
   );
 }
-
+

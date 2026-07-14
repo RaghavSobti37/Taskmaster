@@ -1,3 +1,4 @@
+import { getRuntimeHostname } from '../utils/runtimeEnv';
 import { isAppSite, isAuthSite, isLandingSite } from './siteMode';
 
 const PROD_APP_ORIGIN = 'https://tsccoreknot.com';
@@ -43,6 +44,23 @@ export function getLandingOrigin() {
 
 /** Login/register live on the same SPA as the app (not a cross-origin hop). */
 export const hasSameOriginAuthRoutes = () => isAppSite() || isAuthSite();
+
+/** Auth subdomain in split deploy — build flag or live hostname. */
+export const isAuthSubdomainHost = () => {
+  if (isAuthSite()) return true;
+  const host = getRuntimeHostname();
+  if (!host) return false;
+  const configured = import.meta.env.VITE_AUTH_URL?.trim();
+  if (configured) {
+    const authHost = hostFromUrl(configured);
+    if (authHost && host === authHost) return true;
+  }
+  return host === 'auth.tsccoreknot.com';
+};
+
+/** Post-login app routes must leave auth/landing subdomain for tsccoreknot.com. */
+export const needsExternalAppNavigation = () =>
+  isAuthSubdomainHost() || isLandingSite();
 
 /** Split deploy: auth on auth.tsccoreknot.com while app stays on tsccoreknot.com. */
 export const usesExternalAuthHost = () => {
@@ -94,7 +112,7 @@ export const appUrl = (path = '/dashboard') => joinOrigin(getAppOrigin(), path);
  * clerk-establish sets the shared cookie — app dashboard URL too early = login loop.
  */
 export const resolveClerkForceRedirectUrl = () => {
-  if (isAuthSite()) return '/login';
+  if (isAuthSubdomainHost()) return '/login';
   return '/dashboard';
 };
 
@@ -104,13 +122,13 @@ export const resolveClerkForceRedirectUrl = () => {
  * post-establish navigation on auth.tsccoreknot.com.
  */
 export function getClerkSignInRedirectProps() {
-  if (isAuthSite()) return {};
+  if (isAuthSubdomainHost()) return {};
   const url = resolveClerkForceRedirectUrl();
   return { fallbackRedirectUrl: url, forceRedirectUrl: url };
 }
 
 export function getClerkProviderRedirectProps() {
-  if (isAuthSite()) return {};
+  if (isAuthSubdomainHost()) return {};
   const url = resolveClerkForceRedirectUrl();
   return {
     signInForceRedirectUrl: url,
@@ -121,10 +139,10 @@ export function getClerkProviderRedirectProps() {
 /** Post-login / deep links: auth or landing subdomain → full app URL */
 export const resolveAppNavigationTarget = (pathOrUrl) => {
   if (!pathOrUrl) {
-    return hasSameOriginAuthRoutes() ? '/dashboard' : appUrl('/dashboard');
+    return needsExternalAppNavigation() ? appUrl('/dashboard') : '/dashboard';
   }
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  if (pathOrUrl.startsWith('/') && (isAuthSite() || isLandingSite())) {
+  if (pathOrUrl.startsWith('/') && needsExternalAppNavigation()) {
     return appUrl(pathOrUrl);
   }
   return pathOrUrl;

@@ -373,7 +373,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
               <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
               <label className="relative flex flex-col items-center px-2 py-0.5 min-w-[5.5rem] cursor-pointer">
                 <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none">
-                  {format(selectedDate, 'EEEE')}
+                  {formatDisplayDate(selectedDate)}
                 </span>
                 <span className="text-xs font-black tabular-nums text-[var(--color-text-primary)] leading-tight mt-0.5">
                   {formatDisplayDate(selectedDate)}
@@ -384,7 +384,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   max={normalizeWorkDate(new Date())}
                   onChange={(e) => e.target.value && handleSelectDate(new Date(`${e.target.value}T12:00:00`))}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  aria-label={`${format(selectedDate, 'EEEE')}, ${formatDisplayDate(selectedDate)}`}
+                  aria-label={formatDisplayDate(selectedDate)}
                 />
               </label>
               <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>

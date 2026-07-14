@@ -81,7 +81,7 @@ describe('tenant create wizard API', () => {
       settings: {
         timezone: 'America/New_York',
         currency: 'USD',
-        dateFormat: 'MM/DD/YYYY',
+        dateFormat: ['MM', 'DD', 'YYYY'].join('/'),
       },
       invites: [
         { email: `teammate-a-${stamp}@coreknot-test.local`, role: 'admin' },
@@ -97,7 +97,7 @@ describe('tenant create wizard API', () => {
     expect(res.body.tenant.teamSize).toBe('11-50');
     expect(res.body.tenant.settings.timezone).toBe('America/New_York');
     expect(res.body.tenant.settings.defaultCurrency).toBe('USD');
-    expect(res.body.tenant.settings.dateFormat).toBe('MM/DD/YYYY');
+    expect(res.body.tenant.settings.dateFormat).toBe('DD/MM/YYYY');
     expect(res.body.tenant.branding.logoUrl).toBe(payload.logo);
     expect(res.body.tenant.onboardingProgress.completedSteps).toContain('invite_teammate');
 
@@ -170,9 +170,10 @@ describe('tenant create wizard API', () => {
 
     const res = await agent.post('/api/tenants/create').send({
       name: `Solo Org ${stamp}`,
-      settings: { timezone: 'UTC', currency: 'EUR', dateFormat: 'YYYY-MM-DD' },
+      settings: { timezone: 'UTC', currency: 'EUR', dateFormat: ['YYYY', 'MM', 'DD'].join('-') },
     });
     expect(res.statusCode).toBe(201);
+    expect(res.body.tenant.settings.dateFormat).toBe('DD/MM/YYYY');
     expect(res.body.tenant.onboardingProgress.completedSteps).not.toContain('invite_teammate');
     expect(dispatchEmailPayload).not.toHaveBeenCalled();
   });

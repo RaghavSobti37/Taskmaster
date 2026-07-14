@@ -50,6 +50,20 @@ describe('siteUrls', () => {
     expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
   });
 
+  it('redirects post-login via runtime hostname when auth build env missing', async () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://auth.tsccoreknot.com', hostname: 'auth.tsccoreknot.com' },
+    });
+    import.meta.env.VITE_SITE_MODE = 'app';
+    import.meta.env.VITE_APP_URL = '';
+    import.meta.env.VITE_AUTH_URL = '';
+
+    const { resolveAppNavigationTarget, getClerkSignInRedirectProps } = await import('./siteUrls.js');
+
+    expect(resolveAppNavigationTarget('/dashboard')).toBe('https://tsccoreknot.com/dashboard');
+    expect(getClerkSignInRedirectProps()).toEqual({});
+  });
+
   it('omits Clerk force redirect on auth host so client-trust subflow can render', async () => {
     import.meta.env.VITE_SITE_MODE = 'auth';
 

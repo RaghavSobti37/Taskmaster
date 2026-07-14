@@ -61,6 +61,10 @@ const applyLocalDevEnvOverrides = (mode, env) => {
 export default defineConfig(({ mode }) => {
   sanitizePreviewViteApiUrl()
   const env = applyLocalDevEnvOverrides(mode, loadEnv(mode, __dirname, ''))
+  const siteMode =
+    mode === 'auth' ? 'auth'
+      : mode === 'landing' ? 'landing'
+        : (env.VITE_SITE_MODE || 'app')
   const clerkPk = env.VITE_CLERK_PUBLISHABLE_KEY || env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
   const vercelProduction = process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production'
   const apiUrl = (env.VITE_API_URL || '').trim()
@@ -107,6 +111,17 @@ export default defineConfig(({ mode }) => {
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   define: {
     __AGENTATION_ENABLED__: JSON.stringify(agentationEnabled),
+    'import.meta.env.VITE_SITE_MODE': JSON.stringify(siteMode),
+    ...(mode === 'auth'
+      ? {
+        'import.meta.env.VITE_APP_URL': JSON.stringify(
+          env.VITE_APP_URL?.trim() || 'https://tsccoreknot.com',
+        ),
+        'import.meta.env.VITE_AUTH_URL': JSON.stringify(
+          env.VITE_AUTH_URL?.trim() || 'https://auth.tsccoreknot.com',
+        ),
+      }
+      : {}),
   },
   assetsInclude: ['**/*.wasm'],
   optimizeDeps: {

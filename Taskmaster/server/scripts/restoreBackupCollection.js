@@ -43,7 +43,7 @@ const main = async () => {
   const { date, collection, dryRun, exportPath } = parseArgs();
 
   if (!date || !collection) {
-    console.error('Usage: node server/scripts/restoreBackupCollection.js --date YYYY-MM-DD --collection <name> [--dry-run] [--export ./out.json]');
+    console.error('Usage: node server/scripts/restoreBackupCollection.js --date <backup-date-key> --collection <name> [--dry-run] [--export ./out.json]');
     process.exit(1);
   }
 

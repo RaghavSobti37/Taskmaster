@@ -59,9 +59,6 @@ export const CURRENCY_OPTIONS = [
 /** Maps to Tenant.settings.dateFormat */
 export const TENANT_DATE_FORMAT_OPTIONS = [
   { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', example: '29/06/2026' },
-  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', example: '06/29/2026' },
-  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', example: '2026-06-29' },
-  { value: 'DD-MM-YYYY', label: 'DD-MM-YYYY', example: '29-06-2026' },
 ];
 
 export const ORG_INVITE_ROLE_OPTIONS = [

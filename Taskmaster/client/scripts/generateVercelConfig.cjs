@@ -405,7 +405,20 @@ const payload = {
   }),
 };
 
-const buildSitePayload = (buildCommand) => {
+const AUTH_SITE_REDIRECTS = [
+  {
+    source: '/dashboard',
+    destination: 'https://tsccoreknot.com/dashboard',
+    permanent: false,
+  },
+  {
+    source: '/dashboard/:path*',
+    destination: 'https://tsccoreknot.com/dashboard/:path*',
+    permanent: false,
+  },
+];
+
+const buildSitePayload = (buildCommand, { authSite = false } = {}) => {
   const satelliteClerk = buildClerkProxyRewriteSatellite(apiDestination);
   const siteRewrites = composeRewrites(
     template.rewrites,
@@ -413,13 +426,17 @@ const buildSitePayload = (buildCommand) => {
     socketDestination,
     satelliteClerk,
   );
+  const redirects = [
+    ...(template.redirects || []),
+    ...(authSite ? AUTH_SITE_REDIRECTS : []),
+  ];
   return {
     ...GIT_DEPLOYMENT_CONFIG,
     buildCommand,
     outputDirectory: `../../${CLIENT_REL}/dist`,
     installCommand: `cd ../.. && HUSKY=0 node ${CLIENT_REL}/scripts/generateVercelConfig.cjs && node scripts/vercelInstall.js`,
     framework: null,
-    ...(template.redirects ? { redirects: template.redirects } : {}),
+    ...(redirects.length ? { redirects } : {}),
     rewrites: [
       ...(nestAttendanceDestination
         ? [
@@ -447,7 +464,7 @@ const payloadsByTarget = new Map([
   [path.join(REPO_ROOT, 'vercel.json'), payload],
   [path.join(CLIENT_ROOT, 'vercel.json'), payload],
   [path.join(REPO_ROOT, 'sites/landing/vercel.json'), buildSitePayload(`cd ../../${CLIENT_REL} && npm run vercel-build:landing`)],
-  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload(`cd ../../${CLIENT_REL} && npm run vercel-build:auth`)],
+  [path.join(REPO_ROOT, 'sites/auth/vercel.json'), buildSitePayload(`cd ../../${CLIENT_REL} && npm run vercel-build:auth`, { authSite: true })],
 ]);
 
 for (const file of targets) {

@@ -204,11 +204,16 @@ if (!keys.orgId) {
 }
 
 console.log('Pushing Clerk production keys…');
-for (const { cwd, needsClerkSecret, clerkProxyUrl } of VERCEL_PROJECTS) {
+for (const { cwd, needsClerkSecret, clerkProxyUrl, name } of VERCEL_PROJECTS) {
   vercelUpsert(cwd, 'VITE_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', keys.pk);
   vercelUpsert(cwd, 'VITE_CLERK_PROXY_URL', clerkProxyUrl, ['production']);
   vercelRemove(cwd, 'VITE_CLERK_PROXY_URL', ['preview']);
+  if (name === 'coreknot-auth') {
+    vercelUpsert(cwd, 'VITE_SITE_MODE', 'auth');
+    vercelUpsert(cwd, 'VITE_APP_URL', 'https://tsccoreknot.com');
+    vercelUpsert(cwd, 'VITE_AUTH_URL', 'https://auth.tsccoreknot.com');
+  }
   if (keys.orgId) {
     vercelUpsert(cwd, 'VITE_CLERK_ORGANIZATION_ID', keys.orgId);
   }

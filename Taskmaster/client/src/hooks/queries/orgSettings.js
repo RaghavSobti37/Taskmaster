@@ -21,7 +21,7 @@ export const tenantToOrgSettingsForm = (tenant = {}) => ({
   teamSize: tenant.teamSize || '',
   timezone: tenant.settings?.timezone || 'Asia/Kolkata',
   currency: tenant.settings?.defaultCurrency || tenant.settings?.currency || 'INR',
-  dateFormat: tenant.settings?.dateFormat || 'DD/MM/YYYY',
+  dateFormat: 'DD/MM/YYYY',
 });
 
 export const buildUpdateTenantPayload = (form) => {
@@ -32,7 +32,7 @@ export const buildUpdateTenantPayload = (form) => {
     settings: {
       timezone: form.timezone,
       defaultCurrency: form.currency,
-      dateFormat: form.dateFormat,
+      dateFormat: 'DD/MM/YYYY',
     },
   };
 

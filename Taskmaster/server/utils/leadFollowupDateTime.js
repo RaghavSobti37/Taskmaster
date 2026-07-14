@@ -6,13 +6,13 @@ function parseLeadFollowupDateTime(lead) {
 
   const timeStr = String(lead?.nextFollowupTime || '').trim();
   if (timeStr) {
-    const with24h = parse(`${dateStr} ${timeStr}`, 'dd-MM-yyyy HH:mm', new Date());
+    const with24h = parse(`${dateStr} ${timeStr}`, 'dd/MM/yyyy HH:mm', new Date());
     if (!Number.isNaN(with24h.getTime())) return with24h;
-    const with12h = parse(`${dateStr} ${timeStr}`, 'dd-MM-yyyy h:mm a', new Date());
+    const with12h = parse(`${dateStr} ${timeStr}`, 'dd/MM/yyyy h:mm a', new Date());
     if (!Number.isNaN(with12h.getTime())) return with12h;
   }
 
-  const dateOnly = parse(dateStr, 'dd-MM-yyyy', new Date());
+  const dateOnly = parse(dateStr, 'dd/MM/yyyy', new Date());
   return Number.isNaN(dateOnly.getTime()) ? null : dateOnly;
 }
 

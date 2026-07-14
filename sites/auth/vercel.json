@@ -41,6 +41,16 @@
       "source": "/.env",
       "destination": "/404",
       "statusCode": 404
+    },
+    {
+      "source": "/dashboard",
+      "destination": "https://tsccoreknot.com/dashboard",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "https://tsccoreknot.com/dashboard/:path*",
+      "permanent": false
     }
   ],
   "rewrites": [

@@ -105,7 +105,7 @@ const ScheduleGrid = ({
 
   const dayColumns = dateKeys.map((key, index) => {
     const parsed = parseISO(key);
-    let label = format(parsed, 'EEE');
+    let label = formatDisplayDateShort(parsed);
     if (key === todayKey) label = 'Today';
     else if (index === 1 && dateKeys[0] === todayKey) label = 'Tomorrow';
     return { key, label, sub: formatWeekdayDate(parsed) };

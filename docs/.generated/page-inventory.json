@@ -1505,7 +1505,7 @@
   {
     "file": "Taskmaster/client/src/pages/emails/AutoMailerRedirectPage.jsx",
     "routes": [],
-    "lines": 56,
+    "lines": 60,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

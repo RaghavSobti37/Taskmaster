@@ -3,7 +3,7 @@
 const DEFAULT_TZ = 'Asia/Kolkata';
 
 const DATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
-const DATE_DISPLAY_SHORT_FORMAT = 'dd/MM';
+const DATE_DISPLAY_SHORT_FORMAT = 'dd/MM/yyyy';
 const DATETIME_DISPLAY_FORMAT = 'dd/MM/yyyy HH:mm';
 const DATETIME_DISPLAY_SECONDS_FORMAT = 'dd/MM/yyyy HH:mm:ss';
 
@@ -89,7 +89,7 @@ function formatDateKeyForDisplay(dateKey, { emptyLabel = EMPTY } = {}) {
   return formatDisplayDate(dateKey, { emptyLabel });
 }
 
-/** ponytail: DD/MM/YYYY only — weekday labels removed app-wide */
+/** DD/MM/YYYY only — weekday labels removed app-wide */
 function formatWeekdayDateLong(value, options) {
   return formatDisplayDate(value, options);
 }

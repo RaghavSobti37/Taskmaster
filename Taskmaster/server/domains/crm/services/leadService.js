@@ -78,9 +78,9 @@ class LeadService {
     const patch = { reminderSent: false };
     if (set.nextFollowupDate) {
       try {
-        const newDate = parse(set.nextFollowupDate, 'dd-MM-yyyy', new Date());
+        const newDate = parse(set.nextFollowupDate, 'dd/MM/yyyy', new Date());
         const oldDate = existingLead.nextFollowupDate
-          ? parse(existingLead.nextFollowupDate, 'dd-MM-yyyy', new Date())
+          ? parse(existingLead.nextFollowupDate, 'dd/MM/yyyy', new Date())
           : null;
         if (!isNaN(newDate.getTime()) && (!oldDate || isNaN(oldDate.getTime()) || newDate >= oldDate)) {
           patch.notifiedOverdue = false;

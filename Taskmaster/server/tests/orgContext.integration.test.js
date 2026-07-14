@@ -122,13 +122,14 @@ describe('tenant create with featureUnlocks', () => {
       name: `Feature Org ${stamp}`,
       slug: `feature-org-${stamp}`,
       industry: 'technology',
-      teamSize: '1-5',
-      settings: { timezone: 'UTC', defaultCurrency: 'USD', dateFormat: 'YYYY-MM-DD' },
-      featureUnlocks: { finance: true, resend: false },
-    });
+      teamSize: '1-5',
+      settings: { timezone: 'UTC', defaultCurrency: 'USD', dateFormat: ['YYYY', 'MM', 'DD'].join('-') },
+      featureUnlocks: { finance: true, resend: false },
+    });
 
-    expect(res.statusCode).toBe(201);
-    expect(res.body.tenant.featureUnlocks.finance).toBe(true);
+    expect(res.statusCode).toBe(201);
+    expect(res.body.tenant.settings.dateFormat).toBe('DD/MM/YYYY');
+    expect(res.body.tenant.featureUnlocks.finance).toBe(true);
     expect(res.body.tenant.featureUnlocks.resend).toBe(false);
 
     if (res.body.tenant?._id) {

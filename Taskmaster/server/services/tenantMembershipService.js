@@ -279,7 +279,7 @@ const createTenantForUser = async (userId, payload = {}) => {
   const tenantSettings = {
     timezone: settings.timezone || 'Asia/Kolkata',
     defaultCurrency: settings.currency || settings.defaultCurrency || 'INR',
-    dateFormat: settings.dateFormat || 'DD/MM/YYYY',
+    dateFormat: 'DD/MM/YYYY',
   };
 
   const tenantPayload = {

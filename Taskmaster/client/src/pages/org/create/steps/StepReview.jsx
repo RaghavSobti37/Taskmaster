@@ -7,7 +7,6 @@ import {
   CURRENCY_OPTIONS,
   INDUSTRY_OPTIONS,
   TEAM_SIZE_OPTIONS,
-  TENANT_DATE_FORMAT_OPTIONS,
   TIMEZONE_OPTIONS,
   labelForOption,
   orgInitials,
@@ -52,7 +51,6 @@ export default function StepReview({ form }) {
           <ReviewRow label="Team size">{labelForOption(TEAM_SIZE_OPTIONS, form.teamSize)}</ReviewRow>
           <ReviewRow label="Timezone">{labelForOption(TIMEZONE_OPTIONS, form.timezone)}</ReviewRow>
           <ReviewRow label="Currency">{labelForOption(CURRENCY_OPTIONS, form.currency)}</ReviewRow>
-          <ReviewRow label="Date format">{labelForOption(TENANT_DATE_FORMAT_OPTIONS, form.dateFormat)}</ReviewRow>
           <ReviewRow label="Features">
             {enabledFeatures.length === 0
               ? 'Core only'

@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDateKeyForDisplay, formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -332,7 +332,7 @@ export default function FollowupsPage() {
               {format(row.followupFullDate, 'h:mm a')}
             </span>
             <span className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase">
-              {isToday(row.followupFullDate) ? 'Today' : formatDisplayDateShort(row.followupFullDate)}
+              {formatDisplayDate(row.followupFullDate)}
             </span>
           </div>
         </div>
@@ -523,7 +523,7 @@ export default function FollowupsPage() {
                 {selectedLead?.nextFollowupDate && (
                   <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">
                     <span className="font-bold flex items-center gap-1 text-blue-400"><Clock size={12} /> Follow-up</span>
-                    <span className="font-mono">{selectedLead.nextFollowupDate} {selectedLead.nextFollowupTime}</span>
+                    <span className="font-mono">{formatDateKeyForDisplay(selectedLead.nextFollowupDate)} {selectedLead.nextFollowupTime}</span>
                   </div>
                 )}
               </div>

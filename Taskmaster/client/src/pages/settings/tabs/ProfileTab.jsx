@@ -26,7 +26,6 @@ import { ModalShell } from '../../../components/ui/modals';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getDepartmentName } from '../../../utils/departmentPermissions';
 import { formatDobInput, parseDobInput, getActiveDobPlaceholder } from '../../../utils/dateDisplay';
-import { useDateFormat } from '../../../contexts/DateFormatContext';
 import { validatePasswordStrength } from '../../../utils/passwordValidation';
 import PasswordRequirements from '../../../components/auth/PasswordRequirements';
 import {
@@ -61,9 +60,6 @@ const CATEGORY_ICONS = {
 export default function ProfileTab() {
   const navigate = useNavigate();
   const { user, applySessionUser } = useAuth();
-  const { preference: dateFormatPreference, options: dateFormatOptions, setPreference: setDateFormatPreference, region } = useDateFormat();
-  const [dateFormatSaving, setDateFormatSaving] = useState(false);
-  const [dateFormatError, setDateFormatError] = useState('');
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [phone, setPhone] = useState(user?.phone || '+91 ');
@@ -334,39 +330,6 @@ export default function ProfileTab() {
             className="!text-xs"
           />
           {dobError && <p className="text-xs text-rose-500 font-medium -mt-4">{dobError}</p>}
-          <div className="space-y-2 md:col-span-2">
-            <label htmlFor="date-format-preference" className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
-              Date format
-            </label>
-            <select
-              id="date-format-preference"
-              value={dateFormatPreference}
-              disabled={dateFormatSaving}
-              onChange={async (e) => {
-                const next = e.target.value;
-                setDateFormatError('');
-                setDateFormatSaving(true);
-                try {
-                  await setDateFormatPreference(next);
-                } catch (err) {
-                  setDateFormatError(err.response?.data?.error || 'Could not save date format');
-                } finally {
-                  setDateFormatSaving(false);
-                }
-              }}
-              className="w-full text-xs px-3 py-2 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)]"
-            >
-              {dateFormatOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label} · {opt.example}
-                </option>
-              ))}
-            </select>
-            <p className="text-[9px] text-[var(--color-text-muted)] ml-1">
-              Default follows your region ({region}). Example updates when you pick a format.
-            </p>
-            {dateFormatError && <p className="text-xs text-rose-500 font-medium">{dateFormatError}</p>}
-          </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
               Department / Role

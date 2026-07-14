@@ -77,11 +77,7 @@ const getMonthToDateRange = (dateKey = getDateKey()) => ({
 
 const formatMonthLabel = (dateKey) => {
   const anchor = new Date(`${dateKey}T12:00:00+05:30`);
-  return anchor.toLocaleDateString('en-IN', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Asia/Kolkata',
-  });
+  return formatDisplayDate(anchor);
 };
 
 const formatLakhs = (rupees) => {

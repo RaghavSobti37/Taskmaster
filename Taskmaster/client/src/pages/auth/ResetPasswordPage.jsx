@@ -1,10 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import { isClerkConfigured } from '../../config/clerk';
 
-/** Legacy reset links redirect to Clerk sign-in reset flow. */
+/** Clerk owns password reset after email code — hang off SignIn path routing. */
 export default function ResetPasswordPage() {
   if (!isClerkConfigured()) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to="/login#/reset-password" replace />;
+  return <Navigate to="/login?forgot=1" replace />;
 }

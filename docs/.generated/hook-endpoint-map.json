@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-12",
+  "generatedAt": "2026-07-14",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
@@ -1398,13 +1398,6 @@
           "file": "Taskmaster/client/src/contexts/AuthContext.jsx",
           "endpoints": [
             "/api/auth/logout"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
-          "endpoints": [
-            "/api/users/profile"
           ],
           "network": true
         },
@@ -3556,32 +3549,6 @@
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDateFormat": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
-          "endpoints": [
-            "/api/users/profile"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
-          "endpoints": [
-            "/api/auth/change-required-password",
-            "/api/teams",
-            "/api/users/profile"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/auth/change-required-password",
-        "/api/teams",
-        "/api/users/profile"
       ],
       "network": true
     },

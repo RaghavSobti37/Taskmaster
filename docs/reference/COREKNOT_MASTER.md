@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-12
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-14
 
 ---
 
@@ -1562,7 +1562,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/console |
 | **Default export** | `function` |
-| **Lines** | 347 |
+| **Lines** | 345 |
 | **Hooks** | `useAdminConsoleSummary`, `useAuth`, `useCallback`, `useMemo`, `useNavigate`, `useState`, `useTenantUnlocks` |
 | **Data hooks** | `useAdminConsoleSummary` → /api/admin/console/summary · `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useTenantUnlocks` → /api/tenants/${tenantId}/unlocks |
 | **Key components** | `DataListRow`, `DataOverviewSection`, `PageHeader` |
@@ -1577,7 +1577,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /developers |
 | **Default export** | `DevelopersPage` |
-| **Lines** | 398 |
+| **Lines** | 399 |
 | **Hooks** | `useEffect`, `useState`, `useWebhookDeliveries` |
 | **Data hooks** | `useWebhookDeliveries` → /api/enterprise/api-keys, /api/enterprise/usage, /api/enterprise/webhooks |
 | **Key components** | `WebsiteFormsPanel` |
@@ -1694,9 +1694,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 540 |
-| **Hooks** | `useAuth`, `useCallback`, `useDateFormat`, `useEffect`, `useMemo`, `useNavigate`, `useState`, `useUnsavedChanges` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDateFormat` → /api/auth/change-required-password, /api/teams, /api/users/profile · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
+| **Lines** | 503 |
+| **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useNavigate`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 
 **API endpoints:**
 
@@ -1860,7 +1860,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 87 |
+| **Lines** | 77 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/org/create/steps/StepReview.jsx`
@@ -1869,7 +1869,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 81 |
+| **Lines** | 79 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/org/CreateOrganizationPage.jsx`
@@ -1878,7 +1878,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /org/create |
 | **Default export** | `function` |
-| **Lines** | 158 |
+| **Lines** | 157 |
 | **Hooks** | `useNavigate`, `useState` |
 
 **API endpoints:**

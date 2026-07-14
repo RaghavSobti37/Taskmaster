@@ -2041,6 +2041,7 @@ Express mounts route modules from `server/routes/` (see `server/server.js` for p
 - `server/routes/integrationsRoutes.js`
 - `server/routes/inviteRoutes.js`
 - `server/routes/logRoutes.js`
+- `server/routes/mailStatsProxyRoutes.js`
 - `server/routes/masterclassReviewAdminRoutes.js`
 - `server/routes/mediaContactRoutes.js`
 - `server/routes/newsletterRoutes.js`

@@ -75,6 +75,9 @@ services:
         value: https://YOUR-PRODUCTION-FRONTEND
       - key: CLIENT_URL
         value: https://YOUR-PRODUCTION-FRONTEND
+      # Dashboard campaign-metrics widget proxies /api/mail/stats here (API host, not Vercel UI).
+      - key: AUTO_MAILER_API_URL
+        sync: false
       - key: UPLOADTHING_TOKEN
         sync: false
       - key: UPLOADTHING_SECRET

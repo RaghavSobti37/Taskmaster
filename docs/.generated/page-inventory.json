@@ -1204,7 +1204,7 @@
     "routes": [
       "/forgot-password"
     ],
-    "lines": 11,
+    "lines": 15,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -1234,7 +1234,7 @@
     "routes": [
       "/login/*"
     ],
-    "lines": 165,
+    "lines": 190,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1505,7 +1505,7 @@
   {
     "file": "Taskmaster/client/src/pages/emails/AutoMailerRedirectPage.jsx",
     "routes": [],
-    "lines": 56,
+    "lines": 60,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

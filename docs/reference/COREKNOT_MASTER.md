@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-12
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.7 · **Compiled:** 2026-07-14
 
 ---
 
@@ -201,7 +201,7 @@ _Total page files: 140. Each entry lists route, exports, hooks, components, and 
 | --- | --- |
 | **Route(s)** | /forgot-password |
 | **Default export** | `function` |
-| **Lines** | 11 |
+| **Lines** | 15 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/auth/GoogleSuccessPage.jsx`
@@ -221,7 +221,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /login/* |
 | **Default export** | `function` |
-| **Lines** | 165 |
+| **Lines** | 190 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useRef`, `useState` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignInBlock`, `InstallGuideModal` |
@@ -792,7 +792,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 56 |
+| **Lines** | 60 |
 | **Hooks** | `useMemo` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._

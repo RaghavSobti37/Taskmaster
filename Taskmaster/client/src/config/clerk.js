@@ -2,12 +2,36 @@
  * Clerk app + dashboard URLs (client). API secret stays on Render only.
  */
 
-import { isAuthSite, isLandingSite } from './siteMode';
 import { isVercelPreviewHost } from '../utils/displayMode';
 import { isLocalHostname, isLocalViteDev } from '../utils/runtimeEnv';
 
 const trim = (value) => String(value || '').trim();
 const trimSlash = (url) => trim(url).replace(/\/$/, '');
+
+/** Hosts that must not own the Clerk FAPI proxy (OAuth callback is on primary). */
+const SATELLITE_PROXY_HOSTS = new Set([
+  'auth.tsccoreknot.com',
+  'landing.tsccoreknot.com',
+]);
+
+const primaryClerkProxyUrl = () => {
+  const appOrigin = trim(import.meta.env.VITE_APP_URL) || 'https://tsccoreknot.com';
+  return `${trimSlash(appOrigin)}/__clerk`;
+};
+
+/** Prefer registered primary when env accidentally points at auth/landing /__clerk. */
+export function resolveClerkProxyUrl(explicitProxyUrl, primaryProxyUrl) {
+  const explicit = trim(explicitProxyUrl);
+  const primary = trim(primaryProxyUrl) || primaryClerkProxyUrl();
+  if (!explicit) return primary;
+  try {
+    const host = new URL(explicit).hostname.toLowerCase();
+    if (SATELLITE_PROXY_HOSTS.has(host)) return primary;
+  } catch {
+    // invalid URL → use as-is below
+  }
+  return explicit;
+}
 
 export function getClerkPublishableKey() {
   return trim(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
@@ -88,9 +112,11 @@ export function getPinnedClerkOrganizationId() {
 }
 
 /**
- * Clerk Frontend API proxy on primary app host (Render /__clerk).
- * Auth/landing satellites must load clerk-js same-origin — CSP script-src 'self'
- * blocks cross-origin script from tsccoreknot.com on auth.tsccoreknot.com.
+ * Clerk Frontend API proxy. Clerk Dashboard registers ONE proxy URL
+ * (`https://tsccoreknot.com/__clerk`). Google OAuth redirect_uri uses that
+ * host — satellite auth/landing must use the same proxyUrl so __client cookies
+ * match the oauth_callback host (else authorization_invalid).
+ * CSP allows tsccoreknot.com scripts on auth/landing (vercelSecurityHeaders).
  */
 export function getClerkProxyUrl() {
   if (!isClerkLiveKey()) return '';
@@ -102,23 +128,10 @@ export function getClerkProxyUrl() {
     return `${trimSlash(window.location.origin)}/__clerk`;
   }
 
-  if (isAuthSite()) {
-    const authOrigin = trim(import.meta.env.VITE_AUTH_URL)
-      || (typeof window !== 'undefined' ? window.location?.origin : '');
-    if (authOrigin) return `${trimSlash(authOrigin)}/__clerk`;
-  }
-
-  if (isLandingSite()) {
-    const landingOrigin = trim(import.meta.env.VITE_LANDING_URL)
-      || (typeof window !== 'undefined' ? window.location?.origin : '');
-    if (landingOrigin) return `${trimSlash(landingOrigin)}/__clerk`;
-  }
-
-  const explicit = trim(import.meta.env.VITE_CLERK_PROXY_URL);
-  if (explicit) return explicit;
-
-  const appOrigin = trim(import.meta.env.VITE_APP_URL) || 'https://tsccoreknot.com';
-  return `${trimSlash(appOrigin)}/__clerk`;
+  return resolveClerkProxyUrl(
+    import.meta.env.VITE_CLERK_PROXY_URL,
+    primaryClerkProxyUrl(),
+  );
 }
 
 /** Dashboard links work with default clerk.com host even before publishable key is set. */

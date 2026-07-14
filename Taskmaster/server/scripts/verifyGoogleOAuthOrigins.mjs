@@ -24,6 +24,7 @@ const REQUIRED_JS_ORIGINS = [
 ];
 
 const REQUIRED_REDIRECT_URIS = [
+  'https://tsccoreknot.com/__clerk/v1/oauth_callback',
   'https://clerk.tsccoreknot.com/v1/oauth_callback',
   'https://CoreKnot-jfw0.onrender.com/api/auth/google/callback',
   'https://CoreKnot-jfw0.onrender.com/api/google/accounts/callback',

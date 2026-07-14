@@ -68,14 +68,49 @@ describe('clerk config', () => {
     expect(getPinnedClerkOrganizationId()).toBe('');
   });
 
-  it('uses auth origin proxy on auth site (CSP same-origin)', () => {
+  it('uses registered primary proxy on auth site (OAuth cookies must match redirect_uri)', () => {
     const wasDev = import.meta.env.DEV;
     import.meta.env.DEV = false;
     env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
     env.VITE_SITE_MODE = 'auth';
     env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
     env.VITE_CLERK_PROXY_URL = 'https://tsccoreknot.com/__clerk';
-    expect(getClerkProxyUrl()).toBe('https://auth.tsccoreknot.com/__clerk');
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
+    env.VITE_SITE_MODE = 'landing';
+    env.VITE_LANDING_URL = 'https://landing.tsccoreknot.com';
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
+    env.VITE_SITE_MODE = 'app';
+    import.meta.env.DEV = wasDev;
+  });
+
+  it('rewrites stale auth/landing VITE_CLERK_PROXY_URL to primary (fixes authorization_invalid)', async () => {
+    const { resolveClerkProxyUrl } = await import('./clerk.js');
+    expect(resolveClerkProxyUrl(
+      'https://auth.tsccoreknot.com/__clerk',
+      'https://tsccoreknot.com/__clerk',
+    )).toBe('https://tsccoreknot.com/__clerk');
+    expect(resolveClerkProxyUrl(
+      'https://landing.tsccoreknot.com/__clerk',
+      'https://tsccoreknot.com/__clerk',
+    )).toBe('https://tsccoreknot.com/__clerk');
+    expect(resolveClerkProxyUrl(
+      'https://tsccoreknot.com/__clerk',
+      'https://tsccoreknot.com/__clerk',
+    )).toBe('https://tsccoreknot.com/__clerk');
+  });
+
+  it('falls back to app origin /__clerk when auth site has no explicit proxy env', () => {
+    const wasDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+    env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_live_test';
+    env.VITE_SITE_MODE = 'auth';
+    env.VITE_AUTH_URL = 'https://auth.tsccoreknot.com';
+    env.VITE_APP_URL = 'https://tsccoreknot.com';
+    env.VITE_CLERK_PROXY_URL = '';
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
+    // Stale baked env on auth builds
+    env.VITE_CLERK_PROXY_URL = 'https://auth.tsccoreknot.com/__clerk';
+    expect(getClerkProxyUrl()).toBe('https://tsccoreknot.com/__clerk');
     env.VITE_SITE_MODE = 'app';
     import.meta.env.DEV = wasDev;
   });

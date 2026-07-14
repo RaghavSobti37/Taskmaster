@@ -23,18 +23,23 @@ const ROOT = path.join(__dirname, '..');
 // the unrelated coreknot.in domain). Pushing Clerk keys to "tsc-coreknot" was
 // a prior misconfiguration that caused the auth bridge to see a stale/wrong
 // publishable key on the main app.
+/** Must match Clerk Dashboard registered FAPI proxy (OAuth redirect_uri host). */
+const REGISTERED_CLERK_PROXY = 'https://tsccoreknot.com/__clerk';
+
 const VERCEL_PROJECTS = [
   {
     name: 'coreknot-auth',
     cwd: path.join(ROOT, 'sites', 'auth'),
     needsClerkSecret: true,
-    clerkProxyUrl: 'https://auth.tsccoreknot.com/__clerk',
+    // Auth host started OAuth with auth…/__clerk cookies → Google returned to
+    // tsccoreknot.com/__clerk/v1/oauth_callback → authorization_invalid.
+    clerkProxyUrl: REGISTERED_CLERK_PROXY,
   },
   {
     name: 'taskmaster',
     cwd: path.join(ROOT, 'client'),
     needsClerkSecret: true,
-    clerkProxyUrl: 'https://tsccoreknot.com/__clerk',
+    clerkProxyUrl: REGISTERED_CLERK_PROXY,
   },
 ];
 

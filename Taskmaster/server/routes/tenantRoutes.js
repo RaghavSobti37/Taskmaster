@@ -232,7 +232,7 @@ router.patch(
         tenant.settings.defaultCurrency = String(settings.defaultCurrency).trim() || 'INR';
       }
       if (settings.dateFormat !== undefined) {
-        tenant.settings.dateFormat = String(settings.dateFormat).trim() || 'DD/MM/YYYY';
+        tenant.settings.dateFormat = 'DD/MM/YYYY';
       }
     }
 

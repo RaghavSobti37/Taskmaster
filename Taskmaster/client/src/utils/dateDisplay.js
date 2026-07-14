@@ -1,15 +1,15 @@
 import { format, parse, parseISO, isValid } from 'date-fns';
 import { DEFAULT_TZ } from './dateValidation';
 import { getActiveDateFormatPatterns } from './dateFormatRegistry';
-import { getDobPlaceholder } from '@shared/dateFormatPreference';
+import { getDobPlaceholder } from '@shared/dateFormatStandard';
 
-/** Legacy constants — default DD/MM/YYYY; runtime uses active user preference. */
+/** Platform date display is DD/MM/YYYY. */
 export const DATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
-export const DATE_DISPLAY_SHORT_FORMAT = 'dd/MM';
+export const DATE_DISPLAY_SHORT_FORMAT = 'dd/MM/yyyy';
 export const DATETIME_DISPLAY_FORMAT = 'dd/MM/yyyy HH:mm';
 export const DATETIME_DISPLAY_SECONDS_FORMAT = 'dd/MM/yyyy HH:mm:ss';
-export const WEEKDAY_DATE_DISPLAY_FORMAT = 'EEE, dd/MM/yyyy';
-export const WEEKDAY_DATE_LONG_DISPLAY_FORMAT = 'EEEE, dd/MM/yyyy';
+export const WEEKDAY_DATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
+export const WEEKDAY_DATE_LONG_DISPLAY_FORMAT = 'dd/MM/yyyy';
 
 const EMPTY = '—';
 

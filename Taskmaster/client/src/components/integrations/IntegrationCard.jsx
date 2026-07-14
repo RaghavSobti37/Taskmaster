@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '../ui';
 import IntegrationProviderLogo from './IntegrationProviderLogo';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 
 const STATUS_VARIANT = {
   connected: 'success',
@@ -54,7 +55,7 @@ export default function IntegrationCard({
           ) : null}
           {connection?.lastSyncAt ? (
             <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-              Last sync: {new Date(connection.lastSyncAt).toLocaleString()}
+              Last sync: {formatDisplayDateTime(connection.lastSyncAt)}
             </p>
           ) : null}
         </div>

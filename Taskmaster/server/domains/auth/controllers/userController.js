@@ -10,7 +10,6 @@ const { buildUserMonthlyReport } = require('../../../services/monthlyReportServi
 const { validatePasswordStrength, generateSecurePassword } = require('../../../utils/passwordValidation');
 const { normalizePasswordInput } = require('../../../utils/passwordAuth');
 const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../../../utils/profileCompleteness');
-const { isValidDateFormatPreference } = require('../../../../shared/dateFormatPreference.cjs');
 const { isProtectedRootAdmin } = require('../../../utils/platformAccess');
 const { invalidateAuthUserCache } = require('../../../utils/authUserLookup');
 const { isClerkConfigured } = require('../../../utils/clerkAuth');
@@ -144,7 +143,7 @@ exports.updateUserTeams = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
-  const { name, avatar, phone, departmentId, currentPassword, newPassword, teams, dateOfBirth, dateFormatPreference } = req.body;
+  const { name, avatar, phone, departmentId, currentPassword, newPassword, teams, dateOfBirth } = req.body;
   try {
     const user = await User.findById(req.user._id).select('+password').setOptions({ bypassTenant: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -156,13 +155,6 @@ exports.updateProfile = async (req, res) => {
     if (dateOfBirth !== undefined) {
       user.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
     }
-    if (dateFormatPreference !== undefined) {
-      if (!isValidDateFormatPreference(dateFormatPreference)) {
-        return res.status(400).json({ error: 'Invalid date format preference' });
-      }
-      user.dateFormatPreference = dateFormatPreference;
-    }
-
     if (departmentId !== undefined) {
       if (!isAdminUser(req.user)) {
         return res.status(403).json({ error: 'Only administrators can change department assignment.' });

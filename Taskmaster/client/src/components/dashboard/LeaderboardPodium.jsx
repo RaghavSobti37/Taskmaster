@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { DashboardWidgetShell, DataLoading } from '../ui';
+import { DashboardWidgetShell, DataLoading, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { useLeaderboard, useLeaderboardBreakdown, useLeaderboardHistory } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
@@ -13,7 +13,7 @@ const LeaderboardPodium = () => {
   const { user } = useAuth();
   const [selectedMonthStartKey, setSelectedMonthStartKey] = useState(null);
   const { data: historyData } = useLeaderboardHistory(12, true);
-  const { data, isLoading } = useLeaderboard(selectedMonthStartKey, true);
+  const { data, isLoading, isError, error, refetch } = useLeaderboard(selectedMonthStartKey, true);
   const entries = data?.entries ?? [];
   const meta = data?.meta;
   const topFive = useMemo(() => entries.slice(0, TOP_N), [entries]);
@@ -59,11 +59,18 @@ const LeaderboardPodium = () => {
         }
         icon={Trophy}
       >
+        {isError && (
+          <QueryErrorBanner
+            className="mx-3 mt-2"
+            message={getQueryErrorMessage(error, 'Failed to load leaderboard')}
+            onRetry={() => refetch()}
+          />
+        )}
         {isLoading && <DataLoading className="!py-3" />}
-        {!isLoading && entries.length === 0 && (
+        {!isLoading && !isError && entries.length === 0 && (
           <p className="text-[10px] tm-data-meta italic px-4 py-3">No team members yet</p>
         )}
-        {!isLoading && topFive.length > 0 && (
+        {!isLoading && !isError && topFive.length > 0 && (
           <div className="flex flex-col">
             {topFive.map((member) => (
               <LeaderboardRow

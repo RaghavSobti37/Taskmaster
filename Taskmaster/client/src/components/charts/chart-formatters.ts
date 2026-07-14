@@ -1,7 +1,8 @@
-/** Chart axis/tooltip dates — DD/MM or DD/MM/YYYY only (never en-US / MM/DD). */
+/** Chart axis/tooltip dates use DD/MM/YYYY. */
 export const shortDateFmt = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "2-digit",
+  year: "numeric",
 });
 
 export const weekdayDateFmt = new Intl.DateTimeFormat("en-GB", {
@@ -17,5 +18,5 @@ export const hmsTimeFmt = new Intl.DateTimeFormat("en-GB", {
   hour12: false,
 });
 
-// `Intl.NumberFormat.prototype.format` is a bound getter — safe to extract.
+// `Intl.NumberFormat.prototype.format` is a bound getter - safe to extract.
 export const intFmt = new Intl.NumberFormat("en-IN").format;

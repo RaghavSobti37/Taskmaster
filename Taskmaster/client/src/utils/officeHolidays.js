@@ -1,4 +1,4 @@
-/** TSC office holidays — extend per year as needed. Dates are YYYY-MM-DD (IST calendar day). */
+/** TSC office holidays — extend per year as needed. Dates are stored as ISO calendar-day keys. */
 const OFFICE_HOLIDAYS_BY_YEAR = {
   2026: [
     { date: '2026-01-01', name: "New Year's Day" },

@@ -1,6 +1,5 @@
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useMemo } from 'react';
-import { format } from 'date-fns';
 import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
 
 function parseDateKey(dateKey) {
@@ -25,7 +24,7 @@ export default function ScheduleDayViewControl({
       const dateKey = addDaysToDateKey(rangeStartKey, i);
       const date = parseDateKey(dateKey);
       const dateLabel = date ? formatDisplayDateShort(date) : '';
-      const dayName = date ? format(date, 'EEE') : '';
+      const dayName = dateLabel;
       return {
         value,
         dateKey,

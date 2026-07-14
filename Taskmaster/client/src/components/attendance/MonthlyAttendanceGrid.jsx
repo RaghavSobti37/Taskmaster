@@ -78,7 +78,7 @@ const MonthlyAttendanceGrid = ({
           <Button variant="ghost" size="xs" onClick={() => onMonthChange(subMonths(month, 1))}>
             <ChevronLeft size={14} />
           </Button>
-          <span className="text-sm font-bold min-w-[120px] text-center">{format(month, 'MMMM yyyy')}</span>
+          <span className="text-sm font-bold min-w-[120px] text-center">{formatDisplayDate(month)}</span>
           <Button variant="ghost" size="xs" onClick={() => onMonthChange(addMonths(month, 1))}>
             <ChevronRight size={14} />
           </Button>
@@ -99,7 +99,7 @@ const MonthlyAttendanceGrid = ({
                 colSpan={days.length}
                 className="border-b border-[var(--color-bg-border)] px-2 py-2 text-center text-sm font-black uppercase tracking-wide text-[var(--color-text-primary)]"
               >
-                {format(month, 'MMMM')}
+                {formatDisplayDate(month)}
               </th>
             </tr>
             <tr>

@@ -3,7 +3,6 @@ import {
   CURRENCY_OPTIONS,
   INDUSTRY_OPTIONS,
   TEAM_SIZE_OPTIONS,
-  TENANT_DATE_FORMAT_OPTIONS,
   TIMEZONE_OPTIONS,
 } from '../../../../constants/orgCreateOptions';
 
@@ -69,15 +68,6 @@ export default function StepProfile({ form, setForm, fieldError }) {
           onChange={set('currency')}
           options={CURRENCY_OPTIONS}
         />
-        <div className="sm:col-span-2">
-          <FieldSelect
-            id="org-date-format"
-            label="Date format"
-            value={form.dateFormat}
-            onChange={set('dateFormat')}
-            options={TENANT_DATE_FORMAT_OPTIONS}
-          />
-        </div>
       </div>
 
       {fieldError && <p className="text-xs text-rose-500">{fieldError}</p>}

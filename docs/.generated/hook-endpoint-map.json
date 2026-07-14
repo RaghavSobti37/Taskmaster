@@ -1402,13 +1402,6 @@
           "network": true
         },
         {
-          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
-          "endpoints": [
-            "/api/users/profile"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/features/workspace/hooks/useWorkspaceTasks.js",
           "endpoints": [
             "/api/tasks",
@@ -3556,32 +3549,6 @@
         "/api/data-hub/rebuild-person-hub",
         "/api/data-hub/reconcile",
         "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDateFormat": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/contexts/DateFormatContext.jsx",
-          "endpoints": [
-            "/api/users/profile"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
-          "endpoints": [
-            "/api/auth/change-required-password",
-            "/api/teams",
-            "/api/users/profile"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/auth/change-required-password",
-        "/api/teams",
-        "/api/users/profile"
       ],
       "network": true
     },

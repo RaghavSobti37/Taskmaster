@@ -1659,7 +1659,7 @@
     "routes": [
       "/admin/console"
     ],
-    "lines": 347,
+    "lines": 345,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2125,7 +2125,7 @@
     "routes": [
       "/org/create"
     ],
-    "lines": 158,
+    "lines": 157,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2254,7 +2254,7 @@
   {
     "file": "Taskmaster/client/src/pages/org/create/steps/StepProfile.jsx",
     "routes": [],
-    "lines": 87,
+    "lines": 77,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -2264,7 +2264,7 @@
   {
     "file": "Taskmaster/client/src/pages/org/create/steps/StepReview.jsx",
     "routes": [],
-    "lines": 81,
+    "lines": 79,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [],
@@ -2536,7 +2536,7 @@
     "routes": [
       "/developers"
     ],
-    "lines": 398,
+    "lines": 399,
     "defaultExport": "DevelopersPage",
     "namedExports": [],
     "hooks": [
@@ -2733,13 +2733,12 @@
   {
     "file": "Taskmaster/client/src/pages/settings/tabs/ProfileTab.jsx",
     "routes": [],
-    "lines": 540,
+    "lines": 503,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useAuth",
       "useCallback",
-      "useDateFormat",
       "useEffect",
       "useMemo",
       "useNavigate",

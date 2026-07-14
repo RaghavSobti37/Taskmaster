@@ -79,7 +79,7 @@ const SelfMonthlyAttendanceCalendar = ({
           <Button variant="ghost" size="xs" onClick={() => onMonthChange(subMonths(month, 1))}>
             <ChevronLeft size={14} />
           </Button>
-          <span className="text-sm font-bold min-w-[120px] text-center">{format(month, 'MMMM yyyy')}</span>
+          <span className="text-sm font-bold min-w-[120px] text-center">{formatDisplayDate(month)}</span>
           <Button variant="ghost" size="xs" onClick={() => onMonthChange(addMonths(month, 1))}>
             <ChevronRight size={14} />
           </Button>

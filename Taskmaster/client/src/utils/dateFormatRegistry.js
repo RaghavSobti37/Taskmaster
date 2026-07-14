@@ -1,4 +1,4 @@
-import { getDateFormatPatterns } from '@shared/dateFormatPreference';
+import { getDateFormatPatterns } from '@shared/dateFormatStandard';
 
 let activePreference = 'dmY';
 let activeRegion = 'en-IN';

@@ -1,6 +1,6 @@
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Parse dashboard `YYYY-MM-DD` keys as noon IST so x-scale and tooltips stay aligned. */
+/** Parse dashboard ISO date keys as noon IST so x-scale and tooltips stay aligned. */
 export function parseDashboardSeriesDate(row) {
   const iso = String(row?.date || row?._id || '').slice(0, 10);
   return iso && ISO_DATE_RE.test(iso)

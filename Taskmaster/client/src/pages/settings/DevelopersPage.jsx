@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Code2, Key, Webhook, FileJson, ExternalLink, Copy, Trash2, Activity, Globe,
 } from 'lucide-react';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
 import {
   ListPageLayout,
   PageSkeleton,
@@ -354,7 +355,7 @@ const DevelopersPage = () => {
                       d.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                     }`}
                   >
-                    <span className="text-[var(--color-text-muted)]">{new Date(d.createdAt).toLocaleString()}</span>
+                    <span className="text-[var(--color-text-muted)]">{formatDisplayDateTime(d.createdAt)}</span>
                     <span className="font-mono">{d.event}</span>
                     <span>HTTP {d.statusCode}</span>
                     {d.error ? <span className="text-[var(--color-text-muted)]">· {d.error}</span> : null}

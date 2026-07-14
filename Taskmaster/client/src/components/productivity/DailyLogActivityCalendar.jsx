@@ -1,4 +1,4 @@
-import { formatWeekdayDate } from '../../utils/dateDisplay';
+import { formatDisplayDate, formatWeekdayDate } from '../../utils/dateDisplay';
 import React, { useMemo, useEffect, useState } from 'react';
 import {
   format,
@@ -67,7 +67,7 @@ export default function DailyLogActivityCalendar({
             <ChevronLeft size={14} />
           </Button>
           <span className="text-[10px] font-black uppercase tracking-widest tabular-nums min-w-[7rem] text-center">
-            {format(viewMonth, 'MMM yyyy')}
+            {formatDisplayDate(viewMonth)}
           </span>
           <Button
             variant="ghost"

@@ -25,7 +25,7 @@ describe('financeEditForm', () => {
     },
   };
 
-  it('builds edit form with payment date as YYYY-MM-DD', () => {
+  it('builds edit form with native input date key', () => {
     const form = buildFinanceEditForm(baseDoc, projects);
     expect(form.workspace).toBe('Studio');
     expect(form.metadata.date).toBe('2025-06-15');

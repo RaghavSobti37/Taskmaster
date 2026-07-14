@@ -11,6 +11,7 @@ const ArtistActivityLog = require('../../../models/ArtistActivityLog');
 const ArtistMetrics = require('../../../models/ArtistMetrics');
 const { enrichArtistById } = require('./artistEnrichmentService');
 const { resolveProjectNameFromArtist } = require('../../../utils/artistEnquiryProjectResolver');
+const { formatDisplayDate } = require('../../../../shared/dateDisplay');
 
 const EVENT_COLOR = {
   inquiry: 'inquiry',
@@ -234,7 +235,7 @@ async function listFinance(artistId, month) {
   const expenseRatio = revenue > 0 ? Math.round((expenses / revenue) * 100) : 0;
 
   return {
-    month: ref.toLocaleString('en-IN', { month: 'long', year: 'numeric' }),
+    month: formatDisplayDate(ref),
     revenue,
     expenses,
     net: profit,

@@ -28,7 +28,6 @@ function validateStep(step, form) {
     if (!form.teamSize) return 'Select a team size';
     if (!form.timezone) return 'Select a timezone';
     if (!form.currency) return 'Select a currency';
-    if (!form.dateFormat) return 'Select a date format';
   }
   if (step === 3) {
     return '';

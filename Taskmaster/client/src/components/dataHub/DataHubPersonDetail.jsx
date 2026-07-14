@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { formatDisplayDateTime } from '../../utils/dateDisplay';
+import { formatDateKeyForDisplay, formatDisplayDateTime } from '../../utils/dateDisplay';
 import {
   User, Mail, Phone, MapPin, Star, Clock, ShoppingBag, Database,
   MessageSquare, Activity, GitCommit, Copy, Check,
@@ -439,7 +439,7 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               {(person.bookedCalls?.leads || []).map((lead) => (
                 <Card key={lead._id} className="p-4">
                   <Badge variant="warning">CRM Booked Call</Badge>
-                  <p className="text-sm mt-2">Follow-up: {lead.nextFollowupDate} {lead.nextFollowupTime}</p>
+                  <p className="text-sm mt-2">Follow-up: {formatDateKeyForDisplay(lead.nextFollowupDate)} {lead.nextFollowupTime}</p>
                   <p className="text-xs text-[var(--color-text-muted)]">Status: {lead.callStatus} · {lead.leadStatus}</p>
                 </Card>
               ))}

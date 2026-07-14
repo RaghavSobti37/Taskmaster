@@ -186,7 +186,7 @@ const CalendarView = () => {
       <div className="p-4 border border-[var(--color-bg-border)]">
         <div className="flex items-center justify-between mb-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
-            {format(currentMonth, 'MMMM yyyy')}
+            {formatDisplayDate(currentMonth)}
           </span>
           <div className="flex gap-1">
             <Button variant="ghost" size="xs" title="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={14} /></Button>
@@ -401,7 +401,7 @@ const CalendarView = () => {
                        <Button variant="ghost" size="xs" title="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={16} /></Button>
                        <Button variant="ghost" size="xs" title="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></Button>
                     </div>
-                    <h3 className="text-xs font-black uppercase tracking-tight ml-2">{format(currentMonth, 'MMMM yyyy')}</h3>
+                    <h3 className="text-xs font-black uppercase tracking-tight ml-2">{formatDisplayDate(currentMonth)}</h3>
                  </div>
 
         <div className="flex items-center gap-2">
@@ -418,8 +418,8 @@ const CalendarView = () => {
               </div>
 
               <div className="grid grid-cols-7 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/30 shrink-0">
-                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                   <div key={d} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-r border-[var(--color-bg-border)] last:border-r-0">
+                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, index) => (
+                   <div key={`${d}-${index}`} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-r border-[var(--color-bg-border)] last:border-r-0">
                      {d}
                    </div>
                  ))}

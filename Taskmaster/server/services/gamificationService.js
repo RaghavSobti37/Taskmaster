@@ -804,6 +804,7 @@ class GamificationService {
 
     const tenantId = await this.resolveSnapshotTenantId();
 
+    // ponytail: no $setOnInsert.tenantId — filter already has it; duplicate path → Mongo conflict 500
     const snapshot = await MonthlyLeaderboardSnapshot.findOneAndUpdate(
       { tenantId, monthStartKey: monthly.monthStartKey },
       {
@@ -815,7 +816,6 @@ class GamificationService {
           resolvedSum: monthly.resolvedSum,
           computedAt: new Date(),
         },
-        $setOnInsert: { tenantId },
       },
       {
         upsert: true,

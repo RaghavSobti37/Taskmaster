@@ -6,7 +6,6 @@ import {
   INDUSTRY_OPTIONS,
   slugifyOrgSlug,
   TEAM_SIZE_OPTIONS,
-  TENANT_DATE_FORMAT_OPTIONS,
   TIMEZONE_OPTIONS,
 } from '../../constants/orgCreateOptions';
 import { tenantToOrgSettingsForm } from '../../hooks/queries/orgSettings';
@@ -53,7 +52,6 @@ function validateForm(form) {
   if (!form.teamSize) return 'Select a team size';
   if (!form.timezone) return 'Select a timezone';
   if (!form.currency) return 'Select a currency';
-  if (!form.dateFormat) return 'Select a date format';
   return '';
 }
 
@@ -213,17 +211,6 @@ export default function OrgSettingsForm({ tenant, onSave, saving = false, readOn
             placeholder={null}
             disabled={readOnly}
           />
-          <div className="sm:col-span-2">
-            <FieldSelect
-              id="org-settings-date-format"
-              label="Date format"
-              value={form.dateFormat}
-              onChange={set('dateFormat')}
-              options={TENANT_DATE_FORMAT_OPTIONS}
-              placeholder={null}
-              disabled={readOnly}
-            />
-          </div>
         </div>
       </section>
 

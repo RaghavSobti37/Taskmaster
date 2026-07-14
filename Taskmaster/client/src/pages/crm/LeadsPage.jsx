@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
+import { formatDateKeyForDisplay, formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -704,7 +704,7 @@ export default function LeadsPage() {
             )}
             {row.nextFollowupDate && (
               <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full font-bold uppercase flex items-center gap-1">
-                <Clock size={10} /> {row?.nextFollowupDate}{row?.nextFollowupTime ? ` ${row.nextFollowupTime}` : ''}
+                <Clock size={10} /> {formatDateKeyForDisplay(row?.nextFollowupDate)}{row?.nextFollowupTime ? ` ${row.nextFollowupTime}` : ''}
               </span>
             )}
           </div>
@@ -1044,7 +1044,7 @@ export default function LeadsPage() {
               {editLeadData.nextFollowupDate && (
                 <p className="text-[10px] font-mono text-blue-400 flex items-center gap-1.5 pt-1 border-t border-[var(--color-bg-border)]">
                   <Clock size={12} />
-                  Follow-up {editLeadData.nextFollowupDate} {editLeadData.nextFollowupTime}
+                  Follow-up {formatDateKeyForDisplay(editLeadData.nextFollowupDate)} {editLeadData.nextFollowupTime}
                 </p>
               )}
               </div>

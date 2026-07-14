@@ -11,6 +11,10 @@ import { chartTicksForTimeframe } from '../../utils/chartTimeSeries';
 
 const COMPACT_BAR_HEIGHT = 140;
 
+function campaignClicks(mailStats) {
+  return Number(mailStats?.totalClicked ?? mailStats?.totalClicks ?? 0) || 0;
+}
+
 const GenericDashboardCard = React.memo(function GenericDashboardCard({ componentId, tasks: tasksProp }) {
   const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
@@ -45,31 +49,47 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
 
   const meta = COMPONENT_REGISTRY[componentId];
 
-  const { chartData, type, loading } = useMemo(() => {
+  const { chartData, type, loading, metricTiles } = useMemo(() => {
     const days = timeframe === '1d' ? 1 : timeframe === '7d' ? 7 : 30;
     const now = new Date();
 
-    if (componentId === 'campaign-metrics' && mailStats) {
+    if (componentId === 'campaign-metrics') {
+      const sent = Number(mailStats?.totalSent || 0) || 0;
+      const opens = Number(mailStats?.totalOpened || 0) || 0;
+      const clicks = campaignClicks(mailStats);
       return {
         type: 'bar',
         loading: mailStatsLoading,
+        metricTiles: [
+          { label: 'Sent', value: sent, hint: 'emails' },
+          { label: 'Opens', value: opens, hint: 'unique opens' },
+          { label: 'Clicks', value: clicks, hint: 'link clicks' },
+        ],
         chartData: [
-          { label: 'Sent', value: mailStats.totalSent || 0 },
-          { label: 'Opens', value: mailStats.totalOpened || 0 },
-          { label: 'Clicks', value: mailStats.totalClicks || 0 },
+          { label: 'Sent', value: sent },
+          { label: 'Opens', value: opens },
+          { label: 'Clicks', value: clicks },
         ],
       };
     }
 
-    if (componentId === 'dept-stats' && deptStats?.metrics) {
-      const m = deptStats.metrics;
+    if (componentId === 'dept-stats') {
+      const m = deptStats?.metrics || {};
+      const completion = Number(m.completionRate || 0) || 0;
+      const converted = Number(m.convertedLeads || 0) || 0;
+      const focus = Number(m.focusAvgHours ?? m.focusHours ?? 0) || 0;
       return {
         type: 'bar',
         loading: deptStatsLoading,
+        metricTiles: [
+          { label: 'Tasks', value: `${completion}%`, hint: 'completion rate' },
+          { label: 'Converted', value: converted, hint: 'leads' },
+          { label: 'Focus', value: `${focus}h`, hint: 'avg / day' },
+        ],
         chartData: [
-          { label: 'Tasks', value: m.completionRate || 0 },
-          { label: 'Converted', value: m.convertedLeads || 0 },
-          { label: 'Focus', value: m.focusAvgHours ?? m.focusHours ?? 0 },
+          { label: 'Tasks %', value: completion },
+          { label: 'Converted', value: converted },
+          { label: 'Focus h', value: focus },
         ],
       };
     }
@@ -91,6 +111,7 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
     return {
       type: 'area',
       loading: false,
+      metricTiles: null,
       chartData: Array.from(dataMap.entries()).map(([date, value]) => ({
         date,
         value,
@@ -117,7 +138,7 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
       className="h-full overflow-hidden"
       bodyClassName={
         isBarWidget
-          ? 'px-3 py-2 flex flex-col flex-1 min-h-0 justify-center'
+          ? 'px-3 py-2 flex flex-col flex-1 min-h-0'
           : 'p-4 flex flex-col flex-1 min-h-0'
       }
       title={titleContent}
@@ -130,8 +151,22 @@ const GenericDashboardCard = React.memo(function GenericDashboardCard({ componen
           className="mb-3"
         />
       )}
+      {metricTiles && (
+        <div className="grid grid-cols-3 gap-2 mb-2 shrink-0">
+          {metricTiles.map((tile) => (
+            <div
+              key={tile.label}
+              className="rounded-md border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-2 py-1.5 min-w-0"
+            >
+              <p className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] truncate">{tile.label}</p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)] leading-tight">{tile.value}</p>
+              <p className="text-[9px] text-[var(--color-text-muted)] truncate">{tile.hint}</p>
+            </div>
+          ))}
+        </div>
+      )}
       <ChartSurface
-        className={isBarWidget ? 'w-full shrink-0' : 'flex-1 min-h-0'}
+        className={isBarWidget ? 'w-full flex-1 min-h-0' : 'flex-1 min-h-0'}
         height={isBarWidget ? COMPACT_BAR_HEIGHT : 200}
       >
         {type === 'bar' ? (

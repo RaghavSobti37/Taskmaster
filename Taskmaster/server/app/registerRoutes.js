@@ -206,6 +206,8 @@ function registerRoutes(app) {
   app.use('/api/notes', require('../routes/noteRoutes'));
   app.use('/api/search', require('../routes/searchRoutes'));
   app.use('/api/pinboard', require('../routes/pinBoardRoutes'));
+  // Campaign UI lives in Auto-Mailer; keep a thin stats proxy for dashboard widgets.
+  app.use('/api/mail', require('../routes/mailStatsProxyRoutes'));
   app.use('/api/campaigns', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/data-hub', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/track', require('../routes/deprecatedAutoMailerRoutes'));

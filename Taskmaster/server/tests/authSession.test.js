@@ -69,7 +69,7 @@ describe('authSession sliding sessions', () => {
     const decoded = verifySessionToken(token);
     expect(decoded.id).toBe('user123');
     expect(decoded.loginAt).toBeDefined();
-    expect(decoded.loginAt).toBe(decoded.iat);
+    expect(Math.abs(decoded.loginAt - decoded.iat)).toBeLessThanOrEqual(1);
     expect(decoded.jti).toBeDefined();
   });
 

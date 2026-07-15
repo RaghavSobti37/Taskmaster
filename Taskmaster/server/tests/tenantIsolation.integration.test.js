@@ -129,7 +129,7 @@ describe('tenant isolation (required CI gate)', () => {
     await Project.deleteOne({ _id: projectB._id });
   });
 
-  it('campaign create blocked when resend feature locked', async () => {
+  it('campaign API returns Auto-Mailer migration response when resend feature locked', async () => {
     const lockedTenant = await Tenant.create({
       name: `ISO locked ${stamp}`,
       slug: `iso-locked-${stamp}`,
@@ -139,7 +139,8 @@ describe('tenant isolation (required CI gate)', () => {
     });
     const { agent } = await seedTenantUser({ stamp, tenantId: lockedTenant._id, emailSuffix: 'locked' });
     const res = await agent.get('/api/campaigns');
-    expect([403, 402]).toContain(res.statusCode);
+    expect(res.statusCode).toBe(410);
+    expect(res.body.service).toBe('auto-mailer');
     await Tenant.deleteOne({ _id: lockedTenant._id });
   });
 

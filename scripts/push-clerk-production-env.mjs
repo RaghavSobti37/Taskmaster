@@ -227,7 +227,7 @@ for (const { cwd, needsClerkSecret, clerkProxyUrl, name } of VERCEL_PROJECTS) {
 await renderUpsert(keys.sk, keys.orgId);
 
 console.log('Applying Clerk Dashboard proxy + origins…');
-const cfg = spawnSync('node', ['server/scripts/configureClerkProduction.mjs'], {
+const cfg = spawnSync('node', ['Taskmaster/server/scripts/configureClerkProduction.mjs'], {
   cwd: ROOT,
   stdio: 'inherit',
   shell: true,

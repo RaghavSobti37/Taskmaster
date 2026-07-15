@@ -14,10 +14,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, '../..');
+const ROOT = path.join(__dirname, '../../..');
 
 dotenv.config({ path: path.join(ROOT, '.cursor/clerk-production.local.env') });
-dotenv.config({ path: path.join(ROOT, 'server/.env') });
+dotenv.config({ path: path.join(ROOT, 'Taskmaster/server/.env') });
 
 const dryRun = process.argv.includes('--dry-run');
 const sk = process.env.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY_LIVE || '';

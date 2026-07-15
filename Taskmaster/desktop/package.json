@@ -1,0 +1,73 @@
+{
+  "name": "coreknot-desktop",
+  "version": "1.0.8-beta.1",
+  "private": true,
+  "description": "CoreKnot desktop beta shell with GitHub beta auto-updates",
+  "main": "src/main.cjs",
+  "author": "The Shakti Collective",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "electron .",
+    "smoke": "node --test test/*.test.cjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish=never",
+    "publish": "electron-builder --publish=always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.theshakticollective.coreknot",
+    "productName": "CoreKnot Beta",
+    "artifactName": "CoreKnot-Beta-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/main.cjs"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "RaghavSobti37",
+        "repo": "Taskmaster",
+        "releaseType": "prerelease",
+        "channel": "beta"
+      }
+    ],
+    "win": {
+      "icon": "../client/public/icons/icon-512.png",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    }
+  }
+}

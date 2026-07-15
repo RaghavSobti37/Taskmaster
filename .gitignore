@@ -24,6 +24,7 @@ Taskmaster/server/data/*.csv
 Taskmaster/server/.env
 Taskmaster/server/.env.render
 Taskmaster/client/dist
+Taskmaster/desktop/release/
 Taskmaster/client/lighthouse-reports/
 Taskmaster/client/coverage/
 Taskmaster/server/coverage/

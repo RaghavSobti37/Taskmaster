@@ -1,5 +1,11 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const {
+  APP_ORIGIN,
+  isCoreKnotAppReturn,
+  shouldOpenAuthPopup,
+  toAuthUrl,
+} = require('./authNavigation.cjs');
 
 const APP_URL = process.env.COREKNOT_DESKTOP_URL || 'https://tsccoreknot.com';
 const isDev = !app.isPackaged;
@@ -9,6 +15,7 @@ autoUpdater.allowPrerelease = true;
 autoUpdater.autoDownload = false;
 
 let mainWindow;
+let authWindow;
 let updateInfo = null;
 let updateDownloaded = false;
 
@@ -39,9 +46,93 @@ function createWindow() {
 
   mainWindow.loadURL(APP_URL);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (shouldOpenAuthPopup(url)) {
+      openAuthPopup(url);
+      return { action: 'deny' };
+    }
     shell.openExternal(url);
     return { action: 'deny' };
   });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!shouldOpenAuthPopup(url)) return;
+    event.preventDefault();
+    openAuthPopup(url);
+  });
+  mainWindow.webContents.on('did-navigate-in-page', (_event, url) => {
+    if (!shouldOpenAuthPopup(url)) return;
+    openAuthPopup(url);
+    mainWindow.loadURL(APP_URL);
+  });
+}
+
+function openAuthPopup(url) {
+  const authUrl = toAuthUrl(url);
+  if (authWindow && !authWindow.isDestroyed()) {
+    authWindow.focus();
+    authWindow.loadURL(authUrl);
+    return;
+  }
+
+  authWindow = new BrowserWindow({
+    width: 520,
+    height: 760,
+    minWidth: 420,
+    minHeight: 620,
+    title: 'Sign in to CoreKnot',
+    parent: mainWindow || undefined,
+    backgroundColor: '#0f172a',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+
+  const finishIfSignedIn = (nextUrl) => {
+    if (!isCoreKnotAppReturn(nextUrl)) return;
+    if (authWindow && !authWindow.isDestroyed()) authWindow.close();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadURL(nextUrl || `${APP_ORIGIN}/dashboard`);
+      mainWindow.focus();
+    }
+  };
+
+  authWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => {
+    if (shouldOpenAuthPopup(nextUrl)) {
+      authWindow.loadURL(toAuthUrl(nextUrl));
+      return { action: 'deny' };
+    }
+    if (isCoreKnotAppReturn(nextUrl)) {
+      finishIfSignedIn(nextUrl);
+      return { action: 'deny' };
+    }
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        parent: authWindow,
+        width: 520,
+        height: 760,
+        backgroundColor: '#0f172a',
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: false,
+        },
+      },
+    };
+  });
+  authWindow.webContents.on('will-navigate', (event, nextUrl) => {
+    if (!isCoreKnotAppReturn(nextUrl)) return;
+    event.preventDefault();
+    finishIfSignedIn(nextUrl);
+  });
+  authWindow.webContents.on('did-redirect-navigation', (_event, nextUrl) => {
+    finishIfSignedIn(nextUrl);
+  });
+  authWindow.on('closed', () => {
+    authWindow = null;
+  });
+  authWindow.loadURL(authUrl);
 }
 
 function buildMenu() {

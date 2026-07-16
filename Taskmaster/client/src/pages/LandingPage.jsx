@@ -8,6 +8,7 @@ import {
   CreditCard,
   Shield,
   Star,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import BootScreen from '../components/BootScreen';
@@ -27,6 +28,15 @@ import {
 
 const FEATURE_ICONS = { Briefcase, Mail, Users, Calendar };
 const TRUST_ICONS = { CreditCard, Shield, Users };
+export const DESKTOP_BETA_RELEASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_URL
+  || [
+    'https://github.com',
+    ['Raghav', 'Sobti37'].join(''),
+    'Taskmaster',
+    'releases',
+    'tag',
+    'v1.0.8-beta.2',
+  ].join('/');
 
 function AuthLink({ to, className, children, ...props }) {
   if (hasSameOriginAuthRoutes()) {
@@ -119,6 +129,13 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <a
+              href={DESKTOP_BETA_RELEASE_URL}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/50 text-xs sm:text-sm font-semibold text-[var(--landing-green-dark)] transition"
+            >
+              <Download size={14} aria-hidden />
+              Desktop Beta
+            </a>
             <AuthLink
               to="/login"
               className="px-3.5 py-2 rounded-lg border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/50 text-xs sm:text-sm font-semibold text-[var(--landing-green-dark)] transition"
@@ -170,6 +187,13 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
                   className="px-5 py-3 rounded-xl border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
                 >
                   {landingHero.ctaSecondary}
+                </a>
+                <a
+                  href={DESKTOP_BETA_RELEASE_URL}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[var(--landing-green-dark)]/20 bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
+                >
+                  <Download size={16} aria-hidden />
+                  Download desktop beta
                 </a>
               </div>
 

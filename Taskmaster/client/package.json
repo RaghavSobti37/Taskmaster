@@ -1,7 +1,7 @@
 {
   "name": "CoreKnot-client",
   "private": true,
-  "version": "1.0.8-beta.1",
+  "version": "1.0.8-beta.2",
   "type": "module",
   "scripts": {
     "predev": "node ../server/scripts/freePort.js 5173 --wait",

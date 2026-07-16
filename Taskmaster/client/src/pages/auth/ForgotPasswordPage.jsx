@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { useSignIn } from '@clerk/react';
+import { useClerk, useSignIn } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
 import AuthMarketingShell from '../../components/auth/AuthMarketingShell';
 import { loginCopy } from '../../constants/marketingContent';
@@ -25,7 +25,13 @@ export default function ForgotPasswordPage() {
 
 function ForgotPasswordWithClerk() {
   const navigate = useNavigate();
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const clerk = useClerk();
+  const signInState = useSignIn();
+  const { signIn } = signInState;
+  const isLoaded = typeof signInState.isLoaded === 'boolean'
+    ? signInState.isLoaded
+    : Boolean(signIn);
+  const setActive = signInState.setActive || clerk.setActive;
   const [emailAddress, setEmailAddress] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -145,7 +151,7 @@ function ForgotPasswordWithClerk() {
               required
             />
             <button className={buttonClass} type="submit" disabled={busy || !emailAddress.trim()}>
-              {busy ? 'Sending code...' : 'Send reset code'}
+              {!isLoaded ? 'Loading auth...' : submitting ? 'Sending code...' : 'Send reset code'}
             </button>
           </form>
         ) : null}

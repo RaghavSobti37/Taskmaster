@@ -23,6 +23,7 @@ const signInState = {
 };
 
 vi.mock('@clerk/react', () => ({
+  useClerk: () => ({ setActive: mockSetActive }),
   useSignIn: () => mockUseSignIn(),
 }));
 
@@ -80,6 +81,17 @@ describe('ForgotPasswordPage', () => {
     });
     expect(await screen.findByText(/we sent a password reset code/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/reset code/i)).toBeInTheDocument();
+  });
+
+  it('supports Clerk signal-style sign-in state without isLoaded', async () => {
+    const user = userEvent.setup();
+    mockUseSignIn.mockReturnValue({
+      signIn: signInState,
+    });
+    renderPage();
+
+    await user.type(screen.getByLabelText(/email address/i), 'person@example.com');
+    expect(screen.getByRole('button', { name: /send reset code/i })).toBeEnabled();
   });
 
   it('verifies the reset code', async () => {

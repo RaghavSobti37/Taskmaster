@@ -104,9 +104,23 @@ export async function loginWithClerk(page, { email, password, loginUrl = '/login
   await passwordField.fill(password);
   await page.locator('button.cl-formButtonPrimary, .cl-formButtonPrimary').last().click();
 
-  const hostPattern = expectHost ? new RegExp(expectHost.replace(/\./g, '\\.')) : /\/dashboard/;
+  const expectedHostname = (() => {
+    if (!expectHost) return '';
+    try {
+      return new URL(expectHost).hostname;
+    } catch {
+      return expectHost;
+    }
+  })();
+
   await page.waitForURL(
-    (url) => hostPattern.test(url.hostname) && !url.pathname.endsWith('/login'),
+    (url) => {
+      if (expectedHostname) {
+        const hostPattern = new RegExp(expectedHostname.replace(/\./g, '\\.'));
+        return hostPattern.test(url.hostname) && !url.pathname.endsWith('/login');
+      }
+      return !url.pathname.endsWith('/login') && url.pathname.includes('/dashboard');
+    },
     { timeout: 90_000 },
   );
   await dismissCookieConsentIfVisible(page);

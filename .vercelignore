@@ -1,0 +1,13 @@
+.git
+.github
+.local
+.vercel
+node_modules
+**/node_modules
+Taskmaster/desktop/release
+Taskmaster/desktop/dist
+Taskmaster/client/dist
+Taskmaster/client/coverage
+Taskmaster/client/lighthouse-reports
+coverage
+*.log

@@ -8,7 +8,7 @@ import { isLocalHostname, isLocalViteDev } from '../utils/runtimeEnv';
 const trim = (value) => String(value || '').trim();
 const trimSlash = (url) => trim(url).replace(/\/$/, '');
 
-/** Hosts that must not own the Clerk FAPI proxy (OAuth callback is on primary). */
+/** Satellite hosts can proxy Clerk FAPI same-origin for password auth. */
 const SATELLITE_PROXY_HOSTS = new Set([
   'auth.tsccoreknot.com',
   'landing.tsccoreknot.com',
@@ -19,18 +19,18 @@ const primaryClerkProxyUrl = () => {
   return `${trimSlash(appOrigin)}/__clerk`;
 };
 
-/** Prefer registered primary when env accidentally points at auth/landing /__clerk. */
 export function resolveClerkProxyUrl(explicitProxyUrl, primaryProxyUrl) {
   const explicit = trim(explicitProxyUrl);
   const primary = trim(primaryProxyUrl) || primaryClerkProxyUrl();
   if (!explicit) return primary;
-  try {
-    const host = new URL(explicit).hostname.toLowerCase();
-    if (SATELLITE_PROXY_HOSTS.has(host)) return primary;
-  } catch {
-    // invalid URL → use as-is below
-  }
   return explicit;
+}
+
+function getRuntimeSatelliteProxyUrl() {
+  if (typeof window === 'undefined') return '';
+  const { hostname, origin } = window.location || {};
+  if (!SATELLITE_PROXY_HOSTS.has(String(hostname || '').toLowerCase())) return '';
+  return `${trimSlash(origin)}/__clerk`;
 }
 
 export function getClerkPublishableKey() {
@@ -66,7 +66,7 @@ export function isClerkLiveKey() {
   return getClerkPublishableKey().startsWith('pk_live_');
 }
 
-/** Vite dev or localhost preview — Clerk proxy is registered for production host only. */
+/** Vite dev or localhost preview - Clerk proxy is registered for production hosts only. */
 export function isLocalClerkRuntime() {
   if (isLocalViteDev()) return true;
   if (import.meta.env.MODE === 'test') return false;
@@ -84,7 +84,7 @@ export function getClerkDashboardAppPath() {
 }
 
 /**
- * Clerk Dashboard deep links (clerk/skills — use last-active?path=, not legacy /apps/... paths).
+ * Clerk Dashboard deep links use last-active?path= by default.
  * @see clerk-orgs SKILL.md "Dashboard shortcuts"
  */
 export function getClerkDashboardUrl(subPath = '') {
@@ -92,7 +92,7 @@ export function getClerkDashboardUrl(subPath = '') {
   const legacyAppPath = getClerkDashboardAppPath();
   const path = trim(subPath).replace(/^\//, '');
 
-  // ponytail: optional legacy override for forks that still use apps/app_xxx paths
+  // Optional legacy override for forks that still use apps/app_xxx paths.
   if (legacyAppPath && !path) {
     return `${base}/${legacyAppPath.replace(/^\//, '')}`;
   }
@@ -105,25 +105,24 @@ export function getClerkDashboardUrl(subPath = '') {
   return `${base}/last-active?path=${encodeURIComponent(path)}`;
 }
 
-/** Optional Clerk org pin — empty when using plain users (no organizations). */
+/** Optional Clerk org pin - empty when using plain users (no organizations). */
 export function getPinnedClerkOrganizationId() {
   return trim(import.meta.env.VITE_CLERK_ORGANIZATION_ID)
     || trim(import.meta.env.NEXT_PUBLIC_CLERK_ORGANIZATION_ID);
 }
 
 /**
- * Clerk Frontend API proxy. Clerk Dashboard registers ONE proxy URL
- * (`https://tsccoreknot.com/__clerk`). Google OAuth redirect_uri uses that
- * host — satellite auth/landing must use the same proxyUrl so __client cookies
- * match the oauth_callback host (else authorization_invalid).
- * CSP allows tsccoreknot.com scripts on auth/landing (vercelSecurityHeaders).
+ * Clerk Frontend API proxy.
+ * App host uses the primary proxy. Auth/landing satellite hosts use same-origin
+ * /__clerk so password auth keeps working even if the app host firewall is challenging traffic.
  */
 export function getClerkProxyUrl() {
   if (!isClerkLiveKey()) return '';
-  // ponytail: proxy URL is registered for tsccoreknot.com — localhost + pk_live → 400 Origin mismatch
   if (isLocalClerkRuntime()) return '';
 
-  // Vercel preview: same-origin /__clerk (vercel.json rewrites to Render). Explicit tsccoreknot proxy breaks origin.
+  const satelliteProxyUrl = getRuntimeSatelliteProxyUrl();
+  if (satelliteProxyUrl) return satelliteProxyUrl;
+
   if (isVercelPreviewHost() && typeof window !== 'undefined') {
     return `${trimSlash(window.location.origin)}/__clerk`;
   }
@@ -142,7 +141,7 @@ export function isClerkDashboardReady() {
 /** Quick links for Clerk dashboard widget (grouped like Render log streams). */
 export function getClerkQuickLinks() {
   const orgId = getPinnedClerkOrganizationId();
-  const orgSubtitle = orgId ? `${orgId.slice(0, 16)}…` : 'TSC org';
+  const orgSubtitle = orgId ? `${orgId.slice(0, 16)}...` : 'TSC org';
   return [
     { id: 'home', label: 'Dashboard', subtitle: 'App overview', path: '', group: 'users' },
     {

@@ -292,7 +292,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `—` |
-| **Lines** | 10 |
+| **Lines** | 26 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/LandingPage.jsx`
@@ -301,8 +301,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /, /landing |
 | **Default export** | `function` |
-| **Lines** | 401 |
-| **Named exports** | `DESKTOP_BETA_RELEASE_URL` |
+| **Lines** | 463 |
+| **Named exports** | `DESKTOP_BETA_INSTALLERS` |
 | **Hooks** | `useAuth` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 | **Key components** | `BootScreen`, `BrandLogo`, `LandingDashboardPreview`, `WithClerkWhenConfigured` |

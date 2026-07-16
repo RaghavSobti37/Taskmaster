@@ -69,7 +69,7 @@
   {
     "file": "Taskmaster/client/src/pages/LandingPage.download.test.jsx",
     "routes": [],
-    "lines": 10,
+    "lines": 26,
     "defaultExport": null,
     "namedExports": [],
     "hooks": [],
@@ -82,10 +82,10 @@
       "/",
       "/landing"
     ],
-    "lines": 401,
+    "lines": 463,
     "defaultExport": "function",
     "namedExports": [
-      "DESKTOP_BETA_RELEASE_URL"
+      "DESKTOP_BETA_INSTALLERS"
     ],
     "hooks": [
       "useAuth"

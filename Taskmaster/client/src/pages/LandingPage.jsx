@@ -9,6 +9,8 @@ import {
   Shield,
   Star,
   Download,
+  MonitorDown,
+  Apple,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import BootScreen from '../components/BootScreen';
@@ -28,15 +30,35 @@ import {
 
 const FEATURE_ICONS = { Briefcase, Mail, Users, Calendar };
 const TRUST_ICONS = { CreditCard, Shield, Users };
-export const DESKTOP_BETA_RELEASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_URL
+const DESKTOP_BETA_VERSION = '1.0.8-beta.2';
+const DESKTOP_BETA_RELEASE_BASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_BASE_URL
   || [
     'https://github.com',
     ['Raghav', 'Sobti37'].join(''),
     'Taskmaster',
     'releases',
-    'tag',
-    'v1.0.8-beta.2',
+    'download',
+    `v${DESKTOP_BETA_VERSION}`,
   ].join('/');
+export const DESKTOP_BETA_INSTALLERS = [
+  {
+    os: 'Windows',
+    label: 'Download for Windows',
+    fileName: `CoreKnot-Beta-${DESKTOP_BETA_VERSION}-win-x64.exe`,
+    icon: MonitorDown,
+    note: 'Run the .exe setup file after download.',
+  },
+  {
+    os: 'Mac',
+    label: 'Download for Mac',
+    fileName: `CoreKnot-Beta-${DESKTOP_BETA_VERSION}-mac-arm64.dmg`,
+    icon: Apple,
+    note: 'Open the .dmg file, then drag CoreKnot to Applications.',
+  },
+].map((installer) => ({
+  ...installer,
+  href: `${DESKTOP_BETA_RELEASE_BASE_URL}/${installer.fileName}`,
+}));
 
 function AuthLink({ to, className, children, ...props }) {
   if (hasSameOriginAuthRoutes()) {
@@ -130,11 +152,11 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <a
-              href={DESKTOP_BETA_RELEASE_URL}
+              href="#desktop-download"
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/50 text-xs sm:text-sm font-semibold text-[var(--landing-green-dark)] transition"
             >
               <Download size={14} aria-hidden />
-              Desktop Beta
+              Download
             </a>
             <AuthLink
               to="/login"
@@ -188,14 +210,54 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
                 >
                   {landingHero.ctaSecondary}
                 </a>
-                <a
-                  href={DESKTOP_BETA_RELEASE_URL}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[var(--landing-green-dark)]/20 bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
-                >
-                  <Download size={16} aria-hidden />
-                  Download desktop beta
-                </a>
               </div>
+
+              <section
+                id="desktop-download"
+                className="scroll-mt-24 rounded-2xl border border-[var(--landing-green-dark)]/10 bg-white p-4 shadow-sm"
+                aria-labelledby="desktop-download-title"
+              >
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <h2
+                      id="desktop-download-title"
+                      className="text-base font-black text-[var(--landing-green-dark)]"
+                    >
+                      Install CoreKnot desktop beta
+                    </h2>
+                    <p className="mt-1 text-sm text-[var(--landing-green-mid)]">
+                      Choose your device, download the setup file, then run it to install CoreKnot.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {DESKTOP_BETA_INSTALLERS.map((installer) => {
+                      const Icon = installer.icon;
+                      return (
+                        <a
+                          key={installer.os}
+                          href={installer.href}
+                          download={installer.fileName}
+                          className="flex min-h-[88px] items-center gap-3 rounded-xl border border-[var(--landing-beige)] bg-[var(--landing-beige-wash)] px-4 py-3 text-left transition hover:border-[var(--landing-green-dark)]/30 hover:bg-white"
+                          aria-label={`${installer.label} setup file`}
+                        >
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-[var(--landing-green-dark)] shadow-sm">
+                            <Icon size={20} aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-black text-[var(--landing-green-dark)]">
+                              {installer.label}
+                            </span>
+                            <span className="mt-1 block text-xs leading-relaxed text-[var(--landing-green-mid)]">
+                              {installer.note}
+                            </span>
+                          </span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
 
               <ul className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-5 pt-2" aria-label="Trust indicators">
                 {landingHero.trustBadges.map((badge) => {

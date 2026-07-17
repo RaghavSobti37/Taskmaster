@@ -8,6 +8,7 @@ import {
   CreditCard,
   Shield,
   Star,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import BootScreen from '../components/BootScreen';
@@ -170,6 +171,15 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
                   className="px-5 py-3 rounded-xl border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
                 >
                   {landingHero.ctaSecondary}
+                </a>
+                <a
+                  href={landingHero.desktopDownloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[var(--landing-green-mid)]/20 bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
+                >
+                  <Download size={16} aria-hidden />
+                  {landingHero.desktopDownloadCta}
                 </a>
               </div>
 

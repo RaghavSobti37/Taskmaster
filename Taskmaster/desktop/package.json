@@ -1,6 +1,6 @@
 {
   "name": "coreknot-desktop",
-  "version": "1.0.8-beta.2",
+  "version": "1.0.8-beta.3",
   "private": true,
   "description": "CoreKnot desktop beta shell with GitHub beta auto-updates",
   "main": "src/main.cjs",

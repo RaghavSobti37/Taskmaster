@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.2 · **Compiled:** 2026-07-16
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.2 · **Compiled:** 2026-07-17
 
 ---
 
@@ -301,7 +301,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /, /landing |
 | **Default export** | `function` |
-| **Lines** | 463 |
+| **Lines** | 471 |
 | **Named exports** | `DESKTOP_BETA_INSTALLERS` |
 | **Hooks** | `useAuth` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
@@ -460,7 +460,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /schedule |
 | **Default export** | `SchedulePage` |
-| **Lines** | 199 |
+| **Lines** | 205 |
 | **Named exports** | `MAX_SCHEDULE_DAYS` |
 | **Hooks** | `useAuth`, `useDashboardTaskActions`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useProjects`, `useQueryClient`, `useSchedule`, `useState`, `useStatusCounts`, `useUserDirectory`, `useWorkspaces` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useDashboardTaskActions` → /api/tasks/${taskId} · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useSchedule` → /api/projects/${id}, /api/projects/${id}/remove-member, /api/projects/${projectId}/hours-summary · `useStatusCounts` → /api/calendar/seed-music-content, /api/notifications/status-counts · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
@@ -1156,7 +1156,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 471 |
+| **Lines** | 469 |
 | **Hooks** | `useArtistOsCalendar`, `useArtistOsContent`, `useArtistOsGigs`, `useArtistOsInquiries`, `useArtistOsOverview`, `useArtistOsScores`, `useArtistOsTimeline`, `useConnectionHealth`, `useConnectionHub`, `useMemo`, `useSyncPlatformConnection` |
 | **Data hooks** | `useArtistOsCalendar` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsContent` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsGigs` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsInquiries` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsOverview` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsScores` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useArtistOsTimeline` → /api/artists/${artistId}/os/analytics/scores, /api/artists/${artistId}/os/assets, /api/artists/${artistId}/os/assets/${assetId} · `useConnectionHealth` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useConnectionHub` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncPlatformConnection` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
 

@@ -82,7 +82,7 @@
       "/",
       "/landing"
     ],
-    "lines": 463,
+    "lines": 471,
     "defaultExport": "function",
     "namedExports": [
       "DESKTOP_BETA_INSTALLERS"
@@ -923,7 +923,7 @@
   {
     "file": "Taskmaster/client/src/pages/artists/os/ArtistOverviewPanel.jsx",
     "routes": [],
-    "lines": 471,
+    "lines": 469,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -2532,7 +2532,7 @@
     "routes": [
       "/schedule"
     ],
-    "lines": 199,
+    "lines": 205,
     "defaultExport": "SchedulePage",
     "namedExports": [
       "MAX_SCHEDULE_DAYS"

@@ -106,7 +106,7 @@
     "concurrently": "^10.0.3",
     "dependency-cruiser": "^18.0.0",
     "husky": "^9.1.7",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"

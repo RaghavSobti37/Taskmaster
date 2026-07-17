@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Target } from 'lucide-react';
-import { Button, Input } from '../ui';
+import { Button, Input, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import {
   getCrmDigestSegmentForProject,
   CRM_DIGEST_PLAN_OPTIONS,
@@ -22,7 +22,7 @@ export default function ProjectCrmDigestSettings({ projectId, project }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(null);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['projects', projectId, 'crm-digest'],
     queryFn: async () => (await axios.get(`/api/projects/${projectId}/goals/crm-digest`)).data,
     enabled: !!projectId && !!segment,
@@ -64,7 +64,12 @@ export default function ProjectCrmDigestSettings({ projectId, project }) {
       </div>
 
       {isLoading && <p className="text-xs text-[var(--color-text-muted)]">Loading digest settings…</p>}
-      {error && <p className="text-xs text-rose-400">Could not load CRM digest settings.</p>}
+      {error && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Could not load CRM digest settings.')}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {!isLoading && !editing && data?.crmDigest && (
         <div className="grid gap-3 sm:grid-cols-2">

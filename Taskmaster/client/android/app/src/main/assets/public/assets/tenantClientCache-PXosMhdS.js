@@ -1,0 +1,1 @@
+import{r as e}from"./AuthContext-CMj19vTU.js";function t(t){e(),t&&t.clear()}async function n(){}async function r(e){t(e),await n()}export{r as t};

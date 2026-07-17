@@ -1,0 +1,1 @@
+import{t as e}from"./runtimeEnv-CR9LmPWe.js";var t=`auth.tsccoreknot.com`,n=`landing.tsccoreknot.com`,r=()=>{let r=e();return r===t?`auth`:r===n?`landing`:`app`};r();var i=()=>r()===`app`,a=()=>r()===`landing`,o=()=>r()===`auth`;export{o as n,a as r,i as t};

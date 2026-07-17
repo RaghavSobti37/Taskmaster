@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Target, Briefcase } from 'lucide-react';
-import { Button, Input } from '../ui';
+import { Button, Input, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -36,7 +36,7 @@ export default function WorkspaceGoalsPanel({ workspaceName }) {
   const segment = getCrmDigestSegmentForWorkspace(workspaceName);
   const encoded = encodeURIComponent(workspaceName);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['workspaces', workspaceName, 'goals'],
     queryFn: async () => (await axios.get(`/api/projects/workspaces/${encoded}/goals`)).data,
     enabled: !!workspaceName,
@@ -75,7 +75,12 @@ export default function WorkspaceGoalsPanel({ workspaceName }) {
       </div>
 
       {isLoading && <ProjectGoalMetricCardsSkeleton />}
-      {error && <p className="text-xs text-rose-400">Could not load workspace goals.</p>}
+      {error && (
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Could not load workspace goals.')}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {!isLoading && !editing && data && (
         <>

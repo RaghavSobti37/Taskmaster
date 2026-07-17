@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button, DataLoading } from '../ui';
+import { Button, DataLoading, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { userReportToCsv } from '../../utils/monthlyReportCsv';
 import { reportRangeQueryKey } from '../../utils/monthlyReportRange';
 import { useMonthlyReportRangeState } from '../../hooks/useMonthlyReportRangeState';
@@ -40,7 +40,7 @@ const MonthlyReportPanel = ({ userId, userName }) => {
     exportRangeSuffix,
   } = useMonthlyReportRangeState();
 
-  const { data: report, isLoading, error } = useQuery({
+  const { data: report, isLoading, error, refetch } = useQuery({
     queryKey: reportRangeQueryKey(
       ['monthlyReport', userId],
       month,
@@ -111,11 +111,10 @@ const MonthlyReportPanel = ({ userId, userName }) => {
 
       {isLoading && <DataLoading />}
       {error && (
-        <div className="space-y-2">
-          <p className="text-sm text-red-500">
-            {error.response?.data?.error || error.message || 'Failed to load report.'}
-          </p>
-        </div>
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load report.')}
+          onRetry={() => refetch()}
+        />
       )}
 
       {report && (

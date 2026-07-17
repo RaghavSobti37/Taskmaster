@@ -4,6 +4,7 @@ import { useTaskActivity } from '../../hooks/queries/tasks';
 import { resolveTaskId } from '../../utils/taskCompletion';
 import { filterTaskActivityForDisplay } from '../../utils/taskActivityDisplay';
 import TaskActivityTimeline from './TaskActivityTimeline';
+import QueryErrorBanner from '../ui/QueryErrorBanner';
 
 function withCreatedFallback(items, task) {
   const filtered = filterTaskActivityForDisplay(items);
@@ -69,7 +70,7 @@ export default function TaskHistoryPanel({
   onResizeStart,
 }) {
   const taskId = resolveTaskId(task);
-  const { data: items = [], isLoading, isError } = useTaskActivity(taskId, {
+  const { data: items = [], isLoading, isError, error, refetch } = useTaskActivity(taskId, {
     enabled: enabled && !!taskId,
     markRead: true,
   });
@@ -112,7 +113,10 @@ export default function TaskHistoryPanel({
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto tm-modal-scroll p-4">
         {isError ? (
-          <p className="text-xs text-red-500 py-4 text-center">Could not load history.</p>
+          <QueryErrorBanner
+            message={error?.message || 'Could not load history.'}
+            onRetry={() => refetch()}
+          />
         ) : (
           <TaskActivityTimeline items={visibleItems} isLoading={isLoading} />
         )}

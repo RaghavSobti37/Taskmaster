@@ -2,6 +2,15 @@
 
 All notable CoreKnot releases. Version aligns with root `package.json`.
 
+## [1.0.8-beta.1] - 2026-07-15
+
+### Mobile beta
+
+- Added Capacitor native wrapper for Android and iOS.
+- Added Android debug installer and release bundle scripts.
+- Added mobile beta setup guide, GitHub release draft, and installer instructions.
+- Bumped app/native metadata to `1.0.8-beta.1`.
+
 ## [1.0.7] - 2026-07-02
 
 ### Enterprise readiness
@@ -19,3 +28,4 @@ All notable CoreKnot releases. Version aligns with root `package.json`.
 - CI: OpenAPI drift check, tenant static suite, locked-zone regression tests
 
 [1.0.7]: https://github.com/theshakticollective/coreknot/compare/v1.0.6...v1.0.7
+[1.0.8-beta.1]: https://github.com/theshakticollective/coreknot/compare/v1.0.7...v1.0.8-beta.1

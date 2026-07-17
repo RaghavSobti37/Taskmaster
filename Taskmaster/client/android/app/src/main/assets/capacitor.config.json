@@ -1,0 +1,15 @@
+{
+	"appId": "com.theshakticollective.coreknot",
+	"appName": "CoreKnot",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1200,
+			"backgroundColor": "#126d5e",
+			"showSpinner": false
+		}
+	}
+}

@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{d as t}from"./framer-motion-Dv-8nnQ2.js";var n=e(t(),1),r=(0,n.createContext)(null),i=async()=>!1,a={confirm:i};function o(){let e=(0,n.useContext)(r);return e?.confirm?e:a.confirm===i?{confirm:i}:{confirm:a.confirm}}export{a as n,o as r,r as t};

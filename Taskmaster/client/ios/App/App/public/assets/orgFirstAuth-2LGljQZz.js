@@ -1,0 +1,1 @@
+import{c as e,y as t}from"./systemLogBridge-JIhkMOXV.js";var n=null;function r(){return n===!0}function i(e){typeof e?.orgFirstAuth==`boolean`&&(n=e.orgFirstAuth)}async function a(){try{let e=await fetch(`/api/auth/config`);if(!e.ok)return;i(await e.json())}catch{}}function o(){let n=`/login/choose`;return t()?e(n):n}export{r as n,a as r,o as t};

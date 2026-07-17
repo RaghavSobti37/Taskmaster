@@ -1,0 +1,1 @@
+import{U as e}from"./AuthContext-CMj19vTU.js";function t(t){return e(t,Date.now())}export{t};

@@ -5,7 +5,7 @@ import { getTodayDateKey } from '../../utils/dateValidation';
 import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import EmptyState from '../../components/ui/EmptyState';
-import { DesktopRecommendedBanner } from '../../components/ui';
+import { DesktopRecommendedBanner, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleMobileList from '../../components/schedule/ScheduleMobileList';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
@@ -39,7 +39,7 @@ const SchedulePage = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const today = getTodayDateKey();
   const scheduleEnd = addDaysToDateKey(today, MAX_SCHEDULE_DAYS - 1);
-  const { data: scheduleData, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
+  const { data: scheduleData, isPending, isError, error, refetch } = useSchedule({ start: today, end: scheduleEnd });
   const deferScheduleFilters = useDeferredQueryEnabled(!isPending);
   const { data: workspaces = [] } = useWorkspaces(deferScheduleFilters);
   const { data: projects = [] } = useProjects(deferScheduleFilters);
@@ -120,7 +120,10 @@ const SchedulePage = () => {
           maxDays={MAX_SCHEDULE_DAYS}
         />
         {isError ? (
-          <EmptyState title="Could not load schedule" description={error?.message || 'Try refreshing the page.'} variant="subtle" />
+          <QueryErrorBanner
+            message={getQueryErrorMessage(error, 'Could not load schedule')}
+            onRetry={() => refetch()}
+          />
         ) : showInitialSkeleton ? (
           <ScheduleSkeleton dayCount={dayCount} />
         ) : !scheduleData?.departments?.length ? (
@@ -146,7 +149,10 @@ const SchedulePage = () => {
           maxDays={MAX_SCHEDULE_DAYS}
         />
         {isError ? (
-          <EmptyState title="Could not load schedule" description={error?.message || 'Try refreshing the page.'} variant="subtle" />
+          <QueryErrorBanner
+            message={getQueryErrorMessage(error, 'Could not load schedule')}
+            onRetry={() => refetch()}
+          />
         ) : showInitialSkeleton ? (
           <ScheduleSkeleton dayCount={dayCount} />
         ) : !scheduleData?.departments?.length ? (

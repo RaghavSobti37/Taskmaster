@@ -1,0 +1,171 @@
+{
+  "id": "/?app=coreknot-harmonic-v2",
+  "name": "CoreKnot",
+  "short_name": "CoreKnot",
+  "description": "Project management, CRM, and team workspace for modern operations.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "background_color": "#fcf8f2",
+  "theme_color": "#126d5e",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/favicon-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/apple-touch-icon-120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/apple-touch-icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/apple-touch-icon-167.png",
+      "sizes": "167x167",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-44.png",
+      "sizes": "44x44",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/mstile-150x150.png",
+      "sizes": "150x150",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Inbox",
+      "short_name": "Inbox",
+      "url": "/inbox",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Todo",
+      "short_name": "Todo",
+      "url": "/todo",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "url": "/projects",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

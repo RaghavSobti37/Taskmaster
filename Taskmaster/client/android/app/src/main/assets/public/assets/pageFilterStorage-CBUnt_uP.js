@@ -1,0 +1,1 @@
+import{i as e}from"./AuthContext-CMj19vTU.js";function t(t,n={},r){let i=e(t,r);try{let e=localStorage.getItem(i);if(!e)return{...n};let t=JSON.parse(e);return{...n,...t}}catch{return{...n}}}function n(t,n,r){let i=e(t,r);try{localStorage.setItem(i,JSON.stringify(n))}catch{}}export{n,t};

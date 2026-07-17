@@ -6,7 +6,7 @@ import {
   Music2, RefreshCw, Link2, Plus, ArrowRight, Activity, Disc,
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
-import { Card, Badge, Button } from '../../../components/ui';
+import { Card, Badge, Button, QueryErrorBanner, getQueryErrorMessage } from '../../../components/ui';
 import { formatNumber, isHubStatusSyncable } from '../../../config/integrations.config';
 import {
   useArtistOsOverview,
@@ -249,12 +249,10 @@ export default function ArtistOverviewPanel({
       )}
 
       {!isPreview && isError && (
-        <Card className="p-3 border-rose-500/30 bg-rose-500/5 text-xs text-rose-600">
-          Failed to load overview.{' '}
-          <button type="button" className="underline font-bold" onClick={() => refetch?.()}>
-            Retry
-          </button>
-        </Card>
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load overview.')}
+          onRetry={() => refetch?.()}
+        />
       )}
 
       {isLoading && !isPreview ? (

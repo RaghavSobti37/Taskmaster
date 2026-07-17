@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /$
+Allow: /privacy$
+Allow: /userdata$
+Allow: /unsubscribe$
+Allow: /preview/artist/
+Disallow: /dashboard/
+Disallow: /projects/
+Disallow: /admin/
+Disallow: /settings/
+Disallow: /leads/
+Disallow: /assets/
+Disallow: /calendar/
+Disallow: /logs/
+Disallow: /artists/
+Disallow: /followups/
+Disallow: /todo/
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+Sitemap: https://tsccoreknot.com/sitemap.xml

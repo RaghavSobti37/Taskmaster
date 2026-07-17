@@ -628,11 +628,11 @@ const ComponentsShowcase = () => {
             <Banner
               variant="error"
               message="Query failed — inline list errors use QueryErrorBanner."
-              actions={<Button size="sm" variant="secondary">Retry</Button>}
+              actions={<Button size="sm" variant="secondary">Refresh</Button>}
             />
             <QueryErrorBanner
               message="Could not load records. Check your connection."
-              onRetry={() => emitSystemEvent({ severity: SEVERITY.INFO, message: 'Retry clicked', module: MODULE.SYSTEM, id: 'showcase-query-retry' })}
+              onRetry={() => emitSystemEvent({ severity: SEVERITY.INFO, message: 'Refresh clicked', module: MODULE.SYSTEM, id: 'showcase-query-retry' })}
             />
             <ProgressBar progress={65} />
             <EmptyState title="No items found" actionLabel="Add item" onAction={() => {}} variant="dashed" />

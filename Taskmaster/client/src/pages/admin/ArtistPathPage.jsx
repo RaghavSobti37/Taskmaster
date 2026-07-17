@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { RefreshCw, Music } from 'lucide-react';
-import { PageContainer, Button, PageHeader, Banner } from '../../components/ui';
+import { PageContainer, Button, PageHeader, QueryErrorBanner, getQueryErrorMessage } from '../../components/ui';
 import SearchInput from '../../components/ui/SearchInput';
 import { ADMIN_CONSOLE_PATH } from '../../components/admin/AdminConsoleBackButton';
 import ArtistPathCardGrid from '../../components/artistPath/ArtistPathCardGrid';
@@ -71,9 +71,9 @@ export default function ArtistPathPage() {
       </div>
 
       {isError && (
-        <Banner
-          variant="error"
-          message={error?.response?.data?.error || 'Failed to load Artist Path data'}
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load Artist Path data')}
+          onRetry={() => refetch()}
         />
       )}
 

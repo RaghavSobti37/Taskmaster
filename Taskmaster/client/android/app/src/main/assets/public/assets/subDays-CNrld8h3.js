@@ -1,0 +1,1 @@
+import{V as e}from"./AuthContext-CMj19vTU.js";function t(t,n,r){return e(t,-n,r)}export{t};

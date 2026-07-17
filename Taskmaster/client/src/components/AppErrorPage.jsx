@@ -18,6 +18,7 @@ import {
   getSystemStatusUrl,
   resolveAppErrorPresentation,
 } from '../utils/routeErrorPresentation';
+import { hardReloadApp } from '../utils/chunkRecovery';
 import { Button } from './ui/primitives';
 
 const actionBtnClass =
@@ -83,7 +84,7 @@ export default function AppErrorPage({
     [presentation],
   );
 
-  const handleRetry = onRetry || (() => window.location.reload());
+  const handleRetry = onRetry || (() => { void hardReloadApp(); });
 
   const handleGoDashboard = () => {
     if (onGoDashboard) {
@@ -150,7 +151,7 @@ export default function AppErrorPage({
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button type="button" onClick={handleRetry} className={`${actionBtnClass} sm:flex-1`}>
               <RefreshCw size={14} aria-hidden />
-              Try again
+              Refresh
             </Button>
             <Button
               type="button"

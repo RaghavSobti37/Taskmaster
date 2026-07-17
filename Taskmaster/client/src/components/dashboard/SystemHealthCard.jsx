@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Server,
 } from 'lucide-react';
-import { DashboardWidgetShell, Badge, Button, DataLoading } from '../ui';
+import { DashboardWidgetShell, Badge, Button, DataLoading, QueryErrorBanner } from '../ui';
 import { useSystemHealth } from '../../hooks/queries/systemHealth';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -124,10 +124,10 @@ function SystemHealthCard() {
       {isLoading && <DataLoading className="!py-3" />}
 
       {!isLoading && isError && (
-        <div className="flex items-start gap-2 text-rose-600 dark:text-rose-400">
-          <AlertCircle size={18} className="shrink-0 mt-0.5" />
-          <p className="text-xs font-medium">Could not load system health</p>
-        </div>
+        <QueryErrorBanner
+          message="Could not load system health"
+          onRetry={() => refetch()}
+        />
       )}
 
       {!isLoading && !isError && data && (

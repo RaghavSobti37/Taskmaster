@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{d as t}from"./framer-motion-Dv-8nnQ2.js";import{c as n}from"./react-0pB0c5e7.js";import{t as r}from"./navigationHighlight-CklRQxBb.js";var i=e(t(),1),a=()=>{let e=n();return(0,i.useEffect)(()=>{let t=new URLSearchParams(e.search).get(`highlight`);t&&r(t)},[e.pathname,e.search]),null};export{a as default};

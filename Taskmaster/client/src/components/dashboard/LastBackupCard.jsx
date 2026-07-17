@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Database, CheckCircle2, AlertCircle, Play, Loader2 } from 'lucide-react';
-import { DashboardWidgetShell, Badge, Button, ProgressBar, DataLoading } from '../ui';
+import { DashboardWidgetShell, Badge, Button, ProgressBar, DataLoading, QueryErrorBanner } from '../ui';
 import {
   useDataHubBackups,
   useDataHubBackupProgress,
@@ -131,10 +131,10 @@ function LastBackupCard() {
         <DataLoading className="!py-3" />
       )}
       {!isLoading && isError && !isRunning && (
-        <div className="flex items-start gap-2 text-rose-600 dark:text-rose-400">
-          <AlertCircle size={18} className="shrink-0 mt-0.5" />
-          <p className="text-xs font-medium">Could not load backup status</p>
-        </div>
+        <QueryErrorBanner
+          message="Could not load backup status"
+          onRetry={() => refetch()}
+        />
       )}
       {!isLoading && !isError && recentBackups.length === 0 && !isRunning && (
         <p className="text-xs text-[var(--color-text-muted)] italic">No successful backup on record</p>

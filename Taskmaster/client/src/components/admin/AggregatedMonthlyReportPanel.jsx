@@ -97,7 +97,7 @@ const AggregatedReportShell = ({
         <p className="text-sm text-red-500">
           {error.response?.data?.error || error.message || 'Failed to load report.'}
         </p>
-        <Button variant="secondary" size="sm" onClick={() => refetch()}>Retry</Button>
+        <Button variant="secondary" size="sm" onClick={() => refetch()}>Refresh</Button>
       </div>
     )}
     {children}

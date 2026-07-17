@@ -128,7 +128,7 @@ describe('AppErrorPage', () => {
 
     expect(screen.getByRole('heading', { name: /something went wrong/i })).toBeInTheDocument();
     expect(screen.getByText(/Ref CK-20260701-A1B2/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /go to dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /contact your admin/i })).toHaveAttribute(
       'href',
@@ -166,7 +166,7 @@ describe('RouteErrorFallback', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /show full error/i })).toBeInTheDocument();
   });
 });

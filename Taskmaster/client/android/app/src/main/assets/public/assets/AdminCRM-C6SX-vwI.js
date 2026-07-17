@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{d as t,u as n}from"./framer-motion-Dv-8nnQ2.js";import{n as r}from"./DataHubPage-BVJkL7T0.js";t();var i=e(n(),1),a=()=>(0,i.jsx)(r,{});export{a as default};

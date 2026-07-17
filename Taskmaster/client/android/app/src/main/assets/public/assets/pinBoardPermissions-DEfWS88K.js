@@ -1,0 +1,1 @@
+import{w as e}from"./useShortcutPreferences-YFfD5R52.js";function t(e){let t=e?.createdBy;return t?String(t._id||t):null}function n(n,r){return!n?._id||!r?!1:e(n)?!0:t(r)===String(n._id)}export{n as t};

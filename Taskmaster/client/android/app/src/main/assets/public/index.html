@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <!-- Universal brand mark (Harmonic Frequency) — see client/src/constants/brandIcons.js -->
+  <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.ico" sizes="48x48" />
+  <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="icon" href="/icons/favicon-16.png" type="image/png" sizes="16x16" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-167.png" sizes="167x167" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-152.png" sizes="152x152" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-120.png" sizes="120x120" />
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#126d5e" />
+  <meta name="theme-color" content="#126d5e" />
+  <meta name="msapplication-TileColor" content="#126d5e" />
+  <meta name="msapplication-TileImage" content="/icons/mstile-150x150.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CoreKnot" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="CoreKnot — project management, CRM, and team workspace for modern operations." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="CoreKnot" />
+  <meta property="og:description" content="CoreKnot — project management, CRM, and team workspace for modern operations." />
+  <meta property="og:image" content="https://tsccoreknot.com/icons/og-preview.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="https://tsccoreknot.com/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://tsccoreknot.com/icons/og-preview.png" />
+  <title>CoreKnot</title>
+  <link rel="preconnect" href="https://clerk.com" crossorigin />
+  <link rel="dns-prefetch" href="https://clerk.com" />
+  <link rel="preconnect" href="https://img.clerk.com" crossorigin />
+  <link rel="dns-prefetch" href="https://us.i.posthog.com" />
+
+  <!-- Google Search Console Verification (Pending) -->
+  <!-- Google Analytics (GA4) (Pending) -->
+  <script>
+    (function () {
+      try {
+        var path = window.location.pathname.replace(/\/$/, '') || '/';
+        var publicPrefixes = ['/landing', '/login', '/register', '/forgot-password', '/reset-password', '/relegends', '/privacy', '/userdata'];
+        var isPublic = publicPrefixes.some(function (p) { return path === p || path.indexOf(p + '/') === 0; });
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolved;
+        if (isPublic) {
+          resolved = prefersDark ? 'dark' : 'light';
+        } else {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'dark') resolved = 'dark';
+          else if (theme === 'light') resolved = 'light';
+          else resolved = prefersDark ? 'dark' : 'light';
+        }
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(resolved);
+      } catch (e) { }
+    })();
+  </script>
+  <script type="module" crossorigin src="/assets/index-CBNxnayU.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CNC7AqOf.js">
+  <link rel="modulepreload" crossorigin href="/assets/react-0pB0c5e7.js">
+  <link rel="modulepreload" crossorigin href="/assets/axios-BdD7g42T.js">
+  <link rel="modulepreload" crossorigin href="/assets/query-DSr9DrQ1.js">
+  <link rel="modulepreload" crossorigin href="/assets/dist-CFloydPn.js">
+  <link rel="modulepreload" crossorigin href="/assets/lucide-Dl3qozQz.js">
+  <link rel="modulepreload" crossorigin href="/assets/notifications-DtWyZCZc.js">
+  <link rel="modulepreload" crossorigin href="/assets/displayMode-pqYNyZ7q.js">
+  <link rel="modulepreload" crossorigin href="/assets/runtimeEnv-CR9LmPWe.js">
+  <link rel="modulepreload" crossorigin href="/assets/siteMode-BF4cuTNg.js">
+  <link rel="modulepreload" crossorigin href="/assets/systemLogBridge-JIhkMOXV.js">
+  <link rel="modulepreload" crossorigin href="/assets/authSessionProbe-DVze5PuD.js">
+  <link rel="modulepreload" crossorigin href="/assets/authUnauthorized-Cam_XWuh.js">
+  <link rel="modulepreload" crossorigin href="/assets/AuthContext-CMj19vTU.js">
+  <link rel="modulepreload" crossorigin href="/assets/useShortcutPreferences-YFfD5R52.js">
+  <link rel="modulepreload" crossorigin href="/assets/socket-DD-aoNjP.js">
+  <link rel="modulepreload" crossorigin href="/assets/realtime-gKPjQsPV.js">
+  <link rel="modulepreload" crossorigin href="/assets/backgroundMutationQueue-vYf1jVQk.js">
+  <link rel="modulepreload" crossorigin href="/assets/useTaskmasterQueries-hemTmEhu.js">
+  <link rel="modulepreload" crossorigin href="/assets/startOfDay-DS-qc6Of.js">
+  <link rel="modulepreload" crossorigin href="/assets/dateDisplay-Dqe8zPOK.js">
+  <link rel="modulepreload" crossorigin href="/assets/clerk-BUztldLR.js">
+  <link rel="modulepreload" crossorigin href="/assets/marketing-content-DQIhNQRw.js">
+  <link rel="modulepreload" crossorigin href="/assets/marketingContent-CNVO4BUy.js">
+  <link rel="modulepreload" crossorigin href="/assets/useBreakpoint-r23z-R4-.js">
+  <link rel="modulepreload" crossorigin href="/assets/primitives-DEFxpDjr.js">
+  <link rel="modulepreload" crossorigin href="/assets/AppErrorPage-DWyvN1Hn.js">
+  <link rel="modulepreload" crossorigin href="/assets/navPageAccess-D-dtqhbV.js">
+  <link rel="modulepreload" crossorigin href="/assets/OrgContext-BxYo_VFt.js">
+  <link rel="modulepreload" crossorigin href="/assets/orgPaths-CcBNBoeN.js">
+  <link rel="modulepreload" crossorigin href="/assets/orgFeatures-B80GeAjj.js">
+  <link rel="modulepreload" crossorigin href="/assets/useTenantUnlocks-Be3xDkNP.js">
+  <link rel="modulepreload" crossorigin href="/assets/EmptyState-vjHSyQuH.js">
+  <link rel="modulepreload" crossorigin href="/assets/RoleOptionBoxes-CjVo6S3E.js">
+  <link rel="modulepreload" crossorigin href="/assets/PageSkeleton-DpUc6EGl.js">
+  <link rel="modulepreload" crossorigin href="/assets/bklitInsightsCharts-D7x_kcj5.js">
+  <link rel="modulepreload" crossorigin href="/assets/DataListRow-CS2ZF1yM.js">
+  <link rel="modulepreload" crossorigin href="/assets/CountBadge-CuKeo0JE.js">
+  <link rel="modulepreload" crossorigin href="/assets/ui-vQPJRKYb.js">
+  <link rel="modulepreload" crossorigin href="/assets/artistPath-CZIRiIJq.js">
+  <link rel="modulepreload" crossorigin href="/assets/ModalShell-BTmXi81K.js">
+  <link rel="modulepreload" crossorigin href="/assets/NexusModal-C_4ZP0ib.js">
+  <link rel="modulepreload" crossorigin href="/assets/confirmContext-CKG1zZnV.js">
+  <link rel="modulepreload" crossorigin href="/assets/noteDraftStorage-CeS_KUzY.js">
+  <link rel="stylesheet" crossorigin href="/assets/primitives-8x_b-sjC.css">
+  <link rel="stylesheet" crossorigin href="/assets/xyflow-DtxX27Jz.css">
+  <link rel="stylesheet" crossorigin href="/assets/index-ChxrjJKe.css">
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+
+</html>

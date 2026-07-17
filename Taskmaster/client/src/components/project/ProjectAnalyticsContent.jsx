@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useProjectAnalytics } from '../../hooks/queries/projects';
 import { useAuth } from '../../contexts/AuthContext';
-import { DataLoading, Badge, UserLabel, Card, Button } from '../ui';
+import { DataLoading, Badge, UserLabel, Card, Button, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import SelectionFilterPanel, { FilterToolbarButton } from '../ui/SelectionFilterPanel';
 import { countActiveFilters } from '../ui/selectionFilterUtils';
 import { useProjectReportRangeState } from '../../hooks/useProjectReportRangeState';
@@ -89,7 +89,7 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
     isAllTime,
   } = externalRangeState || internalRangeState;
 
-  const { data: report, isLoading, isFetching, error } = useProjectAnalytics(projectId, queryParams, queryEnabled);
+  const { data: report, isLoading, isFetching, error, refetch } = useProjectAnalytics(projectId, queryParams, queryEnabled);
 
   const permissionLabel = useMemo(() => {
     if (viewMode === 'admin' || hasPageAccess(user, 'admin_project_analytics')) return 'Admin analytics';
@@ -266,9 +266,10 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState, vi
 
       {isLoading && !report && <DataLoading />}
       {error && !report && (
-        <p className="text-sm text-red-500">
-          {error.response?.data?.error || error.message || 'Failed to load analytics.'}
-        </p>
+        <QueryErrorBanner
+          message={getQueryErrorMessage(error, 'Failed to load analytics.')}
+          onRetry={() => refetch()}
+        />
       )}
 
       {report && (

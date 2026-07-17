@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
+import { hardReloadApp } from '../../utils/chunkRecovery';
 import { Button } from './primitives';
 import Banner from './Banner';
 
@@ -10,18 +11,24 @@ export function getQueryErrorMessage(error, fallback = 'Failed to load data') {
     || fallback;
 }
 
-export default function QueryErrorBanner({ message, onRetry, className = '' }) {
+export default function QueryErrorBanner({
+  message,
+  error,
+  onRetry,
+  className = '',
+}) {
+  const resolvedMessage = message || getQueryErrorMessage(error);
+  const handleRefresh = onRetry || (() => { void hardReloadApp(); });
+
   return (
     <Banner
       variant="error"
-      message={message}
+      message={resolvedMessage}
       className={className}
       actions={
-        onRetry ? (
-          <Button size="sm" variant="secondary" onClick={onRetry} className="shrink-0">
-            <RefreshCw size={14} aria-hidden /> Retry
-          </Button>
-        ) : null
+        <Button size="sm" variant="secondary" onClick={handleRefresh} className="shrink-0">
+          <RefreshCw size={14} aria-hidden /> Refresh
+        </Button>
       }
     />
   );

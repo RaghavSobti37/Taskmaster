@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{u as t}from"./framer-motion-Dv-8nnQ2.js";import{i as n}from"./react-0pB0c5e7.js";import{s as r}from"./clerk-BUztldLR.js";var i=e(t(),1);function a(){return r()?(0,i.jsx)(n,{to:`/login#/reset-password`,replace:!0}):(0,i.jsx)(n,{to:`/login`,replace:!0})}export{a as default};

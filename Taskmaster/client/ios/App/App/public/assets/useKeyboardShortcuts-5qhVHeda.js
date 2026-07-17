@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{d as t}from"./framer-motion-Dv-8nnQ2.js";var n=e(t(),1),r=(0,n.createContext)(null);function i(){let e=(0,n.useContext)(r);if(!e)throw Error(`useKeyboardShortcuts must be used within KeyboardShortcutsProvider`);return e}export{r as n,i as t};

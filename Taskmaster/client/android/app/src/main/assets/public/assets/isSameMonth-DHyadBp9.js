@@ -1,0 +1,1 @@
+import{n as e}from"./startOfDay-DS-qc6Of.js";function t(t,n,r){let[i,a]=e(r?.in,t,n);return i.getFullYear()===a.getFullYear()&&i.getMonth()===a.getMonth()}export{t};

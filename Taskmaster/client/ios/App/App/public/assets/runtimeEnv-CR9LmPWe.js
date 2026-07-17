@@ -1,0 +1,1 @@
+function e(){return typeof window>`u`?``:String(window.location?.hostname||``).toLowerCase()}function t(t=e()){let n=String(t||``).toLowerCase();return!n||n===`localhost`||n===`127.0.0.1`||n.endsWith(`.local`)}function n(){return!1}export{t as n,n as r,e as t};

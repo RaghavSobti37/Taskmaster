@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import AppErrorPage from './AppErrorPage';
 import { resolveAppErrorPresentation } from '../utils/routeErrorPresentation';
+import { hardReloadApp } from '../utils/chunkRecovery';
 
 /** Full-screen boot failure — delegates to shared AppErrorPage. */
 export default function AppBootError({
@@ -36,7 +37,7 @@ export default function AppBootError({
   return (
     <AppErrorPage
       {...props}
-      onRetry={onRefresh || (() => window.location.reload())}
+      onRetry={onRefresh || (() => { void hardReloadApp(); })}
     />
   );
 }

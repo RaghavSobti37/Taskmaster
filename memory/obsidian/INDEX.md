@@ -1,7 +1,7 @@
 # CoreKnot Obsidian Memory Index
 
 > Canonical project memory for humans + AI agents.
-> Last updated: 2026-07-07
+> Last updated: 2026-07-16
 
 ## Start Here
 - [[Conventions]]

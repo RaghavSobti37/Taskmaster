@@ -309,7 +309,7 @@ const KeyboardShortcutsTab = () => {
     return (
       <div className="px-4 py-3 space-y-2">
         <p className="text-xs text-rose-500">Could not load shortcut preferences.</p>
-        <Button size="sm" onClick={() => refetch()}>Retry</Button>
+        <Button size="sm" onClick={() => refetch()}>Refresh</Button>
       </div>
     );
   }

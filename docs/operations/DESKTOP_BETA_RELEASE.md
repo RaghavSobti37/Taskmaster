@@ -8,15 +8,15 @@ arrive through GitHub beta releases and show an update dialog inside the desktop
 
 1. Open the latest GitHub prerelease named `CoreKnot Desktop Beta`.
 2. Download the installer for your OS:
-   - Windows: `CoreKnot-Beta-<version>-win-x64.exe`
-   - macOS: `CoreKnot-Beta-<version>-mac-*.dmg`
-   - Linux: `CoreKnot-Beta-<version>-linux-*.AppImage`
+   - Windows: `CoreKnot-Beta-win-x64.exe`
+   - macOS: `CoreKnot-Beta-mac-*.dmg`
+   - Linux: `CoreKnot-Beta-linux-*.AppImage`
 3. Install and launch `CoreKnot Beta`.
 
 ## Release A New Beta
 
 ```bash
-npm run release:desktop:beta -- 1.0.8-beta.3
+npm run release:desktop:beta -- 1.0.8-beta.2
 npm install
 npm run desktop:smoke
 npm run desktop:dist
@@ -26,7 +26,7 @@ git push origin dev
 ```
 
 After the release commit is merged to `main`, `.github/workflows/desktop-beta-release.yml` creates tag
-`v<version>`, builds Windows/macOS/Linux packages, publishes a GitHub prerelease, and uploads update metadata
+the beta release tag, builds Windows/macOS/Linux packages, publishes a GitHub prerelease, and uploads update metadata
 for the `beta` channel.
 
 ## Update Behavior

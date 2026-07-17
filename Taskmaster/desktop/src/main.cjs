@@ -1,29 +1,45 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
-const {
-  APP_ORIGIN,
-  isCoreKnotAppReturn,
-  shouldOpenAuthPopup,
-  toAuthUrl,
-} = require('./authNavigation.cjs');
 
 const APP_URL = process.env.COREKNOT_DESKTOP_URL || 'https://tsccoreknot.com';
 const isDev = !app.isPackaged;
+const AUTH_PATH_PREFIXES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/auth/google/success',
+];
 
 autoUpdater.channel = 'beta';
 autoUpdater.allowPrerelease = true;
 autoUpdater.autoDownload = false;
 
 let mainWindow;
-let authWindow;
-let updateInfo = null;
 let updateDownloaded = false;
+
+function isAuthNavigation(url) {
+  try {
+    const target = new URL(url);
+    const appUrl = new URL(APP_URL);
+    const isAuthHost = target.hostname === 'auth.tsccoreknot.com';
+    const isAppAuthPath =
+      target.origin === appUrl.origin &&
+      AUTH_PATH_PREFIXES.some((path) => target.pathname === path || target.pathname.startsWith(`${path}/`));
+    return isAuthHost || isAppAuthPath;
+  } catch {
+    return false;
+  }
+}
+
+function openInDefaultBrowser(url) {
+  shell.openExternal(url);
+}
 
 function sendUpdateStatus(status, detail = {}) {
   if (!mainWindow?.webContents) return;
   mainWindow.webContents.send('coreknot:update-status', {
     status,
-    version: app.getVersion(),
     ...detail,
   });
 }
@@ -46,93 +62,14 @@ function createWindow() {
 
   mainWindow.loadURL(APP_URL);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (shouldOpenAuthPopup(url)) {
-      openAuthPopup(url);
-      return { action: 'deny' };
-    }
-    shell.openExternal(url);
+    openInDefaultBrowser(url);
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!shouldOpenAuthPopup(url)) return;
+    if (!isAuthNavigation(url)) return;
     event.preventDefault();
-    openAuthPopup(url);
+    openInDefaultBrowser(url);
   });
-  mainWindow.webContents.on('did-navigate-in-page', (_event, url) => {
-    if (!shouldOpenAuthPopup(url)) return;
-    openAuthPopup(url);
-    mainWindow.loadURL(APP_URL);
-  });
-}
-
-function openAuthPopup(url) {
-  const authUrl = toAuthUrl(url);
-  if (authWindow && !authWindow.isDestroyed()) {
-    authWindow.focus();
-    authWindow.loadURL(authUrl);
-    return;
-  }
-
-  authWindow = new BrowserWindow({
-    width: 520,
-    height: 760,
-    minWidth: 420,
-    minHeight: 620,
-    title: 'Sign in to CoreKnot',
-    parent: mainWindow || undefined,
-    backgroundColor: '#0f172a',
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-    },
-  });
-
-  const finishIfSignedIn = (nextUrl) => {
-    if (!isCoreKnotAppReturn(nextUrl)) return;
-    if (authWindow && !authWindow.isDestroyed()) authWindow.close();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.loadURL(nextUrl || `${APP_ORIGIN}/dashboard`);
-      mainWindow.focus();
-    }
-  };
-
-  authWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => {
-    if (shouldOpenAuthPopup(nextUrl)) {
-      authWindow.loadURL(toAuthUrl(nextUrl));
-      return { action: 'deny' };
-    }
-    if (isCoreKnotAppReturn(nextUrl)) {
-      finishIfSignedIn(nextUrl);
-      return { action: 'deny' };
-    }
-    return {
-      action: 'allow',
-      overrideBrowserWindowOptions: {
-        parent: authWindow,
-        width: 520,
-        height: 760,
-        backgroundColor: '#0f172a',
-        webPreferences: {
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: false,
-        },
-      },
-    };
-  });
-  authWindow.webContents.on('will-navigate', (event, nextUrl) => {
-    if (!isCoreKnotAppReturn(nextUrl)) return;
-    event.preventDefault();
-    finishIfSignedIn(nextUrl);
-  });
-  authWindow.webContents.on('did-redirect-navigation', (_event, nextUrl) => {
-    finishIfSignedIn(nextUrl);
-  });
-  authWindow.on('closed', () => {
-    authWindow = null;
-  });
-  authWindow.loadURL(authUrl);
 }
 
 function buildMenu() {
@@ -140,7 +77,7 @@ function buildMenu() {
     {
       label: 'CoreKnot',
       submenu: [
-        { label: `Version ${app.getVersion()}`, enabled: false },
+        { label: 'CoreKnot Beta', enabled: false },
         { type: 'separator' },
         {
           label: 'Check for Updates',
@@ -196,19 +133,18 @@ async function checkForUpdates(manual = false) {
   }
 }
 
-autoUpdater.on('update-available', async (info) => {
-  updateInfo = info;
-  sendUpdateStatus('available', { releaseVersion: info.version });
+autoUpdater.on('update-available', async () => {
+  sendUpdateStatus('available');
   const choice = await dialog.showMessageBox(mainWindow, {
     type: 'info',
     buttons: ['Download update', 'Later'],
     defaultId: 0,
     cancelId: 1,
-    message: `CoreKnot Beta ${info.version} is available.`,
+    message: 'CoreKnot Beta update is available.',
     detail: 'Download now and install after it finishes.',
   });
   if (choice.response === 0) {
-    sendUpdateStatus('downloading', { releaseVersion: info.version });
+    sendUpdateStatus('downloading');
     autoUpdater.downloadUpdate();
   }
 });
@@ -220,19 +156,18 @@ autoUpdater.on('update-not-available', () => {
 autoUpdater.on('download-progress', (progress) => {
   sendUpdateStatus('downloading', {
     percent: Math.round(progress.percent || 0),
-    releaseVersion: updateInfo?.version,
   });
 });
 
-autoUpdater.on('update-downloaded', async (info) => {
+autoUpdater.on('update-downloaded', async () => {
   updateDownloaded = true;
-  sendUpdateStatus('downloaded', { releaseVersion: info.version });
+  sendUpdateStatus('downloaded');
   const choice = await dialog.showMessageBox(mainWindow, {
     type: 'info',
     buttons: ['Restart and install', 'Install on next launch'],
     defaultId: 0,
     cancelId: 1,
-    message: `CoreKnot Beta ${info.version} is ready.`,
+    message: 'CoreKnot Beta update is ready.',
     detail: 'Restart CoreKnot to apply the update.',
   });
   if (choice.response === 0) autoUpdater.quitAndInstall();
@@ -243,11 +178,9 @@ autoUpdater.on('error', (error) => {
 });
 
 ipcMain.handle('coreknot:get-desktop-info', () => ({
-  version: app.getVersion(),
   channel: 'beta',
   appUrl: APP_URL,
   updateDownloaded,
-  releaseVersion: updateInfo?.version || null,
 }));
 
 ipcMain.handle('coreknot:check-for-updates', () => checkForUpdates(true));

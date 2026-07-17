@@ -30,7 +30,6 @@ import {
 
 const FEATURE_ICONS = { Briefcase, Mail, Users, Calendar };
 const TRUST_ICONS = { CreditCard, Shield, Users };
-const DESKTOP_BETA_VERSION = '1.0.8-beta.2';
 const DESKTOP_BETA_RELEASE_BASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_BASE_URL
   || [
     'https://github.com',
@@ -38,20 +37,20 @@ const DESKTOP_BETA_RELEASE_BASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_
     'Taskmaster',
     'releases',
     'download',
-    `v${DESKTOP_BETA_VERSION}`,
+    'coreknot-beta',
   ].join('/');
 export const DESKTOP_BETA_INSTALLERS = [
   {
     os: 'Windows',
     label: 'Download for Windows',
-    fileName: `CoreKnot-Beta-${DESKTOP_BETA_VERSION}-win-x64.exe`,
+    fileName: 'CoreKnot-Beta-win-x64.exe',
     icon: MonitorDown,
     note: 'Run the .exe setup file after download.',
   },
   {
     os: 'Mac',
     label: 'Download for Mac',
-    fileName: `CoreKnot-Beta-${DESKTOP_BETA_VERSION}-mac-arm64.dmg`,
+    fileName: 'CoreKnot-Beta-mac-arm64.dmg',
     icon: Apple,
     note: 'Open the .dmg file, then drag CoreKnot to Applications.',
   },
@@ -209,6 +208,15 @@ function LandingPageView({ clerkLoaded, clerkSignedIn }) {
                   className="px-5 py-3 rounded-xl border border-[var(--landing-beige)] bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
                 >
                   {landingHero.ctaSecondary}
+                </a>
+                <a
+                  href={landingHero.desktopDownloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[var(--landing-green-mid)]/20 bg-white hover:bg-[var(--landing-beige)]/60 text-[var(--landing-green-dark)] font-bold text-sm transition"
+                >
+                  <Download size={16} aria-hidden />
+                  {landingHero.desktopDownloadCta}
                 </a>
               </div>
 

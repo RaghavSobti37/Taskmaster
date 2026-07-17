@@ -52,6 +52,16 @@ const WorkspaceProjectFields = ({
   showWorkspace = true,
   showProject = true,
 }) => {
+  const fallbackWorkspaces = React.useMemo(() => {
+    const byWorkspace = new Map();
+    projects.forEach((project) => {
+      const name = project?.workspace || 'General';
+      const key = normalizeWorkspace(name);
+      if (!byWorkspace.has(key)) byWorkspace.set(key, { name });
+    });
+    return [...byWorkspace.values()];
+  }, [projects]);
+
   const handleWorkspaceChange = (ws) => {
     onChange(applyWorkspaceChange(projects, { workspace, projectId }, ws));
   };
@@ -70,6 +80,7 @@ const WorkspaceProjectFields = ({
           onChange={handleWorkspaceChange}
           label={workspaceLabel}
           disabled={disabled}
+          fallbackWorkspaces={fallbackWorkspaces}
         />
       )}
       {showProject && (

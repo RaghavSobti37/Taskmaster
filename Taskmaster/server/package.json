@@ -4,7 +4,7 @@
   "description": "Enterprise Work Management API",
   "main": "server.js",
   "scripts": {
-    "typecheck": "tsc --noEmit -p ../tsconfig.json",
+    "typecheck": "tsc --noEmit -p ../../tsconfig.json",
     "build": "cd ../client && npm install && npm run build",
     "start": "node server.js",
     "predev": "node scripts/freePort.js 5000 --wait",

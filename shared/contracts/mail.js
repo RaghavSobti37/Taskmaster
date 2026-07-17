@@ -1,11 +1,12 @@
 const { z } = require('zod');
 const { isSafePrimitive, isSafeShallowRecord } = require('./safeValues');
 
-const mailProfileBody = z.record(z.unknown()).refine(
+const mailProfileBody = z.record(z.string(), z.unknown()).refine(
   (body) => Object.entries(body).every(([key, value]) => {
     if (key === 'providerCredentials') {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
       return isSafeShallowRecord(value)
-        && Object.values(value).every((entry) => isSafeShallowRecord(entry));
+        && Object.values(/** @type {Record<string, unknown>} */ (value)).every((entry) => isSafeShallowRecord(entry));
     }
     return isSafePrimitive(value);
   }),
@@ -14,6 +15,7 @@ const mailProfileBody = z.record(z.unknown()).refine(
 
 const updateMailProfileBody = mailProfileBody;
 
+/** @param {unknown} value @returns {boolean} */
 const isSafeRecipientRow = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value).every(([field, entry]) => {
@@ -22,10 +24,10 @@ const isSafeRecipientRow = (value) => {
   });
 };
 
-const createCampaignBody = z.record(z.unknown()).refine(
+const createCampaignBody = z.record(z.string(), z.unknown()).refine(
   (body) => Object.entries(body).every(([key, value]) => {
     if (key === 'leadIds' || key === 'senderProfileIds') {
-      return Array.isArray(value) && value.every((id) => typeof id === 'string');
+      return Array.isArray(value) && /** @type {unknown[]} */ (value).every((id) => typeof id === 'string');
     }
     if (key === 'customRecipients') {
       return Array.isArray(value) && value.every(isSafeRecipientRow);
@@ -41,7 +43,7 @@ const createCampaignBody = z.record(z.unknown()).refine(
   { message: 'Invalid input format' },
 );
 
-const mailTemplateDraftBody = z.record(z.unknown()).refine(
+const mailTemplateDraftBody = z.record(z.string(), z.unknown()).refine(
   (body) => Object.entries(body).every(([key, value]) => {
     if (key === 'dummyValues') return isSafeShallowRecord(value);
     if (key === 'content' || key === 'name' || key === 'subject' || key === 'format' || key === 'id') {

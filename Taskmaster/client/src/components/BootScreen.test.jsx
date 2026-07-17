@@ -35,7 +35,7 @@ describe('BootScreen', () => {
 
     expect(screen.getByRole('heading', { name: /connection timed out/i })).toBeInTheDocument();
     expect(screen.getByText(/loading is taking too long/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /go to dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/Ref CK-/)).toBeInTheDocument();
   });

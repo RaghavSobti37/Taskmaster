@@ -8,14 +8,14 @@ describe('LandingPage desktop beta download', () => {
         expect.objectContaining({
           os: 'Windows',
           label: 'Download for Windows',
-          fileName: 'CoreKnot-Beta-1.0.8-beta.2-win-x64.exe',
-          href: expect.stringContaining('/releases/download/v1.0.8-beta.2/CoreKnot-Beta-1.0.8-beta.2-win-x64.exe'),
+          fileName: 'CoreKnot-Beta-win-x64.exe',
+          href: expect.stringContaining('/releases/download/coreknot-beta/CoreKnot-Beta-win-x64.exe'),
         }),
         expect.objectContaining({
           os: 'Mac',
           label: 'Download for Mac',
-          fileName: 'CoreKnot-Beta-1.0.8-beta.2-mac-arm64.dmg',
-          href: expect.stringContaining('/releases/download/v1.0.8-beta.2/CoreKnot-Beta-1.0.8-beta.2-mac-arm64.dmg'),
+          fileName: 'CoreKnot-Beta-mac-arm64.dmg',
+          href: expect.stringContaining('/releases/download/coreknot-beta/CoreKnot-Beta-mac-arm64.dmg'),
         }),
       ]),
     );

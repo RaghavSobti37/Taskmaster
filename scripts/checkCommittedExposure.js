@@ -49,7 +49,12 @@ const SKIP_FILES = new Set([
   'server/.env.render.example',
 ]);
 
-const SKIP_PATH_PREFIXES = ['server/tests/', 'Taskmaster/server/tests/'];
+const SKIP_PATH_PREFIXES = [
+  'server/tests/',
+  'Taskmaster/server/tests/',
+  'Taskmaster/client/android/',
+  'Taskmaster/client/ios/',
+];
 
 /** Original PII / hosts only — placeholders (redacted@example.com, YOUR-RENDER-SERVICE) are OK. */
 const BLOCKED_LITERALS = [

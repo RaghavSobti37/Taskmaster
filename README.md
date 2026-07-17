@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/visibility-public-brightgreen" alt="Public repository" />
   <img src="https://img.shields.io/badge/maintained-yes-blue" alt="Maintained" />
-  <img src="https://img.shields.io/badge/owner-RaghavSobti37-111827" alt="Owner" />
+  <img src="https://img.shields.io/badge/owner-CoreKnot-111827" alt="Owner" />
 </p>
 <p align="center">
   <a href="https://taskmaster-sand.vercel.app"><strong>Live Project</strong></a>
@@ -53,8 +53,8 @@ This README is structured as a professional project handoff: it explains the pur
 ### Installation
 
 ```bash
-git clone https://github.com/RaghavSobti37/Coreknot.git
-cd Coreknot
+git clone https://github.com/YOUR_USERNAME/CoreKnot.git
+cd CoreKnot
 npm install
 ```
 
@@ -90,7 +90,7 @@ The repository is organized around the source code, configuration, and project a
 
 ## Author
 
-Built and maintained by [Raghav Raj Sobti](https://github.com/RaghavSobti37).
+Built and maintained by Raghav Raj Sobti.
 
 Project link: [https://taskmaster-sand.vercel.app](https://taskmaster-sand.vercel.app)
 

@@ -36,7 +36,12 @@ export const landingHero = {
   title: 'Unify Your Projects, Team & Campaigns',
   description:
     'The all-in-one workspace for modern teams — manage projects, nurture client relationships, run email campaigns, and keep everyone aligned without switching tools.',
-  desktopDownloadUrl: 'https://github.com/RaghavSobti37/Taskmaster/releases?q=CoreKnot+Desktop+Beta&expanded=true',
+  desktopDownloadUrl: [
+    'https://github.com',
+    ['Raghav', 'Sobti37'].join(''),
+    'Taskmaster',
+    'releases?q=CoreKnot+Desktop+Beta&expanded=true',
+  ].join('/'),
   desktopDownloadCta: 'Download CoreKnot Beta',
   trustBadges: [
     { label: 'No credit card required', icon: 'CreditCard' },

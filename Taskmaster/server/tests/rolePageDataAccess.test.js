@@ -151,14 +151,16 @@ describe('Role page + data access matrix', () => {
       expect(res.statusCode).toBe(200);
     });
 
-    it('sales cannot list data hub people', async () => {
+    it('sales sees data hub migration response', async () => {
       const res = await salesAgent.get('/api/data-hub/people');
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(410);
+      expect(res.body.service).toBe('auto-mailer');
     });
 
-    it('admin can list data hub people', async () => {
+    it('admin sees data hub migration response', async () => {
       const res = await adminAgent.get('/api/data-hub/people');
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(410);
+      expect(res.body.service).toBe('auto-mailer');
     });
   });
 });

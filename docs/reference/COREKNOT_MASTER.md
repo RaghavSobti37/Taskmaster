@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.1 · **Compiled:** 2026-07-15
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.2 · **Compiled:** 2026-07-16
 
 ---
 
@@ -190,7 +190,7 @@ Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organ
 
 ## 3. Page catalog by domain
 
-_Total page files: 140. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 142. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -201,7 +201,19 @@ _Total page files: 140. Each entry lists route, exports, hooks, components, and 
 | --- | --- |
 | **Route(s)** | /forgot-password |
 | **Default export** | `function` |
-| **Lines** | 11 |
+| **Lines** | 214 |
+| **Hooks** | `useClerk`, `useMemo`, `useNavigate`, `useSignIn`, `useState` |
+| **Data hooks** | `useClerk` → /api/auth/clerk-establish, /api/tenants/memberships, /api/tenants/select |
+| **Key components** | `AuthMarketingShell` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `Taskmaster/client/src/pages/auth/ForgotPasswordPage.test.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `—` |
+| **Lines** | 144 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/auth/GoogleSuccessPage.jsx`
@@ -221,7 +233,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /login/* |
 | **Default export** | `function` |
-| **Lines** | 165 |
+| **Lines** | 190 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useRef`, `useState` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignInBlock`, `InstallGuideModal` |
@@ -274,13 +286,23 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Lines** | 11 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `Taskmaster/client/src/pages/LandingPage.download.test.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `—` |
+| **Lines** | 26 |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/LandingPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /, /landing |
 | **Default export** | `function` |
-| **Lines** | 377 |
+| **Lines** | 463 |
+| **Named exports** | `DESKTOP_BETA_INSTALLERS` |
 | **Hooks** | `useAuth` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members |
 | **Key components** | `BootScreen`, `BrandLogo`, `LandingDashboardPreview`, `WithClerkWhenConfigured` |

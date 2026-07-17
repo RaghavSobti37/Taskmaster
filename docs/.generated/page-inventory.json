@@ -67,14 +67,26 @@
     ]
   },
   {
+    "file": "Taskmaster/client/src/pages/LandingPage.download.test.jsx",
+    "routes": [],
+    "lines": 26,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
+  },
+  {
     "file": "Taskmaster/client/src/pages/LandingPage.jsx",
     "routes": [
       "/",
       "/landing"
     ],
-    "lines": 377,
+    "lines": 463,
     "defaultExport": "function",
-    "namedExports": [],
+    "namedExports": [
+      "DESKTOP_BETA_INSTALLERS"
+    ],
     "hooks": [
       "useAuth"
     ],
@@ -1204,8 +1216,26 @@
     "routes": [
       "/forgot-password"
     ],
-    "lines": 11,
+    "lines": 214,
     "defaultExport": "function",
+    "namedExports": [],
+    "hooks": [
+      "useClerk",
+      "useMemo",
+      "useNavigate",
+      "useSignIn",
+      "useState"
+    ],
+    "apis": [],
+    "components": [
+      "AuthMarketingShell"
+    ]
+  },
+  {
+    "file": "Taskmaster/client/src/pages/auth/ForgotPasswordPage.test.jsx",
+    "routes": [],
+    "lines": 144,
+    "defaultExport": null,
     "namedExports": [],
     "hooks": [],
     "apis": [],
@@ -1234,7 +1264,7 @@
     "routes": [
       "/login/*"
     ],
-    "lines": 165,
+    "lines": 190,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

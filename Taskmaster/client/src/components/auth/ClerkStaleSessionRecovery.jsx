@@ -5,10 +5,12 @@ import { isClerkConfigured } from '../../config/clerk';
 import { isAuthSite } from '../../config/siteMode';
 import { useAuth } from '../../contexts/AuthContext';
 import { isClerkAuthSubflowPath, resolveClerkAuthPathname } from '../../lib/clerkSignInFlow';
+import { shouldSignOutStaleClerkSession } from '../../lib/clerkStaleSession';
 
 /**
  * Clears invalid Clerk sessions on auth host before sign-in.
  * Stale __session cookies cause session/touch 401 during Clerk setActive after password submit.
+ * Null getToken() right after password submit is normal — do not signOut (races clerk-establish).
  */
 export default function ClerkStaleSessionRecovery() {
   if (!isClerkConfigured() || !isAuthSite()) return null;
@@ -38,19 +40,19 @@ function ClerkStaleSessionRecoveryInner() {
     (async () => {
       try {
         const token = await getToken();
-        if (cancelled || token) return;
+        if (cancelled) return;
+        if (!shouldSignOutStaleClerkSession({ token })) return;
         await signOut();
         checkedRef.current = '';
       } catch (err) {
-        const status = err?.status || err?.response?.status;
-        if (status === 401 || status === 403) {
-          try {
-            await signOut();
-          } catch {
-            // ignore
-          }
-          checkedRef.current = '';
+        if (cancelled) return;
+        if (!shouldSignOutStaleClerkSession({ token: null, error: err })) return;
+        try {
+          await signOut();
+        } catch {
+          // ignore
         }
+        checkedRef.current = '';
       }
     })();
 

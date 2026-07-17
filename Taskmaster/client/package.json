@@ -1,7 +1,7 @@
 {
   "name": "CoreKnot-client",
   "private": true,
-  "version": "1.0.8-beta.1",
+  "version": "1.0.8-beta.2",
   "type": "module",
   "scripts": {
     "predev": "node ../server/scripts/freePort.js 5173 --wait",
@@ -24,20 +24,9 @@
     "lighthouse:prod": "node scripts/lighthouse-audit.mjs --prod",
     "lighthouse:loop": "node scripts/lighthouse-loop.mjs",
     "lighthouse:loop:public": "node scripts/lighthouse-loop.mjs --public-only",
-    "lighthouse:report": "node scripts/lighthouse-report-only.mjs",
-    "mobile:sync": "npm run build && cap sync",
-    "mobile:add:android": "cap add android",
-    "mobile:add:ios": "cap add ios",
-    "mobile:open:android": "cap open android",
-    "mobile:open:ios": "cap open ios",
-    "mobile:android:debug": "npm run mobile:sync && node scripts/build-android-debug.mjs",
-    "mobile:android:bundle": "npm run mobile:sync && node scripts/build-android-bundle.mjs"
+    "lighthouse:report": "node scripts/lighthouse-report-only.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.2",
-    "@capacitor/cli": "^8.4.2",
-    "@capacitor/core": "^8.4.2",
-    "@capacitor/ios": "^8.4.2",
     "@clerk/react": "^6.11.3",
     "@coreknot/contracts": "1.0.0",
     "@coreknot/design-tokens": "1.0.0",

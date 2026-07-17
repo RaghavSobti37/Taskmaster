@@ -1,11 +1,10 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { isClerkConfigured } from '../../config/clerk';
 
-/** Legacy reset links redirect to Clerk sign-in reset flow. */
+/** Start the Clerk-powered password reset flow on the auth host. */
 export default function ResetPasswordPage() {
-  const location = useLocation();
   if (!isClerkConfigured()) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to={`/login/reset-password${location.search || ''}`} replace />;
+  return <Navigate to="/forgot-password" replace />;
 }

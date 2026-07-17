@@ -16,6 +16,22 @@ import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
 import { computeLoginUiState, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 
+/** Clerk hides Forgot password on the combined email+password start step. */
+function ForgotPasswordHint({ visible }) {
+  if (!visible) return null;
+  return (
+    <div
+      className="mb-4 rounded-lg border border-teal-400/30 bg-teal-950/30 px-4 py-3 text-sm text-teal-50 text-center"
+      role="status"
+    >
+      <p className="font-medium">Reset your password</p>
+      <p className="mt-1 text-teal-100/90">
+        Enter your email, leave the password blank, press Continue, then tap Forgot password.
+      </p>
+    </div>
+  );
+}
+
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
@@ -60,6 +76,7 @@ function LoginPageView({
   const clerkReady = isClerkConfigured();
 
   const signInPath = resolveClerkSignInPathname(pathname || location.pathname);
+  const showForgotHint = new URLSearchParams(location.search).get('forgot') === '1';
 
   const uiState = computeLoginUiState({
     clerkReady,
@@ -146,7 +163,15 @@ function LoginPageView({
                 ) : null}
               </div>
             ) : null}
+            <ForgotPasswordHint visible={showForgotHint} />
             <ClerkSignInBlock />
+            {uiState === 'SHOW_SIGN_IN' && !showForgotHint ? (
+              <p className="mt-3 text-center text-sm text-teal-100/80">
+                <Link to="/login?forgot=1" className={linkClass}>
+                  Forgot password?
+                </Link>
+              </p>
+            ) : null}
           </>
         )}
         {showRecovery ? (

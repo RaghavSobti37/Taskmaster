@@ -59,10 +59,13 @@ node server/scripts/verifyGoogleOAuthOrigins.mjs
 
 | URI | Purpose |
 | --- | --- |
-| `https://clerk.tsccoreknot.com/v1/oauth_callback` | Clerk Google OAuth |
+| `https://tsccoreknot.com/__clerk/v1/oauth_callback` | Clerk Google OAuth via registered FAPI proxy (required) |
+| `https://clerk.tsccoreknot.com/v1/oauth_callback` | Clerk FAPI (if not using proxy redirect) |
 | `https://<API_HOST>/api/auth/google/callback` | Legacy staff Google login |
 | `https://<API_HOST>/api/google/accounts/callback` | Link extra Google accounts |
 | `http://localhost:5000/api/auth/google/callback` | Local dev |
+
+> Auth/landing builds must set `VITE_CLERK_PROXY_URL=https://tsccoreknot.com/__clerk` (same registered proxy). A satellite-only proxy (`auth…/__clerk`) starts OAuth with cookies on auth host while Google returns to primary → Clerk `authorization_invalid`.
 
 ### Clerk Dashboard checklist
 

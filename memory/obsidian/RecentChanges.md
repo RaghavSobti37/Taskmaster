@@ -4,6 +4,26 @@ Session deltas appended by `/git-push`, `memory-sync`, and agent ship workflows.
 
 ---
 
+## 2026-07-14 — Google OAuth authorization_invalid on tsccoreknot.com/__clerk
+
+- **What:** Auth site used satellite `proxyUrl` (`auth…/__clerk`); Google callback is registered primary `tsccoreknot.com/__clerk/v1/oauth_callback` → missing `__client` cookies → Clerk `authorization_invalid`. Force primary proxy + rewrite stale auth/landing env.
+- **Files:** `client/src/config/clerk.js`, `clerk.test.js`, `scripts/push-clerk-production-env.mjs`, `docs/auth/google-oauth.md`
+- **Verify:** `npx vitest run src/config/clerk.test.js` (15 pass)
+- **Deploy:** Redeploy **coreknot-auth** from `main`; set `VITE_CLERK_PROXY_URL=https://tsccoreknot.com/__clerk`
+
+---
+
+## 2026-07-14 — Login: stop stale-session signOut race + forgot-password UX
+
+- **What:** `ClerkStaleSessionRecovery` no longer `signOut()` on null `getToken()` (JWT warm window after password) — only on 401/403. Helper `clerkStaleSession.js` + tests. `/forgot-password` → `/login?forgot=1` hint (hash reset was broken); visible Forgot password link on start form.
+- **Why:** Null token after password raced `clerk-establish` → bounce back to SignIn. Combined email+password start hid Clerk’s Forgot link.
+- **Files:** `ClerkStaleSessionRecovery.jsx`, `clerkStaleSession.js`, `LoginPage.jsx`, `ForgotPasswordPage.jsx`, `ResetPasswordPage.jsx`, docs inventory.
+- **Commits:** `9cd42c7e` (#116) · docs `d2b777d3` (#117) on `main`.
+- **Verify:** `npx vitest run src/lib/clerkStaleSession.test.js src/lib/clerkSignInFlow.test.js` (14 pass).
+- **Deploy:** Auto-deploy off — redeploy **coreknot-auth** from `main` for prod: `node scripts/deploy-coreknot-auth.mjs` (needs `VERCEL_TOKEN`).
+
+---
+
 ## 2026-07-07 — Connected Apps intake, KE removal, local integrations demo, docs + memory
 
 - **What:** Trimmed Connected Apps to five providers; Website Forms (embed + public API); full Knowledge Engine removal from CoreKnot; local demo seed `seed:local-integrations-demo`; in-depth docs `CONNECTED_APPS_AND_INTAKE.md`, `KNOWLEDGE_ENGINE_REMOVAL.md`, `LOCAL_DEV_DEMO_DATA.md`.

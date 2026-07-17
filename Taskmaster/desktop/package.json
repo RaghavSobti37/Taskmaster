@@ -23,7 +23,7 @@
   "build": {
     "appId": "com.theshakticollective.coreknot",
     "productName": "CoreKnot Beta",
-    "artifactName": "CoreKnot-Beta-${version}-${os}-${arch}.${ext}",
+    "artifactName": "CoreKnot-Beta-${os}-${arch}.${ext}",
     "directories": {
       "output": "release"
     },

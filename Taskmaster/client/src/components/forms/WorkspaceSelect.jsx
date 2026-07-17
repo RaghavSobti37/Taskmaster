@@ -1,4 +1,3 @@
-import React from 'react';
 import NexusDropdown from '../ui/NexusDropdown';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
@@ -10,10 +9,42 @@ export const WorkspaceDot = ({ color, className = '' }) => (
   />
 );
 
-const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = false, placeholder = 'Select workspace...', className = '', required = false, invalid = false }) => {
-  const { data: workspaces = [] } = useWorkspaces();
+const normalizeWorkspaceOptionKey = (name) => String(name || 'General').trim().toUpperCase();
 
-  const options = workspaces.map((w) => ({
+const mergeWorkspaceOptions = (...groups) => {
+  const byName = new Map();
+  groups.flat().filter(Boolean).forEach((workspace) => {
+    const name = typeof workspace === 'string' ? workspace : workspace.name;
+    if (!name) return;
+    const key = normalizeWorkspaceOptionKey(name);
+    if (!byName.has(key)) {
+      byName.set(key, typeof workspace === 'string' ? { name } : workspace);
+    }
+  });
+  return [...byName.values()];
+};
+
+const WorkspaceSelect = ({
+  value,
+  onChange,
+  label = 'Workspace',
+  disabled = false,
+  placeholder = 'Select workspace...',
+  className = '',
+  required = false,
+  invalid = false,
+  workspaces: providedWorkspaces,
+  fallbackWorkspaces = [],
+}) => {
+  const { data: fetchedWorkspaces = [] } = useWorkspaces();
+  const effectiveWorkspaces = mergeWorkspaceOptions(
+    providedWorkspaces?.length ? providedWorkspaces : fetchedWorkspaces,
+    fallbackWorkspaces,
+    value ? [{ name: value }] : [],
+    [{ name: 'General' }],
+  );
+
+  const options = effectiveWorkspaces.map((w) => ({
     value: w.name,
     label: w.name,
     color: w.color,
@@ -21,7 +52,7 @@ const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = fals
 
   const renderOption = (option) => (
     <span className="flex items-center gap-2 min-w-0">
-      <WorkspaceDot color={option.color || getWorkspaceColor(option.value, workspaces)} />
+      <WorkspaceDot color={option.color || getWorkspaceColor(option.value, effectiveWorkspaces)} />
       <span className="truncate">{option.label}</span>
     </span>
   );

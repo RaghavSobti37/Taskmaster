@@ -6,5 +6,5 @@ export default function ForgotPasswordPage() {
   if (!isClerkConfigured()) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to="/login#/reset-password" replace />;
+  return <Navigate to="/login/reset-password" replace />;
 }

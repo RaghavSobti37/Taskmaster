@@ -13,7 +13,7 @@ import MentionInput from '../mentions/MentionInput';
 import { SLOT_OPTIONS, normalizeTaskCategory } from '../../constants/taskOptions';
 import { useTaskCategoryOptions } from '../../hooks/useTaskCategoryOptions';
 import { computeDueDateFromStart } from '../../utils/taskPriorityDates';
-import { getTodayDateKey, validateTaskTimelineFields } from '../../utils/dateValidation';
+import { getTodayDateKey } from '../../utils/dateValidation';
 
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 const fieldInputClass =
@@ -52,6 +52,15 @@ const TaskFormFields = ({
   const inputClass = inlineEdit ? ghostInputClass : fieldInputClass;
   const set = (field, val) => onChange({ ...values, [field]: val });
   const todayKey = getTodayDateKey();
+  const fallbackWorkspaces = React.useMemo(() => {
+    const byWorkspace = new Map();
+    projects.forEach((project) => {
+      const name = project?.workspace || 'General';
+      const key = String(name).trim().toUpperCase();
+      if (!byWorkspace.has(key)) byWorkspace.set(key, { name });
+    });
+    return [...byWorkspace.values()];
+  }, [projects]);
   const { options: categoryOptions, addCategory } = useTaskCategoryOptions();
   const persistCategory = async (label) => {
     await addCategory.mutateAsync(label);
@@ -120,6 +129,7 @@ const TaskFormFields = ({
             disabled={disabled}
             required
             invalid={workspaceMissing}
+            fallbackWorkspaces={fallbackWorkspaces}
           />
         )}
         {showSchedule && (
@@ -218,6 +228,7 @@ const TaskFormFields = ({
               value={values.workspace || 'General'}
               onChange={handleWorkspaceChange}
               disabled={disabled}
+              fallbackWorkspaces={fallbackWorkspaces}
             />
           )}
           {showProject && !lockProject && (

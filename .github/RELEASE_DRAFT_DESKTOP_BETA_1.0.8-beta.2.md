@@ -1,10 +1,10 @@
-# CoreKnot Desktop Beta 1.0.8-beta.2
+# CoreKnot Beta
 
 Beta desktop update for CoreKnot auth and downloads.
 
 ## Downloads
 
-- Windows: download `CoreKnot-Beta-1.0.8-beta.2-win-x64.exe` from this release.
+- Windows: download `CoreKnot-Beta-win-x64.exe` from this release.
 
 ## What Changed
 
@@ -14,4 +14,4 @@ Beta desktop update for CoreKnot auth and downloads.
 
 ## Update Notes
 
-Existing CoreKnot Desktop Beta users should see the beta update prompt after the app checks GitHub releases.
+Existing CoreKnot Beta users should see the beta update prompt after the app checks GitHub releases.

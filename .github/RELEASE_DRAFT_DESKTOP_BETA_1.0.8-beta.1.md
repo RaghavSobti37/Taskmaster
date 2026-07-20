@@ -1,4 +1,4 @@
-# CoreKnot Desktop Beta 1.0.8-beta.1
+# CoreKnot Beta
 
 Beta desktop installers for CoreKnot.
 

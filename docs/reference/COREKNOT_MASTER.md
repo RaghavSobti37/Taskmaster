@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.3 · **Compiled:** 2026-07-17
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.3 · **Compiled:** 2026-07-20
 
 ---
 
@@ -201,7 +201,7 @@ _Total page files: 142. Each entry lists route, exports, hooks, components, and 
 | --- | --- |
 | **Route(s)** | /forgot-password |
 | **Default export** | `function` |
-| **Lines** | 214 |
+| **Lines** | 221 |
 | **Hooks** | `useClerk`, `useMemo`, `useNavigate`, `useSignIn`, `useState` |
 | **Data hooks** | `useClerk` → /api/auth/clerk-establish, /api/tenants/memberships, /api/tenants/select |
 | **Key components** | `AuthMarketingShell` |
@@ -213,7 +213,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `—` |
-| **Lines** | 144 |
+| **Lines** | 166 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/auth/GoogleSuccessPage.jsx`
@@ -233,7 +233,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /login/* |
 | **Default export** | `function` |
-| **Lines** | 190 |
+| **Lines** | 193 |
 | **Hooks** | `useAuth`, `useClerkAuth`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useRef`, `useState` |
 | **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useClerkAuth` → /api/auth/access-request, /api/auth/clerk-establish, /api/tenants/memberships |
 | **Key components** | `AppBootError`, `AuthMarketingShell`, `BootScreen`, `ClearSessionCookiesButton`, `ClerkSignInBlock`, `InstallGuideModal` |
@@ -292,7 +292,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `—` |
-| **Lines** | 26 |
+| **Lines** | 27 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/LandingPage.jsx`

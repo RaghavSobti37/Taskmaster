@@ -69,7 +69,7 @@
   {
     "file": "Taskmaster/client/src/pages/LandingPage.download.test.jsx",
     "routes": [],
-    "lines": 26,
+    "lines": 27,
     "defaultExport": null,
     "namedExports": [],
     "hooks": [],
@@ -1216,7 +1216,7 @@
     "routes": [
       "/forgot-password"
     ],
-    "lines": 214,
+    "lines": 221,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -1234,7 +1234,7 @@
   {
     "file": "Taskmaster/client/src/pages/auth/ForgotPasswordPage.test.jsx",
     "routes": [],
-    "lines": 144,
+    "lines": 166,
     "defaultExport": null,
     "namedExports": [],
     "hooks": [],
@@ -1264,7 +1264,7 @@
     "routes": [
       "/login/*"
     ],
-    "lines": 190,
+    "lines": 193,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [

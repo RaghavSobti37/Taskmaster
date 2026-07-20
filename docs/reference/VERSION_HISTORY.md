@@ -16,8 +16,8 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 - **Clerk session establish:** frontend token-read failures with `authorization_invalid` are treated as terminal auth errors instead of retry loops.
 
 #### Landing download
-- **Desktop beta links:** landing page installer buttons now target `v1.0.8-beta.3` GitHub release assets.
-- **Hero CTA:** desktop beta CTA now opens the `v1.0.8-beta.3` release page.
+- **Desktop beta links:** landing page installer buttons now target versionless `CoreKnot Beta` setup files on the GitHub beta release.
+- **Hero CTA:** desktop beta CTA now opens the latest `CoreKnot Beta` release page.
 
 ---
 

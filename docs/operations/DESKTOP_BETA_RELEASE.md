@@ -6,7 +6,7 @@ arrive through GitHub beta releases and show an update dialog inside the desktop
 
 ## Install
 
-1. Open the latest GitHub prerelease named `CoreKnot Desktop Beta`.
+1. Open the latest GitHub prerelease named `CoreKnot Beta`.
 2. Download the installer for your OS:
    - Windows: `CoreKnot-Beta-win-x64.exe`
    - macOS: `CoreKnot-Beta-mac-*.dmg`
@@ -25,8 +25,8 @@ git commit -m "feat: package CoreKnot desktop beta"
 git push origin dev
 ```
 
-After the release commit is merged to `main`, `.github/workflows/desktop-beta-release.yml` creates tag
-the beta release tag, builds Windows/macOS/Linux packages, publishes a GitHub prerelease, and uploads update metadata
+After the release commit is merged to `main`, `.github/workflows/desktop-beta-release.yml` creates
+the beta release tag when needed, builds Windows/macOS/Linux packages, publishes a GitHub prerelease, and uploads update metadata
 for the `beta` channel.
 
 ## Update Behavior

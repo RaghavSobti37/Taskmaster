@@ -7,7 +7,7 @@ const version = process.argv[2]?.trim();
 
 if (!version || !/^\d+\.\d+\.\d+-beta\.\d+$/.test(version)) {
   console.error('Usage: npm run release:desktop:beta -- <version>');
-  console.error('Example: npm run release:desktop:beta -- 1.0.8-beta.2');
+  console.error('Example: npm run release:desktop:beta -- 1.0.8-beta.3');
   process.exit(1);
 }
 

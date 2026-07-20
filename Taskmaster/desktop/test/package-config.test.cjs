@@ -10,7 +10,7 @@ test('desktop beta publishes GitHub prerelease update metadata', () => {
   const [publish] = pkg.build.publish;
   assert.equal(publish.provider, 'github');
   assert.equal(publish.owner, 'RaghavSobti37');
-  assert.equal(publish.repo, 'Taskmaster');
+  assert.equal(publish.repo, 'Coreknot');
   assert.equal(publish.releaseType, 'prerelease');
   assert.equal(publish.channel, 'beta');
 });

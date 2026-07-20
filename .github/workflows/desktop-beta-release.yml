@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Beta version to release, e.g. 1.0.8-beta.2"
+        description: "Beta version to release, e.g. 1.0.8-beta.3"
         required: false
         type: string
   push:
@@ -29,6 +29,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       should_release: ${{ steps.version.outputs.should_release }}
+      should_create_tag: ${{ steps.version.outputs.should_create_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,15 +47,22 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "should_create_tag=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_create_tag=true" >> "$GITHUB_OUTPUT"
+          fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} already exists; skipping desktop beta release."
+            echo "Release ${TAG} already exists; skipping desktop beta release."
           else
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   create-tag:
     needs: resolve-version
-    if: needs.resolve-version.outputs.should_release == 'true'
+    if: needs.resolve-version.outputs.should_release == 'true' && needs.resolve-version.outputs.should_create_tag == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,7 +77,42 @@ jobs:
 
   publish:
     needs: [resolve-version, create-tag]
-    if: needs.resolve-version.outputs.should_release == 'true'
+    if: always() && needs.resolve-version.outputs.should_release == 'true' && needs.resolve-version.outputs.should_create_tag == 'true' && needs.create-tag.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            command: npm run desktop:publish -- --win
+          - os: macos-latest
+            command: npm run desktop:publish -- --mac
+          - os: ubuntu-latest
+            command: npm run desktop:publish -- --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Apply requested beta version
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
+        run: node scripts/prepare-desktop-beta-release.mjs "${{ needs.resolve-version.outputs.version }}"
+      - name: Install deps
+        run: npx --yes npm@${{ env.NPM_VERSION }} ci
+      - name: Desktop smoke
+        run: npm run desktop:smoke
+      - name: Build and publish desktop beta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.command }}
+
+  publish-existing-tag:
+    needs: resolve-version
+    if: needs.resolve-version.outputs.should_release == 'true' && needs.resolve-version.outputs.should_create_tag == 'false'
     strategy:
       fail-fast: false
       matrix:

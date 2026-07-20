@@ -38,7 +38,7 @@
       {
         "provider": "github",
         "owner": "RaghavSobti37",
-        "repo": "Taskmaster",
+        "repo": "Coreknot",
         "releaseType": "prerelease",
         "channel": "beta"
       }

@@ -34,7 +34,7 @@ const DESKTOP_BETA_RELEASE_BASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_
   || [
     'https://github.com',
     ['Raghav', 'Sobti37'].join(''),
-    'Taskmaster',
+    'Coreknot',
     'releases',
     'download',
     import.meta.env.VITE_DESKTOP_BETA_RELEASE_TAG || 'v1.0.8-beta.3',

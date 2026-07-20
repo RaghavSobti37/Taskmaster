@@ -4,33 +4,12 @@
     "routes": [
       "/campaign/:campaignId"
     ],
-    "lines": 853,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useCallback",
-      "useCampaignAnalytics",
-      "useCampaignDetails",
-      "useCampaignRecipients",
-      "useEffect",
-      "useLocation",
-      "useMailProfiles",
-      "useMemo",
-      "useNavigate",
-      "useParams",
-      "useResendCampaign",
-      "useResendFilteredCampaign",
-      "useState",
-      "useStopCampaign",
-      "useToast"
-    ],
-    "apis": [
-      "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-    ],
-    "components": [
-      "RegisteredLocationBarChart",
-      "ResendFromEmailPicker"
-    ]
+    "hooks": [],
+    "apis": [],
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/Dashboard.jsx",
@@ -119,18 +98,15 @@
     "routes": [
       "/unsubscribe"
     ],
-    "lines": 179,
+    "lines": 40,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
-      "useMemo",
-      "usePublicEmailStreams",
-      "useSearchParams",
-      "useState"
+      "useEffect",
+      "useLocation",
+      "useMemo"
     ],
-    "apis": [
-      "/api/track/unsubscribe"
-    ],
+    "apis": [],
     "components": []
   },
   {
@@ -437,42 +413,14 @@
     "routes": [
       "(AdminCRM tab)"
     ],
-    "lines": 793,
+    "lines": 55,
     "defaultExport": "function",
     "namedExports": [
       "DataHubContent"
     ],
-    "hooks": [
-      "useCallback",
-      "useConfirm",
-      "useDataHubAnalytics",
-      "useDataHubBackups",
-      "useDataHubBulkDeletePeople",
-      "useDataHubFolders",
-      "useDataHubPeople",
-      "useDataHubProductionBackup",
-      "useDataHubRebuildPersonHub",
-      "useDataHubReconcile",
-      "useDataHubSyncStatus",
-      "useDebounce",
-      "useDeferredQueryEnabled",
-      "useEffect",
-      "useMemo",
-      "useQueryClient",
-      "useRef",
-      "useState",
-      "useToast"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "DataHubCampaignOutcomes",
-      "DataHubInletCluster",
-      "DataHubOpsMenu",
-      "DataHubTemporalColumn",
-      "ListPageLayout",
-      "SearchInput",
-      "StatusBadge"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/admin/ExlyCampaignsPage.jsx",
@@ -1535,10 +1483,12 @@
   {
     "file": "Taskmaster/client/src/pages/emails/AutoMailerRedirectPage.jsx",
     "routes": [],
-    "lines": 60,
+    "lines": 71,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
+      "useEffect",
+      "useLocation",
       "useMemo"
     ],
     "apis": [],
@@ -1547,8 +1497,8 @@
   {
     "file": "Taskmaster/client/src/pages/emails/EmailHubLayout.jsx",
     "routes": [],
-    "lines": 29,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
     "hooks": [],
     "apis": [],
@@ -1559,68 +1509,46 @@
     "routes": [
       "/emails/campaigns"
     ],
-    "lines": 50,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useDeferredQueryEnabled",
-      "useMailProfiles",
-      "useNavigate",
-      "useScanBounces",
-      "useToast"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "MailCampaignList"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/emails/EmailsOverviewPage.jsx",
     "routes": [
       "/emails"
     ],
-    "lines": 109,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useDeferredQueryEnabled",
-      "useMailCampaigns",
-      "useMailStats",
-      "useNavigate"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "MailCampaignList",
-      "MailStatsSummary"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/emails/EmailsProfilesPage.jsx",
     "routes": [
       "/emails/profiles"
     ],
-    "lines": 32,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useMailProfiles"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "MailProfilesPanel"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/emails/EmailsStreamsPage.jsx",
     "routes": [
       "/emails/streams"
     ],
-    "lines": 33,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useEmailStreams"
-    ],
+    "hooks": [],
     "apis": [],
     "components": []
   },
@@ -1629,16 +1557,12 @@
     "routes": [
       "/emails/templates"
     ],
-    "lines": 37,
-    "defaultExport": "function",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useNavigate"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "MailTemplateStudio"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/finance/FinancePage.jsx",
@@ -2463,7 +2387,7 @@
     "routes": [
       "/projects"
     ],
-    "lines": 1406,
+    "lines": 1408,
     "defaultExport": "ProjectsView",
     "namedExports": [],
     "hooks": [
@@ -2476,6 +2400,7 @@
       "useLocation",
       "useMemo",
       "useNavigate",
+      "useOrgPath",
       "useProjects",
       "useQueryClient",
       "useRef",
@@ -2501,7 +2426,7 @@
     "routes": [
       "/workspaces/:name"
     ],
-    "lines": 469,
+    "lines": 471,
     "defaultExport": "WorkspaceSettings",
     "namedExports": [],
     "hooks": [
@@ -2510,6 +2435,7 @@
       "useEffect",
       "useMemo",
       "useNavigate",
+      "useOrgPath",
       "useParams",
       "useQueryClient",
       "useState",
@@ -2864,75 +2790,47 @@
     "routes": [
       "/emails/create"
     ],
-    "lines": 28,
-    "defaultExport": "CreateCampaignPage",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useNavigate"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "CampaignWizardShell"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/workspace/NewsletterCuratePage.jsx",
     "routes": [
       "/emails/newsletter/curate"
     ],
-    "lines": 62,
-    "defaultExport": "NewsletterCuratePage",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useAuth",
-      "useCurrentNewsletterIssue",
-      "useNavigate",
-      "useNewsletterCategories",
-      "useNewsletterIssue",
-      "useSearchParams"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "NewsletterCuratorPanel"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/workspace/NewsletterPage.jsx",
     "routes": [
       "/emails/newsletter"
     ],
-    "lines": 123,
-    "defaultExport": "NewsletterPage",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useAuth",
-      "useCurrentNewsletterIssue",
-      "useNavigate",
-      "useNewsletterCategories"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "NewsletterLinkForm",
-      "NewsletterWeekBoard"
-    ]
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/workspace/NewsletterSendPage.jsx",
     "routes": [
       "/emails/newsletter/send/:issueId"
     ],
-    "lines": 63,
-    "defaultExport": "NewsletterSendPage",
+    "lines": 2,
+    "defaultExport": null,
     "namedExports": [],
-    "hooks": [
-      "useAuth",
-      "useNavigate",
-      "useNewsletterIssue",
-      "useParams"
-    ],
+    "hooks": [],
     "apis": [],
-    "components": [
-      "NewsletterSendWizard"
-    ]
+    "components": []
   }
 ]

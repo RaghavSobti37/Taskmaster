@@ -347,13 +347,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /unsubscribe |
 | **Default export** | `function` |
-| **Lines** | 179 |
-| **Hooks** | `useMemo`, `usePublicEmailStreams`, `useSearchParams`, `useState` |
-| **Data hooks** | `usePublicEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
+| **Lines** | 40 |
+| **Hooks** | `useEffect`, `useLocation`, `useMemo` |
 
-**API endpoints:**
-
-- `/api/track/unsubscribe`
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 
 ### Dashboard & productivity
 
@@ -547,9 +544,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /projects |
 | **Default export** | `ProjectsView` |
-| **Lines** | 1406 |
-| **Hooks** | `useAuth`, `useCallback`, `useConfirm`, `useDashboardTasks`, `useDeferredQueryEnabled`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useProjects`, `useQueryClient`, `useRef`, `useReviewTasks`, `useState`, `useToast`, `useUpdateProject`, `useWorkspaces` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDashboardTasks` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateProject` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
+| **Lines** | 1408 |
+| **Hooks** | `useAuth`, `useCallback`, `useConfirm`, `useDashboardTasks`, `useDeferredQueryEnabled`, `useEffect`, `useLocation`, `useMemo`, `useNavigate`, `useOrgPath`, `useProjects`, `useQueryClient`, `useRef`, `useReviewTasks`, `useState`, `useToast`, `useUpdateProject`, `useWorkspaces` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDashboardTasks` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useOrgPath` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useProjects` → /api/auth/google?state=link_${user?._id}, /api/calendar, /api/calendar/${initialData._id} · `useReviewTasks` → /api/projects, /api/projects/${id}, /api/projects/${id}/remove-member · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateProject` → /api/projects, /api/projects/${id}, /api/projects/${projectId}/analytics · `useWorkspaces` → /api/auth/google?state=link_${user?._id}, /api/finance/${id}, /api/finance/${id}/approve |
 | **Key components** | `WorkspaceColorPicker`, `WorkspaceSelect` |
 
 **API endpoints:**
@@ -564,9 +561,9 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /workspaces/:name |
 | **Default export** | `WorkspaceSettings` |
-| **Lines** | 469 |
-| **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useNavigate`, `useParams`, `useQueryClient`, `useState`, `useUnsavedChanges` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
+| **Lines** | 471 |
+| **Hooks** | `useAuth`, `useCallback`, `useEffect`, `useMemo`, `useNavigate`, `useOrgPath`, `useParams`, `useQueryClient`, `useState`, `useUnsavedChanges` |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useOrgPath` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useUnsavedChanges` → /api/admin/platform-settings, /api/auth/change-required-password, /api/auth/google?state=link_${user?._id} |
 | **Key components** | `NexusDropdown`, `QueryErrorSlot`, `RoleOptionBoxes`, `WorkspaceColorPicker`, `WorkspaceGoalsPanel` |
 
 **API endpoints:**
@@ -799,23 +796,18 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /campaign/:campaignId |
-| **Default export** | `function` |
-| **Lines** | 853 |
-| **Hooks** | `useCallback`, `useCampaignAnalytics`, `useCampaignDetails`, `useCampaignRecipients`, `useEffect`, `useLocation`, `useMailProfiles`, `useMemo`, `useNavigate`, `useParams`, `useResendCampaign`, `useResendFilteredCampaign`, `useState`, `useStopCampaign`, `useToast` |
-| **Data hooks** | `useCampaignAnalytics` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useCampaignDetails` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useCampaignRecipients` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useResendCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useResendFilteredCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useStopCampaign` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
-| **Key components** | `RegisteredLocationBarChart`, `ResendFromEmailPicker` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
-**API endpoints:**
-
-- `/api/campaigns/${campaignApiId}/recipients/export?${params}`
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/AutoMailerRedirectPage.jsx`
 
 | Field | Value |
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
 | **Default export** | `function` |
-| **Lines** | 60 |
-| **Hooks** | `useMemo` |
+| **Lines** | 71 |
+| **Hooks** | `useEffect`, `useLocation`, `useMemo` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailHubLayout.jsx`
@@ -823,8 +815,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | _embedded tab / child route_ |
-| **Default export** | `function` |
-| **Lines** | 29 |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailsCampaignsPage.jsx`
@@ -832,11 +824,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/campaigns |
-| **Default export** | `function` |
-| **Lines** | 50 |
-| **Hooks** | `useDeferredQueryEnabled`, `useMailProfiles`, `useNavigate`, `useScanBounces`, `useToast` |
-| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} · `useScanBounces` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
-| **Key components** | `MailCampaignList` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailsOverviewPage.jsx`
@@ -844,11 +833,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails |
-| **Default export** | `function` |
-| **Lines** | 109 |
-| **Hooks** | `useDeferredQueryEnabled`, `useMailCampaigns`, `useMailStats`, `useNavigate` |
-| **Data hooks** | `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useMailCampaigns` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics |
-| **Key components** | `MailCampaignList`, `MailStatsSummary` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailsProfilesPage.jsx`
@@ -856,11 +842,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/profiles |
-| **Default export** | `function` |
-| **Lines** | 32 |
-| **Hooks** | `useMailProfiles` |
-| **Data hooks** | `useMailProfiles` → /api/campaigns, /api/campaigns/${campaignApiId}/recipients/export?${params}, /api/campaigns/${id} |
-| **Key components** | `MailProfilesPanel` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailsStreamsPage.jsx`
@@ -868,10 +851,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/streams |
-| **Default export** | `function` |
-| **Lines** | 33 |
-| **Hooks** | `useEmailStreams` |
-| **Data hooks** | `useEmailStreams` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/emails/EmailsTemplatesPage.jsx`
@@ -879,10 +860,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/templates |
-| **Default export** | `function` |
-| **Lines** | 37 |
-| **Hooks** | `useNavigate` |
-| **Key components** | `MailTemplateStudio` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/workspace/CreateCampaignPage.jsx`
@@ -890,10 +869,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/create |
-| **Default export** | `CreateCampaignPage` |
-| **Lines** | 28 |
-| **Hooks** | `useNavigate` |
-| **Key components** | `CampaignWizardShell` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/workspace/NewsletterCuratePage.jsx`
@@ -901,11 +878,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/newsletter/curate |
-| **Default export** | `NewsletterCuratePage` |
-| **Lines** | 62 |
-| **Hooks** | `useAuth`, `useCurrentNewsletterIssue`, `useNavigate`, `useNewsletterCategories`, `useNewsletterIssue`, `useSearchParams` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} |
-| **Key components** | `NewsletterCuratorPanel` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/workspace/NewsletterPage.jsx`
@@ -913,11 +887,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/newsletter |
-| **Default export** | `NewsletterPage` |
-| **Lines** | 123 |
-| **Hooks** | `useAuth`, `useCurrentNewsletterIssue`, `useNavigate`, `useNewsletterCategories` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCurrentNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories · `useNewsletterCategories` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories |
-| **Key components** | `NewsletterLinkForm`, `NewsletterWeekBoard` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/workspace/NewsletterSendPage.jsx`
@@ -925,11 +896,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | Field | Value |
 | --- | --- |
 | **Route(s)** | /emails/newsletter/send/:issueId |
-| **Default export** | `NewsletterSendPage` |
-| **Lines** | 63 |
-| **Hooks** | `useAuth`, `useNavigate`, `useNewsletterIssue`, `useParams` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useNewsletterIssue` → /api/newsletter/articles, /api/newsletter/articles/${id}, /api/newsletter/categories |
-| **Key components** | `NewsletterSendWizard` |
+| **Default export** | `—` |
+| **Lines** | 2 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 
@@ -1371,7 +1339,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminPanel` |
 | **Lines** | 483 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateTeam`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteTeam`, `useDeleteUser`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useSearchParams`, `useState`, `useTeams`, `useToast`, `useUpdateUser`, `useUserDirectory` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useTeams` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteTeam` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useMailStats` → /api/mail/stats · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useSearchParams` → /api/auth/google?state=link_${user?._id}, /api/crm/leads/${highlightId}, /api/crm/leads/${id} · `useTeams` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminUserGridCard`, `ClerkDashboardUsersButton`, `MonthlyReportPanel`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1464,7 +1432,7 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | **Default export** | `AdminUsers` |
 | **Lines** | 565 |
 | **Hooks** | `useAuth`, `useCRMStats`, `useCallback`, `useConfirm`, `useCreateUser`, `useDataHubFolders`, `useDeferredQueryEnabled`, `useDeleteUser`, `useDepartments`, `useEffect`, `useMailStats`, `useMemo`, `usePlatformExclusions`, `useState`, `useUpdateUser`, `useUserDirectory` |
-| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useMailStats` → /api/campaigns, /api/campaigns/${id}, /api/campaigns/${id}/analytics · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/mail/preview · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
+| **Data hooks** | `useAuth` → /api/artists/${artistId}, /api/artists/${artistId}/claim, /api/artists/${artistId}/members · `useCRMStats` → /api/crm/artist/import-sheets, /api/crm/config, /api/crm/imports · `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useCreateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useDeleteUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useDepartments` → /api/departments, /api/departments/${departmentId}/monthly-report, /api/departments/${id} · `useMailStats` → /api/mail/stats · `usePlatformExclusions` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUpdateUser` → /api/admin/platform-settings/exclusions, /api/departments/users/${userId}, /api/teams · `useUserDirectory` → /api/admin/platform-settings, /api/assets, /api/contacts |
 | **Key components** | `AdminBulkActionBar`, `AdminUserGridCard`, `ClerkDashboardUsersButton`, `CreateUserModal`, `MonthlyReportPanel`, `PagePermissionsEditor`, `UserDeleteAction` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
@@ -1497,11 +1465,8 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (AdminCRM tab) |
 | **Default export** | `function` |
-| **Lines** | 793 |
+| **Lines** | 55 |
 | **Named exports** | `DataHubContent` |
-| **Hooks** | `useCallback`, `useConfirm`, `useDataHubAnalytics`, `useDataHubBackups`, `useDataHubBulkDeletePeople`, `useDataHubFolders`, `useDataHubPeople`, `useDataHubProductionBackup`, `useDataHubRebuildPersonHub`, `useDataHubReconcile`, `useDataHubSyncStatus`, `useDebounce`, `useDeferredQueryEnabled`, `useEffect`, `useMemo`, `useQueryClient`, `useRef`, `useState`, `useToast` |
-| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useDataHubAnalytics` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBackups` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubBulkDeletePeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubFolders` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubPeople` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubProductionBackup` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubRebuildPersonHub` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubReconcile` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDataHubSyncStatus` → /api/data-hub/analytics, /api/data-hub/backup, /api/data-hub/backup/progress · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useDeferredQueryEnabled` → /api/admin/media-contacts, /api/admin/media-contacts/filters, /api/admin/platform-settings · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
-| **Key components** | `DataHubCampaignOutcomes`, `DataHubInletCluster`, `DataHubOpsMenu`, `DataHubTemporalColumn`, `ListPageLayout`, `SearchInput`, `StatusBadge` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/admin/ExlyCampaignsPage.jsx`

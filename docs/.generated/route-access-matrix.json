@@ -356,7 +356,7 @@
       "pageKey": "emails",
       "tab": null,
       "legacyRedirectTo": null,
-      "featureKey": "resend"
+      "featureKey": "emails"
     },
     {
       "path": "/equipment",

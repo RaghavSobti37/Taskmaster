@@ -1310,13 +1310,6 @@
     "useAuth": {
       "files": [
         {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/components/artists/ClaimWorkspaceBanner.jsx",
           "endpoints": [
             "/api/artists/${artistId}/claim"
@@ -1327,14 +1320,6 @@
           "file": "Taskmaster/client/src/components/auth/ClerkSessionBridge.jsx",
           "endpoints": [
             "/api/auth/clerk-establish"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/components/emails/wizard/StepPreflight.jsx",
-          "endpoints": [
-            "/api/mail/preview",
-            "/api/mail/test-campaign"
           ],
           "network": true
         },
@@ -1669,8 +1654,6 @@
         "/api/google/holidays?year=${year}",
         "/api/invites/${token}",
         "/api/invites/${token}/accept",
-        "/api/mail/preview",
-        "/api/mail/test-campaign",
         "/api/notifications",
         "/api/notifications/${id}/read",
         "/api/notifications/read-all",
@@ -1843,225 +1826,6 @@
       ],
       "network": true
     },
-    "useCampaignAnalytics": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
-    "useCampaignDetails": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
-    "useCampaignRecipients": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
     "useClearAllNotifications": {
       "files": [
         {
@@ -2141,13 +1905,6 @@
     },
     "useConfirm": {
       "files": [
-        {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
         {
           "file": "Taskmaster/client/src/components/project/ProjectFinance.jsx",
           "endpoints": [
@@ -2306,7 +2063,6 @@
         "/api/gamification-admin/config",
         "/api/gamification-admin/recalculate-all-levels",
         "/api/gamification-admin/rules",
-        "/api/mail/preview",
         "/api/office-assets",
         "/api/office-assets/${editingAsset._id}",
         "/api/office-assets/${id}",
@@ -3093,41 +2849,6 @@
       ],
       "network": true
     },
-    "useCurrentNewsletterIssue": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
-          "endpoints": [
-            "/api/newsletter/articles",
-            "/api/newsletter/articles/${id}",
-            "/api/newsletter/categories",
-            "/api/newsletter/issues/${issueId}/audience-preview",
-            "/api/newsletter/issues/${issueId}/compile",
-            "/api/newsletter/issues/${issueId}/curate",
-            "/api/newsletter/issues/${issueId}/preview",
-            "/api/newsletter/issues/${issueId}/send",
-            "/api/newsletter/issues/${weekKey}",
-            "/api/newsletter/issues/current",
-            "/api/newsletter/links/preview"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/newsletter/articles",
-        "/api/newsletter/articles/${id}",
-        "/api/newsletter/categories",
-        "/api/newsletter/issues/${issueId}/audience-preview",
-        "/api/newsletter/issues/${issueId}/compile",
-        "/api/newsletter/issues/${issueId}/curate",
-        "/api/newsletter/issues/${issueId}/preview",
-        "/api/newsletter/issues/${issueId}/send",
-        "/api/newsletter/issues/${weekKey}",
-        "/api/newsletter/issues/current",
-        "/api/newsletter/links/preview"
-      ],
-      "network": true
-    },
     "useDashboardPreset": {
       "files": [
         {
@@ -3237,330 +2958,19 @@
       ],
       "network": true
     },
-    "useDataHubAnalytics": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubBackups": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubBulkDeletePeople": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
     "useDataHubFolders": {
       "files": [
         {
           "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
+          "endpoints": [],
+          "network": false
         }
       ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubPeople": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubProductionBackup": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubRebuildPersonHub": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubReconcile": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
-    },
-    "useDataHubSyncStatus": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/dataHub.js",
-          "endpoints": [
-            "/api/data-hub/analytics",
-            "/api/data-hub/backup",
-            "/api/data-hub/backup/progress",
-            "/api/data-hub/backups",
-            "/api/data-hub/folders",
-            "/api/data-hub/people",
-            "/api/data-hub/people/${id}",
-            "/api/data-hub/people/bulk-delete",
-            "/api/data-hub/rebuild-person-hub",
-            "/api/data-hub/reconcile",
-            "/api/data-hub/sync-status"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/data-hub/analytics",
-        "/api/data-hub/backup",
-        "/api/data-hub/backup/progress",
-        "/api/data-hub/backups",
-        "/api/data-hub/folders",
-        "/api/data-hub/people",
-        "/api/data-hub/people/${id}",
-        "/api/data-hub/people/bulk-delete",
-        "/api/data-hub/rebuild-person-hub",
-        "/api/data-hub/reconcile",
-        "/api/data-hub/sync-status"
-      ],
-      "network": true
+      "endpoints": [],
+      "network": false
     },
     "useDebounce": {
       "files": [
-        {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
         {
           "file": "Taskmaster/client/src/hooks/useDebounce.js",
           "endpoints": [],
@@ -3598,7 +3008,6 @@
         "/api/crm/leads/${leadId}/audit",
         "/api/crm/leads/${selectedLead._id}",
         "/api/crm/leads/${selectedLead._id}/notes",
-        "/api/mail/preview",
         "/api/search",
         "/api/tasks/${task?._id}"
       ],
@@ -4170,71 +3579,6 @@
       ],
       "network": true
     },
-    "useEmailStreams": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
     "useGamificationHistory": {
       "files": [
         {
@@ -4686,214 +4030,18 @@
       ],
       "network": true
     },
-    "useMailCampaigns": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
-    "useMailProfiles": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/components/newsletter/NewsletterSendWizard.jsx",
-          "endpoints": [
-            "/api/exly/offerings"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/exly/offerings",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
     "useMailStats": {
       "files": [
         {
           "file": "Taskmaster/client/src/hooks/queries/mail.js",
           "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
+            "/api/mail/stats"
           ],
           "network": true
         }
       ],
       "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
+        "/api/mail/stats"
       ],
       "network": true
     },
@@ -4977,76 +4125,6 @@
         "/api/attendance/upsert/by-user-date",
         "/api/finance/my-invoices?submissionType=reimbursement",
         "/api/finance/submit-invoice"
-      ],
-      "network": true
-    },
-    "useNewsletterCategories": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
-          "endpoints": [
-            "/api/newsletter/articles",
-            "/api/newsletter/articles/${id}",
-            "/api/newsletter/categories",
-            "/api/newsletter/issues/${issueId}/audience-preview",
-            "/api/newsletter/issues/${issueId}/compile",
-            "/api/newsletter/issues/${issueId}/curate",
-            "/api/newsletter/issues/${issueId}/preview",
-            "/api/newsletter/issues/${issueId}/send",
-            "/api/newsletter/issues/${weekKey}",
-            "/api/newsletter/issues/current",
-            "/api/newsletter/links/preview"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/newsletter/articles",
-        "/api/newsletter/articles/${id}",
-        "/api/newsletter/categories",
-        "/api/newsletter/issues/${issueId}/audience-preview",
-        "/api/newsletter/issues/${issueId}/compile",
-        "/api/newsletter/issues/${issueId}/curate",
-        "/api/newsletter/issues/${issueId}/preview",
-        "/api/newsletter/issues/${issueId}/send",
-        "/api/newsletter/issues/${weekKey}",
-        "/api/newsletter/issues/current",
-        "/api/newsletter/links/preview"
-      ],
-      "network": true
-    },
-    "useNewsletterIssue": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/newsletter.js",
-          "endpoints": [
-            "/api/newsletter/articles",
-            "/api/newsletter/articles/${id}",
-            "/api/newsletter/categories",
-            "/api/newsletter/issues/${issueId}/audience-preview",
-            "/api/newsletter/issues/${issueId}/compile",
-            "/api/newsletter/issues/${issueId}/curate",
-            "/api/newsletter/issues/${issueId}/preview",
-            "/api/newsletter/issues/${issueId}/send",
-            "/api/newsletter/issues/${weekKey}",
-            "/api/newsletter/issues/current",
-            "/api/newsletter/links/preview"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/newsletter/articles",
-        "/api/newsletter/articles/${id}",
-        "/api/newsletter/categories",
-        "/api/newsletter/issues/${issueId}/audience-preview",
-        "/api/newsletter/issues/${issueId}/compile",
-        "/api/newsletter/issues/${issueId}/curate",
-        "/api/newsletter/issues/${issueId}/preview",
-        "/api/newsletter/issues/${issueId}/send",
-        "/api/newsletter/issues/${weekKey}",
-        "/api/newsletter/issues/current",
-        "/api/newsletter/links/preview"
       ],
       "network": true
     },
@@ -5325,6 +4403,52 @@
       ],
       "network": true
     },
+    "useOrgPath": {
+      "files": [
+        {
+          "file": "Taskmaster/client/src/components/org/OrgSwitcher.jsx",
+          "endpoints": [
+            "/api/tenants/memberships",
+            "/api/tenants/select"
+          ],
+          "network": true
+        },
+        {
+          "file": "Taskmaster/client/src/hooks/useOrgPath.js",
+          "endpoints": [],
+          "network": false
+        },
+        {
+          "file": "Taskmaster/client/src/pages/projects/ProjectsView.jsx",
+          "endpoints": [
+            "/api/projects",
+            "/api/projects/${id}",
+            "/api/projects/workspaces",
+            "/api/projects/workspaces/${group.name}"
+          ],
+          "network": true
+        },
+        {
+          "file": "Taskmaster/client/src/pages/projects/WorkspaceSettings.jsx",
+          "endpoints": [
+            "/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}",
+            "/api/users/team"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/projects",
+        "/api/projects/${id}",
+        "/api/projects/workspaces",
+        "/api/projects/workspaces/${encodeURIComponent(workspaceApiName)}",
+        "/api/projects/workspaces/${group.name}",
+        "/api/tenants/memberships",
+        "/api/tenants/select",
+        "/api/users/team"
+      ],
+      "network": true
+    },
     "useOrgSettings": {
       "files": [
         {
@@ -5384,13 +4508,6 @@
     "usePlatformExclusions": {
       "files": [
         {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/hooks/queries/admin.js",
           "endpoints": [
             "/api/admin/platform-settings/exclusions",
@@ -5406,7 +4523,6 @@
       "endpoints": [
         "/api/admin/platform-settings/exclusions",
         "/api/departments/users/${userId}",
-        "/api/mail/preview",
         "/api/teams",
         "/api/teams/${id}",
         "/api/users",
@@ -5727,79 +4843,6 @@
       ],
       "network": true
     },
-    "usePublicEmailStreams": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/Unsubscribe.jsx",
-          "endpoints": [
-            "/api/track/unsubscribe"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams",
-        "/api/track/unsubscribe"
-      ],
-      "network": true
-    },
     "useQAProgress": {
       "files": [
         {
@@ -5892,152 +4935,6 @@
         "/api/artists/${artistId}/members/accept",
         "/api/artists/${artistId}/members/invite",
         "/api/artists/${artistId}/membership/me"
-      ],
-      "network": true
-    },
-    "useResendCampaign": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
-    "useResendFilteredCampaign": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
       ],
       "network": true
     },
@@ -6185,71 +5082,6 @@
       ],
       "network": true
     },
-    "useScanBounces": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
-      ],
-      "network": true
-    },
     "useSchedule": {
       "files": [
         {
@@ -6337,13 +5169,6 @@
             "/api/users/team"
           ],
           "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/Unsubscribe.jsx",
-          "endpoints": [
-            "/api/track/unsubscribe"
-          ],
-          "network": true
         }
       ],
       "endpoints": [
@@ -6368,7 +5193,6 @@
         "/api/google/accounts/simulate",
         "/api/projects",
         "/api/projects/workspaces/${encodeURIComponent(workspace)}",
-        "/api/track/unsubscribe",
         "/api/users/team"
       ],
       "network": true
@@ -6417,79 +5241,6 @@
       "endpoints": [
         "/api/calendar/seed-music-content",
         "/api/notifications/status-counts"
-      ],
-      "network": true
-    },
-    "useStopCampaign": {
-      "files": [
-        {
-          "file": "Taskmaster/client/src/hooks/queries/mail.js",
-          "endpoints": [
-            "/api/campaigns",
-            "/api/campaigns/${id}",
-            "/api/campaigns/${id}/analytics",
-            "/api/campaigns/${id}/dispatch",
-            "/api/campaigns/${id}/recipients?${params}",
-            "/api/campaigns/${id}/resend",
-            "/api/campaigns/${id}/resend-filtered",
-            "/api/campaigns/${id}/stop",
-            "/api/campaigns/upload-attachment",
-            "/api/crm/sync-unsubscribed",
-            "/api/mail/audience/data-hub",
-            "/api/mail/audience/data-hub/folders",
-            "/api/mail/audience/exly",
-            "/api/mail/audience/exly/offerings",
-            "/api/mail/profiles",
-            "/api/mail/profiles/${id}",
-            "/api/mail/scan-bounces",
-            "/api/mail/stats",
-            "/api/mail/streams",
-            "/api/mail/templates",
-            "/api/mail/templates/${id}",
-            "/api/mail/templates/${id}/approve",
-            "/api/mail/templates/${id}/reject",
-            "/api/mail/templates/${id}/submit",
-            "/api/mail/templates/pending",
-            "/api/track/email-streams"
-          ],
-          "network": true
-        },
-        {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        }
-      ],
-      "endpoints": [
-        "/api/campaigns",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
-        "/api/campaigns/${id}",
-        "/api/campaigns/${id}/analytics",
-        "/api/campaigns/${id}/dispatch",
-        "/api/campaigns/${id}/recipients?${params}",
-        "/api/campaigns/${id}/resend",
-        "/api/campaigns/${id}/resend-filtered",
-        "/api/campaigns/${id}/stop",
-        "/api/campaigns/upload-attachment",
-        "/api/crm/sync-unsubscribed",
-        "/api/mail/audience/data-hub",
-        "/api/mail/audience/data-hub/folders",
-        "/api/mail/audience/exly",
-        "/api/mail/audience/exly/offerings",
-        "/api/mail/profiles",
-        "/api/mail/profiles/${id}",
-        "/api/mail/scan-bounces",
-        "/api/mail/stats",
-        "/api/mail/streams",
-        "/api/mail/templates",
-        "/api/mail/templates/${id}",
-        "/api/mail/templates/${id}/approve",
-        "/api/mail/templates/${id}/reject",
-        "/api/mail/templates/${id}/submit",
-        "/api/mail/templates/pending",
-        "/api/track/email-streams"
       ],
       "network": true
     },
@@ -6764,13 +5515,6 @@
     "useToast": {
       "files": [
         {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/components/crm/ArtistCrmImportPanel.jsx",
           "endpoints": [
             "/api/crm/artist/assignees",
@@ -6780,19 +5524,9 @@
           "network": true
         },
         {
-          "file": "Taskmaster/client/src/components/emails/wizard/StepPreflight.jsx",
-          "endpoints": [
-            "/api/mail/preview",
-            "/api/mail/test-campaign"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/components/emails/wizard/useCampaignAudience.js",
           "endpoints": [
-            "/api/crm/leads",
-            "/api/mail/audience/engagement",
-            "/api/mail/holysheet/all"
+            "/api/crm/leads"
           ],
           "network": true
         },
@@ -6850,13 +5584,6 @@
           "network": true
         },
         {
-          "file": "Taskmaster/client/src/pages/CampaignDetails.jsx",
-          "endpoints": [
-            "/api/campaigns/${campaignApiId}/recipients/export?${params}"
-          ],
-          "network": true
-        },
-        {
           "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${leadId}/audit",
@@ -6901,7 +5628,6 @@
         "/api/admin/tenants",
         "/api/admin/tenants/${tenant._id}",
         "/api/calendar/seed-music-content",
-        "/api/campaigns/${campaignApiId}/recipients/export?${params}",
         "/api/crm/artist/assignees",
         "/api/crm/artist/preview",
         "/api/crm/artist/upload",
@@ -6913,10 +5639,6 @@
         "/api/crm/leads/${selectedLead._id}/audit",
         "/api/crm/leads/${selectedLead._id}/notes",
         "/api/exly/offerings",
-        "/api/mail/audience/engagement",
-        "/api/mail/holysheet/all",
-        "/api/mail/preview",
-        "/api/mail/test-campaign",
         "/api/ops-hub/entities",
         "/api/org-accounts",
         "/api/org-accounts/${account._id}",
@@ -7035,13 +5757,6 @@
     },
     "useUnsavedChanges": {
       "files": [
-        {
-          "file": "Taskmaster/client/src/components/admin/MailTemplateStudio.jsx",
-          "endpoints": [
-            "/api/mail/preview"
-          ],
-          "network": true
-        },
         {
           "file": "Taskmaster/client/src/components/ProjectSettingsModal.jsx",
           "endpoints": [
@@ -7226,7 +5941,6 @@
         "/api/gamification-admin/rules",
         "/api/google/accounts/manual",
         "/api/google/accounts/simulate",
-        "/api/mail/preview",
         "/api/office-assets",
         "/api/office-assets/${editingAsset._id}",
         "/api/office-assets/${id}",

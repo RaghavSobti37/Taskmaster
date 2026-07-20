@@ -191,8 +191,30 @@ export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
 };
 
 export const Input = React.forwardRef(({
-  label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props
+  label,
+  icon: Icon,
+  multiline = false,
+  rows = 4,
+  className = '',
+  endAdornment,
+  error,
+  hint,
+  variant = 'field',
+  autoGrow = false,
+  onChange,
+  id,
+  'aria-describedby': ariaDescribedBy,
+  ...props
 }, ref) => {
+  const generatedId = React.useId();
+  const inputId = id || generatedId;
+  const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
+  const describedBy = [
+    ariaDescribedBy,
+    error ? errorId : null,
+    !error && hint ? hintId : null,
+  ].filter(Boolean).join(' ') || undefined;
   const textareaRef = useRef(null);
   const inputRef = useRef(null);
   const fieldRef = multiline ? textareaRef : inputRef;
@@ -233,7 +255,7 @@ export const Input = React.forwardRef(({
   return (
   <div ref={wrapRef} className="t-input-wrap flex flex-col gap-2 w-full min-w-0">
     {label && (
-      <label className="block tm-section-label">
+      <label htmlFor={inputId} className="block tm-section-label">
         {label}
       </label>
     )}
@@ -244,9 +266,11 @@ export const Input = React.forwardRef(({
       {multiline ? (
         <textarea
           ref={assignTextareaRef}
+          id={inputId}
           rows={rows}
           onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
+          aria-describedby={describedBy}
           className={`mobile-form-control t-input block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
             autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
           } ${fieldStyles} ${
@@ -257,8 +281,10 @@ export const Input = React.forwardRef(({
       ) : (
         <input
           ref={assignInputRef}
+          id={inputId}
           onChange={handleChange}
           aria-invalid={error ? 'true' : undefined}
+          aria-describedby={describedBy}
           className={`mobile-form-control t-input block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
           } ${className}`}
@@ -271,8 +297,8 @@ export const Input = React.forwardRef(({
         </div>
       )}
     </div>
-    {error && <p className="t-error-msg text-[10px] font-bold text-rose-400">{error}</p>}
-    {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
+    {error && <p id={errorId} className="t-error-msg text-[10px] font-bold text-rose-400">{error}</p>}
+    {hint && !error && <p id={hintId} className="text-[10px] font-bold text-amber-400">{hint}</p>}
   </div>
   );
 });
@@ -595,6 +621,23 @@ export const DataTable = ({
     onSelectedIdsChange([...next]);
   };
 
+  const isInteractiveTableTarget = (target, currentTarget) => {
+    const interactive = target.closest('button, a, input, select, textarea, [role="button"], [tabindex]');
+    return Boolean(interactive && interactive !== currentTarget);
+  };
+
+  const activateRow = (row, e) => {
+    if (isInteractiveTableTarget(e.target, e.currentTarget)) return;
+    onRowClick?.(row);
+  };
+
+  const handleRowKeyDown = (row, e) => {
+    if (!onRowClick || (e.key !== 'Enter' && e.key !== ' ')) return;
+    if (isInteractiveTableTarget(e.target, e.currentTarget)) return;
+    e.preventDefault();
+    onRowClick(row);
+  };
+
   const parentRef = useRef();
 
   const useRowVirtualizer = virtualize && paginatedData.length > 0;
@@ -653,26 +696,35 @@ export const DataTable = ({
                 return (
                   <th
                     key={i}
-                    className={`${thCellPad} tm-widget-label whitespace-nowrap leading-normal overflow-visible ${alignClass} ${col.headerClassName || ''} ${
-                      sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
-                    }`}
-                    onClick={sortable ? () => handleSortClick(col) : undefined}
+                    className={`${thCellPad} tm-widget-label whitespace-nowrap leading-normal overflow-visible ${alignClass} ${col.headerClassName || ''}`}
                     aria-sort={
                       active
                         ? (sortState.direction === 'asc' ? 'ascending' : 'descending')
                         : 'none'
                     }
                   >
-                    <span className="inline-flex items-center gap-1">
-                      {col.header}
-                      {col.info && <InfoButton text={col.info} />}
-                      {sortable && (
-                        <SortIcon
-                          size={12}
-                          className={active ? 'text-[var(--color-action-primary)]' : 'opacity-40'}
-                        />
-                      )}
-                    </span>
+                    {sortable ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSortClick(col)}
+                          aria-label={`Sort by ${typeof col.header === 'string' ? col.header : sortKey}`}
+                          className="inline-flex items-center gap-1 cursor-pointer select-none hover:text-[var(--color-text-primary)]"
+                        >
+                          {col.header}
+                          <SortIcon
+                            size={12}
+                            className={active ? 'text-[var(--color-action-primary)]' : 'opacity-40'}
+                          />
+                        </button>
+                        {col.info && <InfoButton text={col.info} />}
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        {col.header}
+                        {col.info && <InfoButton text={col.info} />}
+                      </span>
+                    )}
                   </th>
                 );
               })}
@@ -712,10 +764,9 @@ export const DataTable = ({
                 <tr
                   key={rowKey}
                   data-highlight-id={rowId || undefined}
-                  onClick={(e) => {
-                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                    onRowClick?.(row);
-                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={(e) => activateRow(row, e)}
+                  onKeyDown={(e) => handleRowKeyDown(row, e)}
                   className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
                   style={{ height: `${virtualRow.size}px` }}
                 >
@@ -757,10 +808,9 @@ export const DataTable = ({
                   <tr
                     key={rowKey}
                     data-highlight-id={rowId || undefined}
-                    onClick={(e) => {
-                      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                      onRowClick?.(row);
-                    }}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onClick={(e) => activateRow(row, e)}
+                    onKeyDown={(e) => handleRowKeyDown(row, e)}
                     className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
                   >
                     {selectable && (
@@ -812,10 +862,10 @@ export const DataTable = ({
             <div
               key={getRowId?.(row) ?? i}
               data-highlight-id={getRowId?.(row) || undefined}
-              onClick={(e) => {
-                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                onRowClick?.(row);
-              }}
+              role={onRowClick ? 'button' : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              onClick={(e) => activateRow(row, e)}
+              onKeyDown={(e) => handleRowKeyDown(row, e)}
               className={`tm-data-row cursor-pointer min-w-0 ${mobileRowClassName}`.trim()}
             >
               {mobileRowRender ? (

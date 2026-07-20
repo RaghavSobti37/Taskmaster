@@ -1,7 +1,7 @@
 const { isUnlockAllMode, getTenantUnlocks } = require('../services/tenantUnlockService');
 
 const FEATURE_ROUTE_MAP = {
-  resend: ['resend', 'emails'],
+  emails: ['emails', 'resend'],
   finance: ['finance'],
   artistOs: ['artistOs', 'artists'],
   google: ['google'],

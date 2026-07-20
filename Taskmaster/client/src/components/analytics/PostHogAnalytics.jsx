@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  capturePostHogEvent,
   clearPostHogUser,
   ensurePostHogForConsent,
   isPostHogEnabled,
@@ -12,7 +10,6 @@ import { isPostHogConfigured } from '../../config/posthog';
 
 /** Pageview + identify bridge for dashboard widgets (PostHogProvider lives in main.jsx). */
 export default function PostHogAnalytics() {
-  const { pathname } = useLocation();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -35,11 +32,6 @@ export default function PostHogAnalytics() {
       clearPostHogUser();
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!isPostHogConfigured() || !isPostHogEnabled()) return;
-    capturePostHogEvent('$pageview', { $current_url: pathname });
-  }, [pathname]);
 
   return null;
 }

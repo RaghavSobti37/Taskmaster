@@ -1,62 +1,19 @@
-﻿const crypto = require('crypto');
-const EmailLog = require('../models/EmailLog');
-const {
-  resolveTrackingApiBaseUrl,
-  buildStaticUnsubscribePageUrl,
-  shouldSkipClickWrap
-} = require('./trackingUrls');
-
-/** Gmail/Outlook skip display:none images ΓÇö inject a visible 1├ù1 pixel before </body>. */
-const injectOpenPixel = (html, pixelTag) => {
-  const base = html || '';
-  if (/<\/body>/i.test(base)) {
-    return base.replace(/<\/body>/i, `${pixelTag}\n</body>`);
-  }
-  if (/<\/html>/i.test(base)) {
-    return base.replace(/<\/html>/i, `${pixelTag}\n</html>`);
-  }
-  return `${base}${pixelTag}`;
+const autoMailerTrackingUrl = () => {
+  const origin = String(process.env.AUTO_MAILER_URL || 'https://auto-mailer-blue.vercel.app').replace(/\/+$/, '');
+  return origin.endsWith('/analytics') ? origin : `${origin}/analytics`;
 };
 
-const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, options = {}) => {
-  const pixelId = crypto.randomBytes(16).toString('hex');
+/** Historical helper retained for preview compatibility; CoreKnot no longer injects tracking pixels. */
+const injectOpenPixel = (html) => html || '';
 
-  await EmailLog.create({ campaignId, leadEmail, pixelId });
-
-  const trackingBaseUrl = resolveTrackingApiBaseUrl();
-  const unsubscribeUrl = buildStaticUnsubscribePageUrl();
-
-  let processedHtml = rawHtml || '';
-  if (processedHtml.includes('{{unsubscribe_url}}')) {
-    processedHtml = processedHtml.replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
-  } else if (!options.skipAutoFooter && !processedHtml.includes('/unsubscribe')) {
-    const unsubscribeFooter = `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; text-align: center; font-family: sans-serif;">
-      <p style="margin: 4px 0;">You are receiving this email because you opted in at our website or events.</p>
-      <p style="margin: 4px 0;">If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color: #ef4444; text-decoration: underline;">unsubscribe here</a>.</p>
-    </div>`;
-    processedHtml = processedHtml + unsubscribeFooter;
-  }
-
-  const trackingPixel = `<img src="${trackingBaseUrl}/api/track/open/${pixelId}.gif" width="1" height="1" border="0" alt="" />`;
-  processedHtml = injectOpenPixel(processedHtml, trackingPixel);
-
-  const ctaRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi;
-  const linkClickIds = [];
-  processedHtml = processedHtml.replace(ctaRegex, (match, originalUrl, rest) => {
-    if (shouldSkipClickWrap(originalUrl)) return match;
-    const linkClickId = crypto.randomBytes(16).toString('hex');
-    linkClickIds.push(linkClickId);
-    const trackingUrl = `${trackingBaseUrl}/api/track/click/${linkClickId}?redirect=${encodeURIComponent(originalUrl)}`;
-    return `<a href="${trackingUrl}" ${rest}>`;
-  });
-
-  if (linkClickIds.length) {
-    await EmailLog.insertMany(
-      linkClickIds.map((clickId) => ({ campaignId, leadEmail, clickId }))
-    );
-  }
-
-  return { processedHtml, pixelId, clickId: linkClickIds[0] || null };
-};
+const prepareCampaignHTML = async (rawHtml) => ({
+  processedHtml: rawHtml || '',
+  pixelId: null,
+  clickId: null,
+  moved: true,
+  service: 'auto-mailer',
+  url: autoMailerTrackingUrl(),
+  message: 'Campaign tracking moved to Auto-Mailer',
+});
 
 module.exports = { prepareCampaignHTML, injectOpenPixel };

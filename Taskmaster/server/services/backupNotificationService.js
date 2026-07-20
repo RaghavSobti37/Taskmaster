@@ -1,5 +1,6 @@
-const { dispatchEmailPayload } = require('./mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('./mailDriver');
 const logger = require('../utils/logger');
+const { escapeHtml } = require('../utils/emailHtml');
 
 const formatBytes = (bytes) => {
   if (!bytes) return '0 B';
@@ -30,7 +31,7 @@ const formatOriginalDbSize = (result) => {
   const data = formatBytes(result.sourceDataSizeBytes || 0);
   const indexes = formatBytes(result.sourceIndexSizeBytes || 0);
   const total = formatBytes(result.sourceTotalSizeBytes || 0);
-  const dbName = result.sourceDatabase ? ` (${result.sourceDatabase})` : '';
+  const dbName = result.sourceDatabase ? ` (${escapeHtml(result.sourceDatabase)})` : '';
   return `${total}${dbName} — data ${data}, indexes ${indexes}`;
 };
 
@@ -38,7 +39,7 @@ const buildSuccessHtml = (result) => {
   const collectionRows = (result.collections || [])
     .map(
       (col) =>
-        `<tr><td>${col.collectionName}</td><td>${col.documentCount}</td><td>${formatBytes(col.compressedBytes)}</td></tr>`
+        `<tr><td>${escapeHtml(col.collectionName)}</td><td>${escapeHtml(col.documentCount)}</td><td>${escapeHtml(formatBytes(col.compressedBytes))}</td></tr>`
     )
     .join('');
 
@@ -47,13 +48,13 @@ const buildSuccessHtml = (result) => {
       <h2 style="color:#10b981;margin:0 0 12px;font-size:20px;font-weight:600;">Daily backup succeeded</h2>
       <p style="margin:0 0 16px;line-height:1.6;">Production database backup completed successfully.</p>
       <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.date}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.date)}</td></tr>
         <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Original DB size</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatOriginalDbSize(result)}</td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.backupDatabase}</td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Collections</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.collectionCount}</td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Compressed backup size</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatBytes(result.totalBytes)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.backupDatabase)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Collections</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.collectionCount)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Compressed backup size</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(formatBytes(result.totalBytes))}</td></tr>
         <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Duration</strong></td><td style="padding:6px 0;color:#f8fafc;">${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Retention</strong></td><td style="padding:6px 0;color:#f8fafc;">Last ${result.retentionCount ?? result.retentionDays ?? 2} snapshots</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Retention</strong></td><td style="padding:6px 0;color:#f8fafc;">Last ${escapeHtml(result.retentionCount ?? result.retentionDays ?? 2)} snapshots</td></tr>
       </table>
       ${
         collectionRows
@@ -64,7 +65,7 @@ const buildSuccessHtml = (result) => {
              </table>`
           : ''
       }
-      <p style="color:#64748b;font-size:13px;margin:16px 0 0;">Older snapshots are auto-deleted after ${result.retentionCount ?? result.retentionDays ?? 2} backups are kept.</p>
+      <p style="color:#64748b;font-size:13px;margin:16px 0 0;">Older snapshots are auto-deleted after ${escapeHtml(result.retentionCount ?? result.retentionDays ?? 2)} backups are kept.</p>
     </div>
   `;
 };
@@ -74,9 +75,9 @@ const buildFailureHtml = (result) => `
     <h2 style="color:#f87171;margin:0 0 12px;font-size:20px;font-weight:600;">Daily backup failed</h2>
     <p style="margin:0 0 16px;line-height:1.6;">Production database backup did not complete.</p>
     <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.date || 'unknown'}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.backupDatabase || 'coreknot_backups'}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Error</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.error || 'Unknown error'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.date || 'unknown')}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.backupDatabase || 'coreknot_backups')}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Error</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(result.error || 'Unknown error')}</td></tr>
       <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Duration</strong></td><td style="padding:6px 0;color:#f8fafc;">${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
     </table>
     <p style="color:#64748b;font-size:13px;margin:0;">Check Render cron logs for coreknot-daily-backup.</p>
@@ -98,14 +99,15 @@ const notifyBackupResult = async (result) => {
   const from = getFromEmail();
 
   const sendResult = await dispatchEmailPayload({ to, subject, html, from });
+  assertEmailDispatchSucceeded(sendResult, 'Backup notification dispatch failed');
 
   logger.info('BackupNotify', `Backup notification sent to ${to}`, {
     success: result.success,
-    resendId: sendResult?.id,
+    providerMessageId: sendResult?.id,
     sourceTotalSizeBytes: result.sourceTotalSizeBytes,
   });
 
-  return { sent: true, to, resendId: sendResult?.id };
+  return { sent: true, to, providerMessageId: sendResult?.id };
 };
 
 module.exports = {
@@ -113,4 +115,6 @@ module.exports = {
   getNotifyEmail,
   getFromEmail,
   formatOriginalDbSize,
+  buildSuccessHtml,
+  buildFailureHtml,
 };

@@ -23,7 +23,7 @@ export default function StepSetup({ profiles = [] }) {
       <div className="space-y-3">
         <div>
           <p className="text-xs font-semibold text-[var(--color-text-secondary)]">How do you want to send?</p>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Resend is easiest for most campaigns. Gmail uses your connected profile.</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">CoreKnot redirects campaign sending to Auto-Mailer. Legacy sender choices stay read-only here.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
@@ -37,10 +37,10 @@ export default function StepSetup({ profiles = [] }) {
           >
             <div className="flex items-center gap-2 mb-1">
               <Mail size={16} className="text-violet-500" />
-              <p className="font-semibold text-sm">Resend</p>
+              <p className="font-semibold text-sm">Auto-Mailer</p>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              API key on server. Pick a sending stream (subdomain) and from address on <strong>{ROOT_DOMAIN}</strong>.
+              Managed in Auto-Mailer. Pick a sending stream and from address on <strong>{ROOT_DOMAIN}</strong> there.
             </p>
           </button>
           <button
@@ -57,7 +57,7 @@ export default function StepSetup({ profiles = [] }) {
               <p className="font-semibold text-sm">Gmail</p>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Gmail or Workspace app password via smtp.gmail.com. 500 sends/day per account.
+              Managed in Auto-Mailer when campaign sending is needed.
             </p>
           </button>
         </div>
@@ -74,10 +74,10 @@ export default function StepSetup({ profiles = [] }) {
 
       {senderMode === 'single' && (
         <div className="space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Gmail Profile</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Legacy Gmail Profile</p>
           {profiles.length === 0 ? (
             <p className="text-xs text-amber-500 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              No Gmail profiles yet. Add one under Emails → Profiles, or switch to Resend.
+              No Gmail profiles here. Open Auto-Mailer for campaign sender setup.
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

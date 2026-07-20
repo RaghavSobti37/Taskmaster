@@ -151,12 +151,12 @@ function buildDependencyRows(detail, probe) {
       : (ut.reason || ut.state),
   });
 
-  const resendProbe = probeById.resend;
+  const autoMailerProbe = probeById['auto-mailer'];
   rows.push({
-    name: 'Email (Resend)',
-    status: depStatus(resendProbe?.status === 'ok', resendProbe?.state),
-    detail: resendProbe?.detail || resendProbe?.error
-      || (resendProbe?.latencyMs != null ? `${resendProbe.latencyMs} ms` : (resendProbe?.status === 'ok' ? 'Operational' : 'Not configured')),
+    name: 'Email (Auto-Mailer)',
+    status: depStatus(autoMailerProbe?.status === 'ok', autoMailerProbe?.state),
+    detail: autoMailerProbe?.detail || autoMailerProbe?.error
+      || (autoMailerProbe?.latencyMs != null ? `${autoMailerProbe.latencyMs} ms` : (autoMailerProbe?.status === 'ok' ? 'Operational' : 'Not configured')),
   });
 
   const bullProbe = probeById.bullmq;

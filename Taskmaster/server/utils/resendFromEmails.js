@@ -20,7 +20,7 @@ const displayNameForResendEmail = (email) => {
   return local.charAt(0).toUpperCase() + local.slice(1);
 };
 
-/** Map team@team.domain → team@domain when only root is verified in Resend. */
+/** Map team@team.domain to team@domain for legacy campaign sender fields. */
 const coerceVerifiedSender = (email) => {
   const addr = (email || '').trim().toLowerCase();
   if (!addr.includes('@')) return null;

@@ -28,8 +28,8 @@ export const HUB_TAB_ICONS = {
   artists: Music2,
 };
 
-/** Route-based subnav for /emails/* — all sections share the resend gate. */
-export const EMAIL_HUB_FEATURE_KEY = 'resend';
+/** Route-based subnav for /emails/*; CoreKnot redirects these pages to Auto-Mailer. */
+export const EMAIL_HUB_FEATURE_KEY = 'emails';
 
 export const EMAIL_SUBNAV_ITEMS = [
   { id: 'overview', to: '/emails', label: 'Overview', icon: LayoutDashboard, end: true, featureKey: EMAIL_HUB_FEATURE_KEY },

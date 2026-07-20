@@ -1,18 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { ChevronLeft, ChevronRight, Loader2, Save, Send } from 'lucide-react';
-import axios from 'axios';
+import { ChevronLeft, ChevronRight, ExternalLink, Save } from 'lucide-react';
 import { Button, Input } from '../../ui';
 import EmailDevicePreview from '../EmailDevicePreview';
 import CampaignAttachmentsField from './CampaignAttachmentsField';
 import { resolveRowValuesFromRecipient } from '../../../utils/indexedTemplateVariables';
 import {
-  enhancePreviewDocument,
   inlineQuillIndentsInHtml,
   wrapVisualPreviewBody,
 } from '../../../utils/visualEmailHtml';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
+import { getAutoMailerOrigin } from '../../../utils/autoMailerUrl';
 
 function resolveProfileSignature(profiles, senderProfileId) {
   if (!senderProfileId) return '';
@@ -42,12 +41,6 @@ export default function StepPreflight({
   const selectedTemplate = approvedTemplates.find((t) => String(t._id) === String(mailTemplateId));
   const recipients = audience.previewRecipients;
   const activeRecipient = recipients[previewIndex] || recipients[0];
-  const attachments = formValues.attachments || [];
-
-  const previewSignature = formValues.includeSignature && formValues.signatureSaved
-    ? (formValues.signature || '').trim()
-    : '';
-
   const stats = useMemo(() => {
     const total = audience.previewRecipients.length;
     const valid = audience.audienceHealth.validCount;
@@ -107,43 +100,14 @@ export default function StepPreflight({
       setServerPreview('');
       return undefined;
     }
-    let cancelled = false;
-    (async () => {
-      setPreviewLoading(true);
-      try {
-        const { data } = await axios.post('/api/mail/preview', {
-          content: templateBody,
-          subject: formValues.subject,
-          format: selectedTemplate?.format === 'rawHtml' ? 'rawHtml' : 'visual',
-          includeSignature: formValues.includeSignature === true,
-          signature: previewSignature,
-          removeUnsubscribe: !formValues.includeUnsubscribe,
-          senderProfileId: formValues.senderProfileId || formValues.senderProfileIds?.[0],
-          sampleRecipient: activeRecipient,
-          variableMapping: formValues.variableMapping,
-          theme: 'light',
-        });
-        if (!cancelled) {
-          const html = data.html || '';
-          setServerPreview(
-            isRawHtml ? html : enhancePreviewDocument(html, { theme: 'light' })
-          );
-        }
-      } catch {
-        if (!cancelled) setServerPreview('');
-      } finally {
-        if (!cancelled) setPreviewLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setServerPreview('');
+    setPreviewLoading(false);
+    return undefined;
   }, [
     templateBody,
     activeRecipient,
     isRawHtml,
     formValues.subject,
-    formValues.includeSignature,
-    formValues.includeUnsubscribe,
-    previewSignature,
     formValues.senderProfileId,
     formValues.variableMapping,
   ]);
@@ -152,31 +116,13 @@ export default function StepPreflight({
 
   const handleTestSend = async () => {
     if (!testEmail) { toast.warn('Enter test email'); return; }
-    if (formValues.includeSignature && !previewSignature) {
-      toast.warn('Save sender signature before sending a test');
-      return;
-    }
     setTestSending(true);
     try {
-      await axios.post('/api/mail/test-campaign', {
-        subject: formValues.subject,
-        content: templateBody,
-        testEmail,
-        senderProfileId: formValues.senderProfileId || formValues.senderProfileIds?.[0],
-        senderProfileIds: formValues.senderMode === 'pool' ? formValues.senderProfileIds : [],
-        senderMode: formValues.senderMode,
-        resendFromEmail: formValues.resendFromEmail,
-        format: selectedTemplate?.format === 'rawHtml' ? 'rawHtml' : 'visual',
-        includeSignature: formValues.includeSignature,
-        signature: previewSignature,
-        removeUnsubscribe: !formValues.includeUnsubscribe,
-        variableMapping: formValues.variableMapping,
-        sampleRecipient: activeRecipient,
-        attachments,
-      });
-      toast.success(`Test sent to ${testEmail}`);
+      const opened = window.open(`${getAutoMailerOrigin()}/campaigns/new`, '_blank', 'noopener,noreferrer');
+      if (opened) toast.success('Opened Auto-Mailer for campaign testing.');
+      else toast.warn('Open Auto-Mailer to test this campaign.');
     } catch (e) {
-      toast.error('Test send failed: ' + (e.response?.data?.error || e.message));
+      toast.error('Could not open Auto-Mailer: ' + (e.message || 'popup blocked'));
     } finally {
       setTestSending(false);
     }
@@ -185,7 +131,7 @@ export default function StepPreflight({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
       <div className="space-y-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Send summary</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Auto-Mailer summary</h4>
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Total', value: stats.total },
@@ -200,7 +146,7 @@ export default function StepPreflight({
         </div>
 
         <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-          Dispatch returns immediately. Sends run in background via BullMQ (Redis) with rate limiting — large lists will not block the API.
+          CoreKnot prepares campaign context only. Auto-Mailer owns testing, dispatch, delivery queues, and rate limits.
         </p>
 
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] space-y-2 text-sm">
@@ -240,7 +186,7 @@ export default function StepPreflight({
                 <Save size={14} /> Save signature
               </Button>
               <p className="text-[10px] text-[var(--color-text-muted)]">
-                Preview updates after you save. Signature is stored with the campaign when you save draft or dispatch.
+                Preview updates after you save. Auto-Mailer stores the final sender signature when you continue there.
               </p>
             </div>
           )}
@@ -258,17 +204,17 @@ export default function StepPreflight({
         <CampaignAttachmentsField />
 
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] space-y-2">
-          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Test send</label>
+          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Campaign test</label>
           <div className="flex gap-2">
             <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="your@email.com" className="flex-1" />
             <Button variant="secondary" size="sm" onClick={handleTestSend} disabled={testSending}>
               {testSending ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" /> Sending…
+                  <ExternalLink size={14} /> Opening…
                 </>
               ) : (
                 <>
-                  <Send size={14} /> Send test
+                  <ExternalLink size={14} /> Open Auto-Mailer
                 </>
               )}
             </Button>

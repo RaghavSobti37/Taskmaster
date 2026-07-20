@@ -1,10 +1,5 @@
-const express = require('express');
-const router = express.Router();
-
-router.use(require('./templatesRouter'));
-router.use(require('./profilesRouter'));
-router.use(require('./campaignsRouter'));
-router.use(require('./analyticsRouter'));
-router.use(require('./holysheetRouter'));
-
-module.exports = router;
+/**
+ * Campaign, template, profile, and newsletter mail routes live in Auto-Mailer.
+ * Keep this compatibility router as a hard guard for accidental remounts.
+ */
+module.exports = require('../../../routes/deprecatedAutoMailerRoutes');

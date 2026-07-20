@@ -23,7 +23,7 @@ describe('normalizeEmailStreams', () => {
     expect(streams.some((s) => s.slug === 'events')).toBe(true);
   });
 
-  it('keeps default senders on verified Resend domains only', () => {
+  it('keeps default senders on Auto-Mailer verified sender domains only', () => {
     const senders = DEFAULT_EMAIL_STREAMS.flatMap((stream) => stream.fromEmails || []);
 
     expect(senders.length).toBeGreaterThan(0);

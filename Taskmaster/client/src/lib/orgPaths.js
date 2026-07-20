@@ -16,6 +16,7 @@ export const RESERVED_ORG_SLUGS = new Set([
   'api',
   'upgrade',
   'workspace',
+  'workspaces',
   'auth',
   'relegends',
   'forgot-password',
@@ -66,6 +67,7 @@ export function isReservedOrgSlug(slug) {
 export const LEGACY_ORG_APP_PATHS = [
   '/dashboard',
   '/projects',
+  '/workspaces',
   '/calendar',
   '/settings',
   '/logs',

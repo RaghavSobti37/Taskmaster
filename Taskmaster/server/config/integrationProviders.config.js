@@ -5,35 +5,6 @@
 
 const INTEGRATION_PROVIDERS = [
   {
-    id: 'gmail',
-    name: 'Gmail',
-    category: 'email',
-    description: 'Send campaign and transactional email from your Gmail workspace account.',
-    setupHint: 'Requires Google OAuth on the server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). You will sign in with Google and grant send access.',
-    authType: 'oauth2',
-    connectMethod: 'oauth',
-    capabilities: ['send_email'],
-    icon: 'mail',
-    colorClass: 'rose',
-    oauthConfig: {
-      authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-      tokenUrl: 'https://oauth2.googleapis.com/token',
-      scopes: ['https://www.googleapis.com/auth/gmail.send', 'openid', 'email', 'profile'],
-    },
-  },
-  {
-    id: 'resend',
-    name: 'Resend',
-    category: 'email',
-    description: 'Deliver email through Resend using your API key — good for bulk and domain-verified sending.',
-    setupHint: 'Create an API key in Resend → API Keys. Paste it here; CoreKnot stores it encrypted per organization.',
-    authType: 'api_key',
-    connectMethod: 'api_key',
-    capabilities: ['send_email'],
-    icon: 'send',
-    colorClass: 'slate',
-  },
-  {
     id: 'google_sheets',
     name: 'Google Sheets',
     category: 'data',

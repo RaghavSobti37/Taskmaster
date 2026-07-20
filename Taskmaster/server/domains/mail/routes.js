@@ -1,5 +1,7 @@
-/** Thin domain route exports — mount mail + campaign APIs separately in registerRoutes */
+const deprecatedAutoMailerRoutes = require('../../routes/deprecatedAutoMailerRoutes');
+
+/** Compatibility exports only. Mail and campaign APIs moved to Auto-Mailer. */
 module.exports = {
-  mail: require('./routes/index'),
-  campaigns: require('./routes/campaignApiRouter'),
+  mail: deprecatedAutoMailerRoutes,
+  campaigns: deprecatedAutoMailerRoutes,
 };

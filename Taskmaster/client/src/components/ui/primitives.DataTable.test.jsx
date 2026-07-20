@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DataTable } from './primitives.jsx';
 
 vi.mock('../../hooks/useBreakpoint', () => ({
@@ -68,5 +69,55 @@ describe('DataTable', () => {
     expect(boxes.length).toBeGreaterThanOrEqual(2);
     fireEvent.click(boxes[1]);
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it('sorts sortable columns from keyboard activation', async () => {
+    const user = userEvent.setup();
+    render(
+      <DataTable
+        columns={[{ header: 'Name', key: 'name' }]}
+        data={[{ name: 'Bob' }, { name: 'Ada' }]}
+        paginated={false}
+      />,
+    );
+
+    screen.getByRole('button', { name: /sort by name/i }).focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByRole('columnheader', { name: /name/i })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
+    const cells = screen.getAllByRole('cell').map((cell) => cell.textContent);
+    expect(cells).toEqual(['Ada', 'Bob']);
+  });
+
+  it('activates clickable rows from keyboard without hijacking nested controls', () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        columns={[
+          { header: 'Name', key: 'name' },
+          {
+            header: 'Action',
+            key: 'action',
+            render: () => <button type="button">Nested action</button>,
+          },
+        ]}
+        data={[{ name: 'Ada' }]}
+        paginated={false}
+        onRowClick={onRowClick}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole('row', { name: /ada/i }), { key: 'Enter' });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+
+    const table = screen.getByRole('table');
+    fireEvent.keyDown(within(table).getByRole('button', { name: 'Nested action' }), {
+      key: 'Enter',
+      bubbles: true,
+    });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
   });
 });

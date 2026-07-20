@@ -837,12 +837,14 @@ class GamificationService {
     const { monthStartKey } = monthStartInput
       ? getCurrentMonthRange(monthStartInput)
       : getCurrentMonthRange();
+    const currentMonthKey = getCurrentMonthRange().monthStartKey;
+    const shouldRefresh = refresh || monthStartKey === currentMonthKey;
     const tenantId = await this.resolveSnapshotTenantId();
 
     let snapshot = await MonthlyLeaderboardSnapshot.findOne({ tenantId, monthStartKey })
       .setOptions({ bypassTenant: true })
       .lean();
-    if (!snapshot || refresh) {
+    if (!snapshot || shouldRefresh) {
       snapshot = await this.upsertMonthlyLeaderboardSnapshot(monthStartKey);
     }
     return {

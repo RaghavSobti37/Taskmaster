@@ -71,7 +71,6 @@ export default function CampaignWizardShell() {
     const templateId = searchParams.get('templateId');
     const seedSubject = searchParams.get('subject');
     if (templateId) setValue('mailTemplateId', templateId);
-    // URLSearchParams.get already decodes; second decodeURIComponent throws on literals like "50% off"
     if (seedSubject) setValue('subject', seedSubject);
   }, [searchParams, setValue]);
 
@@ -87,9 +86,15 @@ export default function CampaignWizardShell() {
           if (field) setError(field, { message: issue.message });
         });
         const first = result.error.issues[0];
-        const fieldLabel = { title: 'Campaign name', subject: 'Email subject', resendFromEmail: 'From address', senderProfileId: 'Gmail profile', senderMode: 'Send via' }[first?.path?.[0]] || first?.path?.[0];
+        const fieldLabel = {
+          title: 'Campaign name',
+          subject: 'Email subject',
+          resendFromEmail: 'From address',
+          senderProfileId: 'Gmail profile',
+          senderMode: 'Send via',
+        }[first?.path?.[0]] || first?.path?.[0];
         toast.warn(first?.message?.includes('expected string')
-          ? `${fieldLabel || 'A required field'} was not saved — re-type it and try again`
+          ? `${fieldLabel || 'A required field'} was not saved - re-type it and try again`
           : (first?.message || 'Complete setup fields.'));
         return false;
       }
@@ -161,17 +166,17 @@ export default function CampaignWizardShell() {
     if (!ok) return;
     const values = getValues();
     if (values.includeSignature && !(values.signature || '').trim()) {
-      toast.warn('Save sender signature before dispatching');
+      toast.warn('Save sender signature before continuing');
       return;
     }
     if (values.includeSignature && !values.signatureSaved) {
-      toast.warn('Click Save signature so the preview matches what will be sent');
+      toast.warn('Click Save signature so the preview matches what Auto-Mailer receives');
       return;
     }
     const confirmed = await confirm({
-      title: 'Dispatch campaign?',
-      message: `Send to ${audience.audienceHealth.validCount} valid recipient(s)? This cannot be undone.`,
-      confirmLabel: 'Dispatch',
+      title: 'Open Auto-Mailer?',
+      message: `Auto-Mailer owns campaign dispatch. Continue there to send to ${audience.audienceHealth.validCount} valid recipient(s).`,
+      confirmLabel: 'Open Auto-Mailer',
       type: 'primary',
     });
     if (!confirmed) return;
@@ -196,76 +201,76 @@ export default function CampaignWizardShell() {
           >
             <Spinner size="lg" />
             <p className="text-sm font-medium text-[var(--color-text-muted)]">
-              {submittingAction === 'dispatch' ? 'Dispatching campaign…' : 'Saving draft…'}
+              {submittingAction === 'dispatch' ? 'Opening Auto-Mailer...' : 'Saving draft...'}
             </p>
           </div>
         )}
-      <Card className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft size={14} /> {step === 1 ? 'Cancel' : 'Back'}
-          </Button>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-            Step {step} of 4
-          </span>
-        </div>
+        <Card className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={handleBack}>
+              <ArrowLeft size={14} /> {step === 1 ? 'Cancel' : 'Back'}
+            </Button>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+              Step {step} of 4
+            </span>
+          </div>
 
-        <WizardProgressBar currentStep={step} onStepClick={(s) => setStep(s)} />
+          <WizardProgressBar currentStep={step} onStepClick={(s) => setStep(s)} />
 
-        {step === 1 && <StepSetup profiles={profiles} />}
-        {step === 2 && (
-          <StepTemplateSelect
-            approvedTemplates={approvedTemplates}
-            onRefreshTemplates={refetchApprovedTemplates}
-            templatesRefreshing={approvedTemplatesFetching}
-            onContinue={handleNext}
-          />
-        )}
-        {step === 3 && (
-          <StepAudienceMapping
-            audience={audience}
-            approvedTemplates={approvedTemplates}
-            templateIndices={templateIndices}
-          />
-        )}
-        {step === 4 && (
-          <StepPreflight
-            audience={audience}
-            approvedTemplates={approvedTemplates}
-            templateBody={templateBody}
-            profiles={profiles}
-          />
-        )}
+          {step === 1 && <StepSetup profiles={profiles} />}
+          {step === 2 && (
+            <StepTemplateSelect
+              approvedTemplates={approvedTemplates}
+              onRefreshTemplates={refetchApprovedTemplates}
+              templatesRefreshing={approvedTemplatesFetching}
+              onContinue={handleNext}
+            />
+          )}
+          {step === 3 && (
+            <StepAudienceMapping
+              audience={audience}
+              approvedTemplates={approvedTemplates}
+              templateIndices={templateIndices}
+            />
+          )}
+          {step === 4 && (
+            <StepPreflight
+              audience={audience}
+              approvedTemplates={approvedTemplates}
+              templateBody={templateBody}
+              profiles={profiles}
+            />
+          )}
 
-        {step !== 2 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[var(--color-bg-border)]">
-          {step < 4 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="primary" onClick={handleNext}>
-                Continue
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2 ml-auto">
-              <Button
-                variant="secondary"
-                onClick={handleSaveDraft}
-                disabled={isSubmitting}
-              >
-                {submittingAction === 'save_draft' ? 'Saving…' : 'Save as Draft'}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleDispatch}
-                disabled={isSubmitting || !audience.audienceHealth.ok}
-              >
-                {submittingAction === 'dispatch' ? 'Dispatching…' : 'Dispatch Campaign'}
-              </Button>
+          {step !== 2 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[var(--color-bg-border)]">
+              {step < 4 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="primary" onClick={handleNext}>
+                    Continue
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 ml-auto">
+                  <Button
+                    variant="secondary"
+                    onClick={handleSaveDraft}
+                    disabled={isSubmitting}
+                  >
+                    {submittingAction === 'save_draft' ? 'Opening...' : 'Save in Auto-Mailer'}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleDispatch}
+                    disabled={isSubmitting || !audience.audienceHealth.ok}
+                  >
+                    {submittingAction === 'dispatch' ? 'Opening...' : 'Continue in Auto-Mailer'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
-        </div>
-        )}
-      </Card>
+        </Card>
       </div>
     </FormProvider>
   );

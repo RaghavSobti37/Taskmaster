@@ -16,11 +16,6 @@ const getEnvProviderCredential = (providerKey) => {
       if (pass && user && !isMock(pass)) return { smtpUser: user.trim(), smtpPass: pass.trim() };
       break;
     }
-    case 'sendgrid': {
-      const pass = process.env.SENDGRID_API_KEY;
-      if (pass && !isMock(pass)) return { smtpUser: 'apikey', smtpPass: pass.trim() };
-      break;
-    }
     case 'mailjet': {
       const user = process.env.MAILJET_API_KEY;
       const pass = process.env.MAILJET_SECRET_KEY;
@@ -34,7 +29,7 @@ const getEnvProviderCredential = (providerKey) => {
 };
 
 const getEnvConfiguredProviders = () => {
-  const keys = ['gmail', 'brevo', 'sendgrid', 'mailjet'];
+  const keys = ['gmail', 'brevo', 'mailjet'];
   return keys.filter((k) => getEnvProviderCredential(k));
 };
 

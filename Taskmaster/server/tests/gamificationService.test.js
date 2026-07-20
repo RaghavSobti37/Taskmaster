@@ -506,6 +506,48 @@ describe('GamificationService XP resolution', () => {
     expect(snapshot.entries[0].monthlyXp).toBe(30);
   });
 
+  test('getMonthlyLeaderboardSnapshot refreshes current month after new XP', async () => {
+    const { monthStartKey } = require('../utils/attendanceDate').getCurrentMonthRange();
+    await seedGamificationConfig({ taskCompletion: 10 });
+
+    const initial = await GamificationService.getMonthlyLeaderboardSnapshot(monthStartKey);
+    expect(initial.entries).toHaveLength(0);
+
+    const userId = new mongoose.Types.ObjectId();
+    await User.create({ _id: userId, name: 'Fresh XP', email: 'fresh-xp@test.com', exp: 0 });
+    await XPAuditLog.create({
+      userId,
+      action: 'COMPLETE_TASK',
+      amount: 5,
+      details: { hours: 2 },
+      createdAt: new Date(),
+    });
+
+    const refreshed = await GamificationService.getMonthlyLeaderboardSnapshot(monthStartKey);
+    expect(refreshed.entries[0].userId).toBe(String(userId));
+    expect(refreshed.entries[0].monthlyXp).toBe(20);
+  });
+
+  test('queueGamificationEvent carries tenant context into async payload', async () => {
+    const { runWithContext } = require('../utils/tenantContext');
+    const { queueGamificationEvent, drainGamificationMemoryQueue } = require('../services/backgroundQueue');
+    const handleSpy = jest
+      .spyOn(GamificationService, 'handleGamificationEvent')
+      .mockResolvedValueOnce(null);
+
+    await runWithContext({ tenantId: testTenantId, userId: 'agent-test' }, async () => {
+      queueGamificationEvent('TASK_CREATED', {
+        userId: new mongoose.Types.ObjectId(),
+        task: { _id: new mongoose.Types.ObjectId() },
+      });
+      await drainGamificationMemoryQueue();
+    });
+
+    expect(handleSpy).toHaveBeenCalledTimes(1);
+    expect(String(handleSpy.mock.calls[0][1].tenantId)).toBe(String(testTenantId));
+    handleSpy.mockRestore();
+  });
+
   test('getWeeklyLeaderboard resolves time-based amounts from stored hours', async () => {
     const userId = new mongoose.Types.ObjectId();
     await seedGamificationConfig({ taskCompletion: 10 });

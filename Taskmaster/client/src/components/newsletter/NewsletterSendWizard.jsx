@@ -7,19 +7,16 @@ import NexusDropdown from '../ui/NexusDropdown';
 import { useMailProfiles } from '../../hooks/useTaskmasterQueries';
 import {
   useNewsletterAudiencePreview,
-  useSendNewsletterIssue,
-  useCompileNewsletterIssue,
 } from '../../hooks/queries/newsletter';
 import { useToast } from '../../contexts/ToastContext';
 import { NEWSLETTER_AUDIENCE_FOLDERS } from '../../utils/newsletterAudienceFolders';
+import { buildAutoMailerUrl } from '../../utils/autoMailerUrl';
 
 const NewsletterSendWizard = ({ issue }) => {
   const toast = useToast();
   const navigate = useNavigate();
   const { data: profiles = [] } = useMailProfiles();
   const audiencePreviewMutation = useNewsletterAudiencePreview();
-  const sendMutation = useSendNewsletterIssue();
-  const compileMutation = useCompileNewsletterIssue();
 
   const [title, setTitle] = useState(`Shakti Digest — ${issue?.weekKey || ''}`);
   const [subject, setSubject] = useState(`Shakti Digest — ${issue?.weekKey || ''}`);
@@ -89,41 +86,9 @@ const NewsletterSendWizard = ({ issue }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue?._id, audience]);
 
-  const handleSend = async () => {
-    if (!issue?._id) return;
-    if (!senderProfileId) {
-      toast.warn('Select a sender profile');
-      return;
-    }
-    if (!audiencePreview?.recipients?.length) {
-      toast.warn('No sendable recipients — adjust audience selection');
-      return;
-    }
-
-    try {
-      if (issue.status !== 'ready' && !issue.compiledHtml) {
-        await compileMutation.mutateAsync(issue._id);
-      }
-      const result = await sendMutation.mutateAsync({
-        issueId: issue._id,
-        title,
-        subject,
-        senderProfileId,
-        senderMode: 'single',
-        includeSignature: true,
-        audience,
-      });
-      toast.success(`Newsletter queued to ${result.audience?.recipients?.length || audiencePreview.recipients.length} recipients`);
-      if (result.campaign?.campaignId || result.campaign?._id) {
-        navigate(`/campaign/${result.campaign.campaignId || result.campaign._id}`, { state: { from: '/emails/newsletter' } });
-      } else {
-        navigate('/emails');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.error || err.message);
-    }
+  const handleSend = () => {
+    window.location.assign(buildAutoMailerUrl('/emails/newsletter/send'));
   };
-
   if (issue?.status === 'sent') {
     return (
       <Card className="p-6 border border-[var(--color-bg-border)] text-center space-y-3">
@@ -149,7 +114,7 @@ const NewsletterSendWizard = ({ issue }) => {
           value={senderProfileId}
           onChange={setSenderProfileId}
           options={profileOptions}
-          placeholder="Select SMTP profile"
+          placeholder="Managed in Auto-Mailer"
         />
       </Card>
 
@@ -233,9 +198,8 @@ const NewsletterSendWizard = ({ issue }) => {
         <Button
           variant="primary"
           onClick={handleSend}
-          disabled={sendMutation.isPending || compileMutation.isPending || !audiencePreview?.recipients?.length}
         >
-          {sendMutation.isPending ? 'Sending…' : 'Send newsletter now'}
+          Open Auto-Mailer
         </Button>
       </div>
     </div>

@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 const { formatDisplayDate } = require('../../shared/dateDisplay');
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
-const { dispatchEmailPayload } = require('./mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('./mailDriver');
 const logger = require('../utils/logger');
+const { escapeHtml } = require('../utils/emailHtml');
 
 const REMINDER_DAYS = parseInt(process.env.SUBSCRIPTION_REMINDER_DAYS || '7', 10);
 
@@ -23,6 +24,7 @@ const formatInr = (amount) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
 
 const formatDate = (date) => formatDisplayDate(date);
+const safeDisplay = (value, fallback = '-') => escapeHtml(value || fallback);
 
 const getNotifyEmail = async () => {
   const { resolveSubscriptionFallbackEmails } = require('../utils/platformNotificationRecipients');
@@ -41,14 +43,14 @@ const buildReminderHtml = (subscription, usedByName) => `
     <h2 style="color:#2dd4bf;margin:0 0 12px;font-size:20px;font-weight:600;">Subscription renewal in ${REMINDER_DAYS} days</h2>
     <p style="margin:0 0 16px;line-height:1.6;">The following subscription is due soon. Please arrange payment before the due date.</p>
     <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Name</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.name}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Amount</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatInr(subscription.amount)}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Due date</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatDate(subscription.dueDate)}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Type</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.type || '—'}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Periodicity</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.periodicity || '—'}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Payment mode</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.paymentMode || '—'}</td></tr>
-      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Used by</strong></td><td style="padding:6px 0;color:#f8fafc;">${usedByName || '—'}</td></tr>
-      ${subscription.notes ? `<tr><td style="padding:6px 0;color:#94a3b8;"><strong>Notes</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.notes}</td></tr>` : ''}
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Name</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(subscription.name)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Amount</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(formatInr(subscription.amount))}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Due date</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(formatDate(subscription.dueDate))}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Type</strong></td><td style="padding:6px 0;color:#f8fafc;">${safeDisplay(subscription.type)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Periodicity</strong></td><td style="padding:6px 0;color:#f8fafc;">${safeDisplay(subscription.periodicity)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Payment mode</strong></td><td style="padding:6px 0;color:#f8fafc;">${safeDisplay(subscription.paymentMode)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Used by</strong></td><td style="padding:6px 0;color:#f8fafc;">${safeDisplay(usedByName)}</td></tr>
+      ${subscription.notes ? `<tr><td style="padding:6px 0;color:#94a3b8;"><strong>Notes</strong></td><td style="padding:6px 0;color:#f8fafc;">${escapeHtml(subscription.notes)}</td></tr>` : ''}
     </table>
     <p style="color:#64748b;font-size:13px;margin:0;">This is an automated reminder from CoreKnot.</p>
   </div>
@@ -135,7 +137,8 @@ const runSubscriptionReminders = async () => {
 
     try {
       for (const to of recipients) {
-        await dispatchEmailPayload({ to, subject, html, from: getFromEmail() });
+        const sendResult = await dispatchEmailPayload({ to, subject, html, from: getFromEmail() });
+        assertEmailDispatchSucceeded(sendResult, 'Subscription reminder dispatch failed');
       }
       subscription.reminderSentForDueDate = subscription.dueDate;
       await subscription.save();
@@ -155,4 +158,5 @@ module.exports = {
   REMINDER_DAYS,
   getNotifyEmail,
   getFromEmail,
+  buildReminderHtml,
 };

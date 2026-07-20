@@ -1,11 +1,11 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { formatDisplayDateTime } from '../../utils/dateDisplay';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FileText, Search, Download, Trash2, ChevronDown, 
-  ChevronLeft, ChevronRight, X, Eye, Check, Info, ArrowLeft
+  FileText, Search, Download, Trash2, ChevronDown,
+  ChevronLeft, ChevronRight, X, Check, Info, ArrowLeft
 } from 'lucide-react';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { buildProjectFinanceTableColumns } from '../finance/buildFinanceTableColumns';
@@ -27,17 +27,6 @@ const CATEGORIES = [
   { value: 'tax', label: 'Tax' },
   { value: 'other', label: 'Other' },
 ];
-
-const CAT_COLORS = {
-  invoice: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
-  receipt: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-  contract: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
-  proposal: { bg: '#FEF7E0', text: '#B06000', darkBg: '#2E2003', darkText: '#FDD663' }, // Warning
-  budget: { bg: '#FEF7E0', text: '#B06000', darkBg: '#2E2003', darkText: '#FDD663' }, // Warning
-  report: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-  tax: { bg: '#FCE8E6', text: '#C5221F', darkBg: '#30100F', darkText: '#F28B82' }, // Danger
-  other: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-};
 
 const formatBytes = (bytes) => {
   if (!bytes) return '—';
@@ -152,10 +141,10 @@ const ProjectFinance = ({ projectId }) => {
       setEditForm(null);
       setEditAmountUsd('');
     }
-  }, [selectedDoc?._id]);
+  }, [selectedDoc]);
 
   useEffect(() => {
-    if (!selectedDoc || !editForm?.metadata?.amount) return;
+    if (!selectedDoc?._id || !editForm?.metadata?.amount) return;
     if (!Number.isFinite(usdInrRate) || usdInrRate <= 0) return;
     setEditAmountUsd((prev) => (prev === '' ? String(inrToUsd(editForm.metadata.amount, usdInrRate)) : prev));
   }, [selectedDoc?._id, usdInrRate, editForm?.metadata?.amount]);
@@ -353,6 +342,8 @@ const ProjectFinance = ({ projectId }) => {
                     <iframe
                       src={selectedDoc.fileUrl}
                       title={selectedDoc.title}
+                      sandbox="allow-scripts"
+                      referrerPolicy="no-referrer"
                       className="w-full h-full rounded-xl border border-slate-800 bg-slate-900"
                     />
                   ) : selectedDoc.fileType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(selectedDoc.fileName) ? (
@@ -370,7 +361,7 @@ const ProjectFinance = ({ projectId }) => {
                         href={selectedDoc.fileUrl}
                         download
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-blue-700 transition-colors"
                       >
                         <Download size={14} /> Download File

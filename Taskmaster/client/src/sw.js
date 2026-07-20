@@ -1,6 +1,6 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 const STATIC_CACHE = 'coreknot-static-v2';
@@ -60,26 +60,6 @@ registerRoute(
   }),
 );
 
-/** Read-only GET API — short network-first cache for flaky mobile */
-registerRoute(
-  ({ url, request }) =>
-    request.method === 'GET'
-    && url.pathname.startsWith('/api/')
-    && !url.pathname.includes('/auth')
-    && !url.pathname.includes('/upload'),
-  new NetworkFirst({
-    cacheName: `${STATIC_CACHE}-api-read`,
-    networkTimeoutSeconds: 8,
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 48,
-        maxAgeSeconds: 60,
-        purgeOnQuotaError: true,
-      }),
-    ],
-  }),
-);
-
 /** Navigation — network with offline shell fallback */
 registerRoute(
   ({ request }) => request.mode === 'navigate',
@@ -117,7 +97,9 @@ self.addEventListener('push', (event) => {
   let payload = { title: 'CoreKnot', body: 'New notification', actionUrl: '/inbox' };
   try {
     payload = { ...payload, ...event.data.json() };
-  } catch (e) {}
+  } catch {
+    /* ignore malformed push payload */
+  }
 
   const tag = payload.notificationId || payload.actionUrl || 'coreknot-notification';
 

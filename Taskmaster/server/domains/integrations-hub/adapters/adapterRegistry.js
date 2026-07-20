@@ -1,7 +1,6 @@
 const gmailAdapter = require('./gmailAdapter');
 const mailchimpAdapter = require('./mailchimpAdapter');
 const hubspotAdapter = require('./hubspotAdapter');
-const resendAdapter = require('./resendAdapter');
 const webhookInAdapter = require('./webhookInAdapter');
 const googleSheetsAdapter = require('./googleSheetsAdapter');
 const salesforceAdapter = require('./salesforceAdapter');
@@ -10,10 +9,8 @@ const slackAdapter = require('./slackAdapter');
 const aisensyAdapter = require('./aisensyAdapter');
 
 const ADAPTERS = {
-  gmail: gmailAdapter,
   mailchimp: mailchimpAdapter,
   hubspot: hubspotAdapter,
-  resend: resendAdapter,
   webhook_in: webhookInAdapter,
   google_sheets: googleSheetsAdapter,
   salesforce: salesforceAdapter,

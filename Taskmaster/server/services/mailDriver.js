@@ -1,17 +1,10 @@
 /**
- * Minimal transactional email driver for CoreKnot.
- * Only sends single transactional emails (notifications, announcements, reminders).
- * Campaign/marketing email functionality has been moved to auto-mailer.
+ * CoreKnot no longer owns email delivery.
+ * Transactional messages are delegated to Auto-Mailer so provider logic,
+ * sender configuration, and delivery telemetry live in one service.
  */
-const nodemailer = require('nodemailer');
 
-let resendClient = null;
-try {
-  const { Resend } = require('resend');
-  if (process.env.RESEND_API_KEY) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
-  }
-} catch (e) {}
+const MAX_TRANSACTIONAL_RECIPIENTS = 50;
 
 function normalizeToList(to) {
   if (!to) return [];
@@ -22,34 +15,77 @@ function normalizeToList(to) {
     .filter((e) => e && /[^\s@]+@[^\s@]+/.test(e) && !seen.has(e) && seen.add(e));
 }
 
-async function dispatchEmailPayload({ to, subject, html, from } = {}) {
-  const recipients = normalizeToList(to);
-  if (!recipients.length) return { error: 'No valid recipients' };
-  if (resendClient) {
-    try {
-      const response = await resendClient.emails.send({
-        from: from || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev',
-        to: recipients, subject, html,
-      });
-      return { provider: 'resend', ...response };
-    } catch (err) { console.warn('[MailDriver] Resend failed:', err.message); }
+function resolveAutoMailerApiBase() {
+  const raw = String(process.env.AUTO_MAILER_API_URL || '').trim().replace(/\/+$/, '');
+  if (!raw) return { error: 'AUTO_MAILER_API_URL is not configured' };
+  if (/vercel\.app$/i.test(raw) || /auto-mailer-blue/i.test(raw)) {
+    return { error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin, not the Vercel UI' };
   }
-  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: false,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
-      const info = await transporter.sendMail({
-        from: from || process.env.SMTP_USER,
-        to: recipients.join(', '), subject, html,
-      });
-      return { provider: 'smtp', ...info };
-    } catch (err) { return { error: err.message }; }
-  }
-  return { error: 'No email provider configured' };
+  return { baseUrl: raw };
 }
 
-module.exports = { dispatchEmailPayload };
+function resolveBridgeToken() {
+  const token = process.env.AUTO_MAILER_INTERNAL_TOKEN || process.env.COREKNOT_MAIL_BRIDGE_SECRET;
+  if (!token) return { error: 'AUTO_MAILER_INTERNAL_TOKEN or COREKNOT_MAIL_BRIDGE_SECRET is not configured' };
+  return { token };
+}
+
+async function dispatchEmailPayload({ to, cc, subject, html, from } = {}) {
+  const recipients = normalizeToList(to);
+  if (!recipients.length) return { error: 'No valid recipients' };
+  if (recipients.length > MAX_TRANSACTIONAL_RECIPIENTS) {
+    return { error: `Transactional email is limited to ${MAX_TRANSACTIONAL_RECIPIENTS} recipients` };
+  }
+  const { baseUrl, error: baseUrlError } = resolveAutoMailerApiBase();
+  if (baseUrlError) return { error: baseUrlError };
+
+  const { token, error: tokenError } = resolveBridgeToken();
+  if (tokenError) return { error: tokenError };
+
+  const headers = { 'Content-Type': 'application/json' };
+  headers.Authorization = `Bearer ${token}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/transactional/send`, {
+      method: 'POST',
+      headers,
+      signal: AbortSignal.timeout(12_000),
+      body: JSON.stringify({
+        to: recipients,
+        cc: normalizeToList(cc),
+        subject,
+        html,
+        from,
+        source: 'coreknot',
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { error: body.error || `Auto-Mailer returned ${response.status}`, status: response.status };
+    }
+    return body;
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+function assertEmailDispatchSucceeded(result, context = 'Email dispatch') {
+  if (result?.error) {
+    const err = new Error(`${context}: ${result.error}`);
+    if (result.status) err.status = result.status;
+    if (result.provider) err.provider = result.provider;
+    throw err;
+  }
+  return result;
+}
+
+module.exports = {
+  assertEmailDispatchSucceeded,
+  dispatchEmailPayload,
+  normalizeToList,
+  resolveAutoMailerApiBase,
+  resolveBridgeToken,
+  limits: {
+    MAX_TRANSACTIONAL_RECIPIENTS,
+  },
+};

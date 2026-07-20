@@ -8,17 +8,9 @@ const ENV_CONFIG = {
   baseUrl: process.env.APP_BASE_URL || 'http://localhost:5000',
   redisUrl: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
   
-  // Choose production mailer or local sandbox testing provider
-  mailProvider: isProduction ? 'sendgrid' : 'nodemailer', 
-  
-  // Secure configuration fallbacks
-  sendgridApiKey: process.env.SENDGRID_API_KEY,
-  smtp: {
-    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
+  // CoreKnot delegates outbound email delivery to Auto-Mailer.
+  mailProvider: 'auto-mailer',
+  autoMailerApiUrl: process.env.AUTO_MAILER_API_URL
 };
 
 module.exports = { ENV_CONFIG };

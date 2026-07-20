@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import {
   Paperclip, Upload, X, ExternalLink, Eye, FileText, Image as ImageIcon, File,
@@ -67,6 +67,8 @@ function AttachmentPreviewModal({ attachment, onClose }) {
             <iframe
               title={attachment.filename}
               src={attachment.storageUrl}
+              sandbox="allow-scripts"
+              referrerPolicy="no-referrer"
               className="w-full h-[70vh] rounded-lg border border-[var(--color-bg-border)] bg-white"
             />
           )}
@@ -223,7 +225,7 @@ export default function CampaignAttachmentsField() {
           )}
         </div>
         <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-          Files upload to secure storage (UploadThing). The same attachments are included on every recipient email and on test sends.
+          Files upload to secure storage (UploadThing). Auto-Mailer includes them when the campaign is sent or tested.
         </p>
       </div>
 

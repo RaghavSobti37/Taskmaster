@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getEffectiveTemplateContent } from '../../../utils/indexedTemplateVariables';
 import { estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../../utils/smtpPresets';
 import { useCreateCampaign } from '../../../hooks/useTaskmasterQueries';
 import { useToast } from '../../../contexts/ToastContext';
+import { buildAutoMailerUrl } from '../../../utils/autoMailerUrl';
 
 export function buildCampaignPayloadFromForm(formValues, approvedTemplates, customRecipients, leadIds = []) {
   const template = approvedTemplates.find((t) => String(t._id) === String(formValues.mailTemplateId));
   const templateBody = template ? getEffectiveTemplateContent(template) : '';
-  const { senderMode, senderProfileId, senderProfileIds } = formValues;
+  const { senderMode, senderProfileId } = formValues;
 
   return {
     title: formValues.title,
@@ -40,7 +40,6 @@ export function buildCampaignPayloadFromForm(formValues, approvedTemplates, cust
 
 export function useCampaignSubmit({ approvedTemplates, audience }) {
   const toast = useToast();
-  const navigate = useNavigate();
   const createCampaignMutation = useCreateCampaign();
 
   const buildCampaignPayload = useCallback((formValues) => (
@@ -72,40 +71,27 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
       if (!proceed) return false;
     }
 
-    let response;
     try {
-      response = await createCampaignMutation.mutateAsync(payload);
+      window.location.assign(buildAutoMailerUrl('/emails/create'));
     } catch (err) {
       if (!silent) {
-        toast.error(err.response?.data?.error || err.message || 'Campaign save failed.');
+        toast.error(err.message || 'Could not open Auto-Mailer.');
       }
       return false;
     }
-    const campaign = response?.data ?? response;
-    const campaignId = campaign?.campaignId || campaign?._id;
 
     if (!silent) {
-      const queued = campaign?.dispatch?.queuedCount;
-      if (action === 'dispatch') {
-        toast.success(
-          queued != null
-            ? `Dispatch started — ${queued} email(s) queue in background. Track progress on the campaign page.`
-            : 'Dispatch started — emails send in the background. Track progress on the campaign page.',
-        );
-      } else {
-        toast.success('Campaign saved as draft.');
-      }
+      toast.success(
+        action === 'dispatch'
+          ? 'Opening Auto-Mailer to finish campaign dispatch.'
+          : 'Opening Auto-Mailer to save the campaign draft.'
+      );
     }
     if (!stayOnPage) {
       audience.resetAudience();
-      if (action === 'dispatch' && campaignId) {
-        navigate(`/campaign/${campaignId}`, { state: { from: '/emails/create' } });
-      } else {
-        navigate('/emails/campaigns');
-      }
     }
     return true;
-  }, [approvedTemplates, audience, buildCampaignPayload, createCampaignMutation, navigate, toast]);
+  }, [approvedTemplates, audience, buildCampaignPayload, toast]);
 
   return { buildCampaignPayload, submitCampaign, createCampaignMutation };
 }

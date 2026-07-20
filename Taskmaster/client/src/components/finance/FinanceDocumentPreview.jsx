@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { FileText, Loader2 } from 'lucide-react';
 import {
@@ -98,6 +98,8 @@ export default function FinanceDocumentPreview({
       <iframe
         src={blobUrl}
         title={doc?.title || doc?.fileName || 'Document preview'}
+        sandbox="allow-scripts"
+        referrerPolicy="no-referrer"
         className={iframeClassName || className}
       />
     );

@@ -11,8 +11,8 @@ const isLocalHostUrl = (url = '') => {
   }
 };
 
-/** Public API origin for open pixel + click redirect routes (/api/track/...). */
-const DEFAULT_PUBLIC_TRACKING = 'https://YOUR-RENDER-SERVICE.onrender.com';
+/** Campaign open/click tracking moved to Auto-Mailer. */
+const DEFAULT_PUBLIC_TRACKING = 'https://auto-mailer-blue.vercel.app';
 
 const isPlaceholderTrackingUrl = (url = '') =>
   /YOUR-RENDER-SERVICE|YOUR-SERVICE|YOUR-PRODUCTION-API/i.test(String(url));
@@ -34,7 +34,7 @@ const resolveTrackingApiBaseUrl = () => {
     return appBase || `http://localhost:${port}`;
   }
 
-  // Local dev + real inboxes: Gmail cannot reach localhost ΓÇö use public API when configured
+  // Legacy fallback retained for old preview helpers; active tracking belongs to Auto-Mailer.
   const fallback = (process.env.TRACKING_PUBLIC_FALLBACK || DEFAULT_PUBLIC_TRACKING).trim().replace(/\/$/, '');
   const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
   if (isDev && isPlaceholderTrackingUrl(fallback)) {
@@ -76,7 +76,7 @@ const getTrackingDbMismatchWarning = () => {
   if (!localDb) return null;
 
   return (
-    'Mail tracking URLs use a public API (' + trackingBase + ') but MONGODB_URI points to a local DB. ' +
+    'Legacy mail tracking URLs use a public API (' + trackingBase + ') but MONGODB_URI points to a local DB. ' +
     'Opens/clicks will not record. For local send tests, set MONGODB_URI to MONGODB_URI_PROD, ' +
     'or set TRACKING_USE_LOCAL=true and TRACKING_BASE_URL to an ngrok tunnel URL.'
   );

@@ -169,7 +169,7 @@ export function filterNavGroupsForUser(groups, user, hasPageAccessFn = hasPageAc
 
 /** Nav paths that were gated by plan (paywalls removed — kept for route metadata). */
 export const FEATURE_UNLOCK_BY_PATH = {
-  '/emails': 'resend',
+  '/emails': 'emails',
   '/finance': 'finance',
   '/artists': 'artistOs',
   '/admin/ops-hub': 'opsHub',

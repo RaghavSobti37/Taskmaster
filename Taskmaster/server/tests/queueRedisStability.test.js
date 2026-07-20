@@ -22,7 +22,7 @@ describe('queue Redis stability', () => {
     });
   }
 
-  it('does not enqueue campaign email jobs when Redis connection is not ready', async () => {
+  it('does not enqueue campaign email jobs from CoreKnot', async () => {
     process.env.NODE_ENV = 'development';
     mockRedis('wait');
 
@@ -37,13 +37,17 @@ describe('queue Redis stability', () => {
 
     expect(isCampaignEmailQueueAvailable()).toBe(false);
     await expect(enqueueCampaignEmailJobs([{ campaignId: 'c1', recipientId: 'r1' }]))
-      .resolves.toEqual({ queued: 0, via: 'unavailable' });
+      .resolves.toEqual(expect.objectContaining({
+        queued: 0,
+        via: 'auto-mailer',
+        message: 'Campaign email dispatch moved to Auto-Mailer',
+      }));
     expect(addBulk).not.toHaveBeenCalled();
   });
 
-  it('skips campaign email worker when Redis connection is not ready', () => {
+  it('keeps the old campaign email worker disabled even if Redis exists', () => {
     process.env.NODE_ENV = 'development';
-    mockRedis('wait');
+    mockRedis('ready');
 
     const Worker = jest.fn();
     jest.doMock('bullmq', () => ({

@@ -34,7 +34,7 @@ function normalizeMailStatsPayload(raw = {}) {
 
 const router = express.Router();
 
-router.get('/stats', protect, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const base = resolveAutoMailerApiBase();
     const url = new URL('/api/mail/stats', base);

@@ -15,12 +15,14 @@ import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor, normalizeW
 import { normalizeProjects } from '../../utils/projectUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useOrgPath } from '../../hooks/useOrgPath';
 
 const WorkspaceSettings = () => {
   const { name: nameParam } = useParams();
   const workspaceName = decodeURIComponent(nameParam || '').trim();
   const workspaceApiName = normalizeWorkspaceKey(workspaceName) || workspaceName;
   const navigate = useNavigate();
+  const resolveOrgPath = useOrgPath();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -155,7 +157,7 @@ const WorkspaceSettings = () => {
       await axios.patch(apiPath, payload);
       await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
-      navigate('/projects');
+      navigate(resolveOrgPath('/projects'));
     } catch (err) {
       if (err.response?.status === 403) {
         setForbidden(true);
@@ -226,7 +228,7 @@ const WorkspaceSettings = () => {
   if (error) {
     return (
       <PageContainer maxWidth="1000px">
-        <Button variant="ghost" size="xs" onClick={() => navigate('/projects')} className="mb-4 flex items-center gap-2">
+        <Button variant="ghost" size="xs" onClick={() => navigate(resolveOrgPath('/projects'))} className="mb-4 flex items-center gap-2">
           <ArrowLeft size={14} /> Back to Projects
         </Button>
         <div className="p-8 text-center border border-[var(--color-bg-border)]">
@@ -245,7 +247,7 @@ const WorkspaceSettings = () => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(resolveOrgPath('/projects'))}
             className="flex items-center gap-1.5 shrink-0"
           >
             <ArrowLeft size={14} /> Back to Projects
@@ -450,7 +452,7 @@ const WorkspaceSettings = () => {
             {projects.map((p) => (
               <li key={p._id}>
                 <Link
-                  to={`/projects/${p._id}`}
+                  to={resolveOrgPath(`/projects/${p._id}`)}
                   className="text-sm font-bold text-[var(--color-action-primary)] hover:underline uppercase tracking-tight"
                 >
                   {p.name}

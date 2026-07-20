@@ -10,8 +10,17 @@ const router = express.Router();
 
 router.use(apiKeyAuth);
 
+function requireScope(...accepted) {
+  return (req, res, next) => {
+    const scopes = new Set(req.apiKeyScopes || []);
+    if (scopes.has('*') || accepted.some((scope) => scopes.has(scope))) return next();
+    return res.status(403).json({ error: 'API key scope denied', code: 'API_KEY_SCOPE_DENIED' });
+  };
+}
+
 router.get(
   '/health',
+  requireScope('read', 'health:read'),
   asyncHandler(async (req, res) => {
     await incrementUsage(req.tenantId, 'apiCalls');
     res.json({ ok: true, tenantId: String(req.tenantId) });
@@ -20,6 +29,7 @@ router.get(
 
 router.post(
   '/leads',
+  requireScope('write', 'leads:write'),
   asyncHandler(async (req, res) => {
     await incrementUsage(req.tenantId, 'apiCalls');
     const systemUser = await User.findOne({ tenantId: req.tenantId })
@@ -41,6 +51,7 @@ router.post(
 
 router.get(
   '/leads/:id',
+  requireScope('read', 'leads:read'),
   asyncHandler(async (req, res) => {
     await incrementUsage(req.tenantId, 'apiCalls');
     const lead = await Lead.findOne({ _id: req.params.id, tenantId: req.tenantId })

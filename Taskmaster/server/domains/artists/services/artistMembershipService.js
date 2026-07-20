@@ -2,7 +2,8 @@ const crypto = require('crypto');
 const Artist = require('../../../models/Artist');
 const ArtistMembership = require('../../../models/ArtistMembership');
 const User = require('../../../models/User');
-const { dispatchEmailPayload } = require('../../../services/mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('../../../services/mailDriver');
+const { escapeHtml, safeHref } = require('../../../utils/emailHtml');
 
 const isUserOnArtistTeam = (user, team = []) => {
   if (!user) return false;
@@ -230,18 +231,22 @@ function generateInviteToken() {
 
 async function sendWorkspaceInviteEmail({ to, artistName, inviteUrl, inviterName }) {
   const subject = `Join ${artistName} on CoreKnot Artist Workspace`;
+  const safeArtistName = escapeHtml(artistName);
+  const safeInviterName = escapeHtml(inviterName || 'Your team');
+  const safeInviteUrl = safeHref(inviteUrl, 'https://coreknot.app');
   const html = `
     <p>Hi,</p>
-    <p>${inviterName || 'Your team'} invited you to join <strong>${artistName}</strong> on CoreKnot Artist Workspace.</p>
-    <p><a href="${inviteUrl}">Accept invitation</a></p>
+    <p>${safeInviterName} invited you to join <strong>${safeArtistName}</strong> on CoreKnot Artist Workspace.</p>
+    <p><a href="${safeInviteUrl}">Accept invitation</a></p>
     <p>If you did not expect this email, you can ignore it.</p>
   `;
-  await dispatchEmailPayload({
+  const result = await dispatchEmailPayload({
     to,
     subject,
     html,
     from: process.env.SYSTEM_VERIFIED_FROM_EMAIL,
   });
+  assertEmailDispatchSucceeded(result, 'Artist workspace invite email dispatch failed');
 }
 
 async function inviteArtistMember({ artistId, email, role, invitedBy }) {

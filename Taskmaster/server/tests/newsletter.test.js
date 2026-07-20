@@ -1,4 +1,8 @@
-const { compileNewsletterHtml } = require('../services/newsletterCompileService');
+const {
+  compileNewsletterHtml,
+  createNewsletterMovedError,
+  resolveAutoMailerNewsletterUrl,
+} = require('../services/newsletterCompileService');
 const { getCurrentWeekKey, getWeekBounds, parseWeekKey } = require('../utils/newsletterWeek');
 const { previewLink, normalizeUrl } = require('../services/newsletterLinkPreviewService');
 
@@ -14,37 +18,16 @@ describe('newsletterWeek', () => {
 });
 
 describe('newsletterCompileService', () => {
-  it('renders grouped article cards with placeholders', () => {
-    const html = compileNewsletterHtml({
-      issue: {
-        weekKey: '2026-W23',
-        introTitle: 'Weekly picks',
-        introBlurb: 'Curated by the team.',
-      },
-      articles: [
-        {
-          category: 'industry',
-          title: 'Story A',
-          description: 'Desc A',
-          url: 'https://example.com/a',
-          siteName: 'Example',
-        },
-        {
-          category: 'tsc',
-          title: 'Story B',
-          description: 'Desc B',
-          url: 'https://example.com/b',
-          imageUrl: 'https://example.com/a.jpg',
-        },
-      ],
-    });
+  it('blocks newsletter composition in CoreKnot and points to Auto-Mailer', () => {
+    expect(() => compileNewsletterHtml({ issue: {}, articles: [] })).toThrow('Newsletter email composition moved to Auto-Mailer');
 
-    expect(html).toContain('SHAKTI DIGEST');
-    expect(html).toContain('Story A');
-    expect(html).toContain('Story B');
-    expect(html).toContain('{{name}}');
-    expect(html).toContain('{{unsubscribe_url}}');
-    expect(html).toContain('Read article');
+    const err = createNewsletterMovedError();
+    expect(err).toMatchObject({
+      status: 410,
+      service: 'auto-mailer',
+      url: 'https://auto-mailer-blue.vercel.app/campaigns',
+    });
+    expect(resolveAutoMailerNewsletterUrl()).toBe('https://auto-mailer-blue.vercel.app/campaigns');
   });
 });
 

@@ -4,10 +4,11 @@ const { protect } = require('../middleware/authMiddleware');
 const Announcement = require('../models/Announcement');
 const User = require('../models/User');
 const Project = require('../models/Project');
-const { dispatchEmailPayload } = require('../services/mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const { createNotification } = require('../services/notificationDispatcher');
 const { formatDisplayDateTime } = require('../../shared/dateDisplay');
+const { safeHref } = require('../utils/emailHtml');
 
 const { isOpsUser } = require('../utils/departmentPermissions');
 const canManage = (user) => isOpsUser(user);
@@ -46,7 +47,7 @@ const buildAnnouncementEmailHtml = ({ title, message, createdByName, ctaText, ct
   const safeCreator = escapeHtml(createdByName || 'CoreKnot Team');
   const safeMessage = normalizeTextToHtml(message || '');
   const safeCtaText = escapeHtml(ctaText || '');
-  const safeCtaLink = ctaLink ? escapeHtml(ctaLink) : '';
+  const safeCtaLink = ctaLink ? safeHref(ctaLink, '') : '';
   const hasExpiry = !!expiresAt;
   const expiryLabel = hasExpiry ? formatDisplayDateTime(expiresAt) : '';
 
@@ -114,8 +115,6 @@ const dispatchAnnouncementEmails = async (announcementId) => {
       }
     });
 
-    const baseUrl = process.env.APP_BASE_URL || process.env.CLIENT_URL || FALLBACK_APP_URL;
-
     for (const recipient of recipients) {
       await Announcement.findOneAndUpdate(
         { _id: announcementId, 'emailDispatch.recipients._id': recipient._id },
@@ -127,15 +126,14 @@ const dispatchAnnouncementEmails = async (announcementId) => {
         }
       );
 
-      const trackOpenUrl = `${baseUrl.replace(/\/$/, '')}/api/announcements/track/open/${announcementId}/${recipient._id}`;
-      const html = `${buildAnnouncementEmailHtml({
+      const html = buildAnnouncementEmailHtml({
         title: doc.title,
         message: doc.message,
         createdByName: doc.createdBy?.name || 'CoreKnot Team',
         ctaText: doc.ctaText,
         ctaLink: doc.ctaLink,
         expiresAt: doc.expiresAt
-      })}<img src="${trackOpenUrl}" width="1" height="1" alt="" style="display:none;" />`;
+      });
 
       try {
         const sendResult = await dispatchEmailPayload({
@@ -143,6 +141,7 @@ const dispatchAnnouncementEmails = async (announcementId) => {
           subject: `CoreKnot Announcement: ${doc.title}`,
           html
         });
+        assertEmailDispatchSucceeded(sendResult, 'Announcement email dispatch failed');
         const messageId = sendResult?.id || sendResult?.data?.id || '';
 
         await Announcement.findOneAndUpdate(
@@ -187,31 +186,10 @@ const dispatchAnnouncementEmails = async (announcementId) => {
 };
 
 router.get('/track/open/:announcementId/:recipientId', async (req, res) => {
-  try {
-    const { announcementId, recipientId } = req.params;
-    const doc = await Announcement.findById(announcementId);
-    if (doc) {
-      const recipient = doc.emailDispatch?.recipients?.id(recipientId);
-      if (recipient && recipient.status !== 'Opened') {
-        recipient.status = 'Opened';
-        recipient.openedAt = new Date();
-        updateAnnouncementOpenCounters(doc);
-        await doc.save();
-      }
-    }
-  } catch (error) {
-    // Silent tracking endpoint failure by design
-  }
-
-  const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-  res.writeHead(200, {
-    'Content-Type': 'image/gif',
-    'Content-Length': pixel.length,
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    Pragma: 'no-cache',
-    Expires: '0'
+  res.status(410).json({
+    error: 'Announcement open tracking moved to Auto-Mailer telemetry',
+    service: 'auto-mailer',
   });
-  res.end(pixel);
 });
 
 router.use(protect);

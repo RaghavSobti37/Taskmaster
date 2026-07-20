@@ -1,5 +1,6 @@
 /**
- * CRM/Mail API smoke via supertest (no listen). server/: node scripts/auditCrmMailSmokeSupertest.js
+ * CRM/Mail migration smoke via supertest (no listen).
+ * server/: node scripts/auditCrmMailSmokeSupertest.js
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
@@ -19,16 +20,40 @@ const ENDPOINTS = [
   { group: 'crm', path: '/api/crm/followups' },
   { group: 'crm', path: '/api/crm/leads/audit-logs', adminOnly: true },
   { group: 'contacts', path: '/api/contacts' },
-  { group: 'mail', path: '/api/mail/stats' },
-  { group: 'mail', path: '/api/mail/templates' },
-  { group: 'mail', path: '/api/mail/templates/pending' },
-  { group: 'mail', path: '/api/mail/profiles' },
-  { group: 'mail', path: '/api/mail/holysheet/all', adminOnly: true },
-  { group: 'campaigns', path: '/api/campaigns' },
-  { group: 'newsletter', path: '/api/newsletter/categories' },
-  { group: 'newsletter', path: '/api/newsletter/issues/current' },
-  { group: 'data-hub', path: '/api/data-hub/folders', adminOnly: true },
+  { group: 'mail', path: '/api/mail/stats', allowUnavailable: true },
+  { group: 'mail-moved', path: '/api/mail/templates', moved: true },
+  { group: 'mail-moved', path: '/api/mail/profiles', moved: true },
+  { group: 'mail-moved', path: '/api/mail/holysheet/all', moved: true, adminOnly: true },
+  { group: 'campaigns-moved', path: '/api/campaigns', moved: true },
+  { group: 'newsletter-moved', path: '/api/newsletter/categories', moved: true },
+  { group: 'newsletter-moved', path: '/api/newsletter/issues/current', moved: true },
+  { group: 'data-hub-moved', path: '/api/data-hub/folders', moved: true, adminOnly: true },
 ];
+
+function summarizeEndpoint(ep, res) {
+  const entry = {
+    group: ep.group,
+    path: ep.path,
+    status: res.status,
+    adminOnly: ep.adminOnly || false,
+  };
+  if (ep.moved) {
+    entry.expected = 410;
+    entry.ok = res.status === 410 && res.body?.service === 'auto-mailer';
+    entry.autoMailerUrl = res.body?.url;
+    entry.error = entry.ok ? undefined : (res.body?.error || 'Expected Auto-Mailer moved contract');
+    return entry;
+  }
+  if (ep.allowUnavailable && res.status === 503) {
+    entry.ok = true;
+    entry.note = 'Stats proxy is configured at runtime with AUTO_MAILER_API_URL';
+    entry.error = res.body?.error;
+    return entry;
+  }
+  entry.ok = res.status < 400;
+  entry.error = res.status >= 400 ? res.body?.error : undefined;
+  return entry;
+}
 
 async function loginAgent(app, email, password) {
   const agent = request.agent(app);
@@ -47,10 +72,6 @@ async function main() {
   registerRoutes(app);
 
   const results = [];
-  let issueId = null;
-  let adminCampaignCount = null;
-  let salesCampaignCount = null;
-
   for (const user of USERS) {
     const { agent, status, ok, error } = await loginAgent(app, user.email, user.password);
     if (!ok) {
@@ -62,62 +83,20 @@ async function main() {
       const res = await agent.get(ep.path);
       results.push({
         role: user.role,
-        group: ep.group,
-        path: ep.path,
-        status: res.status,
-        adminOnly: ep.adminOnly || false,
-        error: res.status >= 400 ? res.body?.error : undefined,
+        ...summarizeEndpoint(ep, res),
       });
     }
-
-    const campRes = await agent.get('/api/campaigns');
-    const count = Array.isArray(campRes.body) ? campRes.body.length : null;
-    if (user.role === 'admin') adminCampaignCount = count;
-    if (user.role === 'sales') salesCampaignCount = count;
 
     if (user.role === 'admin') {
-      const cur = await agent.get('/api/newsletter/issues/current');
-      issueId = cur.body?.issue?._id;
-      if (issueId) {
-        const preview = await agent.get(`/api/newsletter/issues/${issueId}/preview`);
-        results.push({
-          role: user.role,
-          group: 'newsletter',
-          path: `/api/newsletter/issues/${issueId}/preview`,
-          status: preview.status,
-          adminOnly: true,
-          error: preview.status >= 400 ? preview.body?.error : undefined,
-        });
-      }
-    }
-
-    if (user.role === 'sales' && issueId) {
-      const preview = await agent.get(`/api/newsletter/issues/${issueId}/preview`);
+      const browserCampaign = await agent.get('/api/campaigns/smoke-deep-link').set('Accept', 'text/html');
       results.push({
         role: user.role,
-        group: 'newsletter',
-        path: `/api/newsletter/issues/${issueId}/preview`,
-        status: preview.status,
-        adminOnly: true,
-        error: preview.status >= 400 ? preview.body?.error : undefined,
-      });
-      const sendProbe = await agent.post(`/api/newsletter/issues/${issueId}/send`).send({});
-      results.push({
-        role: user.role,
-        group: 'newsletter',
-        path: `/api/newsletter/issues/${issueId}/send`,
-        status: sendProbe.status,
-        adminOnly: true,
-        error: sendProbe.status >= 400 ? sendProbe.body?.error : undefined,
-      });
-      const holysheet = await agent.get('/api/mail/holysheet/all');
-      results.push({
-        role: user.role,
-        group: 'mail',
-        path: '/api/mail/holysheet/all',
-        status: holysheet.status,
-        adminOnly: true,
-        error: holysheet.status >= 400 ? holysheet.body?.error : undefined,
+        group: 'campaigns-moved',
+        path: '/api/campaigns/smoke-deep-link',
+        status: browserCampaign.status,
+        expected: 308,
+        ok: browserCampaign.status === 308 && /\/campaigns\/smoke-deep-link$/.test(browserCampaign.headers.location || ''),
+        autoMailerUrl: browserCampaign.headers.location,
       });
     }
 
@@ -135,25 +114,23 @@ async function main() {
     }
   }
 
-  results.push({
-    role: 'compare',
-    group: 'campaigns',
-    path: '/api/campaigns count',
-    adminCount: adminCampaignCount,
-    salesCount: salesCampaignCount,
-    note: 'Admin should see all org campaigns; list currently filters createdBy for all roles',
-  });
-
   console.log(JSON.stringify(results, null, 2));
 }
 
-main()
-  .then(async () => {
-    await mongoose.disconnect();
-    process.exit(0);
-  })
-  .catch(async (e) => {
-    console.error(e);
-    try { await mongoose.disconnect(); } catch { /* ignore */ }
-    process.exit(1);
-  });
+if (require.main === module) {
+  main()
+    .then(async () => {
+      await mongoose.disconnect();
+      process.exit(0);
+    })
+    .catch(async (e) => {
+      console.error(e);
+      try { await mongoose.disconnect(); } catch { /* ignore */ }
+      process.exit(1);
+    });
+}
+
+module.exports = {
+  ENDPOINTS,
+  summarizeEndpoint,
+};

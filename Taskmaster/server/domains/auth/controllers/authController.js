@@ -35,6 +35,7 @@ const {
   shouldEnforceClerkOrganization,
 } = require('../../../utils/organizationAccess');
 const { syncClerkUserPassword } = require('../../../utils/clerkUserProvisioning');
+const { escapeHtml, safeHref, textToHtml } = require('../../../utils/emailHtml');
 
 const { assertEstablishAllowed } = require('../utils/establishAccess');
 const { isClerkProductionAuth, respondClerkOnlyAuth } = require('../../../utils/clerkOnlyAuth');
@@ -84,20 +85,24 @@ const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000;
 
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-const buildPasswordResetEmailHtml = ({ name, resetUrl }) => `
-  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
-    <h2 style="color: #0d9488; margin-bottom: 8px;">Reset your Coreknot password</h2>
-    <p>Hi ${name || 'there'},</p>
-    <p>We received a request to reset your Coreknot account password. Click the button below to choose a new password.</p>
-    <p style="text-align: center; margin: 28px 0;">
-      <a href="${resetUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
-        Reset password
-      </a>
-    </p>
-    <p style="font-size: 13px; color: #666;">This link expires in 1 hour. If you did not request a reset, you can ignore this email.</p>
-    <p style="font-size: 12px; color: #999; word-break: break-all;">${resetUrl}</p>
-  </div>
-`;
+const buildPasswordResetEmailHtml = ({ name, resetUrl }) => {
+  const safeName = escapeHtml(name || 'there');
+  const safeResetUrl = safeHref(resetUrl, 'https://coreknot.app');
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
+      <h2 style="color: #0d9488; margin-bottom: 8px;">Reset your Coreknot password</h2>
+      <p>Hi ${safeName},</p>
+      <p>We received a request to reset your Coreknot account password. Click the button below to choose a new password.</p>
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="${safeResetUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
+          Reset password
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #666;">This link expires in 1 hour. If you did not request a reset, you can ignore this email.</p>
+      <p style="font-size: 12px; color: #999; word-break: break-all;">${safeResetUrl}</p>
+    </div>
+  `;
+};
 
 const formatAuthUser = (populated) => attachProfileCompletion(
   populated.toObject ? populated.toObject() : populated
@@ -921,22 +926,27 @@ exports.adminRevokeAllUserSessions = async (req, res) => {
   }
 };
 
-const buildAccessRequestEmailHtml = ({ requesterName, requesterEmail, note, adminUsersUrl }) => `
-  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
-    <h2 style="color: #0d9488; margin-bottom: 8px;">CoreKnot access request</h2>
-    <p>Someone asked to join your organisation workspace.</p>
-    <p><strong>Name:</strong> ${requesterName || 'Not provided'}</p>
-    <p><strong>Email:</strong> ${requesterEmail}</p>
-    ${note ? `<p><strong>Message:</strong> ${note}</p>` : ''}
-    <p style="text-align: center; margin: 28px 0;">
-      <a href="${adminUsersUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
-        Open Admin → Users
-      </a>
-    </p>
-    <p style="font-size: 13px; color: #666;">Add them in CoreKnot, then share the temporary password shown once after creation.</p>
-  </div>
-`;
-
+const buildAccessRequestEmailHtml = ({ requesterName, requesterEmail, note, adminUsersUrl }) => {
+  const safeRequesterName = escapeHtml(requesterName || 'Not provided');
+  const safeRequesterEmail = escapeHtml(requesterEmail);
+  const safeNote = note ? textToHtml(note) : '';
+  const safeAdminUsersUrl = safeHref(adminUsersUrl, 'https://coreknot.app/admin/users');
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
+      <h2 style="color: #0d9488; margin-bottom: 8px;">CoreKnot access request</h2>
+      <p>Someone asked to join your organisation workspace.</p>
+      <p><strong>Name:</strong> ${safeRequesterName}</p>
+      <p><strong>Email:</strong> ${safeRequesterEmail}</p>
+      ${safeNote ? `<p><strong>Message:</strong> ${safeNote}</p>` : ''}
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="${safeAdminUsersUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
+          Open Admin Users
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #666;">Add them in CoreKnot, then share the temporary password shown once after creation.</p>
+    </div>
+  `;
+};
 exports.requestAccess = async (req, res) => {
   try {
     const { email, name, message } = req.body;

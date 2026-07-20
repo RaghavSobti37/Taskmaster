@@ -1,0 +1,598 @@
+{
+    "slug":  "coreknot-remediation",
+    "phase":  "implementation",
+    "slices":  [
+                   {
+                       "sliceId":  "email-auto-mailer-ownership",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/App.jsx",
+                                         "client/src/pages/emails/AutoMailerRedirectPage.jsx",
+                                         "client/src/pages/CampaignDetails.jsx",
+                                         "client/src/pages/emails/EmailHubLayout.jsx",
+                                         "client/src/pages/emails/EmailsCampaignsPage.jsx",
+                                         "client/src/pages/emails/EmailsOverviewPage.jsx",
+                                         "client/src/pages/emails/EmailsProfilesPage.jsx",
+                                         "client/src/pages/emails/EmailsStreamsPage.jsx",
+                                         "client/src/pages/emails/EmailsTemplatesPage.jsx",
+                                         "client/src/pages/workspace/CreateCampaignPage.jsx",
+                                         "client/src/pages/workspace/NewsletterCuratePage.jsx",
+                                         "client/src/pages/workspace/NewsletterPage.jsx",
+                                         "client/src/pages/workspace/NewsletterSendPage.jsx",
+                                         "client/src/hooks/queries/mail.js",
+                                         "client/src/hooks/queries/newsletter.js",
+                                         "client/src/hooks/useMailTemplatePreview.js",
+                                         "client/src/utils/autoMailerUrl.js",
+                                         "client/src/utils/autoMailerUrl.test.js",
+                                         "server/routes/deprecatedAutoMailerRoutes.js",
+                                         "server/app/registerRoutes.js",
+                                         "server/services/mailDriver.js",
+                                         "server/services/queueService.js",
+                                         "server/services/campaignEmailQueue.js",
+                                         "server/workers/campaignEmailWorker.js",
+                                         "server/domains/mail/services/mailDriver.js",
+                                         "server/domains/mail/services/mailService.js",
+                                         "server/domains/mail/services/emailProcessor.js",
+                                         "server/utils/smtpTransport.js",
+                                         "server/tests/deprecatedAutoMailerRoutes.test.js",
+                                         "server/tests/mailDriverAutoMailerBridge.test.js",
+                                         "server/tests/queueServiceAutoMailerMigration.test.js",
+                                         "server/tests/queueRedisStability.test.js",
+                                         "../../auto-mailer/server/routes/transactionalRouter.js",
+                                         "../../auto-mailer/server/services/mailDriver.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "security-tenant-api",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/plugins/tenantPlugin.js",
+                                         "server/middleware/rejectClientTenantSpoof.js",
+                                         "server/middleware/apiIdempotency.js",
+                                         "server/services/tenantApiKeyService.js",
+                                         "server/routes/publicApiRoutes.js",
+                                         "server/tests/*tenant*",
+                                         "server/tests/*apiKey*",
+                                         "server/tests/*idempotency*"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "frontend-a11y-primitives",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/ui/primitives.jsx",
+                                         "client/src/components/ui/ModalShell.jsx",
+                                         "client/src/hooks/useFocusTrap.js",
+                                         "client/src/components/ui/*.test.jsx"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "pwa-privacy-performance",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/sw.js",
+                                         "client/src/lib/cookieConsent.js",
+                                         "client/src/components/legal/CookieConsentBanner.jsx",
+                                         "client/src/components/analytics/PostHogAnalytics.jsx",
+                                         "client/lighthouserc.json",
+                                         "client/vite.config.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "frontend-xss-print-hardening",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/utils/printDomSnapshot.js",
+                                         "client/src/utils/printDomSnapshot.test.js",
+                                         "client/src/components/admin/AggregatedMonthlyReportPanel.jsx",
+                                         "client/src/components/admin/MonthlyReportPanel.jsx"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "frontend-embed-and-mail-defanging",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/admin/MailStatsSummary.jsx",
+                                         "client/src/components/finance/FinanceDocumentPreview.jsx",
+                                         "client/src/components/finance/FinanceDocumentPreview.test.jsx",
+                                         "client/src/components/admin/MailTemplateStudio.jsx",
+                                         "client/src/components/emails/wizard/useCampaignAudience.js",
+                                         "client/src/components/emails/wizard/StepPreflight.jsx"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "frontend-iframe-preview-safety",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/emails/wizard/CampaignAttachmentsField.jsx",
+                                         "client/src/components/newsletter/NewsletterCuratorPanel.jsx",
+                                         "client/src/components/project/ProjectFinance.jsx",
+                                         "client/src/components/security/embedSafety.test.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "qa-mail-migration-alignment",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/scripts/auditCrmMailSmokeSupertest.js",
+                                         "server/tests/auditCrmMailSmokeSupertest.test.js",
+                                         "server/services/qa/qaIntegrationRunners.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "server-auto-mailer-bridge-hardening",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/mailDriver.js",
+                                         "server/tests/mailDriverAutoMailerBridge.test.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "cross-service-transactional-payload-bounds",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/mailDriver.js",
+                                         "server/tests/mailDriverAutoMailerBridge.test.js",
+                                         "../../auto-mailer/server/routes/transactionalRouter.js",
+                                         "../../auto-mailer/scripts/transactional-self-check.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "transactional-caller-error-propagation",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/mailDriver.js",
+                                         "server/tests/mailDriverAutoMailerBridge.test.js",
+                                         "server/tests/tenantCreateWizard.test.js",
+                                         "server/routes/announcementRoutes.js",
+                                         "server/routes/calendarRoutes.js",
+                                         "server/services/backupNotificationService.js",
+                                         "server/services/subscriptionReminderService.js",
+                                         "server/services/tenantMembershipService.js",
+                                         "server/domains/artists/services/artistMembershipService.js",
+                                         "server/domains/crm/services/leadWriteService.js",
+                                         "server/utils/sendSystemEmail.js"
+                                     ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "transactional-email-html-escaping",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/utils/emailHtml.js",
+                                         "server/tests/emailHtml.test.js",
+                                         "server/utils/sendSystemEmail.js",
+                                         "server/routes/announcementRoutes.js",
+                                         "server/routes/calendarRoutes.js",
+                                         "server/services/tenantMembershipService.js",
+                                         "server/domains/artists/services/artistMembershipService.js",
+                                         "server/domains/crm/services/leadWriteService.js",
+                                         "server/services/subscriptionReminderService.js",
+                                         "server/services/backupNotificationService.js",
+                                         "server/domains/auth/controllers/authController.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/utils/emailHtml.js server/utils/sendSystemEmail.js server/routes/calendarRoutes.js server/services/tenantMembershipService.js server/domains/artists/services/artistMembershipService.js server/domains/crm/services/leadWriteService.js server/services/subscriptionReminderService.js server/services/backupNotificationService.js server/domains/auth/controllers/authController.js server/routes/announcementRoutes.js server/tests/emailHtml.test.js",
+                                            "npm test -- --runInBand tests/emailHtml.test.js tests/mailDriverAutoMailerBridge.test.js tests/tenantCreateWizard.test.js",
+                                            "npm test -- --runInBand tests/smtpTransport.test.js tests/emailHtml.test.js"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "newsletter-composition-auto-mailer-guard",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/newsletterCompileService.js",
+                                         "server/routes/newsletterRoutes.js",
+                                         "server/templates/newsletter.html",
+                                         "server/tests/newsletter.test.js",
+                                         "server/templates/marketing.html",
+                                         "server/templates/session-reminder.html"
+                                     ],
+                       "verification":  [
+                                            "node -c server/services/newsletterCompileService.js server/routes/newsletterRoutes.js server/tests/newsletter.test.js",
+                                            "npm test -- --runInBand tests/newsletter.test.js tests/deprecatedAutoMailerRoutes.test.js",
+                                            "rg -n \"SHAKTI DIGEST|unsubscribe_url|Read Full Blog|session reminder|Monthly Newsletter\" server/templates server -g \"!coverage/**\"",
+                                            "npm test -- --runInBand tests/newsletter.test.js tests/deprecatedAutoMailerRoutes.test.js tests/queueServiceAutoMailerMigration.test.js"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "campaign-template-assets-auto-mailer-boundary",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/templates/newsletter.html",
+                                         "server/templates/marketing.html",
+                                         "server/templates/session-reminder.html",
+                                         "server/services/qa/qaSuite5Features.js"
+                                     ],
+                       "verification":  [
+                                            "rg -n \"SHAKTI DIGEST|unsubscribe_url|Read Full Blog|session reminder|Monthly Newsletter\" server/templates server -g \"!coverage/**\"",
+                                            "node -c server/services/qa/qaSuite5Features.js server/services/newsletterCompileService.js server/routes/newsletterRoutes.js",
+                                            "node -e \"require(\u0027./server/services/qa/qaSuite5Features\u0027).runSuite5FeatureChecks().then((checks)=\u003e{ const failed=checks.filter((c)=\u003ec.status===\u0027fail\u0027); console.log(JSON.stringify({ total: checks.length, failed: failed.map((c)=\u003ec.id) })); if (failed.length) process.exit(1); })\"",
+                                            "npm test -- --runInBand tests/newsletter.test.js tests/deprecatedAutoMailerRoutes.test.js tests/queueServiceAutoMailerMigration.test.js"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "mail-domain-route-aggregator-guard",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/domains/mail/routes.js",
+                                         "server/domains/mail/routes/index.js"
+                                     ],
+                       "verification":  [
+                                            "node -e \"const routes=require(\u0027./server/domains/mail/routes\u0027); console.log(Boolean(routes.mail.stack), Boolean(routes.campaigns.stack), routes.mail===routes.campaigns);\"",
+                                            "node -c server/domains/mail/routes.js server/domains/mail/routes/index.js",
+                                            "npm test -- --runInBand tests/deprecatedAutoMailerRoutes.test.js tests/queueServiceAutoMailerMigration.test.js"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "coreknot-email-provider-boundary-cleanup",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/systemHealthProbeService.js",
+                                         "server/config/environment.js",
+                                         "server/utils/smtpTransport.js",
+                                         "server/tests/systemHealthProbeService.test.js",
+                                         "server/tests/smtpTransport.test.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/utils/smtpTransport.js server/config/environment.js server/tests/smtpTransport.test.js server/services/systemHealthProbeService.js server/tests/systemHealthProbeService.test.js",
+                                            "npm test -- --runInBand tests/smtpTransport.test.js tests/systemHealthProbeService.test.js tests/mailDriverAutoMailerBridge.test.js",
+                                            "rg -n \"new Resend|Resend Email|RESEND_API_KEY|sendgridApiKey|mailProvider: isProduction|nodemailer|createTransport|sendMail\\(\" server/services server/utils server/config server/routes -g \"!coverage/**\" -g \"!scripts/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "client-data-hub-track-auto-mailer-handoff",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/utils/autoMailerUrl.js",
+                                         "client/src/utils/autoMailerUrl.test.js",
+                                         "client/src/pages/admin/DataHubPage.jsx",
+                                         "client/src/hooks/queries/dataHub.js",
+                                         "client/src/components/dataHub/DataHubCampaignOutcomes.jsx",
+                                         "client/src/components/dataHub/DataHubCampaignImport.jsx",
+                                         "client/src/pages/Unsubscribe.jsx",
+                                         "client/src/hooks/queries/mail.js",
+                                         "client/src/utils/visualEmailHtml.js"
+                                     ],
+                       "verification":  [
+                                            "npx vitest run src/utils/autoMailerUrl.test.js",
+                                            "rg --pcre2 -n \"/api/(campaigns|newsletter|track|data-hub)|/api/mail(?!/stats)\" client/src -g \"!**/*.test.*\"",
+                                            "npm run build"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "coreknot-campaign-tracking-auto-mailer-guard",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/routes/track.js",
+                                         "server/utils/emailTracker.js",
+                                         "server/utils/trackingUrls.js",
+                                         "server/tests/emailTrackingRedirect.test.js",
+                                         "server/tests/emailTrackerAutoMailerMigration.test.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/utils/emailTracker.js server/utils/trackingUrls.js server/tests/emailTrackerAutoMailerMigration.test.js server/routes/track.js",
+                                            "npm test -- --runInBand tests/emailTrackerAutoMailerMigration.test.js tests/emailTrackingRedirect.test.js tests/deprecatedAutoMailerRoutes.test.js",
+                                            "rg -n \"/api/track|claimEmailLog|EmailLog.create|EmailLog.insertMany|trackingPixel|track/click|track/open\" server/routes server/utils server/services server/domains -g \"!coverage/**\" -g \"!scripts/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "announcement-email-telemetry-auto-mailer-boundary",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/routes/announcementRoutes.js",
+                                         "server/tests/announcementEmailTelemetry.test.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/routes/announcementRoutes.js server/tests/announcementEmailTelemetry.test.js",
+                                            "npm test -- --runInBand tests/announcementEmailTelemetry.test.js tests/emailHtml.test.js tests/emailTrackerAutoMailerMigration.test.js",
+                                            "rg -n \"/api/(track|announcements/track)|track/open|track/click|trackingPixel|EmailLog.create|EmailLog.insertMany\" server/routes server/utils server/services server/domains -g \"!coverage/**\" -g \"!scripts/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "qa-openapi-auto-mailer-boundary-alignment",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/openapi/spec.json",
+                                         "server/middleware/requestTimeout.js",
+                                         "server/middleware/requestTimeout.test.js",
+                                         "server/services/qa/qaActionRegistry.js",
+                                         "server/services/qa/qaPermissionMatrix.js",
+                                         "server/services/qa/qaIntegrationTests.js",
+                                         "server/services/qa/qaIntegrationRunners.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/services/qa/qaIntegrationTests.js; node -c server/services/qa/qaIntegrationRunners.js; node -c server/services/qa/qaActionRegistry.js; node -c server/services/qa/qaPermissionMatrix.js; node -c server/middleware/requestTimeout.js; node -e \"JSON.parse(require(\u0027fs\u0027).readFileSync(\u0027server/openapi/spec.json\u0027,\u0027utf8\u0027)); console.log(\u0027openapi ok\u0027)\"",
+                                            "npm test -- --runInBand middleware/requestTimeout.test.js tests/deprecatedAutoMailerRoutes.test.js tests/rolePageDataAccess.test.js",
+                                            "node -e \"const q=require(\u0027./server/services/qa/qaIntegrationTests\u0027); if(!q.ALL_INTEGRATION_DEFS.some(d=\u003ed.id===\u0027int-auto-mailer-migration-contract\u0027)) process.exit(1); console.log(\u0027qa integration defs ok\u0027, q.ALL_INTEGRATION_DEFS.length); process.exit(0)\"",
+                                            "node -e \"const r=require(\u0027./server/services/qa/qaIntegrationRunners\u0027); if(!r.PLANNED_RUNNERS[\u0027sync-folder-count-match\u0027]) process.exit(1); console.log(\u0027qa runners ok\u0027, r.PLANNED_INTEGRATION_DEFS.length); process.exit(0)\"",
+                                            "rg -n \"const before = await Contact.countDocuments\\\\(\\\\)|DataHubSyncState|DataHubService|getFolderCounts|track\\\\.js dual-writes|MailEvent open sets Contact\\\\.inMailer|Data Hub folder counts match Contact|Paginated people directory\" server/services/qa server/openapi server/middleware server/tests -g \"!coverage/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "coreknot-email-provider-catalog-removal",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/package.json",
+                                         "server/utils/envProviderCredentials.js",
+                                         "server/config/integrationProviders.config.js",
+                                         "server/domains/integrations-hub/adapters/adapterRegistry.js",
+                                         "server/domains/integrations-hub/adapters/resendAdapter.js",
+                                         "server/utils/healthPageHtml.js",
+                                         "server/middleware/requireFeatureUnlock.js",
+                                         "server/openapi/spec.json",
+                                         "client/src/components/admin/MailProfilesPanel.jsx",
+                                         "client/src/components/emails/wizard/StepSetup.jsx",
+                                         "client/src/utils/smtpPresets.js",
+                                         "client/src/utils/navPageAccess.js",
+                                         "client/src/utils/hubSubnavConfig.js"
+                                     ],
+                       "verification":  [
+                                            "node -c server/config/integrationProviders.config.js server/domains/integrations-hub/adapters/adapterRegistry.js server/utils/healthPageHtml.js server/middleware/requireFeatureUnlock.js server/utils/envProviderCredentials.js; node -e \"JSON.parse(require(\u0027fs\u0027).readFileSync(\u0027server/package.json\u0027,\u0027utf8\u0027)); JSON.parse(require(\u0027fs\u0027).readFileSync(\u0027server/openapi/spec.json\u0027,\u0027utf8\u0027)); console.log(\u0027provider boundary syntax ok\u0027)\"",
+                                            "npm test -- --runInBand tests/systemHealthProbeService.test.js tests/mailDriverAutoMailerBridge.test.js tests/deprecatedAutoMailerRoutes.test.js",
+                                            "npm test -- --runInBand tests/integrationHub/integrationService.test.js",
+                                            "npm run build",
+                                            "rg -n \"Create campaign \\\\(draft or dispatch\\\\)|Resend campaign to selected recipient statuses|Dispatch queued|id: \u0027resend\u0027|name: \u0027Resend\u0027|Email \\\\(Resend\\\\)|RESEND_API_KEY|SENDGRID|@sendgrid/mail|nodemailer|createTransport|new Resend|resendAdapter|\u0027/emails\u0027: \u0027resend\u0027|EMAIL_HUB_FEATURE_KEY = \u0027resend\u0027\" server client/src packages -g \"!server/coverage/**\" -g \"!coverage/**\" -g \"!node_modules/**\" -g \"!dist/**\" -g \"!build/**\" -g \"!*.test.*\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "dead-mail-internals-auto-mailer-stubbing",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/domains/mail/controllers/campaignApiController.js",
+                                         "server/domains/mail/controllers/campaignsController.js",
+                                         "server/domains/mail/controllers/analyticsController.js",
+                                         "server/domains/mail/services/mailService.js",
+                                         "server/domains/mail/webhooks/resendWebhookHandler.js",
+                                         "server/domains/mail/routes/campaignApiRouter.js",
+                                         "server/routes/newsletterRoutes.js",
+                                         "server/services/qa/qaIntegrationRunners.js",
+                                         "server/package.json"
+                                     ],
+                       "verification":  [
+                                            "node -e \"JSON.parse(require(\u0027fs\u0027).readFileSync(\u0027server/package.json\u0027,\u0027utf8\u0027)); console.log(\u0027package ok\u0027)\"; node -c server/domains/mail/webhooks/resendWebhookHandler.js server/services/qa/qaIntegrationRunners.js server/routes/newsletterRoutes.js server/domains/mail/controllers/analyticsController.js server/domains/mail/controllers/campaignApiController.js server/domains/mail/controllers/campaignsController.js server/domains/mail/services/mailService.js",
+                                            "npm test -- --runInBand tests/lockedZones.regression.test.js tests/newsletter.test.js tests/deprecatedAutoMailerRoutes.test.js tests/queueServiceAutoMailerMigration.test.js",
+                                            "rg -n \"MailEvent\\\\.create|EmailLog\\\\.deleteMany|dispatchCampaignJobs\\\\(|requireFeatureUnlock\\\\(\u0027resend\u0027\\\\)|System Resend|System SMTP|resendFromEmail required|resendFromEmail must|IMAP Scan|imap-simple|mailparser|Resend Webhook\" server/domains/mail server/routes/newsletterRoutes.js server/services/qa server/services server/utils server/package.json -g \"!coverage/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "retired-email-entrypoint-cleanup",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/scripts/auditCrmMailSmokeSupertest.js",
+                                         "server/tests/auditCrmMailSmokeSupertest.test.js",
+                                         "server/app/rateLimits.js",
+                                         "server/tests/rateLimits.test.js",
+                                         "server/package.json",
+                                         "server/domains/mail/webhooks/resendWebhookHandler.js",
+                                         "client/src/components/emails/wizard/StepSetup.jsx",
+                                         "client/src/components/emails/ResendFromEmailPicker.jsx",
+                                         "client/src/utils/smtpPresets.js",
+                                         "client/src/validation/campaignWizardSchema.js"
+                                     ],
+                       "verification":  [
+                                            "node -c app/rateLimits.js; node -c scripts/auditCrmMailSmokeSupertest.js; node -c domains/mail/webhooks/resendWebhookHandler.js; node -e \"JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package json ok')\"",
+                                            "npm test -- --runInBand tests/auditCrmMailSmokeSupertest.test.js tests/deprecatedAutoMailerRoutes.test.js tests/rateLimits.test.js tests/lockedZones.regression.test.js",
+                                            "npm run build",
+                                            "rg -n \"sync-email-campaigns|syncEmailCampaignsToProd|data-hub.*adminOnly|/api/data-hub/folders'\\\\s*,\\\\s*adminOnly|Check Resend setup|Resend \\\\(API\\\\)|Gmail Profile</p>|Loading streams...|/api/track'\" server/package.json server/scripts server/tests server/app client/src -g \"!coverage/**\" -g \"!node_modules/**\" -g \"!dist/**\" -g \"!build/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "retired-provider-demo-surface-cleanup",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/routes/webhookRoutes.js",
+                                         "server/routes/analyticsRoutes.js",
+                                         "server/scripts/seedLocalDevIntegrationsDemo.js",
+                                         "server/utils/smtpPresets.js"
+                                     ],
+                       "verification":  [
+                                            "node -c routes/webhookRoutes.js; node -c routes/analyticsRoutes.js; node -c scripts/seedLocalDevIntegrationsDemo.js; node -c utils/smtpPresets.js",
+                                            "npm test -- --runInBand tests/deprecatedAutoMailerRoutes.test.js tests/systemHealthProbeService.test.js tests/integrationHub/integrationService.test.js tests/rateLimits.test.js",
+                                            "rg -n \"Auto Mailer|Resend campaign webhooks|case 'resend'|resend: 'Resend|resend: true|Resend \\\\(API\\\\)|sendgrid:|brevo:|mailjet:|smtp2go:\" routes scripts/seedLocalDevIntegrationsDemo.js utils/smtpPresets.js -g \"!coverage/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "newsletter-profile-handoff-hardening",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/newsletter/NewsletterSendWizard.jsx",
+                                         "server/scripts/seedRaghavSignature.js"
+                                     ],
+                       "verification":  [
+                                            "node -c scripts/seedRaghavSignature.js; node -c routes/webhookRoutes.js; node -c routes/analyticsRoutes.js; node -c utils/smtpPresets.js",
+                                            "npm test -- --runInBand tests/deprecatedAutoMailerRoutes.test.js tests/systemHealthProbeService.test.js tests/rateLimits.test.js",
+                                            "npm run build",
+                                            "rg -n \"SEED_SMTP|create one|Send newsletter now|Sending|Select SMTP profile|useSendNewsletterIssue|useCompileNewsletterIssue|No matching EmailProfile|No sendable recipients|Select a sender profile\" server/scripts/seedRaghavSignature.js client/src/components/newsletter/NewsletterSendWizard.jsx"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "legacy-profile-copy-and-helper-cleanup",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/admin/MailProfilesPanel.jsx",
+                                         "server/utils/smtpPresets.js"
+                                     ],
+                       "verification":  [
+                                            "node -c utils/smtpPresets.js; node -c scripts/seedRaghavSignature.js; node -c routes/webhookRoutes.js; node -c routes/analyticsRoutes.js",
+                                            "npm test -- --runInBand tests/deprecatedAutoMailerRoutes.test.js tests/systemHealthProbeService.test.js tests/rateLimits.test.js",
+                                            "npm run build",
+                                            "rg -n \"Gmail Profile|Gmail profile|fail to resend|rotation pool seeding|Transactional providers|Select SMTP profile|Send newsletter now\" client/src/components/admin/MailProfilesPanel.jsx client/src/components/newsletter/NewsletterSendWizard.jsx server/utils/smtpPresets.js"
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "orphan-mail-domain-router-guards",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/domains/mail/routes/campaignApiRouter.js",
+                                         "server/domains/mail/routes/profilesRouter.js",
+                                         "server/domains/mail/routes/templatesRouter.js",
+                                         "server/domains/mail/routes/analyticsRouter.js",
+                                         "server/domains/mail/routes/campaignsRouter.js",
+                                         "server/domains/mail/routes/holysheetRouter.js"
+                                     ],
+                       "verification":  [
+                                            "node -c domains/mail/routes/campaignApiRouter.js; node -c domains/mail/routes/profilesRouter.js; node -c domains/mail/routes/templatesRouter.js; node -c domains/mail/routes/analyticsRouter.js; node -c domains/mail/routes/campaignsRouter.js; node -c domains/mail/routes/holysheetRouter.js",
+                                            "npm test -- --runInBand tests/deprecatedAutoMailerRoutes.test.js tests/auditCrmMailSmokeSupertest.test.js tests/rateLimits.test.js",
+                                            "rg -n \"multer|validateBody|campaignApiController|profilesController|templatesController|analyticsController|campaignsController|holysheetController|audienceController|requireFeatureUnlock|resendCampaignBody|createCampaignBody|mailTemplateDraftBody|mailProfileBody\" server/domains/mail/routes -g \"!coverage/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "queue-dispatch-callsite-residue-cleanup",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/services/queueService.js"
+                                     ],
+                       "verification":  [
+                                            "node -c services/queueService.js",
+                                            "npm test -- --runInBand tests/queueServiceAutoMailerMigration.test.js tests/deprecatedAutoMailerRoutes.test.js",
+                                            "rg -n \"@sendgrid/mail|nodemailer|createTransport\\\\(|new Resend\\\\(|mailparser|imap-simple|EmailLog\\\\.create|EmailLog\\\\.insertMany|EmailLog\\\\.deleteMany|MailEvent\\\\.create|send_email|sendCampaign\\\\(|sendTestEmail\\\\(|dispatchCampaignJobs\\\\(\" server client/src packages -g \"!server/coverage/**\" -g \"!**/node_modules/**\" -g \"!**/dist/**\" -g \"!**/build/**\" -g \"!*.test.*\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "dead-resend-helper-removal",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "server/utils/resendSendGate.js",
+                                         "server/utils/resendTags.js",
+                                         "server/utils/campaignAttachments.js",
+                                         "server/services/emailStreamService.js",
+                                         "server/tests/emailStreamService.test.js",
+                                         "server/tests/resendFromEmails.test.js",
+                                         "client/src/constants/resendFromEmails.js",
+                                         "client/src/constants/resendFromEmails.test.js",
+                                         "server/utils/resendFromEmails.js"
+                                     ],
+                       "verification":  [
+                                            "node -c services/emailStreamService.js; node -c utils/resendFromEmails.js",
+                                            "npm test -- --runInBand tests/emailStreamService.test.js tests/resendFromEmails.test.js tests/queueServiceAutoMailerMigration.test.js tests/deprecatedAutoMailerRoutes.test.js",
+                                            "rg -n \"resendSendGate|resendTags|campaignAttachments|formatResendAttachments|formatNodemailerAttachments|verified Resend domain|Resend tag|Resend send gate|resend:send:window|From address must use a verified Resend\" server client/src packages -g \"!server/coverage/**\" -g \"!**/node_modules/**\" -g \"!**/dist/**\" -g \"!**/build/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "client-sender-copy-test-verification",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/emails/wizard/CampaignAttachmentsField.jsx",
+                                         "client/src/constants/resendFromEmails.js",
+                                         "client/src/constants/resendFromEmails.test.js"
+                                     ],
+                       "verification":  [
+                                            "npx vitest run src/constants/resendFromEmails.test.js src/utils/autoMailerUrl.test.js src/validation/campaignWizardSchema.test.js src/components/emails/wizard/useCampaignSubmit.test.js",
+                                            "npm run build",
+                                            "rg -n \"test sends|Send newsletter now|Select SMTP profile|verified Resend domain|Resend tag|Resend send gate|Check Resend setup|Resend \\\\(API\\\\)|@sendgrid/mail|nodemailer|createTransport\\\\(|new Resend\\\\(\" client/src server packages -g \"!server/coverage/**\" -g \"!**/node_modules/**\" -g \"!**/dist/**\" -g \"!**/build/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   },
+                   {
+                       "sliceId":  "client-email-dispatch-affordance-redirects",
+                       "status":  "done",
+                       "ownsFiles":  [
+                                         "client/src/components/emails/MailCampaignList.jsx",
+                                         "client/src/components/emails/wizard/CampaignWizardShell.jsx",
+                                         "client/src/components/emails/wizard/StepPreflight.jsx",
+                                         "client/src/components/emails/wizard/useCampaignSubmit.js",
+                                         "client/src/pages/legal/PrivacyPolicy.jsx",
+                                         "server/services/backupNotificationService.js"
+                                     ],
+                       "verification":  [
+                                            "npx vitest run src/components/emails/wizard/useCampaignSubmit.test.js src/utils/autoMailerUrl.test.js src/validation/campaignWizardSchema.test.js src/components/legal/CookieConsentBanner.test.jsx",
+                                            "npm run build",
+                                            "npm test -- --runInBand tests/emailHtml.test.js tests/deprecatedAutoMailerRoutes.test.js tests/queueServiceAutoMailerMigration.test.js",
+                                            "node -c services/backupNotificationService.js",
+                                            "rg -n \"Dispatch Campaign|Dispatching|Dispatch campaign|Send summary|Test send|Send test|Campaign dispatch started|queue in background|Dispatch started|resendId\" client/src server -g \"!**/*.test.*\" -g \"!server/coverage/**\""
+                                        ],
+                       "forbiddenFiles":  [
+
+                                          ]
+                   }
+               ]
+}

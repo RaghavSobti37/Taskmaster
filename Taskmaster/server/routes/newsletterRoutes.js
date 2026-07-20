@@ -1,8 +1,6 @@
-const crypto = require('crypto');
 const express = require('express');
 const NewsletterIssue = require('../models/NewsletterIssue');
 const NewsletterArticle = require('../models/NewsletterArticle');
-const Campaign = require('../models/Campaign');
 const { protect, requirePageAccess } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 
@@ -13,7 +11,6 @@ const {
   createArticleBody,
   patchArticleBody,
   curateIssueBody,
-  sendIssueBody,
   audiencePreviewBody,
 } = require('../validation/schemas/newsletter');
 const { NEWSLETTER_ARTICLE_CATEGORIES } = require('../constants/newsletterCategories');
@@ -21,9 +18,6 @@ const { getCurrentWeekKey, getWeekBounds } = require('../utils/newsletterWeek');
 const { previewLink, normalizeUrl } = require('../services/newsletterLinkPreviewService');
 const { compileNewsletterHtml } = require('../services/newsletterCompileService');
 const { resolveNewsletterAudience } = require('../services/newsletterAudienceService');
-const { normalizeOutboundEmailHtml } = require('../utils/normalizeOutboundEmailHtml');
-const { dispatchCampaignJobs } = require('../services/queueService');
-const { annotateRecipient, isValidEmail } = require('../utils/emailValidation');
 
 const router = express.Router();
 
@@ -34,6 +28,17 @@ const requireAdmin = (req, res, next) => {
     return res.status(403).json({ error: 'Admin access required' });
   }
   return next();
+};
+
+const handleNewsletterRouteError = (res, err) => {
+  if (err?.status === 410 && err?.service === 'auto-mailer') {
+    return res.status(410).json({
+      error: err.message,
+      service: err.service,
+      url: err.url,
+    });
+  }
+  return handleNewsletterRouteError(res, err);
 };
 
 const serializeArticle = (doc) => {
@@ -87,7 +92,7 @@ router.get('/issues/current', async (req, res) => {
     const bundle = await loadIssueBundle(issue._id);
     res.json(bundle);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -104,7 +109,7 @@ router.get('/issues/:weekKey', async (req, res) => {
     const bundle = await loadIssueBundle(issue._id);
     res.json(bundle);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -171,7 +176,7 @@ router.post('/articles', validateBody(createArticleBody), async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'This link is already saved for this week' });
     }
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -199,7 +204,7 @@ router.patch('/articles/:id', validateBody(patchArticleBody), async (req, res) =
     await article.populate('addedBy', 'name email');
     res.json(serializeArticle(article));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -221,7 +226,7 @@ router.delete('/articles/:id', async (req, res) => {
     await article.deleteOne();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -254,7 +259,7 @@ router.patch('/issues/:id/curate', validateBody(curateIssueBody), async (req, re
     const bundle = await loadIssueBundle(issue._id);
     res.json(bundle);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -286,7 +291,7 @@ router.post('/issues/:id/compile', async (req, res) => {
       compiledHtml,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -305,7 +310,7 @@ router.get('/issues/:id/preview', async (req, res) => {
 
     res.json({ html, issue: issue.toObject() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
@@ -314,85 +319,16 @@ router.post('/issues/:id/audience-preview', validateBody(audiencePreviewBody), a
     const result = await resolveNewsletterAudience(req.body.audience, req.body.excludedEmails);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleNewsletterRouteError(res, err);
   }
 });
 
-router.post('/issues/:id/send', validateBody(sendIssueBody), async (req, res) => {
-  try {
-    const issue = await NewsletterIssue.findById(req.params.id);
-    if (!issue) return res.status(404).json({ error: 'Issue not found' });
-    if (issue.status === 'sent') {
-      return res.status(400).json({ error: 'Issue already sent' });
-    }
-
-    let html = issue.compiledHtml;
-    if (!html) {
-      const articles = await NewsletterArticle.find({ issueId: issue._id, included: true })
-        .sort({ sortOrder: 1, createdAt: 1 })
-        .lean();
-      if (!articles.length) {
-        return res.status(400).json({ error: 'Compile the newsletter before sending' });
-      }
-      html = compileNewsletterHtml({ issue, articles });
-      issue.compiledHtml = html;
-      issue.compiledAt = new Date();
-    }
-
-    const audienceResult = await resolveNewsletterAudience(req.body.audience, req.body.excludedEmails);
-    if (!audienceResult.recipients.length) {
-      return res.status(400).json({ error: 'No sendable recipients for the selected audience' });
-    }
-
-    const allRecipients = audienceResult.recipients.map((r) => {
-      const annotated = annotateRecipient({ email: r.email, name: r.name });
-      return {
-        email: annotated.email,
-        name: annotated.name || r.name,
-        rowData: r.rowData instanceof Map ? r.rowData : new Map(Object.entries(r.rowData || {})),
-        status: annotated.status || 'Pending',
-      };
-    }).filter((r) => isValidEmail(r.email));
-
-    const campaignId = crypto.randomBytes(12).toString('hex');
-    const mode = req.body.senderMode || 'single';
-
-    const campaign = await Campaign.create({
-      campaignId,
-      title: req.body.title,
-      subject: req.body.subject,
-      content: normalizeOutboundEmailHtml(html),
-      senderProfileId: req.body.senderProfileId || undefined,
-      senderMode: mode,
-      senderProfileIds: req.body.senderProfileIds || [],
-      systemProvider: req.body.systemProvider,
-      includeSignature: req.body.includeSignature === true,
-      removeUnsubscribe: false,
-      eventTag: 'Newsletter',
-      recipients: allRecipients,
-      recipientCount: allRecipients.length,
-      status: 'Queued',
-      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },
-      createdBy: req.user._id,
-    });
-
-    const dispatchResult = await dispatchCampaignJobs(campaign._id);
-
-    issue.status = 'sent';
-    issue.sentAt = new Date();
-    issue.sentBy = req.user._id;
-    issue.campaignId = campaign.campaignId;
-    await issue.save();
-
-    res.status(201).json({
-      issue: issue.toObject(),
-      campaign: campaign.toObject(),
-      audience: audienceResult,
-      dispatch: dispatchResult,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+router.post('/issues/:id/send', async (req, res) => {
+  const origin = String(process.env.AUTO_MAILER_URL || 'https://auto-mailer-blue.vercel.app').replace(/\/+$/, '');
+  return res.status(410).json({
+    error: 'Newsletter sending moved to Auto-Mailer',
+    service: 'auto-mailer',
+    url: `${origin}/campaigns/new`,
+  });
 });
-
 module.exports = router;

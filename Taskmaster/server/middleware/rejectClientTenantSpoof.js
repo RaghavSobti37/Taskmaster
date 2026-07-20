@@ -5,12 +5,21 @@ const SPOOF_EXEMPT = (path) => /\/api\/tenants\/select\b/.test(path);
 
 function collectSuppliedTenantIds(req) {
   const values = [];
-  for (const key of SPOOF_KEYS) {
-    const bodyVal = req.body?.[key];
-    const queryVal = req.query?.[key];
-    if (bodyVal !== undefined && bodyVal !== null && bodyVal !== '') values.push(bodyVal);
-    if (queryVal !== undefined && queryVal !== null && queryVal !== '') values.push(queryVal);
-  }
+  const visit = (value) => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (SPOOF_KEYS.includes(key) && child !== undefined && child !== null && child !== '') {
+        values.push(child);
+      }
+      visit(child);
+    }
+  };
+  visit(req.body);
+  visit(req.query);
   return values;
 }
 

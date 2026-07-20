@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-
-const STORAGE_KEY = 'coreknot:cookie-consent';
+import { useEffect, useState } from 'react';
+import { acceptAllCookies, readCookieConsent } from '../../lib/cookieConsent';
 
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
+    if (!readCookieConsent()) setVisible(true);
   }, []);
 
   if (!visible) return null;
@@ -21,7 +20,7 @@ export default function CookieConsentBanner() {
           type="button"
           className="rounded-lg bg-[var(--color-action-primary)] px-4 py-2 text-xs font-medium text-white"
           onClick={() => {
-            localStorage.setItem(STORAGE_KEY, 'accepted');
+            acceptAllCookies();
             setVisible(false);
           }}
         >

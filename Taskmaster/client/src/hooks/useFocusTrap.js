@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const INITIAL_FOCUS_SELECTOR = '[data-autofocus], [autofocus]';
 
 /**
  * Trap focus inside a modal/dialog while open; restore focus on close.
@@ -17,12 +18,17 @@ export function useFocusTrap(isActive, containerRef) {
 
     const getFocusable = () =>
       [...container.querySelectorAll(FOCUSABLE_SELECTOR)].filter(
-        (el) => !el.hasAttribute('disabled') && el.offsetParent !== null
+        (el) =>
+          !el.hasAttribute('disabled') &&
+          !el.hidden &&
+          el.getAttribute('aria-hidden') !== 'true' &&
+          el.getAttribute('type') !== 'hidden'
       );
 
     const focusTimer = window.setTimeout(() => {
       const nodes = getFocusable();
-      (nodes[0] || container).focus?.();
+      const initial = container.querySelector(INITIAL_FOCUS_SELECTOR);
+      (nodes.find((node) => node === initial) || nodes[0] || container).focus?.();
     }, 0);
 
     const onKeyDown = (e) => {

@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * Upsert "Raghav Signature" HTML on an EmailProfile.
+ * Update "Raghav Signature" HTML on a legacy EmailProfile.
  *
  * Run from repo root:
  *   node server/scripts/seedRaghavSignature.js
  *
- * Optional env (for creating a new profile when none matches):
- *   SEED_SMTP_USER, SEED_SMTP_PASS — SMTP credentials for new profile
+ * New campaign sender profiles now belong in Auto-Mailer.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
@@ -50,21 +49,8 @@ const run = async () => {
     await profile.save();
     console.log(`Updated profile "${profile.name}" (${profile._id}) with Raghav Signature HTML.`);
   } else {
-    const smtpUser = (process.env.SEED_SMTP_USER || PROFILE_EMAIL).trim();
-    const smtpPass = (process.env.SEED_SMTP_PASS || '').trim();
-    if (!smtpPass) {
-      console.error('No matching EmailProfile found. Set SEED_SMTP_PASS (and optionally SEED_SMTP_USER) to create one.');
-      process.exit(1);
-    }
-    profile = await EmailProfile.create({
-      name: PROFILE_NAME,
-      email: PROFILE_EMAIL,
-      smtpUser,
-      smtpPass,
-      smtpHost: 'rotation',
-      signature: RAGHAV_SIGNATURE,
-    });
-    console.log(`Created profile "${profile.name}" (${profile._id}) with Raghav Signature HTML.`);
+    console.error('No matching legacy EmailProfile found. Create or edit sender profiles in Auto-Mailer.');
+    process.exit(1);
   }
 
   await mongoose.disconnect();

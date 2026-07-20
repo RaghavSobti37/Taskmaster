@@ -100,7 +100,7 @@ export default function PrivacyPolicy() {
             <p>{legalCopy.productNameInBody} processes your data strictly for operational functionality:</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Aggregating follower and streaming metrics into unified artist dashboards.</li>
-              <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Dispatching scheduled emails and calendar reminders via secure API conduits.</li>
+              <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Routing email workflows to Auto-Mailer and sending calendar reminders via secure API conduits.</li>
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-[var(--color-brand-teal)] mt-0.5 shrink-0" /> Maintaining real-time multi-user synchronization across active workspaces.</li>
             </ul>
           </div>

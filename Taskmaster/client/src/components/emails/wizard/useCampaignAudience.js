@@ -150,9 +150,15 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     { enabled: dataHubLoadRequested },
   );
 
-  const allExlyContacts = exlyAudienceQuery.data?.contacts ?? [];
+  const allExlyContacts = useMemo(
+    () => exlyAudienceQuery.data?.contacts ?? [],
+    [exlyAudienceQuery.data?.contacts],
+  );
   const exlyContactsLoading = exlyAudienceQuery.isFetching;
-  const allDataHubContacts = dataHubAudienceQuery.data?.contacts ?? [];
+  const allDataHubContacts = useMemo(
+    () => dataHubAudienceQuery.data?.contacts ?? [],
+    [dataHubAudienceQuery.data?.contacts],
+  );
   const dataHubContactsLoading = dataHubAudienceQuery.isFetching;
 
   const clientEngagementEmails = useMemo(() => {
@@ -168,6 +174,11 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     return [];
   }, [audienceSource, allContacts, csvRecipients, manualRecipients]);
 
+  const clientEngagementEmailKey = useMemo(
+    () => clientEngagementEmails.join('|'),
+    [clientEngagementEmails],
+  );
+
   useEffect(() => {
     if (audienceSource === 'exly' || audienceSource === 'datahub') return undefined;
     if (!clientEngagementEmails.length) {
@@ -175,24 +186,10 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
       return undefined;
     }
 
-    let cancelled = false;
-    const fetchEngagement = async () => {
-      setEngagementLoading(true);
-      try {
-        const res = await axios.post('/api/mail/audience/engagement', {
-          emails: clientEngagementEmails,
-        });
-        if (!cancelled) setEngagementByEmail(res.data?.engagement || {});
-      } catch {
-        if (!cancelled) setEngagementByEmail({});
-      } finally {
-        if (!cancelled) setEngagementLoading(false);
-      }
-    };
-
-    fetchEngagement();
-    return () => { cancelled = true; };
-  }, [audienceSource, clientEngagementEmails.join('|')]);
+    setEngagementByEmail({});
+    setEngagementLoading(false);
+    return undefined;
+  }, [audienceSource, clientEngagementEmails.length, clientEngagementEmailKey]);
 
   const loadCrmContactsData = useCallback(async (segment = crmSegment) => {
     setContactsLoading(true);
@@ -292,31 +289,12 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const fetchHolySheetData = useCallback(async () => {
     setLoadingHolySheet(true);
     try {
-      const res = await axios.get('/api/mail/holysheet/all');
-      const rawRecs = res.data || [];
-      const newRecs = [];
-      let skipped = 0;
-      rawRecs.forEach((rec) => {
-        if (rec?.email) {
-          rec.email.split(/[,;]/).map((e) => e.trim()).filter(Boolean).forEach((se) => {
-            const normalized = normalizeEmail(se);
-            if (isValidEmail(normalized)) newRecs.push({ ...rec, email: normalized });
-            else if (normalized) skipped += 1;
-          });
-        }
-      });
-      setCsvRecipients((prev) => {
-        const filtered = prev.filter((p) => !p.source || p.source === 'CSV Upload');
-        return [...filtered, ...newRecs];
-      });
-      const holySheetSources = Array.from(new Set(newRecs.map((r) => r.source).filter(Boolean)));
-      setExcludedSources((prev) => [...new Set([...prev, ...holySheetSources])]);
-      const skipNote = skipped > 0 ? ` Skipped ${skipped} invalid.` : '';
-      toast.success(`Loaded ${newRecs.length} from Media List (${holySheetSources.length} tabs deselected by default).${skipNote}`);
-    } catch (e) {
-      toast.error('Failed to load Media List: ' + (e.response?.data?.error || e.message));
+      setCsvRecipients((prev) => prev.filter((p) => p.source !== 'Media List'));
+      setExcludedSources((prev) => [...new Set(prev)]);
+      toast.warn('Media List campaign audiences now load in Auto-Mailer. Open Auto-Mailer to build this send.');
+    } finally {
+      setLoadingHolySheet(false);
     }
-    setLoadingHolySheet(false);
   }, [toast]);
 
   const activeCsvRecipients = useMemo(

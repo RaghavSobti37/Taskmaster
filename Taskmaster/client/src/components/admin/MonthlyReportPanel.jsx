@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, DataLoading, QueryErrorBanner, getQueryErrorMessage } from '../ui';
 import { userReportToCsv } from '../../utils/monthlyReportCsv';
 import { reportRangeQueryKey } from '../../utils/monthlyReportRange';
+import { printDomSnapshot } from '../../utils/printDomSnapshot';
 import { useMonthlyReportRangeState } from '../../hooks/useMonthlyReportRangeState';
 import ReportRangeControls from './reports/ReportRangeControls';
 import MonthlyReportBody from './reports/MonthlyReportBody';
@@ -66,10 +67,10 @@ const MonthlyReportPanel = ({ userId, userName }) => {
 
   const handlePrint = () => {
     if (!printRef.current) return;
-    const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>Report ${month}</title></head><body>${printRef.current.innerHTML}</body></html>`);
-    w.document.close();
-    w.print();
+    printDomSnapshot({
+      title: `Report ${month}`,
+      contentNode: printRef.current,
+    });
   };
 
   const subtitle = rangeSubtitle(report);

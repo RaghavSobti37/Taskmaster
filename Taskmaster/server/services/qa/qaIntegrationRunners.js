@@ -11,13 +11,10 @@ const FinanceDocument = require('../../models/FinanceDocument');
 const Contact = require('../../models/Contact');
 const Log = require('../../models/Log');
 const XPAuditLog = require('../../models/XPAuditLog');
-const Campaign = require('../../models/Campaign');
 const User = require('../../models/User');
 const LeadService = require('../LeadService');
 const ContactService = require('../ContactService');
 const GamificationService = require('../gamificationService');
-const DataHubService = require('../DataHubService');
-const { computeRecipientStats } = require('../../utils/campaignStats');
 const { isWeekend } = require('../../utils/attendanceDate');
 const TaskActivity = require('../../models/TaskActivity');
 const TaskMentionReceipt = require('../../models/TaskMentionReceipt');
@@ -810,12 +807,11 @@ async function runExlySyncsContact(def, ctx) {
 }
 
 async function runMailOpenContactSync(def, ctx) {
-  const contactSrc = await readServer('services/ContactService.js');
   const trackSrc = await readServer('routes/track.js');
-  const ok = contactSrc.includes('inMailer') && trackSrc.includes("eventType: 'Open'");
+  const ok = trackSrc.includes('deprecatedAutoMailerRoutes');
   return ok
-    ? probePass(def, 'Open tracking + Contact.inMailer flags present in codebase')
-    : probeFail(def, 'Mail open → Contact.inMailer wiring incomplete');
+    ? probePass(def, 'Mail open/contact attribution is delegated to Auto-Mailer')
+    : probeFail(def, 'Mail tracking handoff not found in routes/track.js');
 }
 
 async function runMultiinletFlagSet(def, ctx) {
@@ -898,26 +894,16 @@ async function runBugTaskCorrectProject(def, ctx) {
   return { ...probeFail(def, `Bug not in Tech Stack project (got "${projectName}")`), artifacts: ctx.artifacts };
 }
 
-async function runCampaignStatsAccurate(def, ctx) {
+async function runAutoMailerMigrationContract(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const campaign = await Campaign.findOne({ 'recipients.0': { $exists: true } }).lean();
-  if (!campaign) return skipProbeResult(def, 'No campaign with recipients');
-
-  const res = await request(def, { method: 'GET', url: `/api/campaigns/${campaign._id}`, user: adminUser });
-  if (res.status !== 200) return probeFail(def, `Campaign GET failed (${res.status})`);
-
-  const expected = computeRecipientStats(campaign.recipients || []);
-  const apiStats = res.data?.stats || res.data?.data?.stats;
-  if (!apiStats) return probeFail(def, 'Campaign response missing stats');
-
-  const match =
-    apiStats.sent === expected.stats.sent &&
-    apiStats.opened === expected.stats.opened &&
-    apiStats.clicked === expected.stats.clicked;
-  if (match) {
-    return probePass(def, `stats.sent/opened/clicked match recipient rows (${apiStats.sent}/${apiStats.opened}/${apiStats.clicked})`);
+  const res = await request(def, { method: 'GET', url: '/api/campaigns/qa-migration-probe', user: adminUser });
+  if (res.status !== 410) {
+    return probeFail(def, `Expected CoreKnot campaign API to be moved to Auto-Mailer, got ${res.status}`);
   }
-  return probeFail(def, `Stats mismatch API=${JSON.stringify(apiStats)} expected=${JSON.stringify(expected.stats)}`);
+  if (res.data?.service !== 'auto-mailer' || !/\/campaigns\/qa-migration-probe$/.test(res.data?.url || '')) {
+    return probeFail(def, `Moved contract missing Auto-Mailer deep link: ${JSON.stringify(res.data)}`);
+  }
+  return probePass(def, 'CoreKnot campaign APIs return the Auto-Mailer moved contract');
 }
 
 async function runAttendanceWeekendLeave(def, ctx) {
@@ -982,50 +968,30 @@ async function runSyncBookedcallFullFlow(def, ctx) {
 async function runMailEventNoHardcode(def, ctx) {
   const geo = await readServer('utils/geoLookup.js');
   const campaign = await readServer('domains/mail/controllers/campaignApiController.js');
-  const registered = await readServer('utils/campaignRegisteredLocation.js');
+  const webhook = await readServer('domains/mail/webhooks/resendWebhookHandler.js');
   const badGeo = /Mumbai/i.test(geo);
-  const usesCrmBreakdown = campaign.includes('buildRegisteredLocationBreakdown')
-    && registered.includes('registeredCityFromLeadDoc');
-  if (!badGeo && usesCrmBreakdown) {
-    return probePass(def, 'Campaign location breakdown uses CRM registration (no Mumbai hardcode in geoLookup)');
+  const movedBoundary = campaign.includes('Moved to Auto-Mailer') && webhook.includes('Moved to Auto-Mailer');
+  if (!badGeo && movedBoundary) {
+    return probePass(def, 'Mail telemetry is delegated to Auto-Mailer and geoLookup has no Mumbai fallback');
   }
-  return probeFail(def, `Mail geo check failed (geoLookup Mumbai=${badGeo}, crmBreakdown=${usesCrmBreakdown})`);
+  return probeFail(def, `Mail geo boundary check failed (geoLookup Mumbai=${badGeo}, movedBoundary=${movedBoundary})`);
 }
 
 async function runUnsubscribeDualWrite(def, ctx) {
   const trackJs = await readServer('routes/track.js');
-  const updatesLead = trackJs.includes('Lead.updateMany') && trackJs.includes('unsubscribed');
-  const updatesContact = /Contact\.(updateMany|findOneAndUpdate)/.test(trackJs);
-  if (updatesLead && updatesContact) {
-    return probePass(def, 'Unsubscribe updates Lead and Contact');
+  if (trackJs.includes('deprecatedAutoMailerRoutes')) {
+    return probePass(def, 'Unsubscribe endpoint is delegated to Auto-Mailer');
   }
-  if (updatesLead && !updatesContact) {
-    return probeFail(def, 'Unsubscribe updates Lead only — Contact dual-write missing in track.js');
-  }
-  return probeFail(def, 'Unsubscribe handler wiring not found');
+  return probeFail(def, 'Unsubscribe Auto-Mailer handoff not found');
 }
 
 async function runFolderCountMatch(def, ctx) {
   const { adminUser } = await resolveTestUsers();
   const apiRes = await request(def, { method: 'GET', url: '/api/data-hub/folders', user: adminUser });
-  if (apiRes.status === 403) return skipProbeResult(def, 'Data Hub folders require admin');
-  if (apiRes.status !== 200) return probeFail(def, `folders API failed (${apiRes.status})`);
-
-  const serviceCounts = await DataHubService.getFolderCounts();
-  const apiFolders = apiRes.data?.folders || [];
-  const mismatches = [];
-  for (const folder of apiFolders.slice(0, 8)) {
-    const key = folder.key;
-    if (!key || key.startsWith('tsc:')) continue;
-    const serviceCount = serviceCounts.counts?.[key];
-    if (serviceCount != null && folder.count !== serviceCount) {
-      mismatches.push(`${key}: api=${folder.count} service=${serviceCount}`);
-    }
+  if (apiRes.status === 410 && apiRes.data?.service === 'auto-mailer') {
+    return probePass(def, 'Data Hub folder API returns Auto-Mailer handoff');
   }
-  if (!mismatches.length) {
-    return probePass(def, 'Folder API counts align with DataHubService.getFolderCounts');
-  }
-  return probeFail(def, `Folder count drift: ${mismatches.slice(0, 3).join('; ')}`);
+  return probeFail(def, `Expected Auto-Mailer handoff, got ${apiRes.status}`);
 }
 
 async function runMultiinletCountAccurate(def, ctx) {
@@ -1218,11 +1184,11 @@ const PLANNED_INTEGRATION_DEFS = [
   { id: 'int-review-approve-notify', title: 'Review approval notifies assignee', sev: 'medium', category: 'business-logic' },
   { id: 'int-lead-syncs-to-contact', title: 'Lead syncs to Contact.inCRM', sev: 'high', category: 'business-logic' },
   { id: 'int-exly-syncs-to-contact', title: 'ExlyBooking syncs to Contact.inExly', sev: 'high', category: 'business-logic' },
-  { id: 'int-mail-open-contact-sync', title: 'MailEvent open sets Contact.inMailer', sev: 'medium', category: 'business-logic' },
+  { id: 'int-mail-open-contact-sync', title: 'Mail opens delegated to Auto-Mailer', sev: 'medium', category: 'business-logic' },
   { id: 'int-multiinlet-flag-set', title: 'Multi-inlet Contact gets isMultiInlet=true', sev: 'medium', category: 'business-logic' },
   { id: 'int-task-mutation-logged', title: 'Task mutation creates Log entry', sev: 'medium', category: 'business-logic' },
   { id: 'int-bug-task-correct-project', title: 'Bug report lands in Tech Stack project', sev: 'medium', category: 'business-logic' },
-  { id: 'int-campaign-stats-accurate', title: 'Campaign stats match MailEvents', sev: 'high', category: 'business-logic' },
+  { id: 'int-auto-mailer-migration-contract', title: 'CoreKnot campaign APIs moved to Auto-Mailer', sev: 'high', category: 'business-logic' },
   { id: 'int-attendance-weekend-leave', title: 'Saturday attendance classified as leave', sev: 'medium', category: 'business-logic' },
   { id: 'int-booked-call-full-flow', title: 'Book-a-call webhook full pipeline', sev: 'high', category: 'business-logic' },
   { id: 'sync-lead-csv-dedup-email', title: 'CSV import deduplicates by email', sev: 'critical', category: 'business-logic' },
@@ -1230,9 +1196,9 @@ const PLANNED_INTEGRATION_DEFS = [
   { id: 'sync-tsc-data-normalized', title: 'TSC import normalizes email/name', sev: 'high', category: 'business-logic' },
   { id: 'sync-exly-webhook-booking', title: 'Exly webhook creates booking + Contact', sev: 'high', category: 'business-logic' },
   { id: 'sync-bookedcall-full-flow', title: 'Book-a-call webhook 4-step pipeline', sev: 'critical', category: 'business-logic' },
-  { id: 'sync-mail-event-no-hardcode', title: 'MailEvent displayCity not hardcoded (LOCKED)', sev: 'critical', category: 'business-logic' },
-  { id: 'sync-unsubscribe-dual-write', title: 'Unsubscribe dual-write Lead + Contact', sev: 'critical', category: 'business-logic' },
-  { id: 'sync-folder-count-match', title: 'Data Hub folder counts match Contact', sev: 'high', category: 'business-logic' },
+  { id: 'sync-mail-event-no-hardcode', title: 'Mail telemetry delegated without geo fallback', sev: 'critical', category: 'business-logic' },
+  { id: 'sync-unsubscribe-dual-write', title: 'Unsubscribe delegated to Auto-Mailer', sev: 'critical', category: 'business-logic' },
+  { id: 'sync-folder-count-match', title: 'Data Hub folders delegated to Auto-Mailer', sev: 'high', category: 'business-logic' },
   { id: 'sync-multiinlet-count-accurate', title: 'inletCount reflects active inlets', sev: 'high', category: 'business-logic' },
   { id: 'int-concurrent-xp', title: 'Duplicate XP blocked per entity', sev: 'high', category: 'business-logic' },
   { id: 'int-task-activity-created', title: 'Task create seeds activity timeline', sev: 'high', category: 'business-logic' },
@@ -1270,7 +1236,7 @@ const PLANNED_RUNNERS = {
   'int-multiinlet-flag-set': runMultiinletFlagSet,
   'int-task-mutation-logged': runTaskMutationLogged,
   'int-bug-task-correct-project': runBugTaskCorrectProject,
-  'int-campaign-stats-accurate': runCampaignStatsAccurate,
+  'int-auto-mailer-migration-contract': runAutoMailerMigrationContract,
   'int-attendance-weekend-leave': runAttendanceWeekendLeave,
   'int-booked-call-full-flow': runBookedCallFullFlow,
   'sync-lead-csv-dedup-email': runCsvDedupEmail,

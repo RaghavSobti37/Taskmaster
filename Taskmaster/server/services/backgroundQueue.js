@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const { getRedisUrl, createRedisClient } = require('../utils/wslRedis');
 const logger = require('../utils/logger');
+const { getTenantId, getUserId, runWithContext } = require('../utils/tenantContext');
 
 const MONGO_READY_TIMEOUT_MS = 30000;
 
@@ -129,6 +130,11 @@ function initializeQueues() {
     await waitForMongoReady();
     const { eventType, payload } = job.data;
     const GamificationService = require('./gamificationService');
+    const context = payload?.tenantId ? { tenantId: payload.tenantId, userId: payload.userId } : null;
+    if (context) {
+      await runWithContext(context, () => GamificationService.handleGamificationEvent(eventType, payload));
+      return;
+    }
     await GamificationService.handleGamificationEvent(eventType, payload);
   }, { connection: redisConnection, concurrency: 5 });
 
@@ -315,10 +321,23 @@ async function drainGamificationMemoryQueue(timeoutMs = 30000) {
 }
 
 const queueGamificationEvent = (eventType, payload) => {
+  const enrichedPayload = {
+    ...payload,
+    tenantId: payload?.tenantId || getTenantId() || payload?.user?.tenantId || payload?.task?.tenantId || payload?.project?.tenantId,
+    actorId: payload?.actorId || getUserId() || payload?.userId,
+  };
+
   const job = (async () => {
     const runEvent = async () => {
       const GamificationService = require('./gamificationService');
-      await GamificationService.handleGamificationEvent(eventType, payload);
+      const context = enrichedPayload.tenantId
+        ? { tenantId: enrichedPayload.tenantId, userId: enrichedPayload.actorId || enrichedPayload.userId }
+        : null;
+      if (context) {
+        await runWithContext(context, () => GamificationService.handleGamificationEvent(eventType, enrichedPayload));
+        return;
+      }
+      await GamificationService.handleGamificationEvent(eventType, enrichedPayload);
     };
 
     // QA runs: inline only — avoids Bull waitUntilFinished exceeding HTTP client timeouts
@@ -332,7 +351,7 @@ const queueGamificationEvent = (eventType, payload) => {
       try {
         await gamificationQueue.add(
           eventType,
-          { eventType, payload },
+          { eventType, payload: enrichedPayload },
           { removeOnComplete: true, removeOnFail: true }
         );
         return;

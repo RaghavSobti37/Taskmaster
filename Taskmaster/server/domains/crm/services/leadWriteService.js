@@ -17,7 +17,7 @@ const {
   mergeCorruptLeadIntoKeeper,
 } = require('./leadDuplicateService');
 const { sendAiSensyMessage } = require('../../../utils/aisensyClient');
-const { dispatchEmailPayload } = require('../../../services/mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('../../../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../../../config/realtime');
 const { queueGamificationEvent } = require('../../../services/backgroundQueue');
 const { getDepartmentSlug, ARTIST_SLUG } = require('../../../utils/departmentPermissions');
@@ -29,6 +29,7 @@ const auditService = require('./auditService');
 const { getTenantId } = require('../../../utils/tenantContext');
 const { bypassOptions } = require('../../../infrastructure/database/bypassTenantPolicy');
 const User = require('../../../models/User');
+const { escapeHtml, safeHref } = require('../../../utils/emailHtml');
 
 const TENANT_SAFE_LOOKUP = bypassOptions('crm_lead_duplicate_check');
 
@@ -180,13 +181,16 @@ async function sendFirstCallNotifications(lead) {
   }
 
   if (lead.email) {
-    await dispatchEmailPayload({
+    const safeLeadName = escapeHtml(leadName);
+    const safeCourseTitle = escapeHtml(courseTitle);
+    const safePaymentLink = safeHref(paymentLink, 'https://payment.coreknot.io');
+    const sendResult = await dispatchEmailPayload({
       to: lead.email,
       subject: `Great! We connected - Next steps for ${courseTitle}`,
       html: `
               <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;color:#cbd5e1;">
-                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">Hi ${leadName},</h2>
-                <p style="margin:0 0 16px;line-height:1.6;">Thank you for connecting with us! We're excited to help you with <strong style="color:#f8fafc;">${courseTitle}</strong>.</p>
+                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">Hi ${safeLeadName},</h2>
+                <p style="margin:0 0 16px;line-height:1.6;">Thank you for connecting with us! We're excited to help you with <strong style="color:#f8fafc;">${safeCourseTitle}</strong>.</p>
                 <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Next Steps</p>
                 <ol style="margin:0 0 20px;padding-left:20px;line-height:1.6;">
                   <li>Review the course details and curriculum</li>
@@ -194,7 +198,7 @@ async function sendFirstCallNotifications(lead) {
                   <li>Complete the enrollment process</li>
                 </ol>
                 <p style="margin:0 0 24px;">
-                  <a href="${paymentLink}" 
+                  <a href="${safePaymentLink}"
                      style="background-color:#126d5e;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
                     Complete Payment
                   </a>
@@ -202,9 +206,10 @@ async function sendFirstCallNotifications(lead) {
                 <p style="margin:0 0 8px;line-height:1.6;">If you have any questions, feel free to reach out!</p>
                 <p style="margin:0;color:#64748b;font-size:13px;">Best regards,<br/>The Team</p>
               </div>
-            `,
+      `,
       from: 'support@coreknot.io',
     });
+    assertEmailDispatchSucceeded(sendResult, 'First-call follow-up email dispatch failed');
     logger.info('crm', `Email sent to ${lead.email}`);
   }
 }

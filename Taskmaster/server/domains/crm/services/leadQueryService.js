@@ -16,6 +16,13 @@ const {
 const logger = require('../../../utils/logger');
 const { enrichLeadDetail } = require('./leadEnrichmentService');
 
+const MAX_LEAD_LIST_LIMIT = 100;
+const clampPositiveInt = (value, fallback, max) => {
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+};
+
 const LEAD_LIST_PROJECTION = {
   assignedRepId: 1,
   personId: 1,
@@ -145,8 +152,8 @@ function buildLeadListQuery(user, queryParams) {
 }
 
 function buildLeadLookupPipeline(query, queryParams, { extraProjection = {} } = {}) {
-  const page = parseInt(queryParams.page) || 1;
-  const limit = parseInt(queryParams.limit) || 10;
+  const page = clampPositiveInt(queryParams.page, 1, Number.MAX_SAFE_INTEGER);
+  const limit = clampPositiveInt(queryParams.limit, 10, MAX_LEAD_LIST_LIMIT);
   const skip = (page - 1) * limit;
   const sortField = queryParams.sort || 'createdAt';
   const sortOrder = queryParams.order === 'asc' ? 1 : -1;

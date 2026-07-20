@@ -1,4 +1,8 @@
 jest.mock('../services/mailDriver', () => ({
+  assertEmailDispatchSucceeded: jest.fn((result) => {
+    if (result?.error) throw new Error(result.error);
+    return result;
+  }),
   dispatchEmailPayload: jest.fn().mockResolvedValue({ id: 'email-mock' }),
 }));
 

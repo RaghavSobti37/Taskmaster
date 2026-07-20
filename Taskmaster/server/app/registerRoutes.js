@@ -206,8 +206,9 @@ function registerRoutes(app) {
   app.use('/api/notes', require('../routes/noteRoutes'));
   app.use('/api/search', require('../routes/searchRoutes'));
   app.use('/api/pinboard', require('../routes/pinBoardRoutes'));
-  // Campaign UI lives in Auto-Mailer; keep a thin stats proxy for dashboard widgets.
-  app.use('/api/mail', require('../routes/mailStatsProxyRoutes'));
+  // Campaign sending lives in Auto-Mailer; CoreKnot keeps only a thin stats proxy for dashboard widgets.
+  app.use('/api/mail/stats', require('../routes/mailStatsProxyRoutes'));
+  app.use('/api/mail', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/campaigns', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/data-hub', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/track', require('../routes/deprecatedAutoMailerRoutes'));
@@ -221,7 +222,7 @@ function registerRoutes(app) {
   app.use('/api/org-accounts', require('../routes/orgAccountRoutes'));
   app.use('/api/contacts', require('../routes/contactRoutes'));
   app.use('/api/exly', require('../domains/integrations/exlyRoutes'));
-  app.use('/api/newsletter', require('../routes/newsletterRoutes'));
+  app.use('/api/newsletter', require('../routes/deprecatedAutoMailerRoutes'));
   app.use('/api/finance', require('../routes/financeRoutes'));
   app.use('/api/attendance', require('../routes/attendanceRoutes'));
   app.use('/api/announcements', require('../routes/announcementRoutes'));

@@ -108,7 +108,7 @@ router.post('/instagram', (req, res) => {
 
 router.post('/resend', (_req, res) => {
   res.status(410).json({
-    error: 'Resend campaign webhooks moved to Auto Mailer',
+    error: 'Email provider webhooks moved to Auto-Mailer',
     service: 'auto-mailer',
   });
 });

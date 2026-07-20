@@ -115,6 +115,33 @@ export const ModalShell = ({
     };
   }, [mounted, onClose, closeOnEscape]);
 
+  React.useEffect(() => {
+    if (!mounted || typeof document === 'undefined') return undefined;
+
+    const modalRoot = panelRef.current?.closest('[data-modal-root]');
+    if (!modalRoot) return undefined;
+
+    const siblings = [...document.body.children].filter((el) => el !== modalRoot);
+    const previous = siblings.map((el) => ({
+      el,
+      inert: el.inert,
+      ariaHidden: el.getAttribute('aria-hidden'),
+    }));
+
+    siblings.forEach((el) => {
+      el.inert = true;
+      el.setAttribute('aria-hidden', 'true');
+    });
+
+    return () => {
+      previous.forEach(({ el, inert, ariaHidden }) => {
+        el.inert = Boolean(inert);
+        if (ariaHidden == null) el.removeAttribute('aria-hidden');
+        else el.setAttribute('aria-hidden', ariaHidden);
+      });
+    };
+  }, [mounted]);
+
   const handlePanelKeyDown = React.useCallback((e) => {
     if (!submitOnEnter || e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
     if (!shouldSubmitModalOnEnter(e.target)) return;
@@ -138,6 +165,7 @@ export const ModalShell = ({
 
   return createPortal(
     <div
+      data-modal-root
       className={`fixed inset-0 ${className}`}
       style={{ zIndex }}
       role="presentation"

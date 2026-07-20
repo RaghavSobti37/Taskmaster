@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 router.get('/geo-campaign', protect, (_req, res) => {
   res.status(410).json({
-    error: 'Campaign analytics moved to Auto Mailer',
+    error: 'Campaign analytics moved to Auto-Mailer',
     service: 'auto-mailer',
   });
 });

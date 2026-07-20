@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { Resend } = require('resend');
 const { config } = require('../config');
 const { isRedisAvailable } = require('./backgroundQueue');
 const { pingSharedRedis } = require('../utils/sharedRedis');
@@ -162,28 +161,64 @@ async function probeSupabase() {
   });
 }
 
-async function probeResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || apiKey === 'mock_resend_api_key') {
+function resolveAutoMailerApiBase() {
+  return String(process.env.AUTO_MAILER_API_URL || '').trim().replace(/\/+$/, '');
+}
+
+async function probeAutoMailerBridge() {
+  const apiBase = resolveAutoMailerApiBase();
+  const token = process.env.AUTO_MAILER_INTERNAL_TOKEN || process.env.COREKNOT_MAIL_BRIDGE_SECRET;
+  if (!apiBase) {
     return serviceResult({
-      id: 'resend',
-      label: 'Resend Email',
+      id: 'auto-mailer',
+      label: 'Auto-Mailer Bridge',
       status: config.isProduction ? 'degraded' : 'ok',
       state: 'not_configured',
-      detail: 'RESEND_API_KEY not set',
+      detail: 'AUTO_MAILER_API_URL not set',
     });
   }
 
-  const resend = new Resend(apiKey);
+  if (/vercel\.app$/i.test(apiBase) || /auto-mailer-blue/i.test(apiBase)) {
+    return serviceResult({
+      id: 'auto-mailer',
+      label: 'Auto-Mailer Bridge',
+      status: 'degraded',
+      state: 'invalid_origin',
+      error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin, not the Vercel UI',
+    });
+  }
+
+  if (!token) {
+    return serviceResult({
+      id: 'auto-mailer',
+      label: 'Auto-Mailer Bridge',
+      status: config.isProduction ? 'degraded' : 'ok',
+      state: 'missing_token',
+      detail: 'AUTO_MAILER_INTERNAL_TOKEN or COREKNOT_MAIL_BRIDGE_SECRET not set',
+    });
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
   const { latencyMs, error } = await withLatency(async () => {
-    const { error: apiError } = await resend.domains.list();
-    if (apiError) throw new Error(apiError.message || 'Resend API error');
+    try {
+      const response = await fetch(`${apiBase}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Auto-Mailer returned ${response.status}`);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   if (error) {
     return serviceResult({
-      id: 'resend',
-      label: 'Resend Email',
+      id: 'auto-mailer',
+      label: 'Auto-Mailer Bridge',
       status: 'degraded',
       state: 'api_error',
       latencyMs,
@@ -192,11 +227,12 @@ async function probeResend() {
   }
 
   return serviceResult({
-    id: 'resend',
-    label: 'Resend Email',
+    id: 'auto-mailer',
+    label: 'Auto-Mailer Bridge',
     status: 'ok',
     state: 'connected',
     latencyMs,
+    detail: apiBase,
   });
 }
 
@@ -279,13 +315,13 @@ async function getAdminSystemHealth(options = {}) {
       : probeSupabase(),
     light
       ? Promise.resolve(serviceResult({
-        id: 'resend',
-        label: 'Resend Email',
+        id: 'auto-mailer',
+        label: 'Auto-Mailer Bridge',
         status: 'ok',
         state: 'skipped_local',
         detail: 'External probe skipped in development',
       }))
-      : probeResend(),
+      : probeAutoMailerBridge(),
     probeBullmq(),
   ]);
 

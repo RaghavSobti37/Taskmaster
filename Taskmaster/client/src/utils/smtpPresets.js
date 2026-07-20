@@ -1,7 +1,7 @@
-/** Supported senders: Gmail (SMTP) and Resend (API via system_resend) */
+/** Legacy campaign sender labels. Campaign delivery is owned by Auto-Mailer. */
 export const SMTP_PRESETS = {
   gmail: { label: 'Gmail', smtpHost: 'smtp.gmail.com', smtpPort: 587, dailyLimit: 500 },
-  resend: { label: 'Resend (API)', smtpHost: '', smtpPort: 587, dailyLimit: 100 },
+  resend: { label: 'Auto-Mailer', smtpHost: '', smtpPort: 587, dailyLimit: 100 },
 };
 
 export const inferProviderFromEmail = (email) => {

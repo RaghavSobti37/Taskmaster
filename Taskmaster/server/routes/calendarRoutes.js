@@ -8,7 +8,7 @@ const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
 const User = require('../models/User');
-const { dispatchEmailPayload } = require('../services/mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const TenantMembership = require('../models/TenantMembership');
 const { validateCalendarEventRange, buildDateTimeFromParts, toDateKey } = require('../utils/dateValidation');
@@ -16,6 +16,7 @@ const { formatWeekdayDateLong } = require('../../shared/dateDisplay');
 const { validateQuery } = require('../validation/validateQuery');
 const { validateBody } = require('../validation/validateBody');
 const { calendarQuery, calendarEventBody } = require('../validation/schemas/calendar');
+const { escapeHtml, safeHref } = require('../utils/emailHtml');
 
 function normalizeMeetingLink(link) {
   if (!link || typeof link !== 'string') return '';
@@ -222,18 +223,24 @@ router.post('/', validateBody(calendarEventBody), async (req, res) => {
           : [];
         const eventDate = formatWeekdayDateLong(eventDateTime);
 
-        const emailPromises = allUsers.map((user) =>
-          dispatchEmailPayload({
+        const safeCalendarUrl = safeHref(`${process.env.CLIENT_URL || 'https://coreknot.app'}/calendar`, 'https://coreknot.app/calendar');
+        const safeTitle = escapeHtml(title);
+        const safeEventDate = escapeHtml(eventDate);
+        const safeCreator = escapeHtml(populated.createdBy?.name || 'CoreKnot Team');
+        const safeDescription = description ? escapeHtml(description) : '';
+
+        const emailPromises = allUsers.map(async (user) => {
+          const sendResult = await dispatchEmailPayload({
             to: user.email,
             subject: `📅 New Public Event: ${title}`,
             html: `
               <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;color:#cbd5e1;">
-                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">${title}</h2>
-                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Date:</strong> ${eventDate}</p>
-                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Created by:</strong> ${populated.createdBy.name}</p>
-                ${description ? `<p style="margin:0 0 16px;line-height:1.6;"><strong style="color:#f8fafc;">Description:</strong> ${description}</p>` : ''}
+                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">${safeTitle}</h2>
+                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Date:</strong> ${safeEventDate}</p>
+                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Created by:</strong> ${safeCreator}</p>
+                ${safeDescription ? `<p style="margin:0 0 16px;line-height:1.6;"><strong style="color:#f8fafc;">Description:</strong> ${safeDescription}</p>` : ''}
                 <p style="margin:0;">
-                  <a href="${process.env.CLIENT_URL || 'https://coreknot.app'}/calendar"
+                  <a href="${safeCalendarUrl}"
                      style="background-color:#126d5e;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
                     View Event
                   </a>
@@ -241,8 +248,9 @@ router.post('/', validateBody(calendarEventBody), async (req, res) => {
               </div>
             `,
             from: 'events@coreknot.io',
-          }).catch((err) => console.error(`Failed to send event email to ${user.email}:`, err))
-        );
+          });
+          return assertEmailDispatchSucceeded(sendResult, 'Calendar event email dispatch failed');
+        });
 
         await Promise.all(emailPromises);
       } catch (emailErr) {

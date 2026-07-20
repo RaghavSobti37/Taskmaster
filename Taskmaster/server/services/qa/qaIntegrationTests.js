@@ -6,7 +6,6 @@ const Lead = require('../../models/Lead');
 const FinanceDocument = require('../../models/FinanceDocument');
 const CRMAudit = require('../../models/CRMAudit');
 const Contact = require('../../models/Contact');
-const DataHubSyncState = require('../../models/DataHubSyncState');
 const { purgeQaIdentity, qaLeadPayload } = require('./qaTestData');
 const {
   isApiReachable,
@@ -433,44 +432,23 @@ async function runUnsubscribeWiring(def, ctx) {
     'utf8'
   ).catch(() => '');
   const ok =
-    trackJs.includes('Lead.updateMany') &&
-    /Contact\.updateMany/.test(trackJs) &&
-    trackJs.includes('unsubscribed');
+    trackJs.includes('deprecatedAutoMailerRoutes') &&
+    trackJs.includes('module.exports = deprecatedAutoMailerRoutes');
   return ok
-    ? probePass(def, 'track.js dual-writes Lead + Contact on unsubscribe')
-    : probeFail(def, 'Unsubscribe dual-write not evident in track.js');
+    ? probePass(def, 'track.js delegates tracking and unsubscribe to Auto-Mailer')
+    : probeFail(def, 'Auto-Mailer tracking/unsubscribe handoff not evident in track.js');
 }
 
 async function runReconcileIdempotent(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const syncStamp = new Date();
-  await DataHubSyncState.findOneAndUpdate(
-    { configKey: 'incremental' },
-    {
-      $set: {
-        lastSyncedAt: syncStamp,
-        lastFullSyncAt: syncStamp,
-        lastStats: { leads: 0, outsourced: 0, bookedCalls: 0, newsletter: 0, exly: 0, enquiries: 0, mail: 0, errors: 0 },
-      },
-    },
-    { upsert: true }
-  );
-
-  const before = await Contact.countDocuments();
   const reconcileReq = { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {}, timeout: 120000 };
   const r1 = await request({ ...def, timeout: 120000 }, reconcileReq);
   const r2 = await request({ ...def, timeout: 120000 }, reconcileReq);
-  if (r1.status === 403 || r2.status === 403) {
-    return skipProbeResult(def, 'Data Hub reconcile requires admin — test user not admin');
+  if (r1.status === 410 && r2.status === 410 && r1.data?.service === 'auto-mailer' && r2.data?.service === 'auto-mailer') {
+    return probePass(def, 'Data Hub reconcile consistently returns Auto-Mailer handoff');
   }
-  const after = await Contact.countDocuments();
-  const delta = Math.abs(after - before);
-  if (r1.status < 500 && r2.status < 500 && delta < 5000) {
-    return probePass(def, `Reconcile twice OK (contacts ${before} → ${after})`);
-  }
-  return probeFail(def, `Reconcile unstable (${r1.status}/${r2.status}, delta ${delta})`);
+  return probeFail(def, `Expected Auto-Mailer handoff, got ${r1.status}/${r2.status}`);
 }
-
 const RUNNERS = {
   'sm-delegated-goes-inreview': runDelegatedInReview,
   'sm-self-direct-complete': runSelfComplete,

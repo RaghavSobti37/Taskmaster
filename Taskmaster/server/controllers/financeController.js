@@ -29,6 +29,12 @@ const populateFinanceDoc = (id) =>
     .lean();
 
 const FINANCE_COLLECTION = FinanceDocument.collection.name;
+const MAX_FINANCE_LIST_LIMIT = 100;
+const clampPositiveInt = (value, fallback, max) => {
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+};
 
 /** Stages: folders sort by latest child payment date; docs by metadata.date */
 const financePaymentDateSortStages = (order) => {
@@ -301,8 +307,8 @@ const getDocuments = async (req, res) => {
       }
     }
 
-    const pageVal = parseInt(page) || 1;
-    const limitVal = parseInt(limit) || 10;
+    const pageVal = clampPositiveInt(page, 1, Number.MAX_SAFE_INTEGER);
+    const limitVal = clampPositiveInt(limit, 10, MAX_FINANCE_LIST_LIMIT);
     const skip = (pageVal - 1) * limitVal;
 
     const SORTABLE = {

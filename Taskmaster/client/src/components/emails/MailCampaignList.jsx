@@ -1,21 +1,18 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { format } from 'date-fns';
-import { Mail, Play, Trash2 } from 'lucide-react';
+import { ExternalLink, Mail, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { formatDisplayDate } from '../../utils/dateDisplay';
 import { Card, Button, Badge, DataTable, PageSkeleton } from '../ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../ui/QueryErrorBanner';
 import {
-  useMailCampaigns, useMailProfiles, useSendCampaign, useDeleteCampaign,
+  useMailCampaigns, useMailProfiles, useDeleteCampaign,
 } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useQueryClient } from '@tanstack/react-query';
 import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
+import { buildAutoMailerUrl } from '../../utils/autoMailerUrl';
 
 export default function MailCampaignList({ limit }) {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { confirm } = useConfirm();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -28,9 +25,19 @@ export default function MailCampaignList({ limit }) {
   } = useMailCampaigns();
   const deferProfiles = useDeferredQueryEnabled(!campaignsLoading);
   const { isLoading: profilesLoading } = useMailProfiles(deferProfiles);
-  const sendCampaignMutation = useSendCampaign();
   const deleteCampaignMutation = useDeleteCampaign();
-  const [dispatchingId, setDispatchingId] = React.useState(null);
+  const [openingId, setOpeningId] = React.useState(null);
+
+  const openCampaignInAutoMailer = (campaignId) => {
+    setOpeningId(campaignId);
+    try {
+      window.location.assign(buildAutoMailerUrl(`/campaign/${campaignId}`));
+      toast.success('Opening Auto-Mailer for this campaign.');
+    } catch (err) {
+      toast.error(err.message || 'Could not open Auto-Mailer.');
+      setOpeningId(null);
+    }
+  };
 
   const displayCampaigns = limit ? campaigns.slice(0, limit) : campaigns;
 
@@ -99,69 +106,62 @@ export default function MailCampaignList({ limit }) {
     },
     {
       header: 'Created',
-      render: (row) => (
-        <div className="flex items-center justify-between gap-2 min-w-[10rem]">
-          <span className="text-xs text-[var(--color-text-muted)]">
-            {formatDisplayDate(new Date(row.createdAt))}
-          </span>
-          {!limit && (
-            <div
-              className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
-              {row.status === 'Draft' && (
+      render: (row) => {
+        const id = row.campaignId || row._id;
+        return (
+          <div className="flex items-center justify-between gap-2 min-w-[10rem]">
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {formatDisplayDate(new Date(row.createdAt))}
+            </span>
+            {!limit && (
+              <div
+                className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                {row.status === 'Draft' && (
+                  <Button
+                    size="xs"
+                    variant="primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openCampaignInAutoMailer(id);
+                    }}
+                    disabled={openingId === id}
+                  >
+                    <ExternalLink size={12} /> {openingId === id ? 'Opening...' : 'Open Auto-Mailer'}
+                  </Button>
+                )}
                 <Button
                   size="xs"
-                  variant="primary"
+                  variant="ghost"
+                  className="text-[var(--color-pastel-rose-text)] hover:bg-[var(--color-pastel-rose-bg)]"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    const id = row.campaignId || row._id;
-                    setDispatchingId(id);
-                    try {
-                      await sendCampaignMutation.mutateAsync(id);
-                      toast.success('Campaign dispatch started.');
-                      navigate(`/campaign/${id}`, { state: { from: location.pathname } });
-                    } catch (err) {
-                      toast.error(err.response?.data?.error || err.message || 'Dispatch failed.');
-                    } finally {
-                      setDispatchingId(null);
-                    }
+                    const ok = await confirm({
+                      title: 'Delete campaign?',
+                      message: 'Delete the legacy CoreKnot campaign record? Auto-Mailer campaigns are managed separately.',
+                      confirmLabel: 'Delete',
+                      type: 'danger',
+                    });
+                    if (!ok) return;
+                    deleteCampaignMutation.mutate(id, {
+                      onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+                        toast.success('Campaign deleted');
+                      },
+                    });
                   }}
-                  disabled={dispatchingId === (row.campaignId || row._id)}
+                  disabled={deleteCampaignMutation.isPending}
+                  title="Delete campaign"
                 >
-                  <Play size={12} /> {dispatchingId === (row.campaignId || row._id) ? 'Dispatching…' : 'Dispatch'}
+                  <Trash2 size={14} />
                 </Button>
-              )}
-              <Button
-                size="xs"
-                variant="ghost"
-                className="text-[var(--color-pastel-rose-text)] hover:bg-[var(--color-pastel-rose-bg)]"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  const ok = await confirm({
-                    title: 'Delete campaign?',
-                    message: 'All associated metrics and tracking data will be permanently removed.',
-                    confirmLabel: 'Delete',
-                    type: 'danger',
-                  });
-                  if (!ok) return;
-                  deleteCampaignMutation.mutate(row.campaignId || row._id, {
-                    onSuccess: () => {
-                      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
-                      toast.success('Campaign deleted');
-                    },
-                  });
-                }}
-                disabled={deleteCampaignMutation.isPending}
-                title="Delete campaign"
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-          )}
-        </div>
-      ),
+              </div>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -179,7 +179,7 @@ export default function MailCampaignList({ limit }) {
       <DataTable
         columns={campaignColumns}
         data={displayCampaigns}
-        onRowClick={(row) => navigate(`/campaign/${row.campaignId || row._id}`, { state: { from: location.pathname } })}
+        onRowClick={(row) => openCampaignInAutoMailer(row.campaignId || row._id)}
       />
       {displayCampaigns.length === 0 && (
         <div className="p-16 text-center opacity-40">

@@ -1,18 +1,24 @@
-import React, { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ExternalLink, Mail, Server, Upload } from 'lucide-react';
 import { Button } from '../../components/ui';
-
-const PRODUCTION_AUTO_MAILER_URL = 'https://auto-mailer-blue.vercel.app';
-
-function resolveAutoMailerUrl() {
-  const fromEnv = String(import.meta.env.VITE_AUTO_MAILER_URL || '').trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
-  if (import.meta.env.DEV) return 'http://localhost:5001';
-  return PRODUCTION_AUTO_MAILER_URL;
-}
+import { buildAutoMailerUrl } from '../../utils/autoMailerUrl';
 
 export default function AutoMailerRedirectPage() {
-  const autoMailerUrl = useMemo(() => resolveAutoMailerUrl(), []);
+  const location = useLocation();
+  const autoMailerUrl = useMemo(
+    () => buildAutoMailerUrl(`${location.pathname}${location.search || ''}`),
+    [location.pathname, location.search]
+  );
+
+  const shouldAutoRedirect =
+    /\/emails\/(create|campaigns|templates|profiles|streams|newsletter)\b/.test(location.pathname)
+    || /\/campaign\/[^/]+/.test(location.pathname);
+
+  useEffect(() => {
+    if (!shouldAutoRedirect) return;
+    window.location.replace(autoMailerUrl);
+  }, [autoMailerUrl, shouldAutoRedirect]);
 
   const openAutoMailer = () => {
     window.open(autoMailerUrl, '_blank', 'noopener,noreferrer');
@@ -29,8 +35,13 @@ export default function AutoMailerRedirectPage() {
             <p className="text-xs font-bold uppercase text-[var(--color-text-muted)]">Emails moved</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">Open Auto Mailer</h1>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Campaigns, templates, tracking, Data Hub, Docker boot, and AiSensy CSV imports now live in the standalone Auto Mailer service.
+              Campaign sending, templates, sender profiles, tracking, Data Hub, Docker boot, and AiSensy CSV imports now live in the standalone Auto Mailer service.
             </p>
+            {shouldAutoRedirect && (
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                Redirecting this email workflow to Auto Mailer...
+              </p>
+            )}
           </div>
         </div>
 

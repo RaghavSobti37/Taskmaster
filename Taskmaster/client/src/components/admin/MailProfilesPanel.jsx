@@ -28,7 +28,7 @@ const emptyProfile = () => ({
   signature: '',
 });
 
-/** Gmail or Google Workspace — both use smtp.gmail.com + app password */
+/** Legacy Gmail/Workspace profile validation for archived imports. */
 const isGoogleMailbox = (email) => {
   const addr = (email || '').trim().toLowerCase();
   if (!addr.includes('@')) return false;
@@ -106,18 +106,17 @@ export default function MailProfilesPanel({ profiles = [] }) {
       <Card className="p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
         <div className="p-4 rounded-xl border border-violet-500/30 bg-violet-500/5 space-y-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-violet-600 flex items-center gap-2">
-            <Mail size={14} /> Resend (recommended for campaigns)
+            <Mail size={14} /> Auto-Mailer owns campaign sending
           </p>
           <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
-            Verified domain <strong>theshakticollective.in</strong> sends via Resend API.
-            Set <code className="font-mono text-[9px]">RESEND_API_KEY</code> on the API service, then pick the from address
-            (artist@, helloworld@, team@, or add another) in the campaign wizard.
+            Campaign profiles, API keys, from addresses, and delivery analytics now live in Auto-Mailer.
+            CoreKnot keeps this panel only for older imports.
           </p>
         </div>
 
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
-            <Zap size={16} /> {editingProfileId ? 'Edit Gmail Profile' : 'Gmail Profile'}
+            <Zap size={16} /> {editingProfileId ? 'Edit Legacy Gmail Profile' : 'Legacy Gmail Profile'}
           </h3>
           {editingProfileId && (
             <Button size="xs" variant="ghost" onClick={resetForm}>
@@ -131,7 +130,7 @@ export default function MailProfilesPanel({ profiles = [] }) {
             <p className="text-[10px] text-[var(--color-text-muted)]">
               Google Account → Security → 2-Step Verification ON → App passwords → create &quot;Mail&quot; password.
               Works for <strong>@gmail.com</strong> and <strong>@theshakticollective.in</strong> Workspace mailboxes via <strong>smtp.gmail.com</strong> (500/day).
-              Same profile can also be picked as the Resend &quot;from&quot; identity in the campaign wizard.
+              Campaign sender rotation now belongs in Auto-Mailer.
             </p>
           </div>
 
@@ -195,16 +194,16 @@ export default function MailProfilesPanel({ profiles = [] }) {
             />
           </div>
           <Button type="submit" disabled={createProfileMutation.isPending || updateProfileMutation.isPending} className="w-full">
-            <Plus size={14} /> {editingProfileId ? 'Update Gmail Profile' : 'Save Gmail Profile'}
+            <Plus size={14} /> {editingProfileId ? 'Update Legacy Profile' : 'Save Legacy Profile'}
           </Button>
         </form>
       </Card>
 
       <div className="space-y-3">
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Active Gmail Profiles ({profiles.length})</h3>
+        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Legacy Gmail Profiles ({profiles.length})</h3>
         {profiles.length === 0 && (
           <p className="text-xs text-[var(--color-text-muted)] p-4 rounded-xl border border-dashed border-[var(--color-bg-border)]">
-            No Gmail profiles yet. Campaigns can still send via Resend once API env vars are set.
+            No Gmail profiles here. Campaign sender setup now belongs in Auto-Mailer.
           </p>
         )}
         {profiles.map(p => {
@@ -235,8 +234,8 @@ export default function MailProfilesPanel({ profiles = [] }) {
                     className="text-rose-500 hover:bg-rose-500/10"
                     onClick={async () => {
                       const ok = await confirm({
-                        title: 'Delete Gmail profile?',
-                        message: `Remove "${p.name}"? Campaigns using this profile may fail to resend.`,
+                        title: 'Delete legacy profile?',
+                        message: `Remove "${p.name}"? Older imports may lose saved signature metadata.`,
                         confirmLabel: 'Delete',
                         variant: 'danger',
                       });

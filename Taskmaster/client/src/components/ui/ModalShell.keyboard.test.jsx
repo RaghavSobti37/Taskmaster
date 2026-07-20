@@ -63,6 +63,26 @@ describe('ModalShell sizing', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog.className).toMatch(/tm-modal-fullscreen/);
   });
+
+  it('marks body siblings inert while open', () => {
+    const appRoot = document.createElement('div');
+    appRoot.id = 'app-root';
+    document.body.appendChild(appRoot);
+
+    const { unmount } = renderModal(
+      <ModalShell isOpen onClose={() => {}} ariaLabel="Inert modal">
+        <p>Content</p>
+      </ModalShell>,
+    );
+
+    expect(appRoot).toHaveAttribute('aria-hidden', 'true');
+    expect(appRoot.inert).toBe(true);
+
+    unmount();
+
+    expect(appRoot).not.toHaveAttribute('aria-hidden');
+    expect(appRoot.inert).toBe(false);
+  });
 });
 
 describe('ModalShell keyboard', () => {

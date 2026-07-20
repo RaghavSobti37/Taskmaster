@@ -1,11 +1,10 @@
-import { formatDisplayDate, formatDisplayDateTime, formatDisplayDateShort, formatDisplayDateTime12h, formatDisplayDateTime12hComma, formatWeekdayDate, formatWeekdayDateLong } from '../../utils/dateDisplay';
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { formatDisplayDate, formatDisplayDateTime } from '../../utils/dateDisplay';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import '../../utils/mailTemplateQuillSetup';
 import { MAIL_TEMPLATE_QUILL_KEYBOARD, attachMailTemplateClipboardSanitizer } from '../../utils/mailTemplateQuillSetup';
 import { FileCode, Plus, Save, Send, Check, X, Trash2, Eye, AlertCircle, Image as ImageIcon, Copy, RefreshCw, Clock, HelpCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../ui';
 import QueryErrorBanner, { getQueryErrorMessage } from '../ui/QueryErrorBanner';
-import { format } from 'date-fns';
 import {
   useMailTemplates,
   usePendingMailTemplates,
@@ -29,7 +28,6 @@ import {
   insertIndexedVariable,
   getEffectiveTemplateContent,
 } from '../../utils/indexedTemplateVariables';
-import axios from 'axios';
 import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import { useDebounce } from '../../hooks/useDebounce';
 import EmailDevicePreview from '../emails/EmailDevicePreview';
@@ -146,9 +144,9 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const [refreshingId, setRefreshingId] = useState(null);
 
   const [draft, setDraft] = useState(emptyDraft());
-  const [draftBaseline, setDraftBaseline] = useState(() => cloneSnapshot(emptyDraft()));
+  const [, setDraftBaseline] = useState(() => cloneSnapshot(emptyDraft()));
   const [useRawHtml, setUseRawHtml] = useState(false);
-  const [rawHtmlBaseline, setRawHtmlBaseline] = useState(false);
+  const [, setRawHtmlBaseline] = useState(false);
   const [studioTab, setStudioTab] = useState('library');
   const [libraryPreviewId, setLibraryPreviewId] = useState(null);
   const [reviewingId, setReviewingId] = useState(null);
@@ -314,7 +312,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       return '<p style="padding:16px;font-family:sans-serif;color:#64748b">Loading preview…</p>';
     }
     return '<p style="padding:16px;font-family:sans-serif;color:#94a3b8">No preview available</p>';
-  }, [serverPreviewDoc, localPreviewDoc, draft.content, useRawHtml]);
+  }, [serverPreviewDoc, localPreviewDoc, draft.content]);
 
   useEffect(() => {
     if (studioTab !== 'editor') return undefined;
@@ -324,32 +322,10 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
       setPreviewLoading(false);
       return undefined;
     }
-    let cancelled = false;
-    setPreviewLoading(true);
-    (async () => {
-      try {
-        const { data } = await axios.post('/api/mail/preview', {
-          content: previewBodyHtml,
-          subject: debouncedSubject || '',
-          dummyValues: draft.dummyValues,
-          format: useRawHtml ? 'rawHtml' : 'visual',
-          removeUnsubscribe: true,
-          theme: 'light',
-        });
-        if (!cancelled) {
-          setServerPreviewDoc(data.html || '');
-          setPreviewSubject(data.subject || applyDummyValuesPlain(debouncedSubject || '', draft.dummyValues));
-        }
-      } catch {
-        if (!cancelled) {
-          setServerPreviewDoc('<p style="padding:16px;color:#dc2626">Preview failed</p>');
-          setPreviewSubject(applyDummyValuesPlain(debouncedSubject || '', draft.dummyValues));
-        }
-      } finally {
-        if (!cancelled) setPreviewLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setServerPreviewDoc('');
+    setPreviewSubject(applyDummyValuesPlain(debouncedSubject || '', draft.dummyValues));
+    setPreviewLoading(false);
+    return undefined;
   }, [previewBodyHtml, debouncedSubject, draft.dummyValues, useRawHtml, studioTab]);
 
   const syncBaseline = (nextDraft, rawHtml = useRawHtml) => {

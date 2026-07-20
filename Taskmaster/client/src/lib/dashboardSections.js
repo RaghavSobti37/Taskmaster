@@ -43,7 +43,7 @@ export const DASHBOARD_SECTIONS = [
   {
     id: 'more',
     title: 'More widgets',
-    collapsedLabel: 'Notes, pin board, missions, leave requests, reimbursements',
+    collapsedLabel: 'Notes, pin board, leave requests, reimbursements',
     collapsible: true,
     defaultCollapsed: true,
   },
@@ -68,6 +68,7 @@ export const WIDGET_SECTION_MAP = {
   'followups-today': 'daily-actions',
   'artist-calendar': 'daily-actions',
   leaderboard: 'team-context',
+  'daily-missions': 'team-context',
   'projects-today': 'team-context',
   announcements: 'team-context',
   pinboard: 'team-context',
@@ -77,7 +78,6 @@ export const WIDGET_SECTION_MAP = {
   'team-activity': 'analytics',
   notes: 'more',
   composer: 'more',
-  'daily-missions': 'more',
 };
 
 export const STATUS_STRIP_WIDGET_IDS = new Set(
@@ -126,7 +126,7 @@ export const DAILY_ACTION_ORDER = [
   'review-queue',
 ];
 
-export const TEAM_CONTEXT_ORDER = ['leaderboard', 'projects-today', 'announcements'];
+export const TEAM_CONTEXT_ORDER = ['leaderboard', 'daily-missions', 'projects-today', 'announcements'];
 
 const DEFAULT_VISIBLE = new Set([
   'mark-attendance',
@@ -135,6 +135,7 @@ const DEFAULT_VISIBLE = new Set([
   'todos-overdue',
   'review-queue',
   'leaderboard',
+  'daily-missions',
   'projects-today',
   'announcements',
   'system-health',
@@ -152,7 +153,6 @@ const DEFAULT_HIDDEN = new Set([
   'notes',
   'pinboard',
   'composer',
-  'daily-missions',
   'leave-alerts',
   'invoice-alerts',
 ]);

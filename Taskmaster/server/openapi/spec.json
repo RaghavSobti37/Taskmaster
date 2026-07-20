@@ -28,7 +28,8 @@
       "name": "crm"
     },
     {
-      "name": "data-hub"
+      "name": "data-hub",
+      "description": "Audience and campaign data hub APIs have moved to Auto-Mailer."
     },
     {
       "name": "attendance"
@@ -49,7 +50,8 @@
       "name": "mail"
     },
     {
-      "name": "campaigns"
+      "name": "campaigns",
+      "description": "Campaign creation, dispatch, resend, and analytics APIs have moved to Auto-Mailer."
     },
     {
       "name": "finance"
@@ -355,18 +357,36 @@
         "tags": [
           "campaigns"
         ],
-        "summary": "Create campaign (draft or dispatch)",
+        "summary": "Moved to Auto-Mailer campaigns",
         "security": [
           {
             "cookieAuth": []
           }
         ],
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Validation error"
+          "410": {
+            "description": "Moved to Auto-Mailer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Moved to Auto-Mailer"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "auto-mailer"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "https://auto-mailer-blue.vercel.app/campaigns"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -376,7 +396,7 @@
         "tags": [
           "campaigns"
         ],
-        "summary": "Resend campaign to selected recipient statuses",
+        "summary": "Moved to Auto-Mailer campaigns",
         "security": [
           {
             "cookieAuth": []
@@ -393,11 +413,29 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Dispatch queued"
-          },
-          "400": {
-            "description": "Validation error"
+          "410": {
+            "description": "Moved to Auto-Mailer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Moved to Auto-Mailer"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "auto-mailer"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "https://auto-mailer-blue.vercel.app/campaigns"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -600,38 +638,36 @@
         "tags": [
           "data-hub"
         ],
-        "summary": "Paginated people directory",
+        "summary": "Moved to Auto-Mailer audience hub",
         "security": [
           {
             "cookieAuth": []
           }
         ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "folder",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "People page"
+          "410": {
+            "description": "Moved to Auto-Mailer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Moved to Auto-Mailer"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "auto-mailer"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "https://auto-mailer-blue.vercel.app/audience"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

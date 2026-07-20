@@ -1,4 +1,4 @@
-/** Free / freemium SMTP providers suitable for rotation pools */
+/** Legacy SMTP labels kept for retired CoreKnot profile reads. Campaign delivery belongs to Auto-Mailer. */
 const SMTP_PRESETS = {
   gmail: { label: 'Gmail', smtpHost: 'smtp.gmail.com', smtpPort: 587, dailyLimit: 500, secure: false },
   outlook: { label: 'Outlook / Office 365', smtpHost: 'smtp.office365.com', smtpPort: 587, dailyLimit: 300, secure: false },
@@ -7,23 +7,12 @@ const SMTP_PRESETS = {
   zoho: { label: 'Zoho Mail', smtpHost: 'smtp.zoho.com', smtpPort: 587, dailyLimit: 500, secure: false },
   icloud: { label: 'iCloud Mail', smtpHost: 'smtp.mail.me.com', smtpPort: 587, dailyLimit: 1000, secure: false },
   gmx: { label: 'GMX Mail', smtpHost: 'mail.gmx.com', smtpPort: 587, dailyLimit: 50, secure: false },
-  brevo: { label: 'Brevo (Sendinblue)', smtpHost: 'smtp-relay.brevo.com', smtpPort: 587, dailyLimit: 300, secure: false },
-  sendgrid: { label: 'SendGrid SMTP', smtpHost: 'smtp.sendgrid.net', smtpPort: 587, dailyLimit: 100, secure: false },
-  mailjet: { label: 'Mailjet', smtpHost: 'in-v3.mailjet.com', smtpPort: 587, dailyLimit: 200, secure: false },
-  elasticemail: { label: 'Elastic Email', smtpHost: 'smtp.elasticemail.com', smtpPort: 2525, dailyLimit: 100, secure: false },
-  mailgun: { label: 'Mailgun', smtpHost: 'smtp.mailgun.org', smtpPort: 587, dailyLimit: 10, secure: false },
-  amazon_ses: { label: 'Amazon SES', smtpHost: 'email-smtp.us-east-1.amazonaws.com', smtpPort: 587, dailyLimit: 200, secure: false },
-  mailersend: { label: 'MailerSend', smtpHost: 'smtp.mailersend.net', smtpPort: 587, dailyLimit: 17, secure: false },
-  smtp2go: { label: 'SMTP2GO', smtpHost: 'mail.smtp2go.com', smtpPort: 2525, dailyLimit: 33, secure: false },
-  sparkpost: { label: 'SparkPost', smtpHost: 'smtp.sparkpostmail.com', smtpPort: 587, dailyLimit: 17, secure: false },
-  postmark: { label: 'Postmark', smtpHost: 'smtp.postmarkapp.com', smtpPort: 587, dailyLimit: 100, secure: false },
-  resend: { label: 'Resend (API)', smtpHost: '', smtpPort: 587, dailyLimit: 100, secure: false },
   custom: { label: 'Custom SMTP', smtpHost: '', smtpPort: 587, dailyLimit: 500, secure: false },
 };
 
-/** Presets with real SMTP hosts — used for rotation pool seeding */
+/** Presets with real SMTP hosts for legacy profile reads. */
 const FREE_ROTATION_PROVIDER_KEYS = Object.keys(SMTP_PRESETS).filter(
-  (key) => key !== 'custom' && key !== 'resend' && SMTP_PRESETS[key].smtpHost
+  (key) => key !== 'custom' && SMTP_PRESETS[key].smtpHost
 );
 
 /** Map login email domain → SMTP provider key */
@@ -61,24 +50,10 @@ const findProviderByHost = (host) => {
   return Object.entries(SMTP_PRESETS).find(([, p]) => p.smtpHost?.toLowerCase() === normalized)?.[0] || null;
 };
 
-/** Transactional providers — each needs its own SMTP credentials on the profile */
-const ADDITIONAL_ROTATION_PROVIDERS = [
-  'brevo', 'sendgrid', 'mailjet', 'elasticemail', 'smtp2go',
-  'mailersend', 'amazon_ses', 'mailgun', 'sparkpost', 'postmark',
-];
+/** Additional campaign providers are disabled in CoreKnot; Auto-Mailer owns delivery. */
+const ADDITIONAL_ROTATION_PROVIDERS = [];
 
-const SMTP_AUTH_HINTS = {
-  brevo: { userLabel: 'Brevo account email', passLabel: 'SMTP key (xsmtpsib-...)', userPlaceholder: 'you@company.com' },
-  sendgrid: { userLabel: 'SMTP login', passLabel: 'API key (SG....)', userDefault: 'apikey', userPlaceholder: 'apikey' },
-  mailjet: { userLabel: 'API key', passLabel: 'Secret key', userPlaceholder: 'API key' },
-  elasticemail: { userLabel: 'Elastic Email login', passLabel: 'API key', userPlaceholder: 'your@email.com' },
-  smtp2go: { userLabel: 'SMTP2GO username', passLabel: 'SMTP2GO password' },
-  mailersend: { userLabel: 'MailerSend SMTP user', passLabel: 'MailerSend SMTP password' },
-  amazon_ses: { userLabel: 'SES SMTP username', passLabel: 'SES SMTP password' },
-  mailgun: { userLabel: 'Mailgun SMTP login', passLabel: 'Mailgun SMTP password', userPlaceholder: 'postmaster@yourdomain.mailgun.org' },
-  sparkpost: { userLabel: 'SparkPost SMTP user', passLabel: 'SparkPost SMTP password' },
-  postmark: { userLabel: 'Postmark Server Token', passLabel: 'Postmark Server Token', userPlaceholder: 'Server API token' },
-};
+const SMTP_AUTH_HINTS = {};
 
 const credentialsMapToObject = (map) => {
   if (!map) return {};

@@ -14,10 +14,10 @@ async function runSuite5FeatureChecks() {
   const taskAccess = await readText('utils/taskAccess.js');
   const mentionNotif = await readText('utils/mentionNotifications.js');
   const taskReviewShared = await readRepoText('shared/taskReviewRules.js');
-  const buildFinalHtml = await readText('utils/buildFinalEmailHtml.js');
-  const normalizeOutbound = await readText('utils/normalizeOutboundEmailHtml.js');
-  const indexedVars = await readText('utils/indexedTemplateVariables.js');
-  const mailHelpers = await readText('utils/mailTemplateHelpers.js');
+  const deprecatedAutoMailerRoutes = await readText('routes/deprecatedAutoMailerRoutes.js');
+  const queueService = await readText('services/queueService.js');
+  const transactionalMailDriver = await readText('services/mailDriver.js');
+  const autoMailerContract = await readRepoText('shared/contracts/mail.js');
   const taskDetailModal = await readRepoText('client/src/components/TaskDetailModal.jsx');
   const mentionTokensClient = await readRepoText('client/src/utils/mentionTokens.js');
 
@@ -173,47 +173,47 @@ async function runSuite5FeatureChecks() {
       'low'
     ),
     makeCheck(
-      'feat-email-build-final-html',
+      'feat-email-auto-mailer-boundary',
       'business-logic',
-      'Outbound email uses buildFinalEmailHtml pipeline',
-      buildFinalHtml && buildFinalHtml.includes('buildFinalEmailHtml')
+      'CoreKnot campaign mail endpoints point to Auto-Mailer',
+      deprecatedAutoMailerRoutes && deprecatedAutoMailerRoutes.includes('Moved to Auto-Mailer')
         ? 'pass'
         : 'fail',
-      'buildFinalEmailHtml composes signature + body',
-      'utils/buildFinalEmailHtml.js',
+      'deprecatedAutoMailerRoutes returns moved contract for mail/campaign/newsletter paths',
+      'routes/deprecatedAutoMailerRoutes.js',
       'high'
     ),
     makeCheck(
-      'feat-email-normalize-outbound',
+      'feat-campaign-dispatch-blocked',
       'business-logic',
-      'normalizeOutboundEmailHtml sanitizes campaign HTML',
-      normalizeOutbound && normalizeOutbound.includes('normalizeOutboundEmailHtml')
+      'CoreKnot campaign dispatch is blocked',
+      queueService && queueService.includes('Blocked CoreKnot campaign dispatch')
         ? 'pass'
         : 'fail',
-      'normalizeOutboundEmailHtml present for send path',
-      'utils/normalizeOutboundEmailHtml.js',
+      'queueService refuses campaign send work and points to Auto-Mailer',
+      'services/queueService.js',
       'high'
     ),
     makeCheck(
-      'feat-indexed-template-variables',
+      'feat-transactional-mail-bridge',
       'business-logic',
-      'Indexed template variables (server) for mail merge',
-      indexedVars && indexedVars.includes('parseIndexedVariables')
+      'Transactional email delegates through Auto-Mailer bridge',
+      transactionalMailDriver && transactionalMailDriver.includes('/api/transactional/send')
         ? 'pass'
         : 'fail',
-      'indexedTemplateVariables utility for HolySheet merge fields',
-      'utils/indexedTemplateVariables.js',
+      'mailDriver delegates provider delivery to Auto-Mailer',
+      'services/mailDriver.js',
       'medium'
     ),
     makeCheck(
-      'feat-mail-template-helpers',
+      'feat-mail-moved-contract',
       'business-logic',
-      'mailTemplateHelpers centralizes template notifications',
-      mailHelpers && mailHelpers.includes('mailTemplate')
+      'Shared mail contract exposes moved-to-Auto-Mailer response',
+      autoMailerContract && autoMailerContract.includes('auto-mailer')
         ? 'pass'
         : 'warn',
-      'mailTemplateHelpers module exists',
-      'utils/mailTemplateHelpers.js',
+      'shared/contracts/mail.js documents moved mail capability',
+      'shared/contracts/mail.js',
       'low'
     ),
     makeCheck(

@@ -8,9 +8,10 @@ const User = require('../models/User');
 const { establishSession } = require('../utils/authSession');
 const { registerSession, decodeToken } = require('../utils/sessionRegistry');
 const { assertSeatAvailable } = require('./planEnforcementService');
-const { dispatchEmailPayload } = require('./mailDriver');
+const { assertEmailDispatchSucceeded, dispatchEmailPayload } = require('./mailDriver');
 const { syncTenantToClerkOrganization, deleteClerkOrganization } = require('./clerkOrgService');
 const { bootstrapTenant } = require('./tenantBootstrapService');
+const { escapeHtml, safeHref } = require('../utils/emailHtml');
 const {
   isClerkIdentityWritePathEnabled,
   createClerkOrganizationInvitation,
@@ -36,17 +37,21 @@ async function sendTenantInviteEmails(invites = []) {
   const base = (process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173').trim();
   await Promise.all(invites.map((invite) => {
     const inviteUrl = `${base}/invites/${encodeURIComponent(invite.inviteToken)}/accept`;
+    const safeTenantName = escapeHtml(invite.tenantName);
+    const safeInviterName = escapeHtml(invite.inviterName || 'Your team');
+    const safeRole = escapeHtml(invite.role);
+    const safeInviteUrl = safeHref(inviteUrl, 'https://coreknot.app');
     return dispatchEmailPayload({
       to: invite.email,
       subject: `Join ${invite.tenantName} on CoreKnot`,
       html: `
         <p>Hi,</p>
-        <p>${invite.inviterName || 'Your team'} invited you to join <strong>${invite.tenantName}</strong> on CoreKnot as ${invite.role}.</p>
-        <p><a href="${inviteUrl}">Accept invitation</a></p>
+        <p>${safeInviterName} invited you to join <strong>${safeTenantName}</strong> on CoreKnot as ${safeRole}.</p>
+        <p><a href="${safeInviteUrl}">Accept invitation</a></p>
         <p>If you did not expect this email, you can ignore it.</p>
       `,
       from: process.env.SYSTEM_VERIFIED_FROM_EMAIL,
-    });
+    }).then((result) => assertEmailDispatchSucceeded(result, 'Tenant invite email dispatch failed'));
   }));
 }
 

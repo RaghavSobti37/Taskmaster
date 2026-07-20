@@ -102,6 +102,16 @@ function matrixCase(action, roleKey) {
 
       const allowed = res.status >= 200 && res.status < 300;
       const denied = res.status === 401 || res.status === 403;
+      const reconcileMoved =
+        action.id === 'data-hub-reconcile'
+        && res.status === 410
+        && res.data?.service === 'auto-mailer';
+      if (reconcileMoved && expectAllow) {
+        return probePass(
+          { id: action.id, title: action.label, category: action.category },
+          'Data Hub reconcile is intentionally handed off to Auto-Mailer'
+        );
+      }
       const reconcileDisabled =
         action.id === 'data-hub-reconcile'
         && (res.status === 403 || res.status === 503)

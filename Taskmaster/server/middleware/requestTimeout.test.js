@@ -14,8 +14,8 @@ describe('requestTimeoutMiddleware', () => {
     expect(res.setTimeout).toHaveBeenCalledWith(5000, expect.any(Function));
   });
 
-  it('uses long timeout for campaign routes', () => {
-    const req = { setTimeout: jest.fn(), originalUrl: '/api/campaigns?foo=1' };
+  it('uses long timeout for heavy CoreKnot-owned routes', () => {
+    const req = { setTimeout: jest.fn(), originalUrl: '/api/reports/export?foo=1' };
     const res = { setTimeout: jest.fn(), headersSent: false };
     const next = jest.fn();
 
@@ -26,7 +26,7 @@ describe('requestTimeoutMiddleware', () => {
   });
 
   it('marks timedOut and skips double json when headers already sent', () => {
-    const req = { setTimeout: jest.fn(), originalUrl: '/api/campaigns' };
+    const req = { setTimeout: jest.fn(), originalUrl: '/api/reports/export' };
     let timeoutCb;
     const res = {
       headersSent: false,
@@ -46,8 +46,11 @@ describe('requestTimeoutMiddleware', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  it('LONG_TIMEOUT_RE matches mail audience', () => {
-    expect(LONG_TIMEOUT_RE.test('/api/mail/audience/data-hub')).toBe(true);
+  it('LONG_TIMEOUT_RE excludes retired email routes', () => {
+    expect(LONG_TIMEOUT_RE.test('/api/mail/audience/data-hub')).toBe(false);
+    expect(LONG_TIMEOUT_RE.test('/api/campaigns')).toBe(false);
+    expect(LONG_TIMEOUT_RE.test('/api/newsletter/issues/current')).toBe(false);
+    expect(LONG_TIMEOUT_RE.test('/api/reports/export')).toBe(true);
     expect(LONG_TIMEOUT_RE.test('/api/health')).toBe(false);
   });
 });

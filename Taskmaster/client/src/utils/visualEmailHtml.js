@@ -547,7 +547,7 @@ function stripHardcodedTextColors(html) {
   return root.innerHTML.trim();
 }
 
-/** Re-apply indent inlines on a full preview document from /api/mail/preview. */
+/** Re-apply indent inlines on a full preview document from the Auto-Mailer preview pipeline. */
 export function enhancePreviewDocument(fullDoc, { theme = 'light' } = {}) {
   if (!fullDoc?.trim()) return '';
   const bodyMatch = fullDoc.match(/<body[^>]*>([\s\S]*)<\/body>/i);

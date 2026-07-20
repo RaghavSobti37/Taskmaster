@@ -40,8 +40,6 @@ function demoCredentials(providerId, tenant, integrationId) {
         email: 'demo@example.com',
         accountId: 'demo@example.com',
       };
-    case 'resend':
-      return { apiKey: 're_demo_local_only', accountId: 'resend-demo' };
     case 'google_sheets':
       return {
         accessToken: 'demo_sheets_access',
@@ -72,8 +70,6 @@ function demoMetadata(providerId, tenant, integrationId, credentials) {
   switch (providerId) {
     case 'gmail':
       return { accountEmail: 'demo@example.com', demo: true };
-    case 'resend':
-      return { fromEmail: 'hello@demo.local', demo: true };
     case 'google_sheets':
       return {
         demo: true,
@@ -103,7 +99,6 @@ function demoMetadata(providerId, tenant, integrationId, credentials) {
 function demoLabel(providerId) {
   const labels = {
     gmail: 'Gmail — demo@example.com',
-    resend: 'Resend — demo workspace',
     google_sheets: 'Leads Import Sheet',
     webhook_in: 'Inbound Webhook (demo)',
     aisensy: 'AiSensy — demo',
@@ -222,7 +217,6 @@ async function main() {
       tenant.plan = 'pro';
       tenant.featureUnlocks = tenant.featureUnlocks || {};
       Object.assign(tenant.featureUnlocks, {
-        resend: true,
         google: true,
         meta: true,
         finance: true,

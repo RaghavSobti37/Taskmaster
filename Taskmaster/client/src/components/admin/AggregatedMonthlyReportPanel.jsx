@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, DataLoading } from '../ui';
 import { aggregatedReportToCsv } from '../../utils/monthlyReportCsv';
 import { reportRangeQueryKey } from '../../utils/monthlyReportRange';
+import { printDomSnapshot } from '../../utils/printDomSnapshot';
 import { useMonthlyReportRangeState } from '../../hooks/useMonthlyReportRangeState';
 import ReportRangeControls from './reports/ReportRangeControls';
 import MonthlyReportBody from './reports/MonthlyReportBody';
@@ -37,10 +38,10 @@ const AggregatedReportContent = ({ report, title, filenameBase, exportRangeSuffi
 
   const handlePrint = () => {
     if (!printRef.current) return;
-    const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>${title} ${report.month}</title></head><body>${printRef.current.innerHTML}</body></html>`);
-    w.document.close();
-    w.print();
+    printDomSnapshot({
+      title: `${title} ${report.month}`,
+      contentNode: printRef.current,
+    });
   };
 
   return (
@@ -68,7 +69,7 @@ const AggregatedReportContent = ({ report, title, filenameBase, exportRangeSuffi
 const AggregatedReportShell = ({
   title,
   extraTitle,
-  report,
+  report: _report,
   isLoading,
   error,
   refetch,

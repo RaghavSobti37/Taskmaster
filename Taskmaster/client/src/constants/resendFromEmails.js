@@ -21,7 +21,7 @@ export const normalizeEmailStreams = (streams) => {
   return DEFAULT_EMAIL_STREAMS.map((s, i) => normalizeEmailStream(s, i));
 };
 
-/** Legacy alias — root domain currently verified in Resend. */
+/** Legacy alias for stored campaign fields; Auto-Mailer owns sender verification. */
 export const VERIFIED_RESEND_DOMAIN = ROOT_DOMAIN;
 
 export const DEFAULT_RESEND_FROM_EMAILS = DEFAULT_EMAIL_STREAMS.find((s) => s.slug === 'main')?.fromEmails || [

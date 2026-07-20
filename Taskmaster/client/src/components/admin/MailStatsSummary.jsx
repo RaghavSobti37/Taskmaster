@@ -1,4 +1,3 @@
-import React from 'react';
 import { Mail, Send, AlertCircle, UserMinus } from 'lucide-react';
 import { StatCard } from '../ui';
 
@@ -29,7 +28,7 @@ export default function MailStatsSummary({ stats, campaignCount = 0 }) {
         variant="warning"
         subValue="view list ↗"
         info="Opens tracked in campaign detail views."
-        onClick={() => window.open(UNSUB_SHEET_URL, '_blank')}
+        onClick={() => window.open(UNSUB_SHEET_URL, '_blank', 'noopener,noreferrer')}
       />
     </div>
   );

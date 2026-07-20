@@ -20,7 +20,6 @@ function isTrackingPath(path = '') {
     || path.startsWith('/click/')
     || path === '/unsubscribe'
     || path.startsWith('/webhooks/')
-    || path.startsWith('/api/track')
   );
 }
 

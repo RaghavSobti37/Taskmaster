@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import {
   getEffectiveTemplateContent,
   normalizeTemplateDummyValues,
@@ -29,30 +28,13 @@ export function useMailTemplatePreview(template) {
     const format = template.format === 'rawHtml' ? 'rawHtml' : 'visual';
     let cancelled = false;
 
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await axios.post('/api/mail/preview', {
-          content,
-          subject: template.subject || '',
-          dummyValues,
-          format,
-          removeUnsubscribe: true,
-          theme: 'light',
-        });
-        if (!cancelled) {
-          setHtml(data.html || '');
-          setSubject(data.subject || applyDummyValuesPlain(template.subject || '', dummyValues));
-        }
-      } catch {
-        if (!cancelled) {
-          setHtml('<p style="padding:16px;color:#dc2626;font-family:sans-serif">Preview failed</p>');
-          setSubject(applyDummyValuesPlain(template.subject || '', dummyValues));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    setLoading(false);
+    if (!cancelled) {
+      const previewSubject = applyDummyValuesPlain(template.subject || '', dummyValues);
+      const previewHtml = applyDummyValuesPlain(content, dummyValues);
+      setHtml(format === 'rawHtml' ? previewHtml : `<div>${previewHtml.replace(/\n/g, '<br />')}</div>`);
+      setSubject(previewSubject);
+    }
 
     return () => { cancelled = true; };
   }, [template]);

@@ -99,13 +99,13 @@ const QA_ACTIONS = [
   },
   {
     id: 'data-hub-reconcile',
-    label: 'Data Hub reconcile',
+    label: 'Data Hub Auto-Mailer handoff',
     method: 'POST',
     url: '/api/data-hub/reconcile',
-    allowedRoles: ['admin'],
-    deniedRoles: ['user', 'sales'],
+    allowedRoles: ['admin', 'operations', 'sales', 'artist_management', 'user', 'manager', 'platform_owner'],
+    deniedRoles: [],
     category: 'permission',
-    sev: 'critical',
+    sev: 'medium',
   },
   {
     id: 'admin-roles-list',

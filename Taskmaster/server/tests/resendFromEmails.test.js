@@ -4,8 +4,8 @@ const {
   isVerifiedResendEmail,
 } = require('../../shared/emailStreams.cjs');
 
-describe('Resend from-address catalog', () => {
-  it('keeps every default sender on a verified Resend domain', () => {
+describe('Auto-Mailer from-address catalog compatibility', () => {
+  it('keeps every default sender on an Auto-Mailer verified sender domain', () => {
     const verified = new Set(RESEND_VERIFIED_DOMAINS);
     const senders = DEFAULT_EMAIL_STREAMS.flatMap((stream) => stream.fromEmails || []);
 
@@ -17,7 +17,7 @@ describe('Resend from-address catalog', () => {
     }
   });
 
-  it('rejects unverified TSC subdomains that Resend will refuse in production', () => {
+  it('rejects unverified TSC subdomains that production sending will refuse', () => {
     expect(isVerifiedResendEmail('team@team.theshakticollective.in')).toBe(false);
     expect(isVerifiedResendEmail('artist@artist.theshakticollective.in')).toBe(false);
     expect(isVerifiedResendEmail('hello@events.theshakticollective.in')).toBe(false);

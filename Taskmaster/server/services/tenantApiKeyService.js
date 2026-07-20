@@ -29,7 +29,7 @@ async function verifyApiKey(bearerToken) {
   const hash = hashSecret(bearerToken);
   const row = await TenantApiKey.findOne({ keyHash: hash, revokedAt: null })
     .setOptions({ bypassTenant: true })
-    .select('+keyHash tenantId scopes name');
+    .select('+keyHash tenantId scopes name keyPrefix');
   if (!row) return null;
   row.lastUsedAt = new Date();
   await row.save();

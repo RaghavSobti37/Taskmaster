@@ -33,6 +33,7 @@ import { useDeferredQueryEnabled } from '../../hooks/useDeferredQuery';
 import { projectCardAccentClass, ProjectCardStatusOverlay } from '../../components/project/ProjectStatusPing';
 import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
 import { buildProjectsActiveFilterChips } from '../../utils/activeFilterChips';
+import { useOrgPath } from '../../hooks/useOrgPath';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -298,6 +299,7 @@ const ProjectsView = () => {
   const isAdmin = isAdminUser(user);
   const navigate = useNavigate();
   const location = useLocation();
+  const resolveOrgPath = useOrgPath();
   const queryClient = useQueryClient();
   const updateProject = useUpdateProject();
 
@@ -308,9 +310,9 @@ const ProjectsView = () => {
   const { data: dashboardTasks = [] } = useDashboardTasks(user?._id, !!user?._id && deferProjectsSecondary);
 
   const navigateToProject = useCallback((projectId, tab) => {
-    if (tab === 'analytics') { navigate(`/projects/${projectId}/analytics`); return; }
-    navigate(`/projects/${projectId}`, tab ? { state: { tab } } : undefined);
-  }, [navigate]);
+    if (tab === 'analytics') { navigate(resolveOrgPath(`/projects/${projectId}/analytics`)); return; }
+    navigate(resolveOrgPath(`/projects/${projectId}`), tab ? { state: { tab } } : undefined);
+  }, [navigate, resolveOrgPath]);
 
   const reviewCountByProject = useMemo(() => countReviewTasksByProject(reviewTasks), [reviewTasks]);
   const overdueCountByProject = useMemo(
@@ -339,9 +341,9 @@ const ProjectsView = () => {
   useEffect(() => {
     if (location.state?.openCreateWorkspace) {
       setCreateModalOpen(true);
-      navigate('/projects', { replace: true, state: {} });
+      navigate(resolveOrgPath('/projects'), { replace: true, state: {} });
     }
-  }, [location.state, navigate]);
+  }, [location.state, navigate, resolveOrgPath]);
 
   const loading = loadingProjects || loadingWorkspaces;
   const listQueryError = projectsError ? projectsErr : workspacesError ? workspacesErr : null;
@@ -806,7 +808,7 @@ const ProjectsView = () => {
           <Button
             size="sm"
             data-mobile-primary
-            onClick={() => navigate('/projects/new')}
+            onClick={() => navigate(resolveOrgPath('/projects/new'))}
             className="tm-toolbar-control flex items-center gap-1.5 shrink-0 !py-0 text-xs min-h-[44px] sm:min-h-0"
           >
             <Plus size={14} />
@@ -947,7 +949,7 @@ const ProjectsView = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate(`/workspaces/${encodeURIComponent(group.name)}`)}
+                          onClick={() => navigate(resolveOrgPath(`/workspaces/${encodeURIComponent(group.name)}`))}
                           className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
                         >
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
@@ -967,7 +969,7 @@ const ProjectsView = () => {
                             variant="ghost"
                             size="xs"
                             className="!p-1 text-[var(--color-action-primary)]"
-                            onClick={() => navigate(`/projects/new?workspace=${encodeURIComponent(group.name)}`)}
+                            onClick={() => navigate(resolveOrgPath(`/projects/new?workspace=${encodeURIComponent(group.name)}`))}
                             title="Create project in this workspace"
                           >
                             <Plus size={14} />
@@ -976,7 +978,7 @@ const ProjectsView = () => {
                             variant="ghost"
                             size="xs"
                             className="!p-1"
-                            onClick={() => navigate(`/workspaces/${encodeURIComponent(group.name)}`)}
+                            onClick={() => navigate(resolveOrgPath(`/workspaces/${encodeURIComponent(group.name)}`))}
                             title="Workspace settings"
                           >
                             <Settings size={14} />
@@ -1046,7 +1048,7 @@ const ProjectsView = () => {
                           variant="subtle"
                           title="No projects yet"
                           actionLabel={`Create project in ${group.name}`}
-                          onAction={() => navigate(`/projects/new?workspace=${encodeURIComponent(group.name)}`)}
+                          onAction={() => navigate(resolveOrgPath(`/projects/new?workspace=${encodeURIComponent(group.name)}`))}
                           className="py-8 border-t border-dashed border-[var(--color-bg-border)]"
                         />
                       )}
@@ -1129,7 +1131,7 @@ const ProjectsView = () => {
                     icon={Briefcase}
                     title="No projects found"
                     actionLabel="Create Project"
-                    onAction={() => navigate('/projects/new')}
+                    onAction={() => navigate(resolveOrgPath('/projects/new'))}
                     variant="subtle"
                     className="py-16"
                   />
@@ -1286,7 +1288,7 @@ const ProjectsView = () => {
                     icon={Briefcase}
                     title="No projects found"
                     actionLabel={filterWorkspace !== 'all' ? `Create project in ${filterWorkspace}` : 'Create Project'}
-                    onAction={() => navigate(filterWorkspace !== 'all' ? `/projects/new?workspace=${encodeURIComponent(filterWorkspace)}` : '/projects/new')}
+                    onAction={() => navigate(resolveOrgPath(filterWorkspace !== 'all' ? `/projects/new?workspace=${encodeURIComponent(filterWorkspace)}` : '/projects/new'))}
                     variant="dashed"
                     className="col-span-full"
                   />

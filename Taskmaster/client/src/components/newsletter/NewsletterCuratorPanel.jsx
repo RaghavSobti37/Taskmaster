@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Eye, Sparkles, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Badge } from '../ui';
@@ -221,6 +221,7 @@ const NewsletterCuratorPanel = ({ issue, articles = [], categories = [] }) => {
             srcDoc={previewHtml}
             className="w-full min-h-[520px] rounded-lg border border-[var(--color-bg-border)] bg-white"
             sandbox=""
+            referrerPolicy="no-referrer"
           />
         </Card>
       )}

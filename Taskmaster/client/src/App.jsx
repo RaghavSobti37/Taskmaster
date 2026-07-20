@@ -303,7 +303,8 @@ function App() {
                 <Route path="developers" element={<DevelopersPage />} />
               </Route>
               <Route element={<PageRoute page="emails" />}>
-                <Route path="emails" element={<AutoMailerRedirectPage />} />
+                <Route path="emails/*" element={<AutoMailerRedirectPage />} />
+                <Route path="campaign/:id" element={<AutoMailerRedirectPage />} />
               </Route>
               <Route path="org/settings" element={<OrgNavigate to="/settings?tab=organization" replace />} />
               <Route path="data-hub" element={<OrgNavigate to="/admin" replace />} />
@@ -459,6 +460,7 @@ function App() {
                 <Route path="/workflows/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/developers/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/emails/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/campaign/:id" element={<AutoMailerRedirectPage />} />
                 <Route path="/upgrade" element={<LegacyOrgPathRedirect />} />
               </>
             )}

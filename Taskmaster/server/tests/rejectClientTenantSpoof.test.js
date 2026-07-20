@@ -46,4 +46,18 @@ describe('rejectClientTenantSpoof', () => {
     expect(res.statusCode).toBe(403);
     expect(res.body.code).toBe('TENANT_SPOOF_REJECTED');
   });
+
+  it('rejects nested tenant identifiers in request bodies', () => {
+    const req = {
+      method: 'POST',
+      originalUrl: '/api/crm/leads',
+      body: { lead: { metadata: { organizationId: 'tenant-b' } } },
+      tenantId: 'tenant-a',
+    };
+    const res = mockRes();
+    rejectClientTenantSpoof(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('TENANT_SPOOF_REJECTED');
+  });
 });

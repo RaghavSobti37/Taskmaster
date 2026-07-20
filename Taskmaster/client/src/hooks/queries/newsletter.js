@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { buildAutoMailerUrl } from '../../utils/autoMailerUrl';
 
 export const newsletterKeys = {
   all: ['newsletter'],
@@ -9,99 +9,35 @@ export const newsletterKeys = {
   preview: (issueId) => [...newsletterKeys.all, 'preview', issueId],
 };
 
-export const useNewsletterCategories = () => useQuery({
-  queryKey: newsletterKeys.categories(),
-  queryFn: async () => (await axios.get('/api/newsletter/categories')).data,
-  staleTime: 1000 * 60 * 60,
+const movedToAutoMailer = (path = '/emails/newsletter') => ({
+  moved: true,
+  service: 'auto-mailer',
+  url: buildAutoMailerUrl(path),
+  message: 'Newsletter workflows moved to Auto-Mailer',
 });
 
-export const useCurrentNewsletterIssue = () => useQuery({
-  queryKey: newsletterKeys.current(),
-  queryFn: async () => (await axios.get('/api/newsletter/issues/current')).data,
-  staleTime: 1000 * 30,
+const useMovedQuery = (queryKey, path, options = {}) => useQuery({
+  queryKey,
+  queryFn: async () => movedToAutoMailer(path),
+  enabled: options.enabled ?? true,
+  staleTime: Infinity,
 });
 
-export const useNewsletterIssue = (weekKey, enabled = true) => useQuery({
-  queryKey: newsletterKeys.issue(weekKey),
-  queryFn: async () => (await axios.get(`/api/newsletter/issues/${weekKey}`)).data,
-  enabled: enabled && !!weekKey,
-  staleTime: 1000 * 30,
+const useMovedMutation = (path) => useMutation({
+  mutationFn: async () => movedToAutoMailer(path),
 });
 
-export const usePreviewNewsletterLink = () => useMutation({
-  mutationFn: (url) => axios.post('/api/newsletter/links/preview', { url }).then((r) => r.data),
-});
-
-export const useCreateNewsletterArticle = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload) => axios.post('/api/newsletter/articles', payload).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['gamification', 'missions'] });
-    },
-  });
-};
-
-export const useUpdateNewsletterArticle = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...payload }) => axios.patch(`/api/newsletter/articles/${id}`, payload).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-    },
-  });
-};
-
-export const useDeleteNewsletterArticle = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => axios.delete(`/api/newsletter/articles/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-    },
-  });
-};
-
-export const useCurateNewsletterIssue = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ issueId, ...payload }) => axios.patch(`/api/newsletter/issues/${issueId}/curate`, payload).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-    },
-  });
-};
-
-export const useCompileNewsletterIssue = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (issueId) => axios.post(`/api/newsletter/issues/${issueId}/compile`).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-    },
-  });
-};
-
-export const useNewsletterHtmlPreview = (issueId, enabled = true) => useQuery({
-  queryKey: newsletterKeys.preview(issueId),
-  queryFn: async () => (await axios.get(`/api/newsletter/issues/${issueId}/preview`)).data,
-  enabled: enabled && !!issueId,
-});
-
-export const useNewsletterAudiencePreview = () => useMutation({
-  mutationFn: ({ issueId, audience, excludedEmails }) => axios
-    .post(`/api/newsletter/issues/${issueId}/audience-preview`, { audience, excludedEmails })
-    .then((r) => r.data),
-});
-
-export const useSendNewsletterIssue = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ issueId, ...payload }) => axios.post(`/api/newsletter/issues/${issueId}/send`, payload).then((r) => r.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
-    },
-  });
-};
+export const useNewsletterCategories = () => useMovedQuery(newsletterKeys.categories(), '/emails/newsletter');
+export const useCurrentNewsletterIssue = () => useMovedQuery(newsletterKeys.current(), '/emails/newsletter');
+export const useNewsletterIssue = (weekKey, enabled = true) =>
+  useMovedQuery(newsletterKeys.issue(weekKey), '/emails/newsletter', { enabled: enabled && !!weekKey });
+export const usePreviewNewsletterLink = () => useMovedMutation('/emails/newsletter');
+export const useCreateNewsletterArticle = () => useMovedMutation('/emails/newsletter');
+export const useUpdateNewsletterArticle = () => useMovedMutation('/emails/newsletter');
+export const useDeleteNewsletterArticle = () => useMovedMutation('/emails/newsletter');
+export const useCurateNewsletterIssue = () => useMovedMutation('/emails/newsletter');
+export const useCompileNewsletterIssue = () => useMovedMutation('/emails/newsletter');
+export const useNewsletterHtmlPreview = (issueId, enabled = true) =>
+  useMovedQuery(newsletterKeys.preview(issueId), '/emails/newsletter', { enabled: enabled && !!issueId });
+export const useNewsletterAudiencePreview = () => useMovedMutation('/emails/newsletter/send');
+export const useSendNewsletterIssue = () => useMovedMutation('/emails/newsletter/send');

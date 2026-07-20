@@ -37,6 +37,7 @@ jobs:
       - id: version
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${INPUT_VERSION:-$(node -p "require('./Taskmaster/desktop/package.json').version")}"
           TAG="v${VERSION}"
@@ -57,8 +58,6 @@ jobs:
           else
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   create-tag:
     needs: resolve-version

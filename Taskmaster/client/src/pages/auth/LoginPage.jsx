@@ -16,6 +16,9 @@ import { subscribeClerkEstablishError } from '../../lib/clerkEstablishRegistry';
 import { computeLoginUiState, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
 import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 
+const linkClass =
+  'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
+
 /** Clerk hides Forgot password on the combined email+password start step. */
 function ForgotPasswordHint({ visible }) {
   if (!visible) return null;
@@ -26,14 +29,14 @@ function ForgotPasswordHint({ visible }) {
     >
       <p className="font-medium">Reset your password</p>
       <p className="mt-1 text-teal-100/90">
-        Enter your email, leave the password blank, press Continue, then tap Forgot password.
+        Use the reset page to receive a code by email and choose a new password.
       </p>
+      <Link to="/forgot-password" className={`${linkClass} mt-2 inline-flex`}>
+        Open reset page
+      </Link>
     </div>
   );
 }
-
-const linkClass =
-  'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 /** ponytail: Clerk hooks only under ClerkProvider — CI preview builds omit publishable key */
 export default function LoginPage() {
@@ -167,7 +170,7 @@ function LoginPageView({
             <ClerkSignInBlock />
             {uiState === 'SHOW_SIGN_IN' && !showForgotHint ? (
               <p className="mt-3 text-center text-sm text-teal-100/80">
-                <Link to="/login?forgot=1" className={linkClass}>
+                <Link to="/forgot-password" className={linkClass}>
                   Forgot password?
                 </Link>
               </p>

@@ -8,6 +8,19 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-07-20] v1.0.8-beta.3 patch - Auth entry and desktop download stabilization
+
+#### Authentication
+- **App entry:** workspace host now opens dashboard for signed-in users and login for signed-out users; `/landing` no longer renders inside app mode.
+- **Forgot password:** login links directly to `/forgot-password`; Clerk `authorization_invalid` failures now show the long message, code, and trace ID for support.
+- **Clerk session establish:** frontend token-read failures with `authorization_invalid` are treated as terminal auth errors instead of retry loops.
+
+#### Landing download
+- **Desktop beta links:** landing page installer buttons now target `v1.0.8-beta.3` GitHub release assets.
+- **Hero CTA:** desktop beta CTA now opens the `v1.0.8-beta.3` release page.
+
+---
+
 ### [2026-07-08] v1.0.7 patch - Production-readiness stabilization
 
 #### Billing / paywalls

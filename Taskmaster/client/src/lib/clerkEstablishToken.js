@@ -29,14 +29,23 @@ export async function fetchClerkEstablishToken({
     }
   } catch (err) {
     const status = err?.status || err?.response?.status;
+    const first = err?.errors?.[0] || {};
+    const code = first.code || err?.code || (status === 401 || status === 403 ? 'clerk-session-stale' : 'clerk-token-error');
+    const terminalAuthError = status === 401 || status === 403 || code === 'authorization_invalid';
+    const message = first.longMessage
+      || first.long_message
+      || first.message
+      || err?.message
+      || 'Clerk session token could not be read.';
+    const trace = err?.clerk_trace_id ? ` trace ${err.clerk_trace_id}` : '';
     return {
       ok: false,
-      retryable: status !== 401 && status !== 403,
+      retryable: !terminalAuthError,
       error: {
         status,
-        message: err?.message || 'Clerk session token could not be read.',
+        message: trace ? `${message} (${code};${trace})` : message,
       },
-      code: status === 401 || status === 403 ? 'clerk-session-stale' : 'clerk-token-error',
+      code,
     };
   }
 

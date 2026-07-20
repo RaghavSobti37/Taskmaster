@@ -83,6 +83,28 @@ describe('ForgotPasswordPage', () => {
     expect(screen.getByLabelText(/reset code/i)).toBeInTheDocument();
   });
 
+  it('shows Clerk long_message errors from the frontend API', async () => {
+    const user = userEvent.setup();
+    mockSendCode.mockRejectedValue({
+      errors: [
+        {
+          message: 'Unauthorized request',
+          long_message: 'You are not authorized to perform this request',
+          code: 'authorization_invalid',
+        },
+      ],
+      clerk_trace_id: 'b2cbf0cd14be5f430240acb49433a602',
+    });
+    renderPage();
+
+    await user.type(screen.getByLabelText(/email address/i), 'person@example.com');
+    await user.click(screen.getByRole('button', { name: /send reset code/i }));
+
+    expect(await screen.findByText(/you are not authorized to perform this request/i)).toBeInTheDocument();
+    expect(screen.getByText(/authorization_invalid/i)).toBeInTheDocument();
+    expect(screen.getByText(/b2cbf0cd14be5f430240acb49433a602/i)).toBeInTheDocument();
+  });
+
   it('supports Clerk signal-style sign-in state without isLoaded', async () => {
     const user = userEvent.setup();
     mockUseSignIn.mockReturnValue({

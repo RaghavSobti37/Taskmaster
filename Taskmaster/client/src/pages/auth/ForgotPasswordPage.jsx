@@ -10,10 +10,17 @@ const buttonClass = 'w-full rounded-lg bg-[var(--brand-green)] px-4 py-2.5 text-
 const linkClass = 'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 function getClerkErrorMessage(err) {
-  return err?.errors?.[0]?.longMessage
-    || err?.errors?.[0]?.message
+  const first = err?.errors?.[0] || {};
+  const message = first.longMessage
+    || first.long_message
+    || first.message
     || err?.message
     || 'Something went wrong. Please try again.';
+  const detail = [
+    first.code || err?.code,
+    err?.clerk_trace_id ? `trace ${err.clerk_trace_id}` : null,
+  ].filter(Boolean).join(' | ');
+  return detail ? `${message} (${detail})` : message;
 }
 
 export default function ForgotPasswordPage() {

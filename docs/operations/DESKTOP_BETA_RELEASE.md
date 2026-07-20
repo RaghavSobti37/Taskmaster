@@ -16,7 +16,7 @@ arrive through GitHub beta releases and show an update dialog inside the desktop
 ## Release A New Beta
 
 ```bash
-npm run release:desktop:beta -- 1.0.8-beta.2
+npm run release:desktop:beta -- 1.0.8-beta.3
 npm install
 npm run desktop:smoke
 npm run desktop:dist

@@ -40,7 +40,9 @@ export const landingHero = {
     'https://github.com',
     ['Raghav', 'Sobti37'].join(''),
     'Taskmaster',
-    'releases?q=CoreKnot+Desktop+Beta&expanded=true',
+    'releases',
+    'tag',
+    'v1.0.8-beta.3',
   ].join('/'),
   desktopDownloadCta: 'Download CoreKnot Beta',
   trustBadges: [

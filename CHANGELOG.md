@@ -2,6 +2,15 @@
 
 All notable CoreKnot releases. Version aligns with root `package.json`.
 
+## [1.0.8-beta.3] - 2026-07-20
+
+### Auth and routing
+
+- Fixed app-mode root and catch-all routing so users land on dashboard when signed in, or login when signed out.
+- Removed the in-app marketing landing page from the workspace host; marketing stays on the landing site only.
+- Fixed forgot-password access by linking login directly to the reset page and surfacing Clerk `authorization_invalid` details with trace IDs.
+- Updated desktop beta download links to the `v1.0.8-beta.3` GitHub release assets.
+
 ## [1.0.8-beta.1] - 2026-07-15
 
 ### Mobile beta
@@ -29,3 +38,4 @@ All notable CoreKnot releases. Version aligns with root `package.json`.
 
 [1.0.7]: https://github.com/theshakticollective/coreknot/compare/v1.0.6...v1.0.7
 [1.0.8-beta.1]: https://github.com/theshakticollective/coreknot/compare/v1.0.7...v1.0.8-beta.1
+[1.0.8-beta.3]: https://github.com/RaghavSobti37/Taskmaster/releases/tag/v1.0.8-beta.3

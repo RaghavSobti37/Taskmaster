@@ -135,7 +135,7 @@ const LegacyTasksCreateRedirect = () => {
 
 function AppCatchAllRedirect() {
   const { user } = useAuth();
-  const target = user ? orgPathFromUser(user, '/dashboard') : '/landing';
+  const target = user ? orgPathFromUser(user, '/dashboard') : '/login';
   return <Navigate to={target} replace />;
 }
 
@@ -164,7 +164,7 @@ function AppRootRedirectInner({ clerkLoaded, clerkSignedIn }) {
     return <ExternalLandingRedirect />;
   }
 
-  return <Navigate to="/landing" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 function AppRootRedirect() {
@@ -242,7 +242,7 @@ function App() {
           {usesExternalLandingHost() ? (
             <Route path="/landing" element={<ExternalLandingRedirect />} />
           ) : (
-            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/landing" element={<AppRootRedirect />} />
           )}
           {usesExternalAuthHost() ? (
             <>
@@ -439,6 +439,7 @@ function App() {
               <>
                 <Route path="/dashboard/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/projects/*" element={<LegacyOrgPathRedirect />} />
+                <Route path="/workspaces/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/calendar/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/settings/*" element={<LegacyOrgPathRedirect />} />
                 <Route path="/logs/*" element={<LegacyOrgPathRedirect />} />

@@ -130,4 +130,30 @@ describe('fetchClerkEstablishToken', () => {
     expect(result.retryable).toBe(false);
     expect(result.error.status).toBe(401);
   });
+
+  it('marks Clerk authorization_invalid token errors as non-retryable even without status', async () => {
+    const getToken = vi.fn(async () => {
+      throw {
+        errors: [
+          {
+            code: 'authorization_invalid',
+            long_message: 'You are not authorized to perform this request',
+          },
+        ],
+        clerk_trace_id: 'b2cbf0cd14be5f430240acb49433a602',
+      };
+    });
+
+    const result = await fetchClerkEstablishToken({
+      getToken,
+      setActive: vi.fn(),
+      pinnedOrgId: '',
+      activeOrgId: null,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.retryable).toBe(false);
+    expect(result.code).toBe('authorization_invalid');
+    expect(result.error.message).toContain('You are not authorized');
+  });
 });

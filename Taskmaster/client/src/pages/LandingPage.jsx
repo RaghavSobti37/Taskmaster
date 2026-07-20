@@ -37,7 +37,7 @@ const DESKTOP_BETA_RELEASE_BASE_URL = import.meta.env.VITE_DESKTOP_BETA_RELEASE_
     'Taskmaster',
     'releases',
     'download',
-    'coreknot-beta',
+    import.meta.env.VITE_DESKTOP_BETA_RELEASE_TAG || 'v1.0.8-beta.3',
   ].join('/');
 export const DESKTOP_BETA_INSTALLERS = [
   {

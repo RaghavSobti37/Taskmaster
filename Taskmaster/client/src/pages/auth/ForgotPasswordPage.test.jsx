@@ -139,7 +139,7 @@ describe('ForgotPasswordPage', () => {
     await user.type(screen.getByLabelText(/confirm password/i), 'Different-password-1');
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/passwords do not match/i);
     expect(mockSubmitPassword).not.toHaveBeenCalled();
   });
 

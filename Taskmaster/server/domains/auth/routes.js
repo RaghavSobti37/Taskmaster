@@ -3,7 +3,6 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { config } = require('../../config');
 const { authRateLimit } = require('../../middleware/rateLimits');
 const { isE2eTestUser } = require('../../utils/e2eTestUsers');
-const authForgotPasswordLimiter = authRateLimit;
 const router = express.Router();
 const {
   register, login, logout, getMe, getSession, getAuthConfig, changeRequiredPassword, googleLogin,
@@ -26,6 +25,24 @@ const {
   clerkEstablishBody,
   accessRequestBody,
 } = require('../../validation/schemas/auth');
+
+/** Helper: format retry-after seconds into readable time string */
+const formatRetryAfter = (retryAfterSeconds) => {
+  if (!retryAfterSeconds || retryAfterSeconds <= 0) return '';
+  const mins = Math.ceil(retryAfterSeconds / 60);
+  if (mins >= 60) {
+    const hours = Math.floor(mins / 60);
+    return hours === 1 ? '1 hour' : `${hours} hours`;
+  }
+  return mins === 1 ? '1 minute' : `${mins} minutes`;
+};
+
+/** Rate limit handler that includes retry-after info in the error message */
+const rateLimitMessage = (baseMsg) => (req, res) => {
+  const retryAfter = res.getHeader('Retry-After');
+  const suffix = retryAfter ? `. Try again in ${formatRetryAfter(Number(retryAfter))}.` : '';
+  res.status(429).json({ error: `${baseMsg}${suffix}` });
+};
 
 const authLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -54,7 +71,7 @@ const authSignupLimiter = rateLimit({
 
 const clerkEstablishLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
@@ -80,6 +97,22 @@ const authAccessRequestLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many access requests. Try again later.' },
   skip: () => process.env.NODE_ENV === 'test',
+});
+
+const authForgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset attempts. Try again in 15 minutes.' },
+  skip: () => process.env.NODE_ENV === 'test',
+  keyGenerator: (req) => {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.trim()) {
+      return `forgot-pw:${email.trim().toLowerCase()}`;
+    }
+    return `forgot-pw-ip:${ipKeyGenerator(req)}`;
+  },
 });
 
 router.post('/access-request', authAccessRequestLimiter, validateBody(accessRequestBody), requestAccess);

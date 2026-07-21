@@ -19,6 +19,9 @@ import { navigateOnce, resetNavigateGuard } from '../../lib/postLoginRedirect';
 const linkClass =
   'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
+const forgotBtnClass =
+  'text-sm text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
+
 /** Clerk hides Forgot password on the combined email+password start step. */
 function ForgotPasswordHint({ visible }) {
   if (!visible) return null;
@@ -34,6 +37,21 @@ function ForgotPasswordHint({ visible }) {
       <Link to="/forgot-password" className={`${linkClass} mt-2 inline-flex`}>
         Open reset page
       </Link>
+    </div>
+  );
+}
+
+function RateLimitHint({ visible }) {
+  if (!visible) return null;
+  return (
+    <div
+      className="mb-4 rounded-lg border border-orange-400/30 bg-orange-950/30 px-4 py-3 text-sm text-orange-50 text-center"
+      role="status"
+    >
+      <p className="font-medium">Too many attempts?</p>
+      <p className="mt-1 text-orange-100/90">
+        Login is temporarily rate-limited after multiple failed attempts. Wait 15 minutes or clear your session cookies below.
+      </p>
     </div>
   );
 }
@@ -166,15 +184,14 @@ function LoginPageView({
                 ) : null}
               </div>
             ) : null}
+            <RateLimitHint visible={Boolean(new URLSearchParams(location.search).get('rate-limit'))} />
             <ForgotPasswordHint visible={showForgotHint} />
             <ClerkSignInBlock />
-            {uiState === 'SHOW_SIGN_IN' && !showForgotHint ? (
-              <p className="mt-3 text-center text-sm text-teal-100/80">
-                <Link to="/forgot-password" className={linkClass}>
-                  Forgot password?
-                </Link>
-              </p>
-            ) : null}
+            <p className="mt-3 text-center text-sm text-teal-100/80">
+              <Link to="/forgot-password" className={forgotBtnClass}>
+                Forgot password?
+              </Link>
+            </p>
           </>
         )}
         {showRecovery ? (

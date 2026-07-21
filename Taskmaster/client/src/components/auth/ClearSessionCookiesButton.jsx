@@ -21,10 +21,22 @@ export default function ClearSessionCookiesButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const isFooter = variant === 'footer';
 
-  if (!isFooter && (done || !shouldOfferSessionReset({ bootError, stuckLogin }))) {
-    return null;
+  // Always show the button when there's an error or user is stuck
+  const shouldShowPanel = isFooter || (!done && (bootError || stuckLogin || showTroubleshoot || shouldOfferSessionReset({ bootError, stuckLogin })));
+
+  if (!shouldShowPanel) return null;
+
+  if (!isFooter && done) {
+    return (
+      <div className="mt-4 pt-4 border-t border-white/15 text-center">
+        <p className="text-[11px] leading-relaxed text-teal-100/70">
+          Session cookies cleared. The page will reload — please try signing in again.
+        </p>
+      </div>
+    );
   }
 
   const handleClick = async () => {
@@ -57,7 +69,11 @@ export default function ClearSessionCookiesButton({
   return (
     <div className="mt-4 pt-4 border-t border-white/15 text-center">
       <p className="text-[11px] leading-relaxed text-white/60 mb-2">
-        Stuck after sign-in? Old session cookies can block a fresh login.
+        {bootError
+          ? 'The app could not load your session. Clearing old cookies may help.'
+          : stuckLogin
+            ? 'Stuck in a sign-in loop? Old session cookies can block a fresh login.'
+            : 'Stuck after sign-in? Old session cookies can block a fresh login.'}
       </p>
       <button
         type="button"
@@ -67,6 +83,17 @@ export default function ClearSessionCookiesButton({
       >
         {label}
       </button>
+      {!showTroubleshoot && !bootError && !stuckLogin ? (
+        <p className="mt-2">
+          <button
+            type="button"
+            onClick={() => setShowTroubleshoot(true)}
+            className="text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline transition-colors"
+          >
+            Still having trouble?
+          </button>
+        </p>
+      ) : null}
     </div>
   );
 }

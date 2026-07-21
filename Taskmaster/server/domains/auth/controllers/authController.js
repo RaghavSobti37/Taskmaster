@@ -59,6 +59,18 @@ const blockLegacyAuth = (reqOrRes, maybeRes) => {
   return false;
 };
 
+/** Lazy-create OAuth2 client to avoid module-init issues. */
+const resolveOAuth2Client = (() => {
+  let cached = null;
+  return () => {
+    if (!cached) {
+      const { createOAuth2Client: createOAuth } = require('../../../utils/googleAuth');
+      cached = createOAuth();
+    }
+    return cached;
+  };
+})();
+
 const getSessionCookie = (req) => req.cookies?.[require('../../../utils/authCookie').COOKIE_NAME] || null;
 
 const { isE2eTestUser } = require('../../../utils/e2eTestUsers');
@@ -363,11 +375,15 @@ exports.googleLogin = async (req, res) => {
   if (blockLegacyAuth(null, res)) return;
   try {
     const { tokenId } = req.body;
-    const ticket = await oauth2Client.verifyIdToken({
+    if (typeof tokenId !== 'string' || !tokenId.trim()) {
+      return apiError(res, 'Missing Google token', 400);
+    }
+    const oauthClient = resolveOAuth2Client();
+    const ticket = await oauthClient.verifyIdToken({
       idToken: tokenId,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const { name, email, picture } = ticket.getPayload();
+    const { name, email, picture, sub: googleId } = ticket.getPayload();
     const emailLower = email.toLowerCase().trim();
 
     const registrationCheck = isRegistrationAllowed(emailLower);
@@ -383,7 +399,14 @@ exports.googleLogin = async (req, res) => {
         email: emailLower,
         password: Math.random().toString(36).slice(-8),
         avatar: picture,
+        googleId,
       });
+    } else {
+      // Update googleId for existing users
+      if (!user.googleId || user.googleId !== googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
     }
     if (user.suspended) {
       clearAuthCookie(res, req);
@@ -396,7 +419,8 @@ exports.googleLogin = async (req, res) => {
 
     return sendAuthSuccess(req, res, populated, { authMethod: 'google_token' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    logger.error('authController', 'googleLogin failed', { error: error.message || error });
+    return apiError(res, error.message?.includes('Invalid Idp') ? 'Invalid Google token' : 'Google sign-in failed', 401);
   }
 };
 
@@ -421,6 +445,16 @@ exports.logout = async (req, res) => {
     /* revocation is best-effort */
   }
   clearAuthCookie(res, req);
+  // Also clear any legacy cookie names
+  ['coreknot_token_v2', 'coreknot_token'].forEach((name) => {
+    res.clearCookie(name, {
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined,
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  });
   capturePostHogEvent(req, 'user_logged_out');
   res.json({ success: true, hadCookie: hadAuthCookie(req) });
 };
@@ -1124,6 +1158,9 @@ exports.resetPassword = async (req, res) => {
 
     const { revokeAllUserSessions } = require('../../../utils/sessionRegistry');
     await revokeAllUserSessions(user._id.toString());
+
+    // Clear any active session cookies
+    clearAuthCookie(res, req);
 
     return res.json({ message: 'Password updated successfully. You can now sign in with your new password.' });
   } catch (error) {

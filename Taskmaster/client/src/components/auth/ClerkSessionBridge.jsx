@@ -38,6 +38,7 @@ const extractEstablishError = (err, fallback) => {
 
 const ESTABLISH_RETRY_MS = 1500;
 const ESTABLISH_MAX_ATTEMPTS = 5;
+const ESTABLISH_TIMEOUT_MS = 30_000; // 30s total timeout for establish flow
 
 /**
  * After Clerk sign-in, exchange Clerk JWT for CoreKnot HttpOnly session cookie.
@@ -122,6 +123,10 @@ function ClerkSessionBridgeInner() {
     establishForClerkSession = clerkKey;
     let cancelled = false;
 
+    // Overall timeout to prevent infinite loops
+    const establishStartedAt = Date.now();
+    const isTimedOut = () => Date.now() - establishStartedAt > ESTABLISH_TIMEOUT_MS;
+
     establishInflight = (async () => {
       try {
         const tokenResult = await fetchClerkEstablishToken({
@@ -134,7 +139,7 @@ function ClerkSessionBridgeInner() {
         if (cancelled) return;
 
         if (!tokenResult.ok) {
-          if (tokenResult.retryable && establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+          if (tokenResult.retryable && establishAttempt < ESTABLISH_MAX_ATTEMPTS && !isTimedOut()) {
             establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
@@ -187,7 +192,7 @@ function ClerkSessionBridgeInner() {
             }
             return;
           }
-          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS && !isTimedOut()) {
             establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);
@@ -210,7 +215,7 @@ function ClerkSessionBridgeInner() {
             loginErr,
             'Signed in with Clerk but could not load your workspace session.',
           );
-          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS) {
+          if (establishAttempt < ESTABLISH_MAX_ATTEMPTS && !isTimedOut()) {
             establishForClerkSession = null;
             window.setTimeout(() => {
               if (!cancelled) setEstablishAttempt((n) => n + 1);

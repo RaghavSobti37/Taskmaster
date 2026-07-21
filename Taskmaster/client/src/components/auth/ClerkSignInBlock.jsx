@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { SignIn, useAuth } from '@clerk/react';
+import { Link, useLocation } from 'react-router-dom';
+import { SignIn, useAuth as useClerkAuth } from '@clerk/react';
 import { isClerkConfigured } from '../../config/clerk';
 import { getClerkSignInRedirectProps } from '../../config/siteUrls';
 import { isClerkReadyForCoreKnotEstablish, resolveClerkSignInPathname } from '../../lib/clerkSignInFlow';
@@ -10,6 +10,9 @@ import {
   clerkAuthLocalization,
   clerkAuthShellClass,
 } from '../../config/clerkAppearance';
+
+const linkClass =
+  'text-[var(--brand-green)] font-medium hover:text-[var(--brand-teal-deep)] underline-offset-2 hover:underline transition-colors';
 
 function ClerkSignInLoading() {
   return (
@@ -25,7 +28,7 @@ export default function ClerkSignInBlock() {
 }
 
 function ClerkSignInInner() {
-  const { isLoaded, isSignedIn, sessionId } = useAuth();
+  const { isLoaded, isSignedIn, sessionId } = useClerkAuth();
   const location = useLocation();
   const signInRedirectProps = useMemo(() => getClerkSignInRedirectProps(), []);
   const appearance = useMemo(() => clerkAuthAppearance, []);
@@ -61,6 +64,11 @@ function ClerkSignInInner() {
         appearance={appearance}
         localization={localization}
       />
+      <div className="mt-2 text-center">
+        <Link to="/forgot-password" className={linkClass}>
+          Forgot password?
+        </Link>
+      </div>
     </div>
   );
 }

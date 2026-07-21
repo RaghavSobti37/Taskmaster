@@ -15,11 +15,16 @@ function normalizeToList(to) {
     .filter((e) => e && /[^\s@]+@[^\s@]+/.test(e) && !seen.has(e) && seen.add(e));
 }
 
+/**
+ * Auto-Mailer is a standalone service. CoreKnot references it via
+ * AUTO_MAILER_API_URL — if unset, email dispatch degrades gracefully.
+ * @see Auto-Mailer repo
+ */
 function resolveAutoMailerApiBase() {
   const raw = String(process.env.AUTO_MAILER_API_URL || '').trim().replace(/\/+$/, '');
-  if (!raw) return { error: 'AUTO_MAILER_API_URL is not configured' };
+  if (!raw) return { error: 'AUTO_MAILER_API_URL is not configured. Set it to your Auto-Mailer API origin (e.g. the Render URL of your automailer-api service).' };
   if (/vercel\.app$/i.test(raw) || /auto-mailer-blue/i.test(raw)) {
-    return { error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin, not the Vercel UI' };
+    return { error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin (e.g. your automailer-api Render URL), not the Vercel UI' };
   }
   return { baseUrl: raw };
 }

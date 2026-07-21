@@ -23,7 +23,7 @@ describe('mailDriver Auto-Mailer bridge', () => {
       to: 'person@example.com',
       subject: 'Hello',
       html: '<p>Hello</p>',
-    })).resolves.toEqual({ error: 'AUTO_MAILER_API_URL is not configured' });
+    })).resolves.toEqual({ error: 'AUTO_MAILER_API_URL is not configured. Set it to your Auto-Mailer API origin (e.g. the Render URL of your automailer-api service).' });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -37,7 +37,7 @@ describe('mailDriver Auto-Mailer bridge', () => {
       subject: 'Hello',
       html: '<p>Hello</p>',
     })).resolves.toEqual({
-      error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin, not the Vercel UI',
+      error: 'AUTO_MAILER_API_URL must be the Auto-Mailer API origin (e.g. your automailer-api Render URL), not the Vercel UI',
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });

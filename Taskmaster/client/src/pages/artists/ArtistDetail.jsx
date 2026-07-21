@@ -4,6 +4,7 @@ import { ArrowLeft, Share2, RefreshCw, Music, Edit2, Disc, Link2 } from 'lucide-
 import { PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useArtistDashboard } from '../../hooks/useArtistDashboard';
+import { useOrgPath } from '../../hooks/useOrgPath';
 
 import ArtistEditDrawer from '../../components/artists/ArtistEditDrawer';
 
@@ -24,6 +25,7 @@ export default function ArtistDetail({ isPreview = false }) {
   const { id } = useParams();
 
   const navigate = useNavigate();
+  const resolveOrgPath = useOrgPath();
 
 
 
@@ -119,7 +121,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
     await deleteMutation.mutateAsync(artist._id);
 
-    navigate('/artists');
+    navigate(resolveOrgPath('/artists'));
 
   };
 
@@ -174,7 +176,7 @@ export default function ArtistDetail({ isPreview = false }) {
       <PageContainer className="!py-16 text-center">
         <Disc size={48} className="mx-auto mb-4 text-rose-500 opacity-50" />
         <h2 className="text-lg font-black uppercase text-rose-500">Artist Not Found</h2>
-        <Button variant="secondary" className="mt-6 mx-auto" onClick={() => navigate('/artists')}>
+        <Button variant="secondary" className="mt-6 mx-auto" onClick={() => navigate(resolveOrgPath('/artists'))}>
           <ArrowLeft size={16} /> Back to Roster
         </Button>
       </PageContainer>
@@ -209,7 +211,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
               <>
 
-                <Button variant="secondary" size="sm" onClick={() => navigate('/artists')}>
+                <Button variant="secondary" size="sm" onClick={() => navigate(resolveOrgPath('/artists'))}>
 
                   <ArrowLeft size={14} /> Roster
 

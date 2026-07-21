@@ -71,9 +71,9 @@ exports.getPerson = async (req, res) => {
   try {
     const { personId } = req.params;
     const [person, hub, identifiers, responses] = await Promise.all([
-      Person.findById(personId).lean(),
+      Person.findById(personId).setOptions({ bypassTenant: true }).lean(),
       artistPathHubService.findHubByPersonId(personId),
-      PersonIdentifier.find({ personId }).lean(),
+      PersonIdentifier.find({ personId }).setOptions({ bypassTenant: true }).lean(),
       artistPathHubService.listResponsesForPerson(personId),
     ]);
     if (!person && !hub) return res.status(404).json({ error: 'Person not found' });

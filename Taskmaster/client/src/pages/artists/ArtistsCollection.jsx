@@ -11,6 +11,7 @@ import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
 import { formatNumber } from '../../config/integrations.config';
+import { useOrgPath } from '../../hooks/useOrgPath';
 
 const getArtistEmoji = (name = '') => {
   if (name.includes('Yugm')) return '🎸';
@@ -26,6 +27,7 @@ const formatNumberLocal = (num) => {
 
 export default function ArtistsCollection() {
   const navigate = useNavigate();
+  const resolveOrgPath = useOrgPath();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -237,7 +239,7 @@ export default function ArtistsCollection() {
       )}
       toolbarActions={(
         <>
-          <Button size="sm" variant="secondary" onClick={() => navigate('/artists/portfolio')}>
+          <Button size="sm" variant="secondary" onClick={() => navigate(resolveOrgPath('/artists/portfolio'))}>
             <BarChart3 size={14} /> Portfolio
           </Button>
           <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
@@ -256,7 +258,7 @@ export default function ArtistsCollection() {
         <DataTable
           columns={columns}
           data={filteredArtists}
-          onRowClick={(row) => navigate(`/artists/${row?._id}`)}
+          onRowClick={(row) => navigate(resolveOrgPath(`/artists/${row?._id}`))}
           emptyTitle="No artists found in roster"
         />
       </div>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20",
+  "generatedAt": "2026-07-21",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
@@ -1861,10 +1861,18 @@
             "/api/tenants/select"
           ],
           "network": true
+        },
+        {
+          "file": "Taskmaster/client/src/pages/auth/ForgotPasswordPage.jsx",
+          "endpoints": [
+            "/api/auth/forgot-password"
+          ],
+          "network": true
         }
       ],
       "endpoints": [
         "/api/auth/clerk-establish",
+        "/api/auth/forgot-password",
         "/api/tenants/memberships",
         "/api/tenants/select"
       ],
@@ -5125,6 +5133,13 @@
           "network": true
         },
         {
+          "file": "Taskmaster/client/src/pages/auth/ResetPasswordPage.jsx",
+          "endpoints": [
+            "/api/auth/reset-password"
+          ],
+          "network": true
+        },
+        {
           "file": "Taskmaster/client/src/pages/crm/FollowupsPage.jsx",
           "endpoints": [
             "/api/crm/leads/${leadId}/audit",
@@ -5173,6 +5188,7 @@
       ],
       "endpoints": [
         "/api/auth/google?state=link_${user?._id}",
+        "/api/auth/reset-password",
         "/api/crm/leads/${highlightId}",
         "/api/crm/leads/${id}",
         "/api/crm/leads/${leadId}/audit",
@@ -5218,6 +5234,21 @@
       "endpoints": [
         "/api/customization/shortcuts",
         "/api/customization/shortcuts/reset"
+      ],
+      "network": true
+    },
+    "useSignIn": {
+      "files": [
+        {
+          "file": "Taskmaster/client/src/pages/auth/ForgotPasswordPage.jsx",
+          "endpoints": [
+            "/api/auth/forgot-password"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/auth/forgot-password"
       ],
       "network": true
     },

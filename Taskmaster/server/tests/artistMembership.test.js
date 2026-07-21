@@ -10,6 +10,19 @@ const { PRESET_PAGES } = require('../utils/pagePermissions');
 const { generateShareToken } = require('../domains/artists/controllers/artistShareController');
 const { createArtistMembership } = require('../domains/artists/services/artistMembershipService');
 
+// Mock mailDriver so invite email dispatch doesn't fail or attempt real HTTP calls
+jest.mock('../services/mailDriver', () => ({
+  sendMail: jest.fn().mockResolvedValue({ success: true }),
+  dispatchEmailPayload: jest.fn().mockResolvedValue({ success: true }),
+  resolveAutoMailerApiBase: jest.fn().mockReturnValue('https://mailer-api.example.com'),
+  validateAutoMailerApiBase: jest.fn().mockReturnValue(true),
+  assertEmailDispatchSucceeded: jest.fn().mockImplementation((result) => {
+    if (!result || result.error) throw new Error(result?.error || 'Email dispatch failed');
+    return result;
+  }),
+  limits: { maxPayloadSize: 100_000 },
+}));
+
 async function ensureSalesDept() {
   let dept = await Department.findOne({ slug: 'sales' });
   if (!dept) {

@@ -190,7 +190,7 @@ Clerk org switcher stays **hidden**; org selection is app-level (not Clerk organ
 
 ## 3. Page catalog by domain
 
-_Total page files: 142. Each entry lists route, exports, hooks, components, and explicit API paths._
+_Total page files: 144. Each entry lists route, exports, hooks, components, and explicit API paths._
 
 
 ### Authentication & legal
@@ -733,9 +733,18 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | (tab: artists) |
 | **Default export** | `function` |
-| **Lines** | 333 |
-| **Hooks** | `useArtists`, `useCallback`, `useCreateArtist`, `useMemo`, `useNavigate`, `useState`, `useSyncArtistStats` |
-| **Data hooks** | `useArtists` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useCreateArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useSyncArtistStats` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
+| **Lines** | 335 |
+| **Hooks** | `useArtists`, `useCallback`, `useCreateArtist`, `useMemo`, `useNavigate`, `useOrgPath`, `useState`, `useSyncArtistStats` |
+| **Data hooks** | `useArtists` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useCreateArtist` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual · `useOrgPath` → /api/projects, /api/projects/${id}, /api/projects/workspaces · `useSyncArtistStats` → /api/artists, /api/artists/${artistId}/connections/${connectionId}/primary, /api/artists/${artistId}/connections/${platform}/manual |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `Taskmaster/client/src/pages/artists/ArtistsCollection.test.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `—` |
+| **Lines** | 58 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/finance/FinancePage.jsx`
@@ -916,10 +925,19 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /artists/:id/*, /preview/artist/:id/* |
 | **Default export** | `function` |
-| **Lines** | 326 |
-| **Hooks** | `useArtistDashboard`, `useConfirm`, `useNavigate`, `useParams`, `useState` |
-| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} |
+| **Lines** | 328 |
+| **Hooks** | `useArtistDashboard`, `useConfirm`, `useNavigate`, `useOrgPath`, `useParams`, `useState` |
+| **Data hooks** | `useConfirm` → /api/contacts, /api/contacts/${editingContact._id}, /api/contacts/${id} · `useOrgPath` → /api/projects, /api/projects/${id}, /api/projects/workspaces |
 | **Key components** | `ArtistEditDrawer`, `ArtistShareModal`, `ClaimWorkspaceBanner` |
+
+_No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
+#### `Taskmaster/client/src/pages/artists/ArtistDetail.test.jsx`
+
+| Field | Value |
+| --- | --- |
+| **Route(s)** | _embedded tab / child route_ |
+| **Default export** | `—` |
+| **Lines** | 102 |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/artists/ArtistOSLayout.jsx`

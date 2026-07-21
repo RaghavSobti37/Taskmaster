@@ -560,13 +560,14 @@
       "/artists/:id/*",
       "/preview/artist/:id/*"
     ],
-    "lines": 326,
+    "lines": 328,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useArtistDashboard",
       "useConfirm",
       "useNavigate",
+      "useOrgPath",
       "useParams",
       "useState"
     ],
@@ -576,6 +577,16 @@
       "ArtistShareModal",
       "ClaimWorkspaceBanner"
     ]
+  },
+  {
+    "file": "Taskmaster/client/src/pages/artists/ArtistDetail.test.jsx",
+    "routes": [],
+    "lines": 102,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
+    "apis": [],
+    "components": []
   },
   {
     "file": "Taskmaster/client/src/pages/artists/ArtistOSLayout.jsx",
@@ -624,7 +635,7 @@
     "routes": [
       "(tab: artists)"
     ],
-    "lines": 333,
+    "lines": 335,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
@@ -633,9 +644,20 @@
       "useCreateArtist",
       "useMemo",
       "useNavigate",
+      "useOrgPath",
       "useState",
       "useSyncArtistStats"
     ],
+    "apis": [],
+    "components": []
+  },
+  {
+    "file": "Taskmaster/client/src/pages/artists/ArtistsCollection.test.jsx",
+    "routes": [],
+    "lines": 58,
+    "defaultExport": null,
+    "namedExports": [],
+    "hooks": [],
     "apis": [],
     "components": []
   },

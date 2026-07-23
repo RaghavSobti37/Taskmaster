@@ -107,7 +107,7 @@
     "dependency-cruiser": "^18.0.0",
     "husky": "^9.1.7",
     "jsonfile": "^6.2.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"

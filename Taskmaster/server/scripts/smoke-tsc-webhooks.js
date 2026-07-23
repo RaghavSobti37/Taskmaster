@@ -1,10 +1,21 @@
 #!/usr/bin/env node
 /**
- * POST all 5 TSC webhooks directly to Taskmaster.
+ * POST all TSC webhooks directly to Taskmaster.
  * Usage: node server/scripts/smoke-tsc-webhooks.js
  * Env: TASKMASTER_BASE_URL (default http://127.0.0.1:5000), plus *_WEBHOOK_SECRET from server/.env
  */
-require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+const fs = require('fs');
+const path = require('path');
+
+for (const envPath of [
+  path.join(__dirname, '../.env'),
+  path.join(__dirname, '../../../server/.env'),
+]) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    break;
+  }
+}
 
 const BASE = (process.env.TASKMASTER_BASE_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
 const TEST_EMAIL = 'webhook.smoke@example.com';
@@ -34,6 +45,22 @@ const tests = [
       date: `${yyyy}-${mm}-${dd}`,
       time: `${hours}:${minutes} ${period}`,
       timezone: 'Asia/Kolkata',
+    },
+  },
+  {
+    name: 'contact-lead',
+    path: '/api/webhooks/contact-lead',
+    secretEnv: 'ARTIST_ENQUIRY_WEBHOOK_SECRET',
+    body: {
+      source: 'TSC Website Contact',
+      sourceSite: 'tsc-website',
+      userType: 'brand',
+      name: 'Webhook Smoke Test',
+      email: TEST_EMAIL,
+      phone: '+919876543210',
+      company: 'TSC Smoke Test',
+      message: 'Contact form smoke test',
+      budget: '100k-500k',
     },
   },
   {

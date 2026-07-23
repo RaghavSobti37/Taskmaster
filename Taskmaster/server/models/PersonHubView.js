@@ -31,8 +31,22 @@ const PersonHubViewSchema = new mongoose.Schema({
   imlPriority: { type: Boolean, default: false, index: true },
 }, { timestamps: true });
 
-PersonHubViewSchema.index({ tenantId: 1, email: 1 }, { unique: true, sparse: true });
-PersonHubViewSchema.index({ tenantId: 1, phone: 1 }, { unique: true, sparse: true });
+PersonHubViewSchema.index(
+  { tenantId: 1, email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $exists: true, $type: 'string', $gt: '' } },
+    name: 'tenantId_1_email_1',
+  }
+);
+PersonHubViewSchema.index(
+  { tenantId: 1, phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { phone: { $exists: true, $type: 'string', $gt: '' } },
+    name: 'tenantId_1_phone_1',
+  }
+);
 PersonHubViewSchema.index({ name: 'text', email: 'text', phone: 'text' });
 PersonHubViewSchema.index({ 'inletKeys': 1 });
 

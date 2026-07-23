@@ -15,12 +15,14 @@ const {
 } = require('../utils/webhookAuth');
 const { processNewsletterWebhook } = require('../services/newsletterWebhookService');
 const { processMasterclassReviewWebhook } = require('../services/masterclassReviewService');
+const { createLeadFromForm } = require('../domains/crm/services/leadWriteService');
 const { sendAiSensyMessage } = require('../utils/aisensyClient');
 /** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 const { runWithDefaultWebhookTenant } = require('../utils/webhookTenantContext');
 const { bypassOptions } = require('../infrastructure/database/bypassTenantPolicy');
 const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
+const { getTenantId } = require('../utils/tenantContext');
 
 const REP_BYPASS = bypassOptions('book-call-rep-fetch');
 const LEAD_BYPASS = bypassOptions('book-call-lead-lookup');
@@ -250,6 +252,71 @@ exports.processArtistPathLogic = processArtistPathWebhook;
 exports.processNewsletterLogic = processNewsletterWebhook;
 exports.processMasterclassReviewLogic = processMasterclassReviewWebhook;
 
+const compact = (value) => String(value || '').trim();
+
+function buildContactLeadRemarks(data = {}) {
+  const rows = [
+    ['Submitted', compact(data.submittedAt)],
+    ['User type', compact(data.userType)],
+    ['Message', compact(data.message)],
+    ['Genres', compact(data.genres)],
+    ['Experience', compact(data.experience)],
+    ['Looking for', compact(data.lookingFor)],
+    ['Budget', compact(data.budget)],
+    ['Campaign type', compact(data.campaignType)],
+    ['Focus area', compact(data.focusArea)],
+    ['Capital', compact(data.capital)],
+    ['Timeline', compact(data.timeline)],
+    ['Source site', compact(data.sourceSite)],
+  ].filter(([, value]) => value);
+
+  return rows.map(([label, value]) => `${label}: ${value}`).join('\n');
+}
+
+function normalizeContactLeadPayload(data = {}) {
+  const userType = compact(data.userType).toLowerCase();
+  return {
+    name: compact(data.name),
+    email: compact(data.email).toLowerCase(),
+    phone: compact(data.phone),
+    company: compact(data.company),
+    source: compact(data.source) || 'TSC Website Contact',
+    leadStatus: 'New',
+    crmType: CRM_TYPES.SALES,
+    remarks: buildContactLeadRemarks(data),
+    tags: ['tsc-website', 'contact-form', userType].filter(Boolean),
+  };
+}
+
+async function processContactLeadWebhook(data) {
+  const leadBody = normalizeContactLeadPayload(data);
+  const tenantId = getTenantId();
+  const systemUser = await User.findOne(tenantId ? { tenantId } : {})
+    .setOptions(LEAD_BYPASS)
+    .sort({ createdAt: 1 });
+  if (!systemUser) throw new Error('No tenant user available for contact lead');
+
+  const result = await createLeadFromForm(systemUser, leadBody, {
+    defaultSource: 'TSC Website Contact',
+    defaultLeadStatus: 'New',
+    defaultCrmType: CRM_TYPES.SALES,
+  });
+  if (result.error) {
+    const err = new Error(result.error);
+    err.status = result.status || 400;
+    throw err;
+  }
+  return {
+    success: true,
+    message: result.created ? 'Contact lead created' : 'Contact lead updated',
+    leadId: result.lead?._id,
+    created: !!result.created,
+  };
+}
+
+exports.normalizeContactLeadPayload = normalizeContactLeadPayload;
+exports.processContactLeadWebhook = processContactLeadWebhook;
+
 exports.handleArtistPath = async (req, res) => {
   if (!rejectUnlessArtistPathAuthorized(req, res)) {
     return;
@@ -312,6 +379,24 @@ exports.handleArtistEnquiry = async (req, res) => {
         error: syncError.message || 'Failed to process artist enquiry',
       });
     }
+  }
+};
+
+exports.handleContactLead = async (req, res) => {
+  if (!verifyArtistEnquirySecret(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const result = await runWithDefaultWebhookTenant(() => processContactLeadWebhook(req.body));
+    return res.status(result.created ? 201 : 200).json(result);
+  } catch (error) {
+    console.error('Contact lead webhook error:', error);
+    const status = error.status || (/required|invalid|phone|email|duplicate/i.test(error.message || '') ? 400 : 500);
+    return res.status(status).json({
+      success: false,
+      error: error.message || 'Failed to process contact lead',
+    });
   }
 };
 

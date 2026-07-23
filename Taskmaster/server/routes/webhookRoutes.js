@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const { handleBookedCall, handleArtistEnquiry, handleArtistPath, handleNewsletter, handleMasterclassReview } = require('../controllers/webhookController');
+const { handleBookedCall, handleArtistEnquiry, handleContactLead, handleArtistPath, handleNewsletter, handleMasterclassReview } = require('../controllers/webhookController');
 const metaDataDeletion = require('../controllers/metaDataDeletionController');
 const { webhookIdempotency } = require('../middleware/webhookIdempotency');
 const { webhookRateLimit } = require('../middleware/rateLimits');
@@ -29,6 +29,7 @@ router.post('/aisensy', handleAisensyWebhook);
 router.use(webhookIdempotency);
 router.post('/artist-path', handleArtistPath);
 router.post('/artist-enquiry', handleArtistEnquiry);
+router.post('/contact-lead', handleContactLead);
 router.post('/newsletter', handleNewsletter);
 router.post('/masterclass-review', handleMasterclassReview);
 

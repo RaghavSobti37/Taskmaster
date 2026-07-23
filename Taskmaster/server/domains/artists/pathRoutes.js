@@ -8,6 +8,7 @@ const artistPathAccess = requirePageAccess('admin_artist_path');
 router.use(protect);
 
 router.get('/people', artistPathAccess, routes.listPeople);
+router.get('/responses', artistPathAccess, routes.listResponses);
 router.get('/people/:personId', artistPathAccess, routes.getPerson);
 router.post('/sync', artistPathAccess, routes.sync);
 

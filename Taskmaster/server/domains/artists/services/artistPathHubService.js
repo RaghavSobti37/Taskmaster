@@ -34,6 +34,19 @@ class ArtistPathHubService {
       .sort(sort)
       .lean();
   }
+
+  async countResponses(query = {}) {
+    return ArtistPathResponse.countDocuments(query).setOptions(BYPASS);
+  }
+
+  async listResponses(query = {}, { skip = 0, limit = 50, sort = { submittedAt: -1 } } = {}) {
+    return ArtistPathResponse.find(query)
+      .setOptions(BYPASS)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
 }
 
 module.exports = new ArtistPathHubService();

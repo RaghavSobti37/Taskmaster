@@ -41,6 +41,14 @@ services:
         value: "true"
       - key: MONGODB_URI_PROD
         sync: false
+      - key: ARTIST_PATH_GOOGLE_SHEET_ID
+        value: 1UQ6zbfazKUCg6tsWCLLIclpvQlWpPj4sugwCtfXmtxA
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GOOGLE_PRIVATE_KEY
+        sync: false
+      - key: HOLYSHEET_ARTIST_PATH_API_KEY
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: ENCRYPTION_KEY

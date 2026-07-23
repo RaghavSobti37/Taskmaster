@@ -9,6 +9,14 @@ export const useArtistPathPeople = (params = {}, options = {}) => useQuery({
   ...options,
 });
 
+export const useArtistPathResponses = (params = {}, options = {}) => useQuery({
+  queryKey: ['artistPath', 'responses', params],
+  queryFn: async () => (await axios.get('/api/artist-path/responses', { params })).data,
+  placeholderData: keepPreviousData,
+  staleTime: 1000 * 60 * 2,
+  ...options,
+});
+
 export const useArtistPathPerson = (personId, options = {}) => useQuery({
   queryKey: ['artistPath', 'person', personId],
   queryFn: async () => (await axios.get(`/api/artist-path/people/${personId}`)).data,

@@ -4,6 +4,10 @@ const artistPathHubService = require('./services/artistPathHubService');
 const { syncFromSheet } = require('./services/artistPathImportService');
 const { mapRowToArtistPath } = require('../../../shared/artistPathSchema.cjs');
 
+const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+let lastResponseAutoSyncAt = 0;
+let responseAutoSyncPromise = null;
+
 function enrichArtistPathResponse(doc) {
   if (!doc) return doc;
   const mapped = doc.rawRow && Object.keys(doc.rawRow).length
@@ -43,6 +47,22 @@ function sortResponsesForHub(responses, hubEmail) {
   });
 }
 
+async function maybeAutoSyncResponses({ search, page }) {
+  if (process.env.NODE_ENV === 'test') return;
+  if (search || page !== 1) return;
+  const now = Date.now();
+  if (now - lastResponseAutoSyncAt < AUTO_SYNC_INTERVAL_MS) return;
+  if (!responseAutoSyncPromise) {
+    responseAutoSyncPromise = syncFromSheet({ filename: 'artist_path_admin_auto_sync' })
+      .catch(() => null)
+      .finally(() => {
+        lastResponseAutoSyncAt = Date.now();
+        responseAutoSyncPromise = null;
+      });
+  }
+  await responseAutoSyncPromise;
+}
+
 exports.listPeople = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -61,6 +81,44 @@ exports.listPeople = async (req, res) => {
       artistPathHubService.listPeople(query, { skip, limit }),
     ]);
 
+    res.json({ data, total, page, pages: Math.ceil(total / limit) || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.listResponses = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+    const skip = (page - 1) * limit;
+    const search = String(req.query.search || '').trim();
+
+    const query = {};
+    if (search) {
+      const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query.$or = [
+        { 'answers.name': re },
+        { 'answers.email': re },
+        { 'answers.phone': re },
+        { 'answers.stageName': re },
+        { 'answers.city': re },
+        { 'rawRow.FullName': re },
+        { 'rawRow.Email': re },
+        { 'rawRow.Mobile': re },
+        { 'rawRow.StageName': re },
+        { 'rawRow.Place': re },
+      ];
+    }
+
+    await maybeAutoSyncResponses({ search, page });
+
+    const [total, rows] = await Promise.all([
+      artistPathHubService.countResponses(query),
+      artistPathHubService.listResponses(query, { skip, limit }),
+    ]);
+
+    const data = rows.map(enrichArtistPathResponse);
     res.json({ data, total, page, pages: Math.ceil(total / limit) || 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });

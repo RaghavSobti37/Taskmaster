@@ -6,6 +6,13 @@ import DailyLogsTable from '../DailyLogsTable';
 import ReportMembersTable from './ReportMembersTable';
 import { BklitBreakdownBars, BklitCategoryBarChart } from '../../charts/bklitInsightsCharts';
 
+const MetricTile = ({ label, value, tone = 'tm-data-primary' }) => (
+  <div className="min-w-0 p-3 sm:p-4">
+    <p className="tm-widget-label text-[var(--color-text-muted)] truncate">{label}</p>
+    <p className={`text-xl sm:text-2xl font-black tabular-nums break-words ${tone}`}>{value}</p>
+  </div>
+);
+
 const MonthlyReportBody = ({
   report,
   printRef,
@@ -28,27 +35,12 @@ const MonthlyReportBody = ({
 
   return (
     <div ref={printRef} className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] divide-x divide-y divide-[var(--color-bg-border)]">
-        <div className="p-3">
-          <p className="tm-widget-label text-[var(--color-text-muted)]">Present</p>
-          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.attendance.present}</p>
-        </div>
-        <div className="p-3">
-          <p className="tm-widget-label text-[var(--color-text-muted)]">Half Days</p>
-          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.attendance.halfDay}</p>
-        </div>
-        <div className="p-3">
-          <p className="tm-widget-label text-[var(--color-text-muted)]">Tasks Done</p>
-          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.tasks.completed}</p>
-        </div>
-        <div className="p-3">
-          <p className="tm-widget-label text-[var(--color-text-muted)]">Log Hours</p>
-          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.logs.totalHours.toFixed(1)}</p>
-        </div>
-        <div className="p-3">
-          <p className="tm-widget-label text-[var(--color-text-muted)]">Daily Logs</p>
-          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.logs.totalEntries ?? report.logs.entries?.length ?? 0}</p>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden divide-x divide-y divide-[var(--color-bg-border)]">
+        <MetricTile label="Present" value={report.attendance.present} />
+        <MetricTile label="Half Days" value={report.attendance.halfDay} />
+        <MetricTile label="Tasks Done" value={report.tasks.completed} />
+        <MetricTile label="Log Hours" value={report.logs.totalHours.toFixed(1)} />
+        <MetricTile label="Daily Logs" value={report.logs.totalEntries ?? report.logs.entries?.length ?? 0} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -87,8 +79,8 @@ const MonthlyReportBody = ({
       {showMember && report.member && (
         <ReportMembersTable members={[report.member]} single />
       )}
-      {showProjects && <ReportProjectsTable projects={report.projects} />}
-      {showCalendar && <ReportCalendarTable events={report.calendar} />}
+      {showProjects && <ReportProjectsTable items={report.projects?.items || []} />}
+      {showCalendar && <ReportCalendarTable events={report.calendar?.events || []} />}
       <DailyLogsTable entries={report.logs.entries} />
     </div>
   );

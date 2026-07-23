@@ -5,7 +5,11 @@ const Project = require('../models/Project');
 const Attendance = require('../models/Attendance');
 const CalendarEvent = require('../models/CalendarEvent');
 const Log = require('../models/Log');
-const { parseTimeSpentToHours } = require('../../shared/timeSpent');
+const {
+  buildDailyLogDateRangeFilter,
+  getLogWorkDateKey,
+  readLogTimeSpentMinutes,
+} = require('../../shared/dailyLogDetails');
 const {
   applyTimeframeFilter,
   resolveReportRangeOptions,
@@ -44,15 +48,18 @@ const formatLogEntry = (log, userName) => {
   const created = log.createdAt || log.timestamp;
   const d = new Date(created);
   const pad = (n) => String(n).padStart(2, '0');
+  const details = log.details || log.payload || {};
+  const date = getLogWorkDateKey(log) || getDateKey(d);
+  const timeSpentMinutes = readLogTimeSpentMinutes(log);
   return {
     userId: log.userId?.toString?.() || log.userId,
     userName: userName || '',
-    date: getDateKey(d),
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    title: log.details?.title || log.payload?.title || 'Untitled',
-    project: log.details?.project || log.payload?.project || 'GENERAL',
-    timeSpent: log.details?.timeSpent || log.payload?.timeSpent || '0m',
-    message: log.details?.message || log.payload?.message || '',
+    date,
+    time: details.startTime || `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    title: details.title || 'Untitled',
+    project: details.project || 'GENERAL',
+    timeSpent: details.timeSpent || `${timeSpentMinutes}m`,
+    message: details.message || '',
   };
 };
 
@@ -108,24 +115,26 @@ const buildTaskSummary = (assignedTasks, startDate, endDate) => {
     const d = new Date(ref);
     return d >= startDate && d <= endDate;
   });
+  const countedTasks = tasksInMonth;
 
   return {
-    total: assignedTasks.length,
-    completed: assignedTasks.filter((t) => t.status === 'done').length,
-    inProgress: assignedTasks.filter((t) => t.status === 'in-progress').length,
-    todo: assignedTasks.filter((t) => t.status === 'todo').length,
-    inReview: assignedTasks.filter((t) => t.status === 'in-review').length,
-    overdue: assignedTasks.filter((t) => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < new Date()).length,
+    total: countedTasks.length,
+    completed: countedTasks.filter((t) => t.status === 'done').length,
+    inProgress: countedTasks.filter((t) => t.status === 'in-progress').length,
+    todo: countedTasks.filter((t) => t.status === 'todo').length,
+    inReview: countedTasks.filter((t) => t.status === 'in-review').length,
+    overdue: countedTasks.filter((t) => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < new Date()).length,
     byPriority: {
-      critical: assignedTasks.filter((t) => t.priority === 'critical').length,
-      high: assignedTasks.filter((t) => t.priority === 'high').length,
-      medium: assignedTasks.filter((t) => t.priority === 'medium').length,
-      low: assignedTasks.filter((t) => t.priority === 'low').length,
+      critical: countedTasks.filter((t) => t.priority === 'critical').length,
+      high: countedTasks.filter((t) => t.priority === 'high').length,
+      medium: countedTasks.filter((t) => t.priority === 'medium').length,
+      low: countedTasks.filter((t) => t.priority === 'low').length,
     },
     monthActivity: tasksInMonth.map((t) => ({
       title: t.title,
       status: t.status,
       priority: t.priority,
+      dueDate: t.dueDate?.toISOString?.()?.split('T')[0],
       date: (t.completedAt || t.dueDate || t.createdAt)?.toISOString?.()?.split('T')[0],
     })),
   };
@@ -134,8 +143,8 @@ const buildTaskSummary = (assignedTasks, startDate, endDate) => {
 const buildLogsSummary = (logs, userName) => {
   const logsByDayMap = new Map();
   const entries = logs.map((log) => {
-    const day = getDateKey(log.createdAt || log.timestamp);
-    const hours = parseTimeSpentToHours(log.details?.timeSpent || log.payload?.timeSpent);
+    const day = getLogWorkDateKey(log) || getDateKey(log.createdAt || log.timestamp);
+    const hours = readLogTimeSpentMinutes(log) / 60;
     const existing = logsByDayMap.get(day) || { hours: 0, count: 0 };
     logsByDayMap.set(day, { hours: existing.hours + hours, count: existing.count + 1 });
     return formatLogEntry(log, userName);
@@ -151,12 +160,17 @@ const buildLogsSummary = (logs, userName) => {
   };
 };
 
+const getReportLogFilter = (userIds, startDate, endDate) => ({
+  action: 'DAILY_LOG',
+  userId: { $in: userIds },
+  ...buildDailyLogDateRangeFilter(startDate, endDate),
+});
+
 const buildBulkMonthlyReports = async (userIds, monthParam) => {
   if (!userIds.length) return [];
 
   const { monthParam: month, startDate, endDate } = parseMonth(monthParam);
   const period = { start: startDate.toISOString(), end: endDate.toISOString() };
-  const idStrings = userIds.map(String);
 
   const users = await User.find({ _id: { $in: userIds } })
     .select('name email departmentId')
@@ -166,11 +180,7 @@ const buildBulkMonthlyReports = async (userIds, monthParam) => {
   const [attendanceRows, assignments, allLogs, allProjects] = await Promise.all([
     Attendance.find({ userId: { $in: userIds }, date: { $gte: startDate, $lte: endDate } }).lean(),
     TaskAssignment.find({ userId: { $in: userIds } }).lean(),
-    Log.find({
-      action: 'DAILY_LOG',
-      createdAt: { $gte: startDate, $lte: endDate },
-      $or: [{ userId: { $in: userIds } }, { actorId: { $in: idStrings } }],
-    }).sort({ createdAt: 1 }).lean(),
+    Log.find(getReportLogFilter(userIds, startDate, endDate)).sort({ createdAt: 1 }).lean(),
     Project.find({ members: { $in: userIds } }).select('name status workspace progress members').lean(),
   ]);
 
@@ -196,14 +206,9 @@ const buildBulkMonthlyReports = async (userIds, monthParam) => {
   const logsByUser = new Map();
   allLogs.forEach((log) => {
     const uid = log.userId?.toString?.() || log.userId;
-    const actor = log.actorId?.toString?.() || log.actorId;
     if (uid) {
       if (!logsByUser.has(uid)) logsByUser.set(uid, []);
       logsByUser.get(uid).push(log);
-    }
-    if (actor && actor !== uid) {
-      if (!logsByUser.has(actor)) logsByUser.set(actor, []);
-      if (!logsByUser.get(actor).includes(log)) logsByUser.get(actor).push(log);
     }
   });
 
@@ -449,4 +454,7 @@ module.exports = {
   buildTeamMonthlyReport,
   applyTimeframeFilter,
   resolveReportRangeOptions,
+  buildLogsSummary,
+  buildTaskSummary,
+  getReportLogFilter,
 };

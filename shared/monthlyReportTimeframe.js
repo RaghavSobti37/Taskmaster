@@ -136,6 +136,12 @@ const recountTasksFromActivity = (activity) => {
     overdue: activity.filter(
       (t) => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < today
     ).length,
+    byPriority: {
+      critical: activity.filter((t) => t.priority === 'critical').length,
+      high: activity.filter((t) => t.priority === 'high').length,
+      medium: activity.filter((t) => t.priority === 'medium').length,
+      low: activity.filter((t) => t.priority === 'low').length,
+    },
     monthActivity: activity,
   };
 };

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21",
+  "generatedAt": "2026-07-23",
   "hooks": {
     "useAcceptArtistMembership": {
       "files": [
@@ -1035,6 +1035,7 @@
           "endpoints": [
             "/api/artist-path/people",
             "/api/artist-path/people/${personId}",
+            "/api/artist-path/responses",
             "/api/artist-path/sync"
           ],
           "network": true
@@ -1043,6 +1044,28 @@
       "endpoints": [
         "/api/artist-path/people",
         "/api/artist-path/people/${personId}",
+        "/api/artist-path/responses",
+        "/api/artist-path/sync"
+      ],
+      "network": true
+    },
+    "useArtistPathResponses": {
+      "files": [
+        {
+          "file": "Taskmaster/client/src/hooks/queries/artistPath.js",
+          "endpoints": [
+            "/api/artist-path/people",
+            "/api/artist-path/people/${personId}",
+            "/api/artist-path/responses",
+            "/api/artist-path/sync"
+          ],
+          "network": true
+        }
+      ],
+      "endpoints": [
+        "/api/artist-path/people",
+        "/api/artist-path/people/${personId}",
+        "/api/artist-path/responses",
         "/api/artist-path/sync"
       ],
       "network": true
@@ -1054,6 +1077,7 @@
           "endpoints": [
             "/api/artist-path/people",
             "/api/artist-path/people/${personId}",
+            "/api/artist-path/responses",
             "/api/artist-path/sync"
           ],
           "network": true
@@ -1062,6 +1086,7 @@
       "endpoints": [
         "/api/artist-path/people",
         "/api/artist-path/people/${personId}",
+        "/api/artist-path/responses",
         "/api/artist-path/sync"
       ],
       "network": true

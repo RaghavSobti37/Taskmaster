@@ -1,7 +1,7 @@
 # CoreKnot — Master Reference
 
 > **Canonical product bible.** Every routed page, APIs, hooks, exports, and access rules.  
-> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.3 · **Compiled:** 2026-07-21
+> **Product:** CoreKnot · **Repo:** `coreknot/Taskmaster` · **Version:** 1.0.8-beta.3 · **Compiled:** 2026-07-23
 
 ---
 
@@ -1467,10 +1467,10 @@ _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskma
 | --- | --- |
 | **Route(s)** | /admin/artist-path |
 | **Default export** | `function` |
-| **Lines** | 110 |
-| **Hooks** | `useArtistPathPeople`, `useArtistPathSync`, `useDebounce`, `useState`, `useToast` |
-| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/sync · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
-| **Key components** | `ArtistPathCardGrid`, `ArtistProductHint`, `SearchInput` |
+| **Lines** | 281 |
+| **Hooks** | `useArtistPathPeople`, `useArtistPathResponses`, `useArtistPathSync`, `useDebounce`, `useState`, `useToast` |
+| **Data hooks** | `useArtistPathPeople` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/responses · `useArtistPathResponses` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/responses · `useArtistPathSync` → /api/artist-path/people, /api/artist-path/people/${personId}, /api/artist-path/responses · `useDebounce` → /api/crm/leads/${highlightId}, /api/crm/leads/${id}, /api/crm/leads/${leadId}/audit · `useToast` → /api/admin/platform-settings, /api/admin/tenants, /api/admin/tenants/${tenant._id} |
+| **Key components** | `ArtistPathAnswerSections`, `ArtistPathCardGrid`, `ArtistProductHint`, `SearchInput` |
 
 _No direct `/api/...` string literals — data via shared hooks (e.g. `useTaskmasterQueries`) or parent hub._
 #### `Taskmaster/client/src/pages/admin/CrmStatsPage.jsx`

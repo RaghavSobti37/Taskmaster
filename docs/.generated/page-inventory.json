@@ -373,11 +373,12 @@
     "routes": [
       "/admin/artist-path"
     ],
-    "lines": 110,
+    "lines": 281,
     "defaultExport": "function",
     "namedExports": [],
     "hooks": [
       "useArtistPathPeople",
+      "useArtistPathResponses",
       "useArtistPathSync",
       "useDebounce",
       "useState",
@@ -385,6 +386,7 @@
     ],
     "apis": [],
     "components": [
+      "ArtistPathAnswerSections",
       "ArtistPathCardGrid",
       "ArtistProductHint",
       "SearchInput"

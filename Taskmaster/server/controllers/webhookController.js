@@ -85,6 +85,58 @@ const connection = createRedisClient();
 const webhookQueue = new Queue('WebhookQueue', { connection });
 webhookQueue.on('error', () => { });
 
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+
+function samePhone(a, b) {
+  const left = digitsOnly(a);
+  const right = digitsOnly(b);
+  return !!left && !!right && left === right;
+}
+
+function sameEmail(a, b) {
+  return !!a && !!b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+}
+
+function buildBookedCallNote({ name, email, phone, whatsapp, course, referral, date, time, timezone, istDateStr, istTimeStr }) {
+  return {
+    text: [
+      'Booked call input',
+      `Name: ${name || ''}`,
+      `Email: ${email || ''}`,
+      `Phone: ${phone || ''}`,
+      `WhatsApp: ${whatsapp || phone || ''}`,
+      `Course: ${course || ''}`,
+      `Requested slot: ${date || ''} ${time || ''} (${timezone || 'Asia/Kolkata'})`,
+      `CRM follow-up: ${istDateStr || ''} ${istTimeStr || ''} IST`,
+      referral ? `Referral: ${referral}` : '',
+    ].filter(Boolean).join('\n'),
+    author: 'Website Booking',
+    date: new Date(),
+  };
+}
+
+function isDuplicateKeyError(error) {
+  return error?.code === 11000 || /E11000 duplicate key/i.test(error?.message || '');
+}
+
+function toPublicWebhookError(error, fallback = 'Something went wrong. Please try again.') {
+  const msg = error?.message || '';
+  if (isDuplicateKeyError(error)) {
+    return {
+      status: 409,
+      error: 'We already have this phone number in CoreKnot. Your booking details were not saved. Please use a different number or message the team.',
+    };
+  }
+  if (/slot is no longer/i.test(msg)) return { status: 400, error: 'This slot is no longer available. Please pick a later time.' };
+  if (/No sales rep/i.test(msg)) return { status: 503, error: 'Booking is temporarily unavailable. Please try again in a few minutes.' };
+  if (/Invalid date|Invalid time/i.test(msg)) return { status: 400, error: 'Please choose a valid date and time.' };
+  if (/Missing required|Invalid name|Name is required/i.test(msg)) return { status: 400, error: 'Please enter your name.' };
+  if (/Invalid email/i.test(msg)) return { status: 400, error: 'Please enter a valid email address.' };
+  if (/Invalid phone|Phone is required|phone format/i.test(msg)) return { status: 400, error: 'Please enter a valid WhatsApp number.' };
+  if (/tenant configured|tenant context/i.test(msg)) return { status: 503, error: 'Booking is temporarily unavailable. Please try again in a few minutes.' };
+  return { status: error?.status || error?.statusCode || 500, error: fallback };
+}
+
 exports.processBookedCallLogic = async (data, options = {}) => {
   const {
     skipSlotValidation = false,
@@ -198,16 +250,37 @@ exports.processBookedCallLogic = async (data, options = {}) => {
       nextFollowupTime: istTimeStr
     };
 
+    const bookingNote = buildBookedCallNote({
+      name,
+      email,
+      phone,
+      whatsapp,
+      course,
+      referral,
+      date,
+      time,
+      timezone,
+      istDateStr,
+      istTimeStr,
+    });
+
     if (lead) {
+      const set = {
+        ...leadData,
+        reminderSent: false,
+        notifiedOverdue: false,
+      };
+      if (!lead.email || sameEmail(lead.email, normalizedEmail)) {
+        set.email = normalizedEmail;
+      }
+      if (!lead.phone || samePhone(lead.phone, normalizedPhone)) {
+        set.phone = normalizedPhone;
+      }
       await LeadService.updateLead(
         { _id: lead._id },
         {
-          $set: {
-            ...leadData,
-            email: normalizedEmail,
-            reminderSent: false,
-            notifiedOverdue: false,
-          },
+          $set: set,
+          $push: { notes: bookingNote },
         }
       );
       lead = await Lead.findById(lead._id);
@@ -217,6 +290,7 @@ exports.processBookedCallLogic = async (data, options = {}) => {
         ...leadData,
         reminderSent: false,
         notifiedOverdue: false,
+        notes: [bookingNote],
       });
     }
 
@@ -340,10 +414,10 @@ exports.handleArtistPath = async (req, res) => {
       return res.status(200).json(result);
     } catch (syncError) {
       console.error('Artist Path sync fallback error:', syncError);
-      const isValidation = syncError.message?.includes('Missing required');
-      return res.status(isValidation ? 400 : 500).json({
+      const friendly = toPublicWebhookError(syncError, 'We could not save your artist path. Please try again.');
+      return res.status(friendly.status).json({
         success: false,
-        error: syncError.message || 'Failed to process Artist Path submission',
+        error: friendly.error,
       });
     }
   }
@@ -373,10 +447,10 @@ exports.handleArtistEnquiry = async (req, res) => {
       return res.status(200).json(result);
     } catch (syncError) {
       console.error('Artist enquiry sync fallback error:', syncError);
-      const isValidation = syncError.message?.includes('Missing required fields');
-      return res.status(isValidation ? 400 : 500).json({
+      const friendly = toPublicWebhookError(syncError, 'We could not save your enquiry. Please try again.');
+      return res.status(friendly.status).json({
         success: false,
-        error: syncError.message || 'Failed to process artist enquiry',
+        error: friendly.error,
       });
     }
   }
@@ -392,10 +466,10 @@ exports.handleContactLead = async (req, res) => {
     return res.status(result.created ? 201 : 200).json(result);
   } catch (error) {
     console.error('Contact lead webhook error:', error);
-    const status = error.status || (/required|invalid|phone|email|duplicate/i.test(error.message || '') ? 400 : 500);
-    return res.status(status).json({
+    const friendly = toPublicWebhookError(error, 'We could not save your enquiry. Please try again.');
+    return res.status(friendly.status).json({
       success: false,
-      error: error.message || 'Failed to process contact lead',
+      error: friendly.error,
     });
   }
 };
@@ -419,10 +493,10 @@ async function enqueueOrProcess(req, res, jobName, processor) {
       return res.status(200).json(result);
     } catch (syncError) {
       console.error(`${jobName} sync fallback error:`, syncError);
-      const isValidation = syncError.message?.includes('Missing required');
-      return res.status(isValidation ? 400 : 500).json({
+      const friendly = toPublicWebhookError(syncError, `We could not process this ${jobName} request. Please try again.`);
+      return res.status(friendly.status).json({
         success: false,
-        error: syncError.message || `Failed to process ${jobName}`,
+        error: friendly.error,
       });
     }
   }
@@ -450,11 +524,10 @@ exports.handleBookedCall = async (req, res) => {
     });
   } catch (error) {
     console.error('Book-call webhook error:', error);
-    const msg = error.message || '';
-    const isValidation = /Invalid date|slot is no longer|Missing required|No sales rep|Invalid name|Invalid email|Invalid phone|Phone is required|Name is required|Invalid phone format|tenant configured/i.test(msg);
-    return res.status(isValidation ? 400 : 500).json({
+    const friendly = toPublicWebhookError(error, 'We could not save your booking. Please try again.');
+    return res.status(friendly.status).json({
       success: false,
-      error: msg || 'Failed to book call in CRM',
+      error: friendly.error,
     });
   }
 };

@@ -132,4 +132,49 @@ describe('book-call duplicate phone handling', () => {
     });
     expect(res.json.mock.calls[0][0].error).not.toMatch(/E11000|duplicate key|ObjectId/i);
   });
+
+  it('falls back to updating existing lead when create hits duplicate phone index', async () => {
+    Lead.findOne
+      .mockReturnValueOnce({
+        setOptions: jest.fn().mockResolvedValue(null),
+      })
+      .mockReturnValueOnce({
+        setOptions: jest.fn().mockResolvedValue({
+          _id: 'lead-dup',
+          email: 'old-email@example.com',
+          phone: '+918591499393',
+          assignedRepId: 'rep-a',
+        }),
+      });
+    Lead.findById.mockResolvedValue({
+      _id: 'lead-dup',
+      email: 'old-email@example.com',
+      phone: '+918591499393',
+    });
+    const duplicate = new Error('E11000 duplicate key error collection: taskmaster_production.leads index: tenantId_1_phone_1 dup key');
+    duplicate.code = 11000;
+    LeadService.createLead.mockRejectedValueOnce(duplicate);
+    LeadService.updateLead.mockResolvedValue({});
+
+    const result = await processBookedCallLogic(validPayload, {
+      skipNotifications: true,
+      skipSlotValidation: true,
+      forceRepId: 'rep-a',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.leadId).toBe('lead-dup');
+    expect(LeadService.updateLead).toHaveBeenCalledWith(
+      { _id: 'lead-dup' },
+      expect.objectContaining({
+        $set: expect.not.objectContaining({ email: 'new-email@example.com' }),
+        $push: {
+          notes: expect.objectContaining({
+            text: expect.stringContaining('new-email@example.com'),
+            author: 'Website Booking',
+          }),
+        },
+      }),
+    );
+  });
 });

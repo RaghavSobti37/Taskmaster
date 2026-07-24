@@ -97,6 +97,24 @@ function sameEmail(a, b) {
   return !!a && !!b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
 }
 
+function phoneLookupVariants(phone) {
+  const variants = new Set();
+  if (!phone) return [];
+  variants.add(phone);
+  const digits = digitsOnly(phone);
+  if (digits.length >= 10) {
+    const national = digits.startsWith('91') && digits.length >= 12
+      ? digits.slice(2, 12)
+      : digits.slice(-10);
+    if (national) {
+      variants.add(national);
+      variants.add(`+91${national}`);
+      variants.add(`91${national}`);
+    }
+  }
+  return [...variants];
+}
+
 function buildBookedCallNote({ name, email, phone, whatsapp, course, referral, date, time, timezone, istDateStr, istTimeStr }) {
   return {
     text: [
@@ -137,6 +155,41 @@ function toPublicWebhookError(error, fallback = 'Something went wrong. Please tr
   return { status: error?.status || error?.statusCode || 500, error: fallback };
 }
 
+async function findBookedCallLead(normalizedEmail, normalizedPhone, { anyCrmType = false } = {}) {
+  const lookup = { $or: [] };
+  const tenantId = getTenantId();
+  if (tenantId) lookup.tenantId = tenantId;
+  if (!anyCrmType) lookup.crmType = CRM_TYPES.SALES;
+  if (normalizedEmail) lookup.$or.push({ email: normalizedEmail });
+  const phoneVariants = phoneLookupVariants(normalizedPhone);
+  if (phoneVariants.length) lookup.$or.push({ phone: { $in: phoneVariants } });
+  if (!lookup.$or.length) return null;
+  return Lead.findOne(lookup).setOptions(LEAD_BYPASS);
+}
+
+async function updateBookedCallLead(lead, leadData, bookingNote, normalizedEmail, normalizedPhone) {
+  const set = {
+    ...leadData,
+    crmType: lead.crmType || leadData.crmType,
+    reminderSent: false,
+    notifiedOverdue: false,
+  };
+  if (!lead.email || sameEmail(lead.email, normalizedEmail)) {
+    set.email = normalizedEmail;
+  }
+  if (!lead.phone || samePhone(lead.phone, normalizedPhone)) {
+    set.phone = normalizedPhone;
+  }
+  await LeadService.updateLead(
+    { _id: lead._id },
+    {
+      $set: set,
+      $push: { notes: bookingNote },
+    }
+  );
+  return Lead.findById(lead._id);
+}
+
 exports.processBookedCallLogic = async (data, options = {}) => {
   const {
     skipSlotValidation = false,
@@ -163,12 +216,8 @@ exports.processBookedCallLogic = async (data, options = {}) => {
     const normalizedPhone = identity.phone;
 
     // 1. Assign Rep (Only if new lead or lead has no rep)
-    const leadLookup = { crmType: CRM_TYPES.SALES, $or: [] };
-    if (normalizedEmail) leadLookup.$or.push({ email: normalizedEmail });
-    if (normalizedPhone) leadLookup.$or.push({ phone: normalizedPhone });
-    let lead = leadLookup.$or.length
-      ? await Lead.findOne(leadLookup).setOptions(LEAD_BYPASS)
-      : null;
+    let lead = await findBookedCallLead(normalizedEmail, normalizedPhone)
+      || await findBookedCallLead(normalizedEmail, normalizedPhone, { anyCrmType: true });
     let rep = null;
 
     if (lead && lead.assignedRepId) {
@@ -265,33 +314,22 @@ exports.processBookedCallLogic = async (data, options = {}) => {
     });
 
     if (lead) {
-      const set = {
-        ...leadData,
-        reminderSent: false,
-        notifiedOverdue: false,
-      };
-      if (!lead.email || sameEmail(lead.email, normalizedEmail)) {
-        set.email = normalizedEmail;
-      }
-      if (!lead.phone || samePhone(lead.phone, normalizedPhone)) {
-        set.phone = normalizedPhone;
-      }
-      await LeadService.updateLead(
-        { _id: lead._id },
-        {
-          $set: set,
-          $push: { notes: bookingNote },
-        }
-      );
-      lead = await Lead.findById(lead._id);
+      lead = await updateBookedCallLead(lead, leadData, bookingNote, normalizedEmail, normalizedPhone);
     } else {
-      lead = await LeadService.createLead({
-        email: normalizedEmail,
-        ...leadData,
-        reminderSent: false,
-        notifiedOverdue: false,
-        notes: [bookingNote],
-      });
+      try {
+        lead = await LeadService.createLead({
+          email: normalizedEmail,
+          ...leadData,
+          reminderSent: false,
+          notifiedOverdue: false,
+          notes: [bookingNote],
+        });
+      } catch (err) {
+        if (!isDuplicateKeyError(err)) throw err;
+        const duplicateLead = await findBookedCallLead(normalizedEmail, normalizedPhone, { anyCrmType: true });
+        if (!duplicateLead) throw err;
+        lead = await updateBookedCallLead(duplicateLead, leadData, bookingNote, normalizedEmail, normalizedPhone);
+      }
     }
 
     // mergeContact handled by LeadService.syncToContactHub
